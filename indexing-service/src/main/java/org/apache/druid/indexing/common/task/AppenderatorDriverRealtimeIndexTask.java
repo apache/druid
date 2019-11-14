@@ -272,7 +272,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
     this.metrics = fireDepartmentForMetrics.getMetrics();
 
-    Supplier<Committer> committerSupplier = null;
+    final Supplier<Committer> committerSupplier = Committers.nilSupplier();
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
@@ -351,7 +351,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       synchronized (this) {
         if (!gracefullyStopped) {
           firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
-          committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }
 

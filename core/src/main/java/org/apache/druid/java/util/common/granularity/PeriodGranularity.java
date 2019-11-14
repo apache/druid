@@ -307,8 +307,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         }
         return t;
       } else {
-        t = chronology.hourOfDay().roundFloor(t);
-        return chronology.hourOfDay().set(t, 0);
+        return chronology.dayOfMonth().roundFloor(t);
       }
     }
 
@@ -330,8 +329,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         }
         return t;
       } else {
-        t = chronology.minuteOfHour().roundFloor(t);
-        return chronology.minuteOfHour().set(t, 0);
+        return chronology.hourOfDay().roundFloor(t);
       }
     }
 
@@ -350,8 +348,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         }
         return t;
       } else {
-        t = chronology.secondOfMinute().roundFloor(t);
-        return chronology.secondOfMinute().set(t, 0);
+        return chronology.minuteOfHour().roundFloor(t);
       }
     }
 

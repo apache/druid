@@ -50,6 +50,9 @@
       "design/coordinator": {
         "title": "Coordinator Process"
       },
+      "design/extensions-contrib/dropwizard": {
+        "title": "Dropwizard metrics emitter"
+      },
       "design/historical": {
         "title": "Historical Process"
       },
@@ -318,6 +321,9 @@
       "operations/insert-segment-to-db": {
         "title": "insert-segment-to-db tool"
       },
+      "operations/kubernetes": {
+        "title": "kubernetes"
+      },
       "operations/management-uis": {
         "title": "Management UIs"
       },
@@ -335,9 +341,6 @@
       },
       "operations/pull-deps": {
         "title": "pull-deps tool"
-      },
-      "operations/recommendations": {
-        "title": "Recommendations"
       },
       "operations/reset-cluster": {
         "title": "reset-cluster tool"

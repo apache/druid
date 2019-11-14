@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -58,7 +59,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
@@ -332,7 +332,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
         uri,
         u -> {
           try {
-            return shuffleClient.go(new Request(HttpMethod.GET, u.toURL()), new BytesAccumulatingResponseHandler())
+            return shuffleClient.go(new Request(HttpMethod.GET, u.toURL()), new InputStreamResponseHandler())
                                 .get();
           }
           catch (InterruptedException | ExecutionException e) {

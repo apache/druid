@@ -109,6 +109,7 @@ KMS
 Kerberized
 Kerberos
 Kinesis
+Kubernetes
 LRU
 LZ4
 LZO
@@ -168,6 +169,7 @@ aggregator
 aggregators
 ambari
 analytics
+async
 authorizer
 authorizers
 autocomplete
@@ -368,6 +370,7 @@ whitelist
 whitelisted
 whitespace
 wildcard
+wildcards
 xml
 znode
 znodes
@@ -483,12 +486,14 @@ doubleMax
 doubleMean
 doubleMeanNoNulls
 doubleMin
+doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
 longMean
 longMeanNoNulls
 longMin
+longSum
 movingAverage
 postAggregations
 postAveragers
@@ -1281,10 +1286,14 @@ druid.broker.cache.useCache
 druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
+enableParallelMerge
 floatSum
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
+parallelMergeInitialYieldRows
+parallelMergeParallelism
+parallelMergeSmallBatchRows
 populateCache
 populateResultLevelCache
 queryId
@@ -1390,6 +1399,7 @@ avg_num_rows
 avg_size
 created_time
 current_size
+detailed_state
 druid.server.maxSize
 druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
@@ -1416,6 +1426,7 @@ runner_status
 segment_id
 server_type
 sqlTimeZone
+supervisor_id
 sys
 sys.segments
 task_id

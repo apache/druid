@@ -16,20 +16,20 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 import './center-message.scss';
 
-export interface CenterMessageProps {}
-
-export class CenterMessage extends React.PureComponent<CenterMessageProps> {
-  render(): JSX.Element {
-    const { children } = this.props;
-
-    return (
-      <div className="center-message bp3-input">
-        <div className="center-message-inner">{children}</div>
-      </div>
-    );
-  }
+export interface CenterMessageProps {
+  children?: ReactNode;
 }
+
+export const CenterMessage = React.memo(function CenterMessage(props: CenterMessageProps) {
+  const { children } = props;
+
+  return (
+    <div className="center-message bp3-input">
+      <div className="center-message-inner">{children}</div>
+    </div>
+  );
+});

@@ -349,59 +349,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected class CheckpointNotice implements Notice
   {
-    @Nullable
-    private final Integer nullableTaskGroupId;
-    @Deprecated
-    private final String baseSequenceName;
+    private final int taskGroupId;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata;
 
     CheckpointNotice(
-        @Nullable Integer nullableTaskGroupId,
-        @Deprecated String baseSequenceName,
+        int taskGroupId,
         SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata
     )
     {
-      this.baseSequenceName = baseSequenceName;
-      this.nullableTaskGroupId = nullableTaskGroupId;
+      this.taskGroupId = taskGroupId;
       this.checkpointMetadata = checkpointMetadata;
     }
 
     @Override
     public void handle() throws ExecutionException, InterruptedException
     {
-      // Find taskGroupId using taskId if it's null. It can be null while rolling update.
-      final int taskGroupId;
-      if (nullableTaskGroupId == null) {
-        // We search taskId in activelyReadingTaskGroups and pendingCompletionTaskGroups sequentially. This should be fine because
-        // 1) a taskGroup can be moved from activelyReadingTaskGroups to pendingCompletionTaskGroups in RunNotice
-        //    (see checkTaskDuration()).
-        // 2) Notices are proceesed by a single thread. So, CheckpointNotice and RunNotice cannot be processed at the
-        //    same time.
-        final java.util.Optional<Integer> maybeGroupId = activelyReadingTaskGroups
-            .entrySet()
-            .stream()
-            .filter(entry -> {
-              final TaskGroup taskGroup = entry.getValue();
-              return taskGroup.baseSequenceName.equals(baseSequenceName);
-            })
-            .findAny()
-            .map(Entry::getKey);
-
-        taskGroupId = maybeGroupId.orElseGet(() -> pendingCompletionTaskGroups
-            .entrySet()
-            .stream()
-            .filter(entry -> {
-              final List<TaskGroup> taskGroups = entry.getValue();
-              return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
-            })
-            .findAny()
-            .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
-            .getKey());
-
-      } else {
-        taskGroupId = nullableTaskGroupId;
-      }
-
       // check for consistency
       // if already received request for this sequenceName and dataSourceMetadata combination then return
       final TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
@@ -2710,10 +2672,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (Integer groupId : partitionGroups.keySet()) {
       if (!activelyReadingTaskGroups.containsKey(groupId)) {
         log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
-
-        Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
-            DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
-        ) : Optional.absent());
+        Optional<DateTime> minimumMessageTime;
+        if (ioConfig.getLateMessageRejectionStartDateTime().isPresent()) {
+          minimumMessageTime = Optional.of(ioConfig.getLateMessageRejectionStartDateTime().get());
+        } else {
+          minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
+                                DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
+                               ) : Optional.absent());
+        }
 
         Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
@@ -3129,11 +3095,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public void checkpoint(
-      @Nullable Integer taskGroupId,
-      @Deprecated String baseSequenceName,
-      DataSourceMetadata checkpointMetadata
-  )
+  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     Preconditions.checkNotNull(checkpointMetadata, "checkpointMetadata");
 
@@ -3153,7 +3115,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     log.info("Checkpointing [%s] for taskGroup [%s]", checkpointMetadata, taskGroupId);
-    addNotice(new CheckpointNotice(taskGroupId, baseSequenceName, seekableMetadata));
+    addNotice(new CheckpointNotice(taskGroupId, seekableMetadata));
   }
 
   @VisibleForTesting

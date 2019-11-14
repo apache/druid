@@ -65,6 +65,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -313,7 +314,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
     // as TaskActionClient.
     final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    List<DataSegment> usedSegments;
+    Collection<DataSegment> usedSegments;
     while (true) {
       try {
         usedSegments =

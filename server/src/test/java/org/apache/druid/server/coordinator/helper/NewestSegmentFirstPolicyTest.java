@@ -28,10 +28,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.assertj.core.api.Assertions;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -40,9 +41,9 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class NewestSegmentFirstPolicyTest
 {
@@ -311,31 +312,19 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>();
-    expectedSegmentsToCompact.addAll(
-        timeline
-            .lookup(Intervals.of("2017-12-03/2017-12-04"))
-            .stream()
-            .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-            .map(PartitionChunk::getObject)
-            .collect(Collectors.toList())
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-03/2017-12-04"), Partitions.ONLY_COMPLETE)
     );
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
+    expectedSegmentsToCompact.sort(Comparator.naturalOrder());
 
-    expectedSegmentsToCompact.clear();
-    expectedSegmentsToCompact.addAll(
-        timeline
-            .lookup(Intervals.of("2017-12-01/2017-12-02"))
-            .stream()
-            .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-            .map(PartitionChunk::getObject)
-            .collect(Collectors.toList())
+    final List<DataSegment> expectedSegmentsToCompact2 = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
     );
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
+    expectedSegmentsToCompact2.sort(Comparator.naturalOrder());
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertThat(iterator)
+              .toIterable()
+              .containsExactly(expectedSegmentsToCompact, expectedSegmentsToCompact2);
   }
 
   @Test
@@ -519,18 +508,17 @@ public class NewestSegmentFirstPolicyTest
     final String version = DateTimes.nowUtc().toString();
 
     final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
-    orderedSpecs.sort((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.totalInterval, s2.totalInterval));
-    Collections.reverse(orderedSpecs);
+    orderedSpecs.sort(Comparator.comparing(s -> s.totalInterval, Comparators.intervalsByStartThenEnd().reversed()));
 
     for (SegmentGenerateSpec spec : orderedSpecs) {
-      Interval remaininInterval = spec.totalInterval;
+      Interval remainingInterval = spec.totalInterval;
 
-      while (!Intervals.isEmpty(remaininInterval)) {
+      while (!Intervals.isEmpty(remainingInterval)) {
         final Interval segmentInterval;
-        if (remaininInterval.toDuration().isLongerThan(spec.segmentPeriod.toStandardDuration())) {
-          segmentInterval = new Interval(spec.segmentPeriod, remaininInterval.getEnd());
+        if (remainingInterval.toDuration().isLongerThan(spec.segmentPeriod.toStandardDuration())) {
+          segmentInterval = new Interval(spec.segmentPeriod, remainingInterval.getEnd());
         } else {
-          segmentInterval = remaininInterval;
+          segmentInterval = remainingInterval;
         }
 
         for (int i = 0; i < spec.numSegmentsPerShard; i++) {
@@ -549,7 +537,7 @@ public class NewestSegmentFirstPolicyTest
           segments.add(segment);
         }
 
-        remaininInterval = SegmentCompactorUtil.removeIntervalFromEnd(remaininInterval, segmentInterval);
+        remainingInterval = SegmentCompactorUtil.removeIntervalFromEnd(remainingInterval, segmentInterval);
       }
     }
 

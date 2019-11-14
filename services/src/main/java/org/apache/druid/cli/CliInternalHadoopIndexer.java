@@ -36,7 +36,7 @@ import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.Jobby;
 import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
-import org.apache.druid.indexer.path.MetadataStoreBasedUsedSegmentLister;
+import org.apache.druid.indexer.path.MetadataStoreBasedUsedSegmentsRetriever;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -112,7 +112,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
           HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
               config.getSchema(),
               HadoopDruidIndexerConfig.JSON_MAPPER,
-              new MetadataStoreBasedUsedSegmentLister(
+              new MetadataStoreBasedUsedSegmentsRetriever(
                   injector.getInstance(IndexerMetadataStorageCoordinator.class)
               )
           )

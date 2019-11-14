@@ -61,12 +61,7 @@ public interface Supervisor
    * represented by {@param currentCheckpoint} DataSourceMetadata
    *
    * @param taskGroupId        unique Identifier to figure out for which sequence to do checkpointing
-   * @param baseSequenceName   baseSequenceName
    * @param checkpointMetadata metadata for the sequence to currently checkpoint
    */
-  void checkpoint(
-      @Nullable Integer taskGroupId,
-      @Deprecated String baseSequenceName,
-      DataSourceMetadata checkpointMetadata
-  );
+  void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata);
 }

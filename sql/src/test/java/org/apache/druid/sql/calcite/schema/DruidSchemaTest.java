@@ -152,6 +152,7 @@ public class DruidSchemaTest extends CalciteTestBase
                    .interval(Intervals.of("2000/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index1
     ).add(
@@ -160,6 +161,7 @@ public class DruidSchemaTest extends CalciteTestBase
                    .interval(Intervals.of("2001/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     ).add(
@@ -168,6 +170,7 @@ public class DruidSchemaTest extends CalciteTestBase
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     );
