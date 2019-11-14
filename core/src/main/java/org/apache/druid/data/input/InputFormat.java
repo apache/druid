@@ -32,9 +32,9 @@ import org.apache.druid.guice.annotations.UnstableApi;
 /**
  * InputFormat abstracts the file format of input data.
  * It creates a {@link InputEntityReader} to read data and parse it into {@link InputRow}.
- * The created SplitReader is used by {@link InputSourceReader}.
+ * The created InputEntityReader is used by {@link InputSourceReader}.
  *
- * @see NestedInputFormat for nested input formats such as JSON.
+ * See {@link NestedInputFormat} for nested input formats such as JSON.
  */
 @UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -48,7 +48,7 @@ public interface InputFormat
    * Trait to indicate that a file can be split into multiple {@link InputSplit}s.
    *
    * This method is not being used anywhere for now, but should be considered
-   * in {@link SplittableInputSource#createSplits}.
+   * in {@link SplittableInputSource#createSplits} in the future.
    */
   @JsonIgnore
   boolean isSplittable();

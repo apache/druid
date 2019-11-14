@@ -67,7 +67,7 @@ public interface InputSource
   boolean needsFormat();
 
   /**
-   * Create an {@link InputSourceReader}.
+   * Creates an {@link InputSourceReader}.
    *
    * @param inputRowSchema     for {@link InputRow}
    * @param inputFormat        to parse data. It can be null if {@link #needsFormat()} = true

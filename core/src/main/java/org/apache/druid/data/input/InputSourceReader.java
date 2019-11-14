@@ -27,7 +27,7 @@ import java.io.IOException;
 
 /**
  * InputSourceReader reads data from {@link InputSource} and returns a {@link CloseableIterator} of
- * {@link InputRow}. See {@link InputSource} for an example usage.
+ * {@link InputRow}s. See {@link InputSource} for an example usage.
  *
  * Implementations of this class can use {@link InputEntity} and {@link InputEntityReader}. {@link InputFormat}
  * can be useful to understand how to create an InputEntityReader.

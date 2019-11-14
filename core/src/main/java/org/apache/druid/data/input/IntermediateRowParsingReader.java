@@ -28,9 +28,9 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then parse them
- * into {@link InputRow}s. For example, {@link org.apache.druid.data.input.impl.CsvReader} parses bytes
- * into string lines, and then parses those lines into InputRows.
+ * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
+ * For example, {@link org.apache.druid.data.input.impl.CsvReader} parses bytes into string lines, and then parses
+ * those lines into InputRows.
  *
  * @param <T> type of intermediate row. For example, it can be {@link String} for text formats.
  */

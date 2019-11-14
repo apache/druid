@@ -32,6 +32,8 @@ import java.io.InputStream;
 
 /**
  * InputEntity abstracts an object and knows how to read bytes from the given object.
+ *
+ * @param <T> Type of input entity
  */
 @UnstableApi
 public interface InputEntity<T>
@@ -39,7 +41,7 @@ public interface InputEntity<T>
   Logger LOG = new Logger(InputEntity.class);
 
   int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KB
-  int DEFAULT_MAX_FETCH_RETRY = 2; // 3 tries including the initial try
+  int DEFAULT_MAX_NUM_FETCH_TRIES = 3; // 3 tries including the initial try
 
   /**
    * CleanableFile is the result type of {@link #fetch}.
@@ -83,7 +85,7 @@ public interface InputEntity<T>
           tempFile,
           fetchBuffer,
           getFetchRetryCondition(),
-          DEFAULT_MAX_FETCH_RETRY,
+          DEFAULT_MAX_NUM_FETCH_TRIES,
           StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
       );
     }

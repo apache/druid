@@ -78,7 +78,7 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
   public CloseableIterator<InputRowListPlusJson> sample()
   {
     return createIterator(entity -> {
-      // InputEntitySampler is stateful and so a new one should be created per entity.
+      // InputEntityReader is stateful and so a new one should be created per entity.
       final InputEntityReader reader = inputFormat.createReader(inputRowSchema);
       try {
         return reader.sample(sourceIterator.next(), temporaryDirectory);

@@ -24,6 +24,9 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 
 import java.util.List;
 
+/**
+ * Schema of {@link InputRow}.
+ */
 public class InputRowSchema
 {
   private final TimestampSpec timestampSpec;
