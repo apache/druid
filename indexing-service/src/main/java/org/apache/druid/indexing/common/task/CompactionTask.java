@@ -130,6 +130,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
 
   private static final String TYPE = "compact";
+
   static {
     Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
   }

@@ -37,9 +37,11 @@ public class Tasks
   public static final int DEFAULT_REALTIME_TASK_PRIORITY = 75;
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
+
   static {
     Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
   }
+
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
@@ -55,6 +57,7 @@ public class Tasks
    * org.apache.druid.server.coordinator.duty.NewestSegmentFirstIterator} for more details.
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
+
   static {
     Verify.verify(STORE_COMPACTION_STATE_KEY.equals(CompactSegments.STORE_COMPACTION_STATE_KEY));
   }
