@@ -285,20 +285,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       List<Interval> intervals
   )
   {
-    if (intervals == null || intervals.isEmpty()) {
-      throw new IAE("null/empty intervals");
-    }
-
     final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
-    for (int i = 0; i < intervals.size(); i++) {
-      sb.append(
-          StringUtils.format("(start < ? AND %1$send%1$s > ?)", connector.getQuoteString())
-      );
-      if (i == intervals.size() - 1) {
-        sb.append(")");
-      } else {
-        sb.append(" OR ");
+    sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ?");
+    if (!intervals.isEmpty()) {
+      sb.append(" AND (");
+      for (int i = 0; i < intervals.size(); i++) {
+        sb.append(
+            StringUtils.format("(start < ? AND %1$send%1$s > ?)", connector.getQuoteString())
+        );
+        if (i == intervals.size() - 1) {
+          sb.append(")");
+        } else {
+          sb.append(" OR ");
+        }
       }
     }
 
