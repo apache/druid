@@ -39,17 +39,17 @@ import java.util.stream.Stream;
  * InputSourceReader iterating multiple {@link InputEntity}s. This class could be used for
  * most of {@link org.apache.druid.data.input.InputSource}s.
  */
-public class InputEntityIteratingReader<T> implements InputSourceReader
+public class InputEntityIteratingReader implements InputSourceReader
 {
   private final InputRowSchema inputRowSchema;
   private final InputFormat inputFormat;
-  private final Iterator<InputEntity<T>> sourceIterator;
+  private final Iterator<InputEntity> sourceIterator;
   private final File temporaryDirectory;
 
   InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      Stream<InputEntity<T>> sourceStream,
+      Stream<InputEntity> sourceStream,
       File temporaryDirectory
   )
   {
@@ -89,7 +89,7 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
     });
   }
 
-  private <R> CloseableIterator<R> createIterator(Function<InputEntity<T>, CloseableIterator<R>> rowPopulator)
+  private <R> CloseableIterator<R> createIterator(Function<InputEntity, CloseableIterator<R>> rowPopulator)
   {
     return CloseableIterators.withEmptyBaggage(sourceIterator).flatMap(rowPopulator);
   }

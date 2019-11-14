@@ -33,37 +33,37 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpEntity implements InputEntity<URI>
+public class HttpEntity implements InputEntity
 {
-  private final URI split;
+  private final URI uri;
   @Nullable
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
   HttpEntity(
-      URI split,
+      URI uri,
       @Nullable String httpAuthenticationUsername,
       @Nullable PasswordProvider httpAuthenticationPasswordProvider
   )
   {
-    this.split = split;
+    this.uri = uri;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
   }
 
   @Override
-  public URI getObject()
+  public URI getUri()
   {
-    return split;
+    return uri;
   }
 
   @Override
   public InputStream open() throws IOException
   {
     return CompressionUtils.decompress(
-        openURLConnection(split, httpAuthenticationUsername, httpAuthenticationPasswordProvider).getInputStream(),
-        split.toString()
+        openURLConnection(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider).getInputStream(),
+        uri.toString()
     );
   }
 

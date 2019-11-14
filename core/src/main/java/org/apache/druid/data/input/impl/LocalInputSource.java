@@ -111,7 +111,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
       @Nullable File temporaryDirectory
   )
   {
-    return new InputEntityIteratingReader<>(
+    return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
         // formattableReader() is supposed to be called in each task that actually creates segments.

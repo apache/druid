@@ -44,7 +44,7 @@ public interface InputEntityReader
    */
   ObjectWriter DEFAULT_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
 
-  CloseableIterator<InputRow> read(InputEntity<?> source, File temporaryDirectory) throws IOException;
+  CloseableIterator<InputRow> read(InputEntity source, File temporaryDirectory) throws IOException;
 
-  CloseableIterator<InputRowListPlusJson> sample(InputEntity<?> source, File temporaryDirectory) throws IOException;
+  CloseableIterator<InputRowListPlusJson> sample(InputEntity source, File temporaryDirectory) throws IOException;
 }

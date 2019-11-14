@@ -108,7 +108,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
       @Nullable File temporaryDirectory
   )
   {
-    return new InputEntityIteratingReader<>(
+    return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
         createSplits(inputFormat, null).map(split -> new HttpEntity(

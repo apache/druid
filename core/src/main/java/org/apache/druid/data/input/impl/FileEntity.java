@@ -28,8 +28,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 
-public class FileEntity implements InputEntity<File>
+public class FileEntity implements InputEntity
 {
   private final File file;
 
@@ -58,9 +59,9 @@ public class FileEntity implements InputEntity<File>
   }
 
   @Override
-  public File getObject()
+  public URI getUri()
   {
-    return file;
+    return file.toURI();
   }
 
   @Override

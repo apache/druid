@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -59,6 +60,11 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
             theMap
         )
     );
+  }
+
+  public static InputRow parse(InputRowSchema inputRowSchema, Map<String, Object> theMap) throws ParseException
+  {
+    return parse(inputRowSchema.getTimestampSpec(), inputRowSchema.getDimensionsSpec(), theMap);
   }
 
   public static InputRow parse(

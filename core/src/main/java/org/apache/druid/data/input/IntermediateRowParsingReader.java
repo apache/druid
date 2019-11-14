@@ -37,7 +37,7 @@ import java.util.List;
 public abstract class IntermediateRowParsingReader<T> implements InputEntityReader
 {
   @Override
-  public CloseableIterator<InputRow> read(InputEntity<?> source, File temporaryDirectory) throws IOException
+  public CloseableIterator<InputRow> read(InputEntity source, File temporaryDirectory) throws IOException
   {
     return intermediateRowIterator(source, temporaryDirectory).flatMap(row -> {
       try {
@@ -56,7 +56,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample(InputEntity<?> source, File temporaryDirectory)
+  public CloseableIterator<InputRowListPlusJson> sample(InputEntity source, File temporaryDirectory)
       throws IOException
   {
     return intermediateRowIterator(source, temporaryDirectory).map(row -> {
@@ -83,7 +83,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * Creates an iterator of intermediate rows. The returned rows will be consumed by {@link #parseInputRows} and
    * {@link #toJson}.
    */
-  protected abstract CloseableIterator<T> intermediateRowIterator(InputEntity<?> source, File temporaryDirectory)
+  protected abstract CloseableIterator<T> intermediateRowIterator(InputEntity source, File temporaryDirectory)
       throws IOException;
 
   /**

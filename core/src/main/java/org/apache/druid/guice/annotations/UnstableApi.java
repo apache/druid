@@ -31,6 +31,9 @@ import java.lang.annotation.Target;
  * All public and protected fields, methods, and constructors of annotated classes and interfaces are considered
  * unstable in this sense.
  *
+ * Unstable APIs can become {@link PublicApi}s or {@link ExtensionPoint}s once they settle down. This change can happen
+ * only between major Druid release lines (e.g., 0.16.0 -> 0.17.0).
+ *
  * @see PublicApi
  * @see ExtensionPoint
  */

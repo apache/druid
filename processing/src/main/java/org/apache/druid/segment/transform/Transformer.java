@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.transform;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.Row;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +107,12 @@ public class Transformer
     if (transforms.isEmpty()) {
       transformedRow = row;
     } else {
-      transformedRow = InputRowListPlusJson.of(new TransformedInputRow(row.getInputRow(), transforms), row.getRaw());
+      final List<InputRow> originalRows = Preconditions.checkNotNull(row.getInputRows(), "rows before transform");
+      final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
+      for (InputRow originalRow : originalRows) {
+        transformedRows.add(new TransformedInputRow(originalRow, transforms));
+      }
+      transformedRow = InputRowListPlusJson.of(transformedRows, row.getRawJson());
     }
 
     if (valueMatcher != null) {

@@ -24,10 +24,12 @@ import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 
+import javax.annotation.Nullable;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.ByteBuffer;
 
-public class ByteEntity implements InputEntity<ByteBuffer>
+public class ByteEntity implements InputEntity
 {
   private final ByteBuffer buffer;
 
@@ -42,9 +44,10 @@ public class ByteEntity implements InputEntity<ByteBuffer>
   }
 
   @Override
-  public ByteBuffer getObject()
+  @Nullable
+  public URI getUri()
   {
-    return buffer;
+    return null;
   }
 
   @Override

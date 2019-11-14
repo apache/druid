@@ -50,7 +50,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIterator<String> intermediateRowIterator(InputEntity<?> source, File temporaryDirectory)
+  public CloseableIterator<String> intermediateRowIterator(InputEntity source, File temporaryDirectory)
       throws IOException
   {
     final LineIterator delegate = new LineIterator(

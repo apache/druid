@@ -81,13 +81,7 @@ public class CsvReader extends TextReader
   public List<InputRow> parseInputRows(String line) throws IOException, ParseException
   {
     final Map<String, Object> zipped = parseLine(line);
-    return Collections.singletonList(
-        MapInputRowParser.parse(
-            getInputRowSchema().getTimestampSpec(),
-            getInputRowSchema().getDimensionsSpec(),
-            zipped
-        )
-    );
+    return Collections.singletonList(MapInputRowParser.parse(getInputRowSchema(), zipped));
   }
 
   @Override

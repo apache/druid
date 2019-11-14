@@ -25,18 +25,18 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 
 /**
- * InputEntity abstracts an object and knows how to read bytes from the given object.
- *
- * @param <T> Type of input entity
+ * InputEntity abstracts an input entity and knows how to read bytes from the given entity.
  */
 @UnstableApi
-public interface InputEntity<T>
+public interface InputEntity
 {
   Logger LOG = new Logger(InputEntity.class);
 
@@ -52,18 +52,23 @@ public interface InputEntity<T>
     File file();
   }
 
-  T getObject();
+  /**
+   * Returns an URI to identify the input entity. Implementations can return null if they don't have
+   * an unique URI.
+   */
+  @Nullable
+  URI getUri();
 
   /**
-   * Opens an {@link InputStream} on the object directly.
-   * This is the basic way to read the given object.
+   * Opens an {@link InputStream} on the input entity directly.
+   * This is the basic way to read the given entity.
    *
    * @see #fetch as an alternative way to read data.
    */
   InputStream open() throws IOException;
 
   /**
-   * Fetches the object into the local storage.
+   * Fetches the input entity into the local storage.
    * This method might be preferred instead of {@link #open()}, for example
    *
    * - {@link InputFormat} requires expensive random access on remote storage.
@@ -71,14 +76,14 @@ public interface InputEntity<T>
    *
    * @param temporaryDirectory to store temp data. This directory will be removed automatically once
    *                           the task finishes.
-   * @param fetchBuffer        is used to fetch remote object into local storage.
+   * @param fetchBuffer        is used to fetch remote entity into local storage.
    *
    * @see FileUtils#copyLarge
    */
   default CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
   {
-    final File tempFile = File.createTempFile("druid-object-source", ".tmp", temporaryDirectory);
-    LOG.debug("Fetching object into file[%s]", tempFile.getAbsolutePath());
+    final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
+    LOG.debug("Fetching entity into file[%s]", tempFile.getAbsolutePath());
     try (InputStream is = open()) {
       FileUtils.copyLarge(
           is,

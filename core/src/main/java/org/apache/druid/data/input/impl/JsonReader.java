@@ -52,13 +52,7 @@ public class JsonReader extends TextReader
   {
     final JsonNode document = mapper.readValue(line, JsonNode.class);
     final Map<String, Object> flattened = flattener.flatten(document);
-    return Collections.singletonList(
-        MapInputRowParser.parse(
-            getInputRowSchema().getTimestampSpec(),
-            getInputRowSchema().getDimensionsSpec(),
-            flattened
-        )
-    );
+    return Collections.singletonList(MapInputRowParser.parse(getInputRowSchema(), flattened));
   }
 
   @Override
