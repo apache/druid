@@ -25,27 +25,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Signifies that the annotated type is an extension point. Extension points are interfaces or non-final classes that
- * may be subclassed in extensions in order to add functionality to Druid. Extension points may change in breaking ways
- * only between major Druid release lines (e.g. 0.10.x -> 0.11.0), but otherwise must remain stable. Extension points
- * may change at any time in non-breaking ways, however, such as by adding new default methods to an interface.
+ * Signifies that the annotated entity is an unstable API for extension authors. Unstable APIs may change at any time
+ * in breaking ways even between minor Druid release lines (e.g., 0.16.0 -> 0.16.1).
  *
  * All public and protected fields, methods, and constructors of annotated classes and interfaces are considered
- * stable in this sense. If a class is not annotated, but an individual field, method, or constructor is
- * annotated, then only that particular field, method, or constructor is considered an extension API.
- *
- * Extension points are all considered public APIs in the sense of {@link PublicApi}, even if not explicitly annotated
- * as such.
- *
- * Note that there are number of injectable interfaces that are not annotated with {@code ExtensionPoint}. You may
- * still extend these interfaces in extensions, but your extension may need to be recompiled even for a minor
- * update of Druid.
+ * unstable in this sense.
  *
  * @see PublicApi
- * @see UnstableApi
+ * @see ExtensionPoint
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.SOURCE)
-public @interface ExtensionPoint
+public @interface UnstableApi
 {
 }

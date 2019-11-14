@@ -20,7 +20,7 @@
 package org.apache.druid.data.input;
 
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.io.IOException;
  *
  * See {@link InputEntityIteratingReader} as an example.
  */
-@ExtensionPoint
+@UnstableApi
 public interface InputSourceReader
 {
   CloseableIterator<InputRow> read() throws IOException;

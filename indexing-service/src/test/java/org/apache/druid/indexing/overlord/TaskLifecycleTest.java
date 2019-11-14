@@ -284,7 +284,7 @@ public class TaskLifecycleTest
   private static class MockExceptionInputSource extends AbstractInputSource
   {
     @Override
-    protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
     {
       return new InputSourceReader()
       {
@@ -336,7 +336,7 @@ public class TaskLifecycleTest
   private static class MockInputSource extends AbstractInputSource
   {
     @Override
-    protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
     {
       return new InputSourceReader()
       {

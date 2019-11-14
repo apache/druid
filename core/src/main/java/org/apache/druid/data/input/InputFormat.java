@@ -27,7 +27,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 
 /**
  * InputFormat abstracts the file format of input data.
@@ -36,7 +36,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
  *
  * @see NestedInputFormat for nested input formats such as JSON.
  */
-@ExtensionPoint
+@UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "csv", value = CsvInputFormat.class),

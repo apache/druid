@@ -26,7 +26,7 @@ import java.io.File;
 
 /**
  * Abstract class for {@link InputSource}. This class provides a default implementation of {@link #reader} with
- * a sanity check. Child classes should implement one of {@link #formattableReader} or {@link #unformattableReader}
+ * a sanity check. Child classes should implement one of {@link #formattableReader} or {@link #fixedFormatReader}
  * depending on {@link #needsFormat()}.
  */
 public abstract class AbstractInputSource implements InputSource
@@ -45,7 +45,7 @@ public abstract class AbstractInputSource implements InputSource
           temporaryDirectory
       );
     } else {
-      return unformattableReader(inputRowSchema, temporaryDirectory);
+      return fixedFormatReader(inputRowSchema, temporaryDirectory);
     }
   }
 
@@ -58,7 +58,7 @@ public abstract class AbstractInputSource implements InputSource
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = true");
   }
 
-  protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = false");
   }

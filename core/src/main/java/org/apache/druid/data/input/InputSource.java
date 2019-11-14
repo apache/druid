@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -44,7 +44,7 @@ import java.io.File;
  *   }
  * }</pre>
  */
-@ExtensionPoint
+@UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "local", value = LocalInputSource.class),

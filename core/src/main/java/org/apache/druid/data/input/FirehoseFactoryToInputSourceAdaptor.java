@@ -92,7 +92,7 @@ public class FirehoseFactoryToInputSourceAdaptor extends AbstractInputSource imp
   }
 
   @Override
-  protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     return new FirehoseToInputSourceReaderAdaptor(firehoseFactory, inputRowParser, temporaryDirectory);
   }

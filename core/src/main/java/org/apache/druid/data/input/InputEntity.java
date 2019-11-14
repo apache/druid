@@ -20,7 +20,7 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -33,7 +33,7 @@ import java.io.InputStream;
 /**
  * InputEntity abstracts an object and knows how to read bytes from the given object.
  */
-@ExtensionPoint
+@UnstableApi
 public interface InputEntity<T>
 {
   Logger LOG = new Logger(InputEntity.class);
