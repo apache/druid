@@ -75,6 +75,28 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     return checkpointMetadata;
   }
 
+  // For backwards compatibility
+  @Deprecated
+  @JsonProperty
+  public SeekableStreamDataSourceMetadata getCurrentCheckPoint()
+  {
+    return checkpointMetadata;
+  }
+
+  /**
+   * Returning a dummy value so the objects from older versions still work
+   * with current version
+   * TODO : this should be removed in the next release
+   *
+   * @return dummy value
+   */
+  @Deprecated
+  @JsonProperty("sequenceName")
+  public String getBaseSequenceName()
+  {
+    return "dummy";
+  }
+
   @JsonProperty
   public SeekableStreamDataSourceMetadata getCheckpointMetadata()
   {
