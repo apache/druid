@@ -39,6 +39,10 @@ import org.apache.druid.indexing.common.TestFirehose;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.parsers.JSONExplodeSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -104,6 +108,7 @@ public class FirehoseSamplerTest
       "bad_timestamp,foo,,6"
   );
 
+
   private SamplerCache samplerCache;
   private FirehoseSampler firehoseSampler;
   private ParserType parserType;
@@ -141,6 +146,7 @@ public class FirehoseSamplerTest
 
     firehoseSampler.sample(null, null, null);
   }
+
 
   @Test
   public void testNoDataSchema()
@@ -262,6 +268,301 @@ public class FirehoseSamplerTest
         null,
         null
     ), data.get(5));
+  }
+
+  @Test
+  public void testNoFlattenExplode()
+  {
+    final List<Object> str_json_rows_simple = ImmutableList.of(
+        "{\"host\":\"kaka\",\"topic\":\"sky\"}"
+    );
+    FirehoseFactory firehoseFactory = getFirehoseFactory(str_json_rows_simple);
+    final JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("!!!_no_such_column_!!!", null, DateTimes.of("2010-01-01T00:00:00Z")),
+        new DimensionsSpec(null),
+        null,
+        null,
+        null
+    );
+
+    DataSchema dataSchema = new DataSchema("sampler", OBJECT_MAPPER.convertValue(
+        new StringInputRowParser(parseSpec, StandardCharsets.UTF_8.name()),
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    ), null, null, null, OBJECT_MAPPER);
+
+    SamplerResponse response = firehoseSampler.sample(
+        firehoseFactory,
+        dataSchema,
+        new SamplerConfig(4, null, false, null)
+    );
+
+
+    Assert.assertEquals(1, (int) response.getNumRowsRead());
+    Assert.assertEquals(1, (int) response.getNumRowsIndexed());
+    Assert.assertEquals(1, response.getData().size());
+
+    List<SamplerResponseRow> data = response.getData();
+
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_simple.get(0).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "host",
+            "kaka",
+            "topic",
+            "sky"
+        ),
+        null,
+        null
+    ), data.get(0));
+
+  }
+
+  @Test
+  public void testExplode()
+  {
+    final List<Object> str_json_rows_explode = ImmutableList.of(
+        "{ \"t\": \"2019-04-22T12:00\", \"dim1\": \"foo1\", \"bidders\":[\"Baron\",\"Caro\",\"Daro\"]}",
+        "{ \"t\": \"2019-04-23T12:00\", \"dim1\": \"foo2\", \"bidders\":[\"Aaron\",\"Baro\",\"Caro\"]}",
+        "{ \"t\": \"2019-04-24T12:00\", \"dim1\": \"foo3\", \"bidders\":[\"Caron\",\"Daro\",\"Earo\"]}"
+    );
+    FirehoseFactory firehoseFactory = getFirehoseFactory(str_json_rows_explode);
+    final JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("t", null, null), new DimensionsSpec(null),
+        null,
+        ImmutableList.of(
+            new JSONExplodeSpec("$.bidders", "path")
+        ),
+        null
+    );
+
+    DataSchema dataSchema = new DataSchema("sampler", OBJECT_MAPPER.convertValue(
+        new StringInputRowParser(parseSpec, StandardCharsets.UTF_8.name()),
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    ), null, null, null, OBJECT_MAPPER);
+
+    SamplerResponse response = firehoseSampler.sample(
+        firehoseFactory,
+        dataSchema,
+        new SamplerConfig(4, null, false, null)
+    );
+
+
+    Assert.assertEquals(4, (int) response.getNumRowsRead());
+    Assert.assertEquals(4, (int) response.getNumRowsIndexed());
+    Assert.assertEquals(4, response.getData().size());
+
+    List<SamplerResponseRow> data = response.getData();
+
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode.get(0).toString(),
+        ImmutableMap.of(
+            "bidders",
+            "Baron",
+            "__time",
+            1555934400000L,
+            "dim1",
+            "foo1"
+        ),
+        null,
+        null
+    ), data.get(0));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode.get(0).toString(),
+        ImmutableMap.of(
+            "bidders",
+            "Caro",
+            "__time",
+            1555934400000L,
+            "dim1",
+            "foo1"
+        ),
+        null,
+        null
+    ), data.get(1));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode.get(0).toString(),
+        ImmutableMap.of(
+            "bidders",
+            "Daro",
+            "__time",
+            1555934400000L,
+            "dim1",
+            "foo1"
+        ),
+        null,
+        null
+    ), data.get(2));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode.get(1).toString(),
+        ImmutableMap.of(
+            "bidders",
+            "Aaron",
+            "__time",
+            1556020800000L,
+            "dim1",
+            "foo2"
+        ),
+        null,
+        null
+    ), data.get(3));
+  }
+
+  @Test
+  public void testExplodeMore()
+  {
+    final List<Object> str_json_rows_explode_complex = ImmutableList.of(
+        "{\"messages\":[{\"host\":\"clarity\",\"topic\":\"moon\"}],\"value\":5}",
+        "{\"messages\":[{\"host\":\"kaka\",\"topic\":\"sky\"}],\"value\":6}",
+        "{\"messages\":[{\"host\":\"pivot\",\"popic\":\"sun\"},{\"host\":\"apm\",\"popic\":\"lol\"}],\"value\":4}"
+    );
+    FirehoseFactory firehoseFactory = getFirehoseFactory(str_json_rows_explode_complex);
+    final JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("!!!_no_such_column_!!!", null, DateTimes.of("2010-01-01T00:00:00Z")),
+        new DimensionsSpec(null),
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "messages.host", "$.messages.host"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "messages.popic", "$.messages.popic"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "messages.topic", "$.messages.topic")
+            )
+        ),
+        ImmutableList.of(
+            new JSONExplodeSpec("$.messages", "path")
+        ),
+        null
+    );
+
+    DataSchema dataSchema = new DataSchema("sampler", OBJECT_MAPPER.convertValue(
+        new StringInputRowParser(parseSpec, StandardCharsets.UTF_8.name()),
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    ), null, null, null, OBJECT_MAPPER);
+
+    SamplerResponse response = firehoseSampler.sample(
+        firehoseFactory,
+        dataSchema,
+        new SamplerConfig(3, null, false, null)
+    );
+
+    List<SamplerResponseRow> data = response.getData();
+    Assert.assertEquals(3, (int) response.getNumRowsRead());
+    Assert.assertEquals(3, (int) response.getNumRowsIndexed());
+    Assert.assertEquals(3, response.getData().size());
+
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode_complex.get(0).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "messages.topic",
+            "moon",
+            "messages.host",
+            "clarity",
+            "value",
+            "5"
+        ),
+        null,
+        null
+    ), data.get(0));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode_complex.get(1).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "messages.topic",
+            "sky",
+            "messages.host",
+            "kaka",
+            "value",
+            "6"
+        ),
+        null,
+        null
+    ), data.get(1));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode_complex.get(2).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "messages.popic",
+            "sun",
+            "messages.host",
+            "pivot",
+            "value",
+            "4"
+        ),
+        null,
+        null
+    ), data.get(2));
+
+    // check if cache work fine
+    String cacheKey = response.getCacheKey();
+    SamplerResponse cached_response = firehoseSampler.sample(
+        firehoseFactory,
+        dataSchema,
+        new SamplerConfig(500, cacheKey, false, 15000)
+    );
+    data = cached_response.getData();
+
+    Assert.assertEquals(3, (int) response.getNumRowsRead());
+    Assert.assertEquals(3, (int) response.getNumRowsIndexed());
+    Assert.assertEquals(3, response.getData().size());
+
+
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode_complex.get(0).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "messages.topic",
+            "moon",
+            "messages.host",
+            "clarity",
+            "value",
+            "5"
+        ),
+        null,
+        null
+    ), data.get(0));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode_complex.get(1).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "messages.topic",
+            "sky",
+            "messages.host",
+            "kaka",
+            "value",
+            "6"
+        ),
+        null,
+        null
+    ), data.get(1));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_json_rows_explode_complex.get(2).toString(),
+        ImmutableMap.of(
+            "__time",
+            1262304000000L,
+            "messages.popic",
+            "sun",
+            "messages.host",
+            "pivot",
+            "value",
+            "4"
+        ),
+        null,
+        null
+    ), data.get(2));
+
   }
 
   @Test
@@ -785,6 +1086,7 @@ public class FirehoseSamplerTest
         throw new UnsupportedOperationException();
     }
   }
+
 
   private FirehoseFactory<? extends InputRowParser> getFirehoseFactory(List<Object> seedRows)
   {

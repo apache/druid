@@ -46,11 +46,11 @@ public class ObjectExploders
         List<T> allObjs = obj;
         for (JSONExplodeSpec explodeSpec : explodeSpecList) {
           List<T> newAllObjs = new ArrayList<>();
-          final String path = explodeSpec.getExplodePath();
+          final String path = explodeSpec.getPath();
           for (T curObj : allObjs) {
             List<Object> arrayToExplode = exploderMaker.getExplodeArray(curObj, path);
             for (Object entry : arrayToExplode) {
-              T newObj = exploderMaker.setObj(curObj, entry, path);
+              T newObj = exploderMaker.setNodeWithValue(curObj, entry, path);
               newAllObjs.add(newObj);
             }
           }
@@ -69,7 +69,7 @@ public class ObjectExploders
   {
     List<Object> getExplodeArray(T node, String expr);
 
-    T setObj(T node, Object value, String expr);
+    T setNodeWithValue(T node, Object value, String expr);
 
     Object valueConversionFunction(JsonNode val);
 

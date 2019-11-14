@@ -35,6 +35,8 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -77,6 +79,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   {
     private final Firehose firehose;
     private final ScheduledExecutorService shutdownExec;
+    private Iterator<InputRow> parsedInputRows = new ArrayList<InputRow>().iterator();
     @GuardedBy("this")
     private boolean closed = false;
 
@@ -85,7 +88,6 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
       firehose = sampling
                  ? delegateFactory.connectForSampler(parser, temporaryDirectory)
                  : delegateFactory.connect(parser, temporaryDirectory);
-
       shutdownExec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
 
       shutdownExec.schedule(

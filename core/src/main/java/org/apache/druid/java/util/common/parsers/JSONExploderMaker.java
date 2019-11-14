@@ -64,7 +64,7 @@ public class JSONExploderMaker implements ObjectExploders.ExploderMaker<JsonNode
   }
 
   @Override
-  public JsonNode setObj(final JsonNode node, Object value, String expr)
+  public JsonNode setNodeWithValue(final JsonNode node, Object value, String expr)
   {
     final JsonPath jsonPath = JsonPath.compile(expr);
     JsonNode replica = node.deepCopy();

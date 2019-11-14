@@ -19,12 +19,19 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.JSONExplodeSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,6 +70,26 @@ public class InlineFirehoseTest
       ),
       CHARSET.name()
   );
+
+  private static final StringInputRowParser JSON_PARSER = new StringInputRowParser(
+      new JSONParseSpec(
+          new TimestampSpec("!!!_no_such_column_!!!", null, DateTimes.of("2010-01-01T00:00:00Z")),
+          new DimensionsSpec(null),
+          new JSONPathSpec(
+              true,
+              ImmutableList.of(
+                  new JSONPathFieldSpec(JSONPathFieldType.PATH, "messages.topic", "$.messages.topic"),
+                  new JSONPathFieldSpec(JSONPathFieldType.PATH, "messages.popic", "$.messages.popic"),
+                  new JSONPathFieldSpec(JSONPathFieldType.PATH, "messages.host", "$.messages.host")
+              )
+          ),
+          ImmutableList.of(
+              new JSONExplodeSpec("$.messages", null)
+          ),
+          null
+      ),
+      CHARSET.name()
+  );
   private static final String EMPTY = "";
   private static final String TIMESTAMP_0 = "0";
   private static final String VALUE_0 = "a";
@@ -74,6 +101,7 @@ public class InlineFirehoseTest
   private static final String LINE_0 = TIMESTAMP_0 + DELIMITER + VALUE_0;
   private static final String LINE_1 = TIMESTAMP_1 + DELIMITER + VALUE_1;
   private static final String MULTILINE = LINE_0 + "\n" + LINE_1;
+
 
   @Test
   public void testHasMoreEmpty()
@@ -191,6 +219,24 @@ public class InlineFirehoseTest
     Assert.assertNull(rowPlusRaw.getParseException());
 
     Assert.assertFalse(target.hasMore());
+  }
+
+  @Test
+  public void testExplodeSpec() throws IOException
+  {
+    String data =
+        "{\"messages\":[{\"host\":\"clarity\",\"topic\":\"moon\"},{\"host\":\"kaka\",\"topic\":\"sky\"}],\"value\":5}\n"
+        + "{\"messages\":[{\"host\":\"pivot\",\"popic\":\"sun\"},{\"host\":\"apm\",\"popic\":\"lol\"}],\"value\":4}\n"
+        + "{\"messages\":[{\"host\":\"imply\",\"dopik\":\"fun\"}],\"value\":2}";
+    InlineFirehose testFirehose = new InlineFirehose(data, JSON_PARSER);
+    int count = 0;
+    while (testFirehose.hasMore()) {
+      InputRowPlusRaw parsed = testFirehose.nextRowWithRaw();
+      count++;
+    }
+    Assert.assertEquals(5, count);
+
+
   }
 
   private static InlineFirehose create(String data)

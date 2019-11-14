@@ -148,7 +148,6 @@ public class DataSchema
       dimensionExclusions.addAll(aggregator.requiredFields());
       dimensionExclusions.add(aggregator.getName());
     }
-
     if (inputRowParser.getParseSpec() != null) {
       final DimensionsSpec dimensionsSpec = inputRowParser.getParseSpec().getDimensionsSpec();
       final TimestampSpec timestampSpec = inputRowParser.getParseSpec().getTimestampSpec();

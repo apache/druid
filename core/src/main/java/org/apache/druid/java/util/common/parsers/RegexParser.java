@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.collect.Utils;
@@ -108,6 +109,12 @@ public class RegexParser implements Parser<String, Object>
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
     }
+  }
+
+  @Override
+  public List<Map<String, Object>> parseToMapList(String input)
+  {
+    return ImmutableList.of(parseToMap(input));
   }
 
   @Override

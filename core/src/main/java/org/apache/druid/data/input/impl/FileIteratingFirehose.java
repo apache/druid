@@ -37,7 +37,8 @@ public class FileIteratingFirehose implements Firehose
 {
   private final Iterator<LineIterator> lineIterators;
   private final StringInputRowParser parser;
-  private final ArrayList<InputRow> parsedInputRows;
+  private Iterator<InputRow> parsedInputRows = new ArrayList<InputRow>().iterator();
+  private String raw = null;
   private LineIterator lineIterator = null;
 
   private final Closeable closer;
@@ -59,20 +60,17 @@ public class FileIteratingFirehose implements Firehose
     this.lineIterators = lineIterators;
     this.parser = parser;
     this.closer = closer;
-    this.parsedInputRows = new ArrayList<>();
   }
 
   @Override
   public boolean hasMore() throws IOException
   {
-    if (!parsedInputRows.isEmpty()) {
-      return true;
-    }
+
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
       lineIterator = getNextLineIterator();
     }
 
-    return lineIterator != null && lineIterator.hasNext();
+    return (lineIterator != null && lineIterator.hasNext()) || parsedInputRows.hasNext();
   }
 
   @Nullable
@@ -82,22 +80,17 @@ public class FileIteratingFirehose implements Firehose
     if (!hasMore()) {
       throw new NoSuchElementException();
     }
-    if (!parsedInputRows.isEmpty()) {
-      return parsedInputRows.remove(0);
+    if (parsedInputRows.hasNext()) {
+      return parsedInputRows.next();
     }
     return getNextRow();
   }
 
   private InputRow getNextRow()
   {
-    for (InputRow inputRow : parser.parseBatch(lineIterator.next())) {
-      parsedInputRows.add(inputRow);
-    }
-    if (!parsedInputRows.isEmpty()) {
-      return parsedInputRows.remove(0);
-    } else {
-      return null;
-    }
+    raw = lineIterator.next();
+    parsedInputRows = parser.parseBatch(raw).iterator();
+    return parsedInputRows.hasNext() ? parsedInputRows.next() : null;
   }
 
   @Override
@@ -106,10 +99,8 @@ public class FileIteratingFirehose implements Firehose
     if (!hasMore()) {
       throw new NoSuchElementException();
     }
-
-    String raw = lineIterator.next();
     try {
-      return InputRowPlusRaw.of(parser.parse(raw), StringUtils.toUtf8(raw));
+      return InputRowPlusRaw.of(nextRow(), StringUtils.toUtf8(raw));
     }
     catch (ParseException e) {
       return InputRowPlusRaw.of(StringUtils.toUtf8(raw), e);

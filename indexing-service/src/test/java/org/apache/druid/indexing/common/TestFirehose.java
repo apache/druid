@@ -34,9 +34,12 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 public class TestFirehose implements Firehose
@@ -113,6 +116,8 @@ public class TestFirehose implements Firehose
 
   private InputRowParser parser;
   private boolean closed;
+  private Iterator<InputRow> parsedInputRows = new ArrayList<InputRow>().iterator();
+  private Object raw = null;
 
   private TestFirehose(InputRowParser parser, boolean waitForClose, List<Object> seedRows)
   {
@@ -144,7 +149,7 @@ public class TestFirehose implements Firehose
         while (queue.isEmpty() && !closed) {
           wait();
         }
-        return !queue.isEmpty();
+        return !queue.isEmpty() || parsedInputRows.hasNext();
       }
     }
     catch (InterruptedException e) {
@@ -157,33 +162,42 @@ public class TestFirehose implements Firehose
   public InputRow nextRow()
   {
     synchronized (this) {
-      final InputRow row = parser instanceof StringInputRowParser
-                           ? ((StringInputRowParser) parser).parse((String) queue.removeFirst().orElse(null))
-                           : (InputRow) parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
-      if (row != null && row.getRaw(FAIL_DIM) != null) {
-        throw new ParseException(FAIL_DIM);
+      if (!hasMore()) {
+        throw new NoSuchElementException();
       }
-      return row;
+      if (parsedInputRows.hasNext()) {
+        return parsedInputRows.next();
+      }
+      raw = queue.removeFirst().orElse(null);
+      parsedInputRows = parser instanceof StringInputRowParser
+                        ? ((StringInputRowParser) parser).parseBatch((String) raw).iterator()
+                        : parser.parseBatch(raw).iterator();
+      if (parsedInputRows.hasNext()) {
+        InputRow row = parsedInputRows.next();
+        if (row != null && row.getRaw(FAIL_DIM) != null) {
+          throw new ParseException(FAIL_DIM);
+        }
+        return row;
+      } else {
+        throw new ParseException(null);
+      }
     }
   }
 
   @Override
   public InputRowPlusRaw nextRowWithRaw()
   {
-    Object next = queue.removeFirst().orElse(null);
-
     synchronized (this) {
       try {
-        final InputRow row = parser instanceof StringInputRowParser
-                             ? ((StringInputRowParser) parser).parse((String) next)
-                             : (InputRow) parser.parseBatch(next).get(0);
-
+        final InputRow row = nextRow();
+        final Object next = raw;
         if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }
         return InputRowPlusRaw.of(row, next != null ? StringUtils.toUtf8(next.toString()) : null);
       }
       catch (ParseException e) {
+        final Object next = raw;
         return InputRowPlusRaw.of(next != null ? StringUtils.toUtf8(next.toString()) : null, e);
       }
     }

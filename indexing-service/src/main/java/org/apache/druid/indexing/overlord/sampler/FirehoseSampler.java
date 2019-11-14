@@ -88,6 +88,13 @@ public class FirehoseSampler
               throw new ParseException(null);
             }
 
+
+            @Override
+            public List<Map<String, Object>> parseToMapList(String input)
+            {
+              throw new ParseException(null);
+            }
+
             @Override
             public void setFieldNames(Iterable<String> fieldNames)
             {
@@ -162,7 +169,6 @@ public class FirehoseSampler
     if (samplerConfig == null) {
       samplerConfig = SamplerConfig.empty();
     }
-
     final InputRowParser parser = dataSchema.getParser() != null
                                   ? dataSchema.getParser()
                                   : (firehoseFactory instanceof AbstractTextFilesFirehoseFactory
@@ -208,14 +214,12 @@ public class FirehoseSampler
         String raw = null;
         try {
           final InputRowPlusRaw row = firehose.nextRowWithRaw();
-
           if (row == null || row.isEmpty()) {
             continue;
           }
 
           if (row.getRaw() != null) {
             raw = StringUtils.fromUtf8(row.getRaw());
-
             if (!usingCachedData) {
               dataToCache.add(row.getRaw());
             }
@@ -248,7 +252,6 @@ public class FirehoseSampler
           counter++;
         }
       }
-
       final List<String> columnNames = index.getColumnNames();
       columnNames.remove(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
 

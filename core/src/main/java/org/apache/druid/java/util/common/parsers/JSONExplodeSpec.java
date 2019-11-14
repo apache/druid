@@ -29,23 +29,23 @@ public class JSONExplodeSpec
   public static final JSONExplodeSpec DEFAULT =
       new JSONExplodeSpec(null, null);
 
-  private final String explodePath;
+  private final String path;
   private final String type;
 
   @JsonCreator
   public JSONExplodeSpec(
-      @JsonProperty("path") String explodePath,
+      @JsonProperty("path") String path,
       @JsonProperty("type") String type
   )
   {
-    this.explodePath = explodePath;
+    this.path = path;
     this.type = type;
   }
 
   @JsonProperty
-  public String getExplodePath()
+  public String getPath()
   {
-    return explodePath;
+    return path;
   }
 
   @JsonProperty
@@ -65,21 +65,21 @@ public class JSONExplodeSpec
       return false;
     }
     final JSONExplodeSpec that = (JSONExplodeSpec) o;
-    return explodePath.equals(that.explodePath) &&
+    return path.equals(that.path) &&
            type.equals(that.type);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(explodePath, type);
+    return Objects.hash(path, type);
   }
 
   @Override
   public String toString()
   {
     return "JSONExplodeSpec{" +
-           "explodePath=" + explodePath +
+           "path=" + path +
            ", type=" + type +
            '}';
   }

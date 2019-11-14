@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;
 
@@ -62,7 +61,6 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   {
     this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.mapParser = new MapInputRowParser(parseSpec);
-
     if (encoding != null) {
       this.charset = Charset.forName(encoding);
     } else {
@@ -79,7 +77,9 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   @Override
   public List<InputRow> parseBatch(ByteBuffer input)
   {
-    return Utils.nullableListOf(parseMap(buildStringKeyMap(input)));
+    final List<InputRow> theList = new ArrayList<>();
+    buildStringKeyMapList(input).forEach(e -> theList.add(parseMap(e)));
+    return theList;
   }
 
   @JsonProperty
@@ -127,6 +127,34 @@ public class StringInputRowParser implements ByteBufferInputRowParser
       throw new ParseException("Failed with CoderResult[%s]", coderResult);
     }
     return theMap;
+  }
+
+  private List<Map<String, Object>> buildStringKeyMapList(ByteBuffer input)
+  {
+    int payloadSize = input.remaining();
+    if (chars == null || chars.remaining() < payloadSize) {
+      chars = CharBuffer.allocate(payloadSize);
+    }
+
+    final CoderResult coderResult = charset.newDecoder()
+                                           .onMalformedInput(CodingErrorAction.REPLACE)
+                                           .onUnmappableCharacter(CodingErrorAction.REPLACE)
+                                           .decode(input, chars, true);
+
+    List<Map<String, Object>> theMapList;
+    if (coderResult.isUnderflow()) {
+      chars.flip();
+      try {
+        initializeParser();
+        theMapList = parser.parseToMapList(chars.toString());
+      }
+      finally {
+        chars.clear();
+      }
+    } else {
+      throw new ParseException("Failed with CoderResult[%s]", coderResult);
+    }
+    return theMapList;
   }
 
   public void initializeParser()

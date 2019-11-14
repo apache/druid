@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 public class SamplerCache
@@ -124,6 +123,8 @@ public class SamplerCache
   {
     private final ByteBufferInputRowParser parser;
     private final Iterator<byte[]> it;
+    private Iterator<InputRow> parsedInputRows = new ArrayList<InputRow>().iterator();
+    private byte[] raw = null;
 
     public SamplerCacheFirehose(ByteBufferInputRowParser parser, Collection<byte[]> data)
     {
@@ -138,7 +139,7 @@ public class SamplerCache
     @Override
     public boolean hasMore()
     {
-      return it.hasNext();
+      return it.hasNext() || parsedInputRows.hasNext();
     }
 
     @Nullable
@@ -148,9 +149,12 @@ public class SamplerCache
       if (!hasMore()) {
         throw new NoSuchElementException();
       }
-
-      List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(it.next()));
-      return rows.isEmpty() ? null : rows.get(0);
+      if (parsedInputRows.hasNext()) {
+        return parsedInputRows.next();
+      }
+      raw = it.next();
+      parsedInputRows = parser.parseBatch(ByteBuffer.wrap(raw)).iterator();
+      return parsedInputRows.hasNext() ? parsedInputRows.next() : null;
     }
 
     @Override
@@ -159,12 +163,9 @@ public class SamplerCache
       if (!hasMore()) {
         throw new NoSuchElementException();
       }
-
-      byte[] raw = it.next();
-
       try {
-        List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(raw));
-        return InputRowPlusRaw.of(rows.isEmpty() ? null : rows.get(0), raw);
+        InputRow myrow = nextRow();
+        return InputRowPlusRaw.of(myrow, raw);
       }
       catch (ParseException e) {
         return InputRowPlusRaw.of(raw, e);

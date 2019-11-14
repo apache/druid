@@ -32,6 +32,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -41,6 +43,8 @@ public class InlineFirehose implements Firehose
 {
   private final StringInputRowParser parser;
   private final LineIterator lineIterator;
+  private Iterator<InputRow> parsedInputRows = new ArrayList<InputRow>().iterator();
+  private String raw = null;
 
   InlineFirehose(String data, StringInputRowParser parser) throws IOException
   {
@@ -54,30 +58,42 @@ public class InlineFirehose implements Firehose
   @Override
   public boolean hasMore()
   {
+    return lineIterator.hasNext() || parsedInputRows.hasNext();
+  }
+
+  private boolean hasMoreRaw()
+  {
     return lineIterator.hasNext();
   }
 
   @Override
   public InputRow nextRow()
   {
-    return parser.parse(nextRaw());
+    if (parsedInputRows.hasNext()) {
+      return parsedInputRows.next();
+    }
+    parsedInputRows = parser.parseBatch(nextRaw()).iterator();
+    if (parsedInputRows.hasNext()) {
+      return parsedInputRows.next();
+    } else {
+      throw new NoSuchElementException();
+    }
   }
 
   private String nextRaw()
   {
-    if (!hasMore()) {
+    if (!hasMoreRaw()) {
       throw new NoSuchElementException();
     }
-
-    return lineIterator.next();
+    raw = lineIterator.next();
+    return raw;
   }
 
   @Override
   public InputRowPlusRaw nextRowWithRaw()
   {
-    String raw = nextRaw();
     try {
-      return InputRowPlusRaw.of(parser.parse(raw), StringUtils.toUtf8(raw));
+      return InputRowPlusRaw.of(nextRow(), StringUtils.toUtf8(raw));
     }
     catch (ParseException e) {
       return InputRowPlusRaw.of(StringUtils.toUtf8(raw), e);
