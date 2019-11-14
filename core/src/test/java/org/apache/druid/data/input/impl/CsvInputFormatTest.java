@@ -21,14 +21,12 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowSchema;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class CsvInputFormatTest
@@ -52,20 +50,5 @@ public class CsvInputFormatTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a,] has a comma, it cannot");
     new CsvInputFormat(Collections.singletonList("a,"), ",", false, 0);
-  }
-
-  @Test
-  public void testComma2()
-  {
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), ",", false, 0);
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("column[a,] not in columns");
-    format.createReader(
-        new InputRowSchema(
-            new TimestampSpec("timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b"))),
-            Collections.emptyList()
-        )
-    );
   }
 }
