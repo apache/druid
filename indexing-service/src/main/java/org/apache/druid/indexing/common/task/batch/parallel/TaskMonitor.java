@@ -164,8 +164,10 @@ public class TaskMonitor<T extends Task>
               }
             }
             catch (Throwable t) {
+              // Note that we only log the message here so that task monitoring continues to happen or else
+              // the task which created this monitor will keep on waiting endlessly assuming monitored tasks
+              // are still running.
               log.error(t, "Error while monitoring");
-              throw t;
             }
           },
           taskStatusCheckingPeriod,

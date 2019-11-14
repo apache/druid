@@ -4,10 +4,10 @@ exports[`data source view matches snapshot 1`] = `
 <div
   className="datasource-view app-view no-chart"
 >
-  <ViewControlBar
+  <Memo(ViewControlBar)
     label="Datasources"
   >
-    <RefreshButton
+    <Memo(RefreshButton)
       localStorageKey="datasources-refresh-rate"
       onRefresh={[Function]}
     />
@@ -58,7 +58,7 @@ exports[`data source view matches snapshot 1`] = `
       label="Show unused"
       onChange={[Function]}
     />
-    <TableColumnSelector
+    <Memo(TableColumnSelector)
       columns={
         Array [
           "Datasource",
@@ -76,7 +76,7 @@ exports[`data source view matches snapshot 1`] = `
       onChange={[Function]}
       tableColumnsHidden={Array []}
     />
-  </ViewControlBar>
+  </Memo(ViewControlBar)>
   <ReactTable
     AggregatedComponent={[Function]}
     ExpanderComponent={[Function]}

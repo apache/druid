@@ -64,6 +64,7 @@ import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppendera
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -96,6 +97,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
+            binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
@@ -154,7 +156,8 @@ public class CliMiddleManager extends ServerRunnable
                 node.getHostAndPortToUse(),
                 config.getIp(),
                 config.getCapacity(),
-                config.getVersion()
+                config.getVersion(),
+                config.getCategory()
             );
           }
 
@@ -165,7 +168,8 @@ public class CliMiddleManager extends ServerRunnable
             return new WorkerNodeService(
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
-                workerConfig.getVersion()
+                workerConfig.getVersion(),
+                workerConfig.getCategory()
             );
           }
         },

@@ -69,7 +69,7 @@ There are currently no configuration properties specific to Moving Average.
 |dimensions|A JSON list of [DimensionSpec](../../querying/dimensionspecs.md) (Notice that property is optional)|no|
 |limitSpec|See [LimitSpec](../../querying/limitspec.md)|no|
 |having|See [Having](../../querying/having.md)|no|
-|granularity|A period granilarity; See [Period Granularities](../../querying/granularities.html#period-granularities)|yes|
+|granularity|A period granularity; See [Period Granularities](../../querying/granularities.html#period-granularities)|yes|
 |filter|See [Filters](../../querying/filters.md)|no|
 |aggregations|Aggregations forms the input to Averagers; See [Aggregations](../../querying/aggregations.md)|yes|
 |postAggregations|Supports only aggregations as input; See [Post Aggregations](../../querying/post-aggregations.md)|no|
@@ -100,10 +100,12 @@ These are properties which are common to all Averagers:
 * [Standard averagers](#standard-averagers):
   * doubleMean
   * doubleMeanNoNulls
+  * doubleSum
   * doubleMax
   * doubleMin
   * longMean
   * longMeanNoNulls
+  * longSum
   * longMax
   * longMin
 
@@ -113,6 +115,7 @@ These averagers offer four functions:
 
 * Mean (Average)
 * MeanNoNulls (Ignores empty buckets).
+* Sum
 * Max
 * Min
 

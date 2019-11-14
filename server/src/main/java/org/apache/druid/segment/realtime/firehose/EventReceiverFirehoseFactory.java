@@ -49,7 +49,6 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.utils.Runnables;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -446,12 +445,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         nextRow = null;
         return row;
       }
-    }
-
-    @Override
-    public Runnable commit()
-    {
-      return Runnables.getNoopRunnable();
     }
 
     @Override

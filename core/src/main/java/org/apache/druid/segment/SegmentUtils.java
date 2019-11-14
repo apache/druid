@@ -19,15 +19,23 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
@@ -35,6 +43,19 @@ import java.io.InputStream;
 @PublicApi
 public class SegmentUtils
 {
+  private static final HashFunction HASH_FUNCTION = Hashing.sha256();
+
+  /**
+   * Hash the IDs of the given segments based on SHA-256 algorithm.
+   */
+  public static String hashIds(List<DataSegment> segments)
+  {
+    Collections.sort(segments);
+    final Hasher hasher = HASH_FUNCTION.newHasher();
+    segments.forEach(segment -> hasher.putString(segment.getId().toString(), StandardCharsets.UTF_8));
+    return StringUtils.fromUtf8(hasher.hash().asBytes());
+  }
+
   public static int getVersionFromDir(File inDir) throws IOException
   {
     File versionFile = new File(inDir, "version.bin");
@@ -52,5 +73,9 @@ public class SegmentUtils
     }
 
     throw new IOE("Invalid segment dir [%s]. Can't find either of version.bin or index.drd.", inDir);
+  }
+
+  private SegmentUtils()
+  {
   }
 }

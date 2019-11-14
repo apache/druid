@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.appenderator;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
@@ -30,6 +31,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -63,9 +65,8 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
           Iterables.transform(segmentIdsInDataSource, SegmentId::getInterval)
       );
 
-      final List<DataSegment> usedSegmentsForIntervals = taskActionClient.submit(
-          new SegmentListUsedAction(dataSource, null, intervals)
-      );
+      final Collection<DataSegment> usedSegmentsForIntervals = taskActionClient
+          .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, Segments.ONLY_VISIBLE));
 
       for (DataSegment segment : usedSegmentsForIntervals) {
         if (segmentIdsInDataSource.contains(segment.getId())) {

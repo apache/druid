@@ -19,13 +19,16 @@
 export const LEGACY_COORDINATOR_CONSOLE = '/index.html';
 export const LEGACY_OVERLORD_CONSOLE = '/console.html';
 
+// This is set to the latest available version and should be updated to the next version before release
+export const DRUID_DOCS_VERSION = '0.16.0-incubating';
+
 export const DRUID_WEBSITE = 'https://druid.apache.org';
 export const DRUID_GITHUB = 'https://github.com/apache/druid';
-export const DRUID_DOCS = 'https://druid.apache.org/docs/latest';
-export const DRUID_DOCS_SQL = 'https://druid.apache.org/docs/latest/querying/sql.html';
-export const DRUID_DOCS_RUNE = 'https://druid.apache.org/docs/latest/querying/querying.html';
+export const DRUID_DOCS = `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}`;
+export const DRUID_DOCS_SQL = `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/sql.html`;
+export const DRUID_DOCS_RUNE = `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/querying.html`;
 export const DRUID_COMMUNITY = 'https://druid.apache.org/community/';
 export const DRUID_USER_GROUP = 'https://groups.google.com/forum/#!forum/druid-user';
 export const DRUID_ASF_SLACK = 'https://druid.apache.org/community/join-slack';
 export const DRUID_DEVELOPER_GROUP = 'https://lists.apache.org/list.html?dev@druid.apache.org';
-export const DRUID_DOCS_API = 'https://druid.apache.org/docs/latest/operations/api-reference.html';
+export const DRUID_DOCS_API = `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/api-reference.html`;

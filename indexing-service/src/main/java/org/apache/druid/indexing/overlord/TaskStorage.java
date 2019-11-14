@@ -36,8 +36,9 @@ public interface TaskStorage
   /**
    * Adds a task to the storage facility with a particular status.
    *
-   * @param task task to add
+   * @param task   task to add
    * @param status task status
+   *
    * @throws EntryExistsException if the task ID already exists
    */
   void insert(Task task, TaskStatus status) throws EntryExistsException;
@@ -52,7 +53,8 @@ public interface TaskStorage
 
   /**
    * Persists lock state in the storage facility.
-   * @param taskid task ID
+   *
+   * @param taskid   task ID
    * @param taskLock lock state
    */
   void addLock(String taskid, TaskLock taskLock);
@@ -70,7 +72,7 @@ public interface TaskStorage
    * Removes lock state from the storage facility. It is harmless to keep old locks in the storage facility, but
    * this method can help reclaim wasted space.
    *
-   * @param taskid task ID
+   * @param taskid   task ID
    * @param taskLock lock state
    */
   void removeLock(String taskid, TaskLock taskLock);
@@ -85,10 +87,11 @@ public interface TaskStorage
   /**
    * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
    * absentee Optional.
-   *
+   * <p>
    * NOTE: This method really feels like it should be combined with {@link #getStatus}.  Expect that in the future.
    *
    * @param taskid task ID
+   *
    * @return optional task
    */
   Optional<Task> getTask(String taskid);
@@ -98,6 +101,7 @@ public interface TaskStorage
    * an absentee Optional.
    *
    * @param taskid task ID
+   *
    * @return task status
    */
   Optional<TaskStatus> getStatus(String taskid);
@@ -108,10 +112,9 @@ public interface TaskStorage
   /**
    * Add an action taken by a task to the audit log.
    *
-   * @param task task to record action for
+   * @param task       task to record action for
    * @param taskAction task action to record
-   *
-   * @param <T> task action return type
+   * @param <T>        task action return type
    */
   @Deprecated
   <T> void addAuditLog(Task task, TaskAction<T> taskAction);
@@ -120,6 +123,7 @@ public interface TaskStorage
    * Returns all actions taken by a task.
    *
    * @param taskid task ID
+   *
    * @return list of task actions
    */
   @Deprecated
@@ -132,6 +136,16 @@ public interface TaskStorage
    * @return list of active tasks
    */
   List<Task> getActiveTasks();
+
+  /**
+   * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order
+   * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   *
+   * @param datasource datasource
+   *
+   * @return list of {@link Task}
+   */
+  List<Task> getActiveTasksByDatasource(String datasource);
 
   /**
    * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No
@@ -147,9 +161,9 @@ public interface TaskStorage
    * of creation. No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply
    * return nothing.
    *
-   * @param maxTaskStatuses maxTaskStatuses
+   * @param maxTaskStatuses   maxTaskStatuses
    * @param durationBeforeNow duration
-   * @param datasource      datasource
+   * @param datasource        datasource
    *
    * @return list of {@link TaskInfo}
    */
@@ -163,6 +177,7 @@ public interface TaskStorage
    * Returns a list of locks for a particular task.
    *
    * @param taskid task ID
+   *
    * @return list of TaskLocks for the given task
    */
   List<TaskLock> getLocks(String taskid);

@@ -50,7 +50,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
+import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -319,10 +319,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
 
-    spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+    HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,
         jsonMapper,
-        new OverlordActionBasedUsedSegmentLister(toolbox)
+        new OverlordActionBasedUsedSegmentsRetriever(toolbox)
     );
 
     Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(
@@ -600,6 +600,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       return KEYS;
     }
 
+    @Nullable
     @Override
     public Map<String, Number> getTotalMetrics()
     {

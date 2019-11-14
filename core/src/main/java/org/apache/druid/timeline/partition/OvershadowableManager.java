@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * OvershadowableManager manages the state of {@link AtomicUpdateGroup}. See the below {@link State} for details.
@@ -913,9 +914,13 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
-  List<PartitionChunk<T>> getVisibleChunks()
+  Stream<PartitionChunk<T>> createVisibleChunksStream()
   {
-    return getAllChunks(visibleGroups);
+    return visibleGroups
+        .values()
+        .stream()
+        .flatMap((Short2ObjectSortedMap<AtomicUpdateGroup<T>> map) -> map.values().stream())
+        .flatMap((AtomicUpdateGroup<T> aug) -> aug.getChunks().stream());
   }
 
   List<PartitionChunk<T>> getOvershadowedChunks()
@@ -929,7 +934,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return getAllChunks(standbyGroups);
   }
 
-  private List<PartitionChunk<T>> getAllChunks(
+  private static <T extends Overshadowable<T>> List<PartitionChunk<T>> getAllChunks(
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {

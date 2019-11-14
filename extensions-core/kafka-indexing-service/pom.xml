@@ -34,7 +34,7 @@
   </parent>
 
   <properties>
-    <apache.kafka.version>2.1.0</apache.kafka.version>
+    <apache.kafka.version>2.2.1</apache.kafka.version>
   </properties>
 
   <dependencies>
@@ -186,6 +186,11 @@
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>2.12.7</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

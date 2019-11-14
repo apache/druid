@@ -28,6 +28,8 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -35,6 +37,7 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -47,7 +50,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -66,7 +68,6 @@ public class CompactSegmentsTest
     @Override
     public String compactSegments(
         List<DataSegment> segments,
-        @Nullable Long targetCompactionSizeBytes,
         int compactionTaskPriority,
         ClientCompactionTaskQueryTuningConfig tuningConfig,
         Map<String, Object> context
@@ -97,6 +98,22 @@ public class CompactSegmentsTest
             segments.get(0).getDimensions(),
             segments.get(0).getMetrics(),
             new NumberedShardSpec(i, 0),
+            new CompactionState(
+                new DynamicPartitionsSpec(
+                    tuningConfig.getMaxRowsPerSegment(),
+                    tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
+                ),
+                ImmutableMap.of(
+                    "bitmap",
+                    ImmutableMap.of("type", "concise"),
+                    "dimensionCompression",
+                    "lz4",
+                    "metricCompression",
+                    "lz4",
+                    "longEncoding",
+                    "longs"
+                )
+            ),
             1,
             segmentSize
         );
@@ -178,7 +195,7 @@ public class CompactSegmentsTest
   @Test
   public void testRun()
   {
-    final CompactSegments compactor = new CompactSegments(indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(new DefaultObjectMapper(), indexingServiceClient);
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -195,7 +212,7 @@ public class CompactSegmentsTest
 
     // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
     assertCompactSegments(
-        compactor,
+        compactSegments,
         Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 9, 9),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -203,7 +220,7 @@ public class CompactSegmentsTest
     );
     expectedRemainingSegments -= 40;
     assertCompactSegments(
-        compactor,
+        compactSegments,
         Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 8, 9),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -213,7 +230,7 @@ public class CompactSegmentsTest
     // compact for 2017-01-07T12:00:00.000Z/2017-01-08T12:00:00.000Z
     expectedRemainingSegments -= 40;
     assertCompactSegments(
-        compactor,
+        compactSegments,
         Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 8, 8),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -221,7 +238,7 @@ public class CompactSegmentsTest
     );
     expectedRemainingSegments -= 40;
     assertCompactSegments(
-        compactor,
+        compactSegments,
         Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 4, 5),
         expectedRemainingSegments,
         expectedCompactTaskCount,
@@ -231,7 +248,7 @@ public class CompactSegmentsTest
     for (int endDay = 4; endDay > 1; endDay -= 1) {
       expectedRemainingSegments -= 40;
       assertCompactSegments(
-          compactor,
+          compactSegments,
           Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", endDay, endDay),
           expectedRemainingSegments,
           expectedCompactTaskCount,
@@ -239,7 +256,7 @@ public class CompactSegmentsTest
       );
       expectedRemainingSegments -= 40;
       assertCompactSegments(
-          compactor,
+          compactSegments,
           Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", endDay - 1, endDay),
           expectedRemainingSegments,
           expectedCompactTaskCount,
@@ -247,21 +264,21 @@ public class CompactSegmentsTest
       );
     }
 
-    assertLastSegmentNotCompacted(compactor);
+    assertLastSegmentNotCompacted(compactSegments);
   }
 
-  private CoordinatorStats runCompactor(CompactSegments compactor)
+  private CoordinatorStats doCompactSegments(CompactSegments compactSegments)
   {
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withUsedSegmentsTimelinesPerDataSourceInTest(dataSources)
         .withCompactionConfig(CoordinatorCompactionConfig.from(createCompactionConfigs()))
         .build();
-    return compactor.run(params).getCoordinatorStats();
+    return compactSegments.run(params).getCoordinatorStats();
   }
 
   private void assertCompactSegments(
-      CompactSegments compactor,
+      CompactSegments compactSegments,
       Interval expectedInterval,
       int expectedRemainingSegments,
       int expectedCompactTaskCount,
@@ -269,7 +286,7 @@ public class CompactSegmentsTest
   )
   {
     for (int i = 0; i < 3; i++) {
-      final CoordinatorStats stats = runCompactor(compactor);
+      final CoordinatorStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           expectedCompactTaskCount,
           stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
@@ -280,9 +297,9 @@ public class CompactSegmentsTest
         // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting for
         // compaction.
         long numDataSourceOfExpectedRemainingSegments = stats
-            .getDataSources(CompactSegments.SEGMENT_SIZE_WAIT_COMPACT)
+            .getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION)
             .stream()
-            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.SEGMENT_SIZE_WAIT_COMPACT, ds))
+            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION, ds))
             .filter(stat -> stat == expectedRemainingSegments)
             .count();
         Assert.assertEquals(i + 1, numDataSourceOfExpectedRemainingSegments);
@@ -290,7 +307,7 @@ public class CompactSegmentsTest
         // Otherwise, we check how many dataSources are in the coordinator stats.
         Assert.assertEquals(
             2 - i,
-            stats.getDataSources(CompactSegments.SEGMENT_SIZE_WAIT_COMPACT).size()
+            stats.getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION).size()
         );
       }
     }
@@ -309,7 +326,7 @@ public class CompactSegmentsTest
     }
   }
 
-  private void assertLastSegmentNotCompacted(CompactSegments compactor)
+  private void assertLastSegmentNotCompacted(CompactSegments compactSegments)
   {
     // Segments of the latest interval should not be compacted
     for (int i = 0; i < 3; i++) {
@@ -332,7 +349,7 @@ public class CompactSegmentsTest
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     addMoreData(dataSource, 9);
 
-    CoordinatorStats stats = runCompactor(compactor);
+    CoordinatorStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
         stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
@@ -340,7 +357,7 @@ public class CompactSegmentsTest
 
     addMoreData(dataSource, 10);
 
-    stats = runCompactor(compactor);
+    stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
         stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
@@ -375,8 +392,6 @@ public class CompactSegmentsTest
               dataSource,
               0,
               50L,
-              20L,
-              null,
               null,
               new Period("PT1H"), // smaller than segment interval
               null,

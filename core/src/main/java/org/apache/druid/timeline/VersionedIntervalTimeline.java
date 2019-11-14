@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -128,9 +129,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   }
 
   /**
-   * Returns a lazy collection with all objects (including overshadowed, see {@link #findFullyOvershadowed}) in this
-   * VersionedIntervalTimeline to be used for iteration or {@link Collection#stream()} transformation. The order of
-   * objects in this collection is unspecified.
+   * Returns a lazy collection with all objects (including partially AND fully overshadowed, see {@link
+   * #findFullyOvershadowed}) in this VersionedIntervalTimeline to be used for iteration or {@link Collection#stream()}
+   * transformation. The order of objects in this collection is unspecified.
    *
    * Note: iteration over the returned collection may not be as trivially cheap as, for example, iteration over an
    * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned collection only
@@ -152,6 +153,19 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   public int getNumObjects()
   {
     return numObjects.get();
+  }
+
+  /**
+   * Computes a set with all objects falling within the specified interval which are at least partially "visible" in
+   * this interval (that is, are not fully overshadowed within this interval).
+   */
+  public Set<ObjectType> findNonOvershadowedObjectsInInterval(Interval interval, Partitions completeness)
+  {
+    return lookup(interval, completeness)
+        .stream()
+        .flatMap(timelineObjectHolder -> timelineObjectHolder.getObject().stream())
+        .map(PartitionChunk::getObject)
+        .collect(Collectors.toSet());
   }
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
@@ -278,7 +292,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   /**
    * Does a lookup for the objects representing the given time interval.  Will *only* return
-   * PartitionHolders that are complete.
+   * PartitionHolders that are {@linkplain PartitionHolder#isComplete() complete}.
    *
    * @param interval interval to find objects for
    *
@@ -290,7 +304,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   {
     lock.readLock().lock();
     try {
-      return lookup(interval, false);
+      return lookup(interval, Partitions.ONLY_COMPLETE);
     }
     finally {
       lock.readLock().unlock();
@@ -302,7 +316,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   {
     lock.readLock().lock();
     try {
-      return lookup(interval, true);
+      return lookup(interval, Partitions.INCOMPLETE_OK);
     }
     finally {
       lock.readLock().unlock();
@@ -485,6 +499,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
+  @GuardedBy("lock")
   private void add(
       NavigableMap<Interval, TimelineEntry> timeline,
       Interval interval,
@@ -521,12 +536,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   }
 
   /**
-   * @param timeline
-   * @param key
-   * @param entry
-   *
    * @return boolean flag indicating whether or not we inserted or discarded something
    */
+  @GuardedBy("lock")
   private boolean addAtKey(
       NavigableMap<Interval, TimelineEntry> timeline,
       Interval key,
@@ -625,6 +637,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     return retVal;
   }
 
+  @GuardedBy("lock")
   private void addIntervalToTimeline(
       Interval interval,
       TimelineEntry entry,
@@ -636,6 +649,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
+  @GuardedBy("lock")
   private void remove(
       NavigableMap<Interval, TimelineEntry> timeline,
       Interval interval,
@@ -663,6 +677,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
+  @GuardedBy("lock")
   private void remove(
       NavigableMap<Interval, TimelineEntry> timeline,
       Interval interval,
@@ -688,12 +703,16 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
-  private List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval, boolean incompleteOk)
+  @GuardedBy("lock")
+  private List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval, Partitions completeness)
   {
     List<TimelineObjectHolder<VersionType, ObjectType>> retVal = new ArrayList<>();
-    NavigableMap<Interval, TimelineEntry> timeline = (incompleteOk)
-                                                     ? incompletePartitionsTimeline
-                                                     : completePartitionsTimeline;
+    NavigableMap<Interval, TimelineEntry> timeline;
+    if (completeness == Partitions.INCOMPLETE_OK) {
+      timeline = incompletePartitionsTimeline;
+    } else {
+      timeline = completePartitionsTimeline;
+    }
 
     for (Entry<Interval, TimelineEntry> entry : timeline.entrySet()) {
       Interval timelineInterval = entry.getKey();
@@ -716,8 +735,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
 
     TimelineObjectHolder<VersionType, ObjectType> firstEntry = retVal.get(0);
-    if (interval.overlaps(firstEntry.getInterval()) && interval.getStart()
-                                                               .isAfter(firstEntry.getInterval().getStart())) {
+    if (interval.overlaps(firstEntry.getInterval()) &&
+        interval.getStart().isAfter(firstEntry.getInterval().getStart())) {
       retVal.set(
           0,
           new TimelineObjectHolder<>(

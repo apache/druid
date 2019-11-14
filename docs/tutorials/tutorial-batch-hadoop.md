@@ -42,7 +42,7 @@ For this tutorial, we've provided a Dockerfile for a Hadoop 2.8.3 cluster, which
 
 This Dockerfile and related files are located at `quickstart/tutorial/hadoop/docker`.
 
-From the apache-druid-#{DRUIDVERSION} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "2.8.3":
+From the apache-druid-{{DRUIDVERSION}} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "2.8.3":
 
 ```bash
 cd quickstart/tutorial/hadoop/docker
@@ -110,7 +110,7 @@ docker exec -it druid-hadoop-demo bash
 
 ### Copy input data to the Hadoop container
 
-From the apache-druid-#{DRUIDVERSION} package root on the host, copy the `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
+From the apache-druid-{{DRUIDVERSION}} package root on the host, copy the `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
 
 ```bash
 cp quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz /tmp/shared/wikiticker-2015-09-12-sampled.json.gz
@@ -122,15 +122,15 @@ In the Hadoop container's shell, run the following commands to setup the HDFS di
 
 ```bash
 cd /usr/local/hadoop/bin
-./hadoop fs -mkdir /druid
-./hadoop fs -mkdir /druid/segments
-./hadoop fs -mkdir /quickstart
-./hadoop fs -chmod 777 /druid
-./hadoop fs -chmod 777 /druid/segments
-./hadoop fs -chmod 777 /quickstart
-./hadoop fs -chmod -R 777 /tmp
-./hadoop fs -chmod -R 777 /user
-./hadoop fs -put /shared/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz
+./hdfs dfs -mkdir /druid
+./hdfs dfs -mkdir /druid/segments
+./hdfs dfs -mkdir /quickstart
+./hdfs dfs -chmod 777 /druid
+./hdfs dfs -chmod 777 /druid/segments
+./hdfs dfs -chmod 777 /quickstart
+./hdfs dfs -chmod -R 777 /tmp
+./hdfs dfs -chmod -R 777 /user
+./hdfs dfs -put /shared/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz
 ```
 
 If you encounter namenode errors when running this command, the Hadoop container may not be finished initializing. When this occurs, wait a couple of minutes and retry the commands.
@@ -196,7 +196,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Once the Hadoop .xml files have been copied to the Druid cluster and the segment/log storage configuration has been updated to use HDFS, the Druid cluster needs to be restarted for the new configurations to take effect.
 
-If the cluster is still running, CTRL-C to terminate the `bin/start-micro-quickstart` script, and re-reun it to bring the Druid services back up.
+If the cluster is still running, CTRL-C to terminate the `bin/start-micro-quickstart` script, and re-run it to bring the Druid services back up.
 
 ## Load batch data
 

@@ -122,12 +122,6 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
     }
 
     @Override
-    public Runnable commit()
-    {
-      return currentFirehose.commit();
-    }
-
-    @Override
     public void close() throws IOException
     {
       currentFirehose.close();

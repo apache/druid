@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -58,6 +59,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -86,6 +88,7 @@ public abstract class IngestionTestBase
 
   private final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
+  private SegmentLoaderFactory segmentLoaderFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadata segmentsMetadata;
@@ -112,6 +115,7 @@ public abstract class IngestionTestBase
         derbyConnectorRule.getConnector()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
+    segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
   }
 
   @After
@@ -136,6 +140,11 @@ public abstract class IngestionTestBase
     lockbox.remove(task);
   }
 
+  public SegmentLoader newSegmentLoader(File storageDir)
+  {
+    return segmentLoaderFactory.manufacturate(storageDir);
+  }
+
   public ObjectMapper getObjectMapper()
   {
     return objectMapper;
@@ -144,6 +153,11 @@ public abstract class IngestionTestBase
   public TaskStorage getTaskStorage()
   {
     return taskStorage;
+  }
+
+  public SegmentLoaderFactory getSegmentLoaderFactory()
+  {
+    return segmentLoaderFactory;
   }
 
   public IndexerMetadataStorageCoordinator getMetadataStorageCoordinator()

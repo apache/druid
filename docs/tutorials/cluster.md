@@ -118,7 +118,7 @@ When choosing the Data server hardware, you can choose a split factor `N`, divid
 
 Instructions for adjusting the Historical/MiddleManager configs for the split are described in a later section in this guide.
 
-#### Query derver
+#### Query server
 
 The main considerations for the Query server are available CPUs and RAM for the Broker heap + direct memory, and Router heap.
 
@@ -144,14 +144,14 @@ First, download and unpack the release archive. It's best to do this on a single
 since you will be editing the configurations and then copying the modified distribution out to all
 of your servers.
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/#{DRUIDVERSION}/apache-druid-#{DRUIDVERSION}-bin.tar.gz)
-the #{DRUIDVERSION} release.
+[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
 
 ```bash
-tar -xzf apache-druid-#{DRUIDVERSION}-bin.tar.gz
-cd apache-druid-#{DRUIDVERSION}
+tar -xzf apache-druid-{{DRUIDVERSION}}-bin.tar.gz
+cd apache-druid-{{DRUIDVERSION}}
 ```
 
 In the package, you should find:
@@ -405,9 +405,6 @@ inbound connections on the following:
 - 8082 (Broker)
 - 8088 (Router, if used)
 
-### Other
-- 8200 (Tranquility Server, if used)
-
 > In production, we recommend deploying ZooKeeper and your metadata store on their own dedicated hardware,
 > rather than on the Master server.
 
@@ -418,7 +415,7 @@ Copy the Druid distribution and your edited configurations to your Master server
 If you have been editing the configurations on your local machine, you can use *rsync* to copy them:
 
 ```bash
-rsync -az apache-druid-#{DRUIDVERSION}/ MASTER_SERVER:apache-druid-#{DRUIDVERSION}/
+rsync -az apache-druid-{{DRUIDVERSION}}/ MASTER_SERVER:apache-druid-{{DRUIDVERSION}}/
 ```
 
 ### No Zookeeper on Master
@@ -431,15 +428,8 @@ bin/start-cluster-master-no-zk-server
 
 ### With Zookeeper on Master
 
-If you plan to run ZK on Master servers, first update `conf/zoo.cfg` to reflect how you plan to run ZK. Then log on to your Master servers and install Zookeeper:
-
-```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -o zookeeper-3.4.14.tar.gz
-tar -xzf zookeeper-3.4.14.tar.gz
-mv zookeeper-3.4.14 zk
-```
-
-If you are running ZK on the Master server, you can start the Master server processes together with ZK using:
+If you plan to run ZK on Master servers, first update `conf/zoo.cfg` to reflect how you plan to run ZK. Then, you
+can start the Master server processes together with ZK using:
 
 ```
 bin/start-cluster-master-with-zk-server
@@ -461,24 +451,6 @@ You can add more Data servers as needed.
 
 > For clusters with complex resource allocation needs, you can break apart Historicals and MiddleManagers and scale the components individually.
 > This also allows you take advantage of Druid's built-in MiddleManager autoscaling facility.
-
-### Tranquility
-
-If you are doing push-based stream ingestion with Kafka or over HTTP, you can also start Tranquility Server on the Data server.
-
-For large scale production, Data server processes and the Tranquility Server can still be co-located.
-
-If you are running Tranquility (not server) with a stream processor, you can co-locate Tranquility with the stream processor and not require Tranquility Server.
-
-First install Tranquility:
-
-```bash
-curl http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.3.tgz -o tranquility-distribution-0.8.3.tgz
-tar -xzf tranquility-distribution-0.8.3.tgz
-mv tranquility-distribution-0.8.3 tranquility
-```
-
-Afterwards, in `conf/supervise/cluster/data.conf`, uncomment out the `tranquility-server` line, and restart the Data server proceses.
 
 ## Start Query Server
 

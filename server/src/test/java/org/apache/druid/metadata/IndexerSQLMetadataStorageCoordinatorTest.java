@@ -23,16 +23,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -41,9 +42,9 @@ import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -57,12 +58,12 @@ import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
@@ -497,7 +498,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval()
+                defaultSegment.getInterval(),
+                Segments.ONLY_VISIBLE
             )
         )
     );
@@ -509,47 +511,41 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.announceHistoricalSegments(SEGMENTS);
     coordinator.announceHistoricalSegments(ImmutableSet.of(defaultSegment3));
 
-    Assert.assertEquals(
-        SEGMENTS,
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                defaultSegment.getDataSource(),
-                ImmutableList.of(defaultSegment.getInterval())
-            )
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(defaultSegment.getInterval()),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(SEGMENTS.toArray(new DataSegment[0]));
 
-    Assert.assertEquals(
-        ImmutableSet.of(defaultSegment3),
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                defaultSegment.getDataSource(),
-                ImmutableList.of(defaultSegment3.getInterval())
-            )
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(defaultSegment3.getInterval()),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(defaultSegment3);
 
-    Assert.assertEquals(
-        ImmutableSet.of(defaultSegment, defaultSegment2, defaultSegment3),
-        ImmutableSet.copyOf(
-            coordinator.retrieveUsedSegmentsForIntervals(
-                defaultSegment.getDataSource(),
-                ImmutableList.of(defaultSegment.getInterval(), defaultSegment3.getInterval())
-            )
+    Assertions.assertThat(
+        coordinator.retrieveUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(defaultSegment.getInterval(), defaultSegment3.getInterval()),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(defaultSegment, defaultSegment2, defaultSegment3);
 
     //case to check no duplication if two intervals overlapped with the interval of same segment.
-    Assert.assertEquals(
-        ImmutableList.of(defaultSegment3),
+    Assertions.assertThat(
         coordinator.retrieveUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
             ImmutableList.of(
                 Intervals.of("2015-01-03T00Z/2015-01-03T05Z"),
                 Intervals.of("2015-01-03T09Z/2015-01-04T00Z")
-            )
+            ),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(defaultSegment3);
   }
 
   @Test
@@ -576,7 +572,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            Intervals.of("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
+            Intervals.of("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z"), // end is exclusive
+            Segments.ONLY_VISIBLE
         )
     );
     Assert.assertEquals(
@@ -595,7 +592,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Intervals.of("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
+                Intervals.of("2015-1-1T23:59:59.999Z/2015-02-01T00Z"),
+                Segments.ONLY_VISIBLE
             )
         )
     );
@@ -608,7 +606,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getStart().minus(1), defaultSegment.getInterval().getStart())
+            new Interval(defaultSegment.getInterval().getStart().minus(1), defaultSegment.getInterval().getStart()),
+            Segments.ONLY_VISIBLE
         ).isEmpty()
     );
   }
@@ -621,7 +620,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getEnd(), defaultSegment.getInterval().getEnd().plusDays(10))
+            new Interval(defaultSegment.getInterval().getEnd(), defaultSegment.getInterval().getEnd().plusDays(10)),
+            Segments.ONLY_VISIBLE
         ).isEmpty()
     );
   }
@@ -635,7 +635,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().minusMillis(1))
+                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().minusMillis(1)),
+                Segments.ONLY_VISIBLE
             )
         )
     );
@@ -650,7 +651,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusMillis(1))
+                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusMillis(1)),
+                Segments.ONLY_VISIBLE
             )
         )
     );
@@ -1001,15 +1003,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       Assert.assertEquals(toBeAnnounced, announced);
     }
 
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline
-        .forSegments(coordinator.retrieveUsedSegmentsForInterval(dataSource, interval));
-
-    final List<DataSegment> visibleSegments = timeline
-        .lookup(interval)
-        .stream()
-        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-        .map(PartitionChunk::getObject)
-        .collect(Collectors.toList());
+    final Collection<DataSegment> visibleSegments =
+        coordinator.retrieveUsedSegmentsForInterval(dataSource, interval, Segments.ONLY_VISIBLE);
 
     Assert.assertEquals(1, visibleSegments.size());
     Assert.assertEquals(
@@ -1030,7 +1025,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             0,
             10L
         ),
-        visibleSegments.get(0)
+        Iterables.getOnlyElement(visibleSegments)
     );
   }
 

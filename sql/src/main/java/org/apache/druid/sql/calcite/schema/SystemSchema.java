@@ -55,6 +55,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -99,6 +100,7 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
+  private static final String SUPERVISOR_TABLE = "supervisors";
 
   private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
       SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
@@ -180,6 +182,18 @@ public class SystemSchema extends AbstractSchema
       .add("error_msg", ValueType.STRING)
       .build();
 
+  static final RowSignature SUPERVISOR_SIGNATURE = RowSignature
+      .builder()
+      .add("supervisor_id", ValueType.STRING)
+      .add("state", ValueType.STRING)
+      .add("detailed_state", ValueType.STRING)
+      .add("healthy", ValueType.LONG)
+      .add("type", ValueType.STRING)
+      .add("source", ValueType.STRING)
+      .add("suspended", ValueType.LONG)
+      .add("spec", ValueType.STRING)
+      .build();
+
   private final Map<String, Table> tableMap;
 
   @Inject
@@ -207,7 +221,8 @@ public class SystemSchema extends AbstractSchema
         SEGMENTS_TABLE, segmentsTable,
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
+        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper),
+        SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
     );
   }
 
@@ -729,7 +744,7 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/tasks"),
+          "/druid/indexer/v1/tasks",
           false
       );
     }
@@ -742,6 +757,170 @@ public class SystemSchema extends AbstractSchema
     );
 
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
+    {
+    });
+    return new JsonParserIterator<>(
+        typeRef,
+        future,
+        request.getUrl().toString(),
+        null,
+        request.getUrl().getHost(),
+        jsonMapper,
+        responseHandler
+    );
+  }
+
+  /**
+   * This table contains a row per supervisor task.
+   */
+  static class SupervisorsTable extends AbstractTable implements ScannableTable
+  {
+    private final DruidLeaderClient druidLeaderClient;
+    private final ObjectMapper jsonMapper;
+    private final BytesAccumulatingResponseHandler responseHandler;
+    private final AuthorizerMapper authorizerMapper;
+
+    public SupervisorsTable(
+        DruidLeaderClient druidLeaderClient,
+        ObjectMapper jsonMapper,
+        BytesAccumulatingResponseHandler responseHandler,
+        AuthorizerMapper authorizerMapper
+    )
+    {
+      this.druidLeaderClient = druidLeaderClient;
+      this.jsonMapper = jsonMapper;
+      this.responseHandler = responseHandler;
+      this.authorizerMapper = authorizerMapper;
+    }
+
+
+    @Override
+    public RelDataType getRowType(RelDataTypeFactory typeFactory)
+    {
+      return SUPERVISOR_SIGNATURE.getRelDataType(typeFactory);
+    }
+
+    @Override
+    public TableType getJdbcTableType()
+    {
+      return TableType.SYSTEM_TABLE;
+    }
+
+    @Override
+    public Enumerable<Object[]> scan(DataContext root)
+    {
+      class SupervisorsEnumerable extends DefaultEnumerable<Object[]>
+      {
+        private final CloseableIterator<SupervisorStatus> it;
+
+        public SupervisorsEnumerable(JsonParserIterator<SupervisorStatus> tasks)
+        {
+          this.it = getAuthorizedSupervisors(tasks, root);
+        }
+
+        @Override
+        public Iterator<Object[]> iterator()
+        {
+          throw new UnsupportedOperationException("Do not use iterator(), it cannot be closed.");
+        }
+
+        @Override
+        public Enumerator<Object[]> enumerator()
+        {
+          return new Enumerator<Object[]>()
+          {
+            @Override
+            public Object[] current()
+            {
+              final SupervisorStatus supervisor = it.next();
+              return new Object[]{
+                  supervisor.getId(),
+                  supervisor.getState(),
+                  supervisor.getDetailedState(),
+                  supervisor.isHealthy() ? 1L : 0L,
+                  supervisor.getType(),
+                  supervisor.getSource(),
+                  supervisor.isSuspended() ? 1L : 0L,
+                  supervisor.getSpecString()
+              };
+            }
+
+            @Override
+            public boolean moveNext()
+            {
+              return it.hasNext();
+            }
+
+            @Override
+            public void reset()
+            {
+
+            }
+
+            @Override
+            public void close()
+            {
+              try {
+                it.close();
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            }
+          };
+        }
+      }
+
+      return new SupervisorsEnumerable(getSupervisors(druidLeaderClient, jsonMapper, responseHandler));
+    }
+
+    private CloseableIterator<SupervisorStatus> getAuthorizedSupervisors(
+        JsonParserIterator<SupervisorStatus> it,
+        DataContext root
+    )
+    {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getSource()));
+
+      final Iterable<SupervisorStatus> authorizedSupervisors = AuthorizationUtils.filterAuthorizedResources(
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
+
+      return wrap(authorizedSupervisors.iterator(), it);
+    }
+  }
+
+  // Note that overlord must be up to get supervisor tasks, otherwise queries to sys.supervisors table
+  // will fail with internal server error (HTTP 500)
+  private static JsonParserIterator<SupervisorStatus> getSupervisors(
+      DruidLeaderClient indexingServiceClient,
+      ObjectMapper jsonMapper,
+      BytesAccumulatingResponseHandler responseHandler
+  )
+  {
+    Request request;
+    try {
+      request = indexingServiceClient.makeRequest(
+          HttpMethod.GET,
+          "/druid/indexer/v1/supervisor?system",
+          false
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    ListenableFuture<InputStream> future = indexingServiceClient.goAsync(
+        request,
+        responseHandler
+    );
+
+    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SupervisorStatus>()
     {
     });
     return new JsonParserIterator<>(

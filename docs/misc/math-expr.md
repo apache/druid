@@ -60,6 +60,9 @@ dialects. However, by using the `array_to_string` function, aggregations may be 
 complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator,
 allows transforming the stringified dimension back into the true native array type.
 
+> Note that array functions are not currently supported at ingestion time with
+> [`transformSpec`](../ingestion/index.md#transformspec).
+
 
 The following built-in functions are available.
 
@@ -105,7 +108,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milli-seconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
+|timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milliseconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
 |unix_timestamp|same with 'timestamp' function but returns seconds instead |
 |timestamp_ceil|timestamp_ceil(expr, period, \[origin, \[timezone\]\]) rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_floor|timestamp_floor(expr, period, \[origin, [timezone\]\]) rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
@@ -186,10 +189,10 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | function | description |
 | --- | --- |
 | map(lambda,arr) | applies a transform specified by a single argument lambda expression to all elements of arr, returning a new array |
-| cartesian_map(lambda,arr1,arr2,...) | applies a transform specified by a multi argument lambda expression to all elements of the cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
+| cartesian_map(lambda,arr1,arr2,...) | applies a transform specified by a multi argument lambda expression to all elements of the Cartesian product of all input arrays, returning a new array; the number of lambda arguments and array inputs must be the same |
 | filter(lambda,arr) | filters arr by a single argument lambda, returning a new array with all matching elements, or null if no elements match |
 | fold(lambda,arr) | folds a 2 argument lambda across arr. The first argument of the lambda is the array element and the second the accumulator, returning a single accumulated value. |
-| cartesian_fold(lambda,arr1,arr2,...) | folds a multi argument lambda across the cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
+| cartesian_fold(lambda,arr1,arr2,...) | folds a multi argument lambda across the Cartesian product of all input arrays. The first arguments of the lambda is the array element and the last is the accumulator, returning a single accumulated value. |
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 

@@ -127,7 +127,7 @@ public class FiniteFirehoseProcessor
             if (dynamicPartitionsSpec != null) {
               final boolean isPushRequired = addResult.isPushRequired(
                   dynamicPartitionsSpec.getMaxRowsPerSegment(),
-                  dynamicPartitionsSpec.getMaxTotalRows()
+                  dynamicPartitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
               );
               if (isPushRequired) {
                 // There can be some segments waiting for being pushed even though no more rows will be added to them

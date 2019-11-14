@@ -99,10 +99,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       0
   );
 
-  TestLocalTaskActionClient actionClient;
-  LocalIndexingServiceClient indexingServiceClient;
-  TaskToolbox toolbox;
-  File localDeepStorage;
+  protected TestLocalTaskActionClient actionClient;
+  protected LocalIndexingServiceClient indexingServiceClient;
+  protected TaskToolbox toolbox;
+  protected File localDeepStorage;
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -128,7 +128,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     );
   }
 
-  class LocalIndexingServiceClient extends NoopIndexingServiceClient
+  public class LocalIndexingServiceClient extends NoopIndexingServiceClient
   {
     private final ConcurrentMap<String, Future<TaskStatus>> tasks = new ConcurrentHashMap<>();
     private final ListeningExecutorService service = MoreExecutors.listeningDecorator(
@@ -246,13 +246,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    void shutdown()
+    public void shutdown()
     {
       service.shutdownNow();
     }
   }
 
-  TaskToolbox createTaskToolbox(Task task) throws IOException
+  protected TaskToolbox createTaskToolbox(Task task) throws IOException
   {
     return new TaskToolbox(
         null,
@@ -278,7 +278,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        null,
+        newSegmentLoader(temporaryFolder.newFolder()),
         getObjectMapper(),
         temporaryFolder.newFolder(task.getId()),
         getIndexIO(),
@@ -307,6 +307,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       super(
           id,
+          null,
           taskResource,
           ingestionSchema,
           context,

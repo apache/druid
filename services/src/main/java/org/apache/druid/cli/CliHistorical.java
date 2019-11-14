@@ -24,7 +24,6 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
@@ -49,8 +48,8 @@ import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -81,6 +80,7 @@ public class CliHistorical extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
+          binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
 
           // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
           LifecycleModule.register(binder, Server.class);
@@ -100,7 +100,6 @@ public class CliHistorical extends ServerRunnable
 
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
-          MetricsModule.register(binder, CacheMonitor.class);
 
           bindAnnouncer(
               binder,

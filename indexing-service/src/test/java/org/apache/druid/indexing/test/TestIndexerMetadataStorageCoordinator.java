@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -73,15 +74,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     return false;
   }
-  
-  @Override
-  public List<DataSegment> retrieveUsedSegmentsForInterval(String dataSource, Interval interval)
-  {
-    return ImmutableList.of();
-  }
 
   @Override
-  public List<DataSegment> retrieveAllUsedSegments(String dataSource)
+  public List<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
     return ImmutableList.of();
   }
@@ -93,7 +88,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
+  public List<DataSegment> retrieveUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  )
   {
     return ImmutableList.of();
   }

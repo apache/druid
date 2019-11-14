@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.IOE;
@@ -141,13 +142,11 @@ public class IngestSegmentFirehoseFactoryTest
       private final Set<DataSegment> published = new HashSet<>();
 
       @Override
-      public List<DataSegment> retrieveUsedSegmentsForInterval(String dataSource, Interval interval)
-      {
-        return ImmutableList.copyOf(SEGMENT_SET);
-      }
-
-      @Override
-      public List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
+      public List<DataSegment> retrieveUsedSegmentsForIntervals(
+          String dataSource,
+          List<Interval> interval,
+          Segments visibility
+      )
       {
         return ImmutableList.copyOf(SEGMENT_SET);
       }
@@ -212,9 +211,12 @@ public class IngestSegmentFirehoseFactoryTest
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return ImmutableList.copyOf(SEGMENT_SET);
+        return ImmutableSet.copyOf(SEGMENT_SET);
       }
     };
 

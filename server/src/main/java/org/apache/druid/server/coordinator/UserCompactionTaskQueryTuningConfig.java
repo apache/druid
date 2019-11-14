@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.segment.IndexSpec;
 
 import javax.annotation.Nullable;
@@ -34,12 +35,24 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-      @JsonProperty("pushTimeout") @Nullable Long pushTimeout
+      @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
+      @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
   )
   {
-    super(null, maxRowsInMemory, maxBytesInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
+    super(
+        null,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        maxTotalRows,
+        splitHintSpec,
+        indexSpec,
+        maxPendingPersists,
+        pushTimeout,
+        maxNumConcurrentSubTasks
+    );
   }
 
   @Override

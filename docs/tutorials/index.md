@@ -52,14 +52,14 @@ configuration than `micro-quickstart`.
 
 ## Getting started
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/#{DRUIDVERSION}/apache-druid-#{DRUIDVERSION}-bin.tar.gz)
-the #{DRUIDVERSION} release.
+[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
 
 ```bash
-tar -xzf apache-druid-#{DRUIDVERSION}-bin.tar.gz
-cd apache-druid-#{DRUIDVERSION}
+tar -xzf apache-druid-{{DRUIDVERSION}}-bin.tar.gz
+cd apache-druid-{{DRUIDVERSION}}
 ```
 
 In the package, you should find:
@@ -72,61 +72,45 @@ In the package, you should find:
 * `lib/*` - libraries and dependencies for core Druid
 * `quickstart/*` - configuration files, sample data, and other files for the quickstart tutorials
 
-## Download Zookeeper
-
-Druid has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll
-need to download and run Zookeeper.
-
-In the package root, run the following commands:
-
-```bash
-curl https://archive.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -o zookeeper-3.4.14.tar.gz
-tar -xzf zookeeper-3.4.14.tar.gz
-mv zookeeper-3.4.14 zk
-```
-
-The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the
-apache-druid-#{DRUIDVERSION} package root.
-
 ## Start up Druid services
 
 The following commands will assume that you are using the `micro-quickstart` single-machine configuration. If you are
 using a different configuration, the `bin` directory has equivalent scripts for each configuration, such as
 `bin/start-single-server-small`.
 
-From the apache-druid-#{DRUIDVERSION} package root, run the following command:
+From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
 ```bash
 ./bin/start-micro-quickstart
 ```
 
-This will bring up instances of Zookeeper and the Druid services, all running on the local machine, e.g.:
+This will bring up instances of ZooKeeper and the Druid services, all running on the local machine, e.g.:
 
 ```bash
 $ ./bin/start-micro-quickstart
-[Fri May  3 11:40:50 2019] Running command[zk], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk conf
-[Fri May  3 11:40:50 2019] Running command[coordinator-overlord], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/coordinator-overlord.log]: bin/run-druid coordinator-overlord conf/druid/single-server/micro-quickstart
-[Fri May  3 11:40:50 2019] Running command[broker], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker conf/druid/single-server/micro-quickstart
-[Fri May  3 11:40:50 2019] Running command[router], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/router.log]: bin/run-druid router conf/druid/single-server/micro-quickstart
-[Fri May  3 11:40:50 2019] Running command[historical], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical conf/druid/single-server/micro-quickstart
-[Fri May  3 11:40:50 2019] Running command[middleManager], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[zk], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/zk.log]: bin/run-zk conf
+[Fri May  3 11:40:50 2019] Running command[coordinator-overlord], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/coordinator-overlord.log]: bin/run-druid coordinator-overlord conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[broker], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/broker.log]: bin/run-druid broker conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[router], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/router.log]: bin/run-druid router conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[historical], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/historical.log]: bin/run-druid historical conf/druid/single-server/micro-quickstart
+[Fri May  3 11:40:50 2019] Running command[middleManager], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/middleManager.log]: bin/run-druid middleManager conf/druid/single-server/micro-quickstart
 ```
 
-All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the apache-druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
+All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the apache-druid-{{DRUIDVERSION}} package root. Logs for the services are located at `var/sv`.
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
 Once the cluster has started, you can navigate to [http://localhost:8888](http://localhost:8888).
-The [Druid router process](../design/router.md), which serves the Druid console, resides at this address.
+The [Druid router process](../design/router.md), which serves the [Druid console](../operations/druid-console.md), resides at this address.
 
 ![Druid console](../assets/tutorial-quickstart-01.png "Druid console")
 
 It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 
 
-## Loading Data
+## Loading data
 
-### Tutorial Dataset
+### Tutorial dataset
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
 
@@ -200,7 +184,7 @@ Once every service has started, you are now ready to load data.
 
 If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.md) and wish to reset the cluster state, you should additionally clear out any Kafka state.
 
-Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
+Shut down the Kafka broker with CTRL-C before stopping ZooKeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
 
 ```bash
 rm -rf /tmp/kafka-logs

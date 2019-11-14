@@ -25,12 +25,16 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Segments in the lists which are the elements of this iterator are sorted according to the natural segment order
+ * (see {@link DataSegment#compareTo}).
+ */
 public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
-  long UNKNOWN_REMAINING_SEGMENT_SIZE = -1L;
+  long UNKNOWN_TOTAL_REMAINING_SEGMENTS_SIZE = -1L;
   /**
    * Return a map of (dataSource, total size of remaining segments) for all dataSources.
    * This method should consider all segments except the segments returned by {@link #next()}.
    */
-  Object2LongOpenHashMap<String> remainingSegmentSizeBytes();
+  Object2LongOpenHashMap<String> totalRemainingSegmentsSizeBytes();
 }

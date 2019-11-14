@@ -47,7 +47,7 @@ public class MetadataStoragePollingBasicAuthenticatorCacheManager implements Bas
   }
 
   @Override
-  public void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap)
+  public void handleAuthenticatorUserMapUpdate(String authenticatorPrefix, byte[] serializedUserMap)
   {
   }
 

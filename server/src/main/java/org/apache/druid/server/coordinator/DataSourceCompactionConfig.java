@@ -30,24 +30,20 @@ import java.util.Objects;
 
 public class DataSourceCompactionConfig
 {
-  public static final long DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 400 * 1024 * 1024; // 400MB
-
-  // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
-  private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
+  /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
+  public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
-  private static final int DEFAULT_NUM_INPUT_SEGMENTS = 150;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
-  @Nullable
-  private final Long targetCompactionSizeBytes;
-  // The number of input segments is limited because the byte size of a serialized task spec is limited by
-  // RemoteTaskRunnerConfig.maxZnodeBytes.
+  /**
+   * The number of input segments is limited because the byte size of a serialized task spec is limited by
+   * {@link org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig#maxZnodeBytes}.
+   */
   @Nullable
   private final Integer maxRowsPerSegment;
-  private final int maxNumSegmentsToCompact;
   private final Period skipOffsetFromLatest;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
@@ -57,9 +53,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
-      @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
-      @JsonProperty("maxNumSegmentsToCompact") @Nullable Integer maxNumSegmentsToCompact,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
@@ -72,71 +66,10 @@ public class DataSourceCompactionConfig
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(
-        targetCompactionSizeBytes,
-        maxRowsPerSegment,
-        tuningConfig
-    );
     this.maxRowsPerSegment = maxRowsPerSegment;
-    this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
-                                   ? DEFAULT_NUM_INPUT_SEGMENTS
-                                   : maxNumSegmentsToCompact;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.taskContext = taskContext;
-
-    Preconditions.checkArgument(
-        this.maxNumSegmentsToCompact > 1,
-        "numTargetCompactionSegments should be larger than 1"
-    );
-  }
-
-  /**
-   * This method is copied from
-   * org.apache.druid.indexing.common.task.CompactionTask.getValidTargetCompactionSizeBytes(). The only difference is
-   * this method doesn't check 'numShards' which is not supported by {@link UserCompactionTaskQueryTuningConfig}.
-   *
-   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
-   * the same method, this method must be synced with CompactionTask.getValidTargetCompactionSizeBytes().
-   */
-  @Nullable
-  private static Long getValidTargetCompactionSizeBytes(
-      @Nullable Long targetCompactionSizeBytes,
-      @Nullable Integer maxRowsPerSegment,
-      @Nullable UserCompactionTaskQueryTuningConfig tuningConfig
-  )
-  {
-    if (targetCompactionSizeBytes != null) {
-      Preconditions.checkArgument(
-          !hasPartitionConfig(maxRowsPerSegment, tuningConfig),
-          "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s] and maxTotalRows[%s]",
-          targetCompactionSizeBytes,
-          maxRowsPerSegment,
-          tuningConfig == null ? null : tuningConfig.getMaxTotalRows()
-      );
-      return targetCompactionSizeBytes;
-    } else {
-      return hasPartitionConfig(maxRowsPerSegment, tuningConfig) ? null : DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
-    }
-  }
-
-  /**
-   * This method is copied from org.apache.druid.indexing.common.task.CompactionTask.hasPartitionConfig(). The two
-   * differences are
-   * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactionTaskQueryTuningConfig}, and
-   * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
-   * {@link UserCompactionTaskQueryTuningConfig}.
-   *
-   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
-   * the same method, this method must be synced with
-   * org.apache.druid.indexing.common.task.CompactionTask.hasPartitionConfig().
-   */
-  private static boolean hasPartitionConfig(
-      @Nullable Integer maxRowsPerSegment,
-      @Nullable UserCompactionTaskQueryTuningConfig tuningConfig
-  )
-  {
-    return maxRowsPerSegment != null || (tuningConfig != null && tuningConfig.getMaxTotalRows() != null);
   }
 
   @JsonProperty
@@ -155,19 +88,6 @@ public class DataSourceCompactionConfig
   public long getInputSegmentSizeBytes()
   {
     return inputSegmentSizeBytes;
-  }
-
-  @JsonProperty
-  public int getMaxNumSegmentsToCompact()
-  {
-    return maxNumSegmentsToCompact;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Long getTargetCompactionSizeBytes()
-  {
-    return targetCompactionSizeBytes;
   }
 
   @JsonProperty
@@ -209,9 +129,7 @@ public class DataSourceCompactionConfig
     DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
-           maxNumSegmentsToCompact == that.maxNumSegmentsToCompact &&
            Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(taskContext, that.taskContext);
@@ -224,8 +142,6 @@ public class DataSourceCompactionConfig
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
-        targetCompactionSizeBytes,
-        maxNumSegmentsToCompact,
         skipOffsetFromLatest,
         tuningConfig,
         taskContext

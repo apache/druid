@@ -40,6 +40,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -271,7 +272,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
     this.metrics = fireDepartmentForMetrics.getMetrics();
 
-    Supplier<Committer> committerSupplier = null;
+    final Supplier<Committer> committerSupplier = Committers.nilSupplier();
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
@@ -350,7 +351,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       synchronized (this) {
         if (!gracefullyStopped) {
           firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
-          committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }
 
@@ -370,7 +370,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             if (addResult.isOk()) {
               final boolean isPushRequired = addResult.isPushRequired(
                   tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
-                  tuningConfig.getPartitionsSpec().getMaxTotalRows()
+                  tuningConfig.getPartitionsSpec().getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
               );
               if (isPushRequired) {
                 publishSegments(driver, publisher, committerSupplier, sequenceName);

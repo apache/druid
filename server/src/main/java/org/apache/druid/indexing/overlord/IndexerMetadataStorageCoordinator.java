@@ -27,6 +27,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -36,59 +37,94 @@ import java.util.Set;
 public interface IndexerMetadataStorageCoordinator
 {
   /**
-   * Retrieve all segments which may include any data in the interval and are marked as used from the metadata store.
+   * Retrieve all published segments which may include any data in the interval and are marked as used from the
+   * metadata store.
+   *
+   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
+   * the collection only once.
    *
    * @param dataSource The data source to query
-   * @param interval   The interval for which all applicable and used segments are requested. Start is inclusive,
-   *                   end is exclusive
-   *
+   * @param interval   The interval for which all applicable and used segmented are requested.
+   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
+   *                   visibility is considered within the specified interval: that is, a segment which is visible
+   *                   outside of the specified interval, but overshadowed within the specified interval will not be
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
+   *                   {@link Segments}.
    * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
-   * requested interval.
+   *         requested interval.
+   *
+   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
+   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
+   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
+   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
-  default List<DataSegment> retrieveUsedSegmentsForInterval(String dataSource, Interval interval)
+  default Collection<DataSegment> retrieveUsedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      Segments visibility
+  )
   {
-    return retrieveUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval));
+    return retrieveUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval), visibility);
   }
 
   /**
-   * Retrieve all used segments in the data source from the metadata store.
+   * Retrieve all published used segments in the data source from the metadata store.
    *
    * @param dataSource The data source to query
    *
    * @return all segments belonging to the given data source
-   * @see #retrieveUsedSegmentsForInterval(String, Interval) similar to this method but also accepts data interval.
+   * @see #retrieveUsedSegmentsForInterval(String, Interval, Segments) similar to this method but also accepts data
+   * interval.
    */
-  List<DataSegment> retrieveAllUsedSegments(String dataSource);
+  Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
 
   /**
-   * Retrieve all used segments and the created_date of these segments belonging to the given data source from the
-   * metadata store.
+   * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
+   * given data source from the metadata store.
+   *
+   * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
+   * parameter. This methods returns overshadowed segments, as if {@link Segments#INCLUDING_OVERSHADOWED} was passed.
    *
    * @param dataSource The data source to query
    *
-   * @return DataSegments and the related created_date of segments
+   * @return The DataSegments and the related created_date of segments
    */
-  List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
 
   /**
-   * Retrieve all segments which may include any data in the given intervals and are marked as used from the metadata
-   * store.
+   * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
+   * metadata store.
+   *
+   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
+   * the collection only once.
    *
    * @param dataSource The data source to query
    * @param intervals  The intervals for which all applicable and used segments are requested.
-   *
+   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
+   *                   visibility is considered within the specified intervals: that is, a segment which is visible
+   *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
+   *                   {@link Segments}.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   * requested intervals.
+   *         requested intervals.
+   *
+   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
+   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
+   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
+   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
-  List<DataSegment> retrieveUsedSegmentsForIntervals(String dataSource, List<Interval> intervals);
+  Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  );
 
   /**
-   * Retrieve all segments which include ONLY data within the given interval and are marked as unused from the metadata
-   * store.
+   * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
+   * metadata store.
    *
    * @param dataSource The data source the segments belong to
-   * @param interval   Filter the data segments to ones that include data in this interval exclusively. Start is
-   *                   inclusive, end is exclusive
+   * @param interval   Filter the data segments to ones that include data in this interval exclusively.
    *
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval

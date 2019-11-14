@@ -168,7 +168,8 @@ public class DruidCoordinator
       @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
-      @Coordinator DruidLeaderSelector coordLeaderSelector
+      @Coordinator DruidLeaderSelector coordLeaderSelector,
+      CompactSegments compactSegments
   )
   {
     this(
@@ -189,7 +190,8 @@ public class DruidCoordinator
         indexingServiceDuties,
         factory,
         lookupCoordinatorManager,
-        coordLeaderSelector
+        coordLeaderSelector,
+        compactSegments
     );
   }
 
@@ -211,7 +213,8 @@ public class DruidCoordinator
       Set<CoordinatorDuty> indexingServiceDuties,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
-      DruidLeaderSelector coordLeaderSelector
+      DruidLeaderSelector coordLeaderSelector,
+      CompactSegments compactSegments
   )
   {
     this.config = config;
@@ -236,7 +239,7 @@ public class DruidCoordinator
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
 
-    this.compactSegments = new CompactSegments(indexingServiceClient);
+    this.compactSegments = compactSegments;
   }
 
   public boolean isLeader()
@@ -340,9 +343,10 @@ public class DruidCoordinator
     return loadStatus;
   }
 
-  public long remainingSegmentSizeBytesForCompaction(String dataSource)
+  @Nullable
+  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
   {
-    return compactSegments.getRemainingSegmentSizeBytes(dataSource);
+    return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
   public CoordinatorDynamicConfig getDynamicConfigs()

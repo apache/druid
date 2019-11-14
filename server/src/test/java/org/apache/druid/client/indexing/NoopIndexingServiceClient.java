@@ -47,7 +47,6 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   @Override
   public String compactSegments(
       List<DataSegment> segments,
-      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context

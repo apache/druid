@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
@@ -41,6 +42,11 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 {
   private static final Logger log = new Logger(EmitClusterStatsAndMetrics.class);
+
+  public static final String TOTAL_CAPACITY = "totalCapacity";
+  public static final String TOTAL_HISTORICAL_COUNT = "totalHistoricalCount";
+  public static final String MAX_REPLICATION_FACTOR = "maxReplicationFactor";
+
   private final DruidCoordinator coordinator;
 
   public EmitClusterStatsAndMetrics(DruidCoordinator coordinator)
@@ -53,6 +59,20 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
       final String metricName,
       final String tier,
       final double value
+  )
+  {
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension(DruidMetrics.TIER, tier)
+            .build(metricName, value)
+    );
+  }
+
+  private void emitTieredStat(
+      final ServiceEmitter emitter,
+      final String metricName,
+      final String tier,
+      final long value
   )
   {
     emitter.emit(
@@ -178,8 +198,35 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
             log.debug("Segment to drop[%s]", segment);
           }
         }
+        stats.addToTieredStat(TOTAL_CAPACITY, server.getTier(), server.getMaxSize());
+        stats.addToTieredStat(TOTAL_HISTORICAL_COUNT, server.getTier(), 1);
       }
     }
+
+
+    params.getDatabaseRuleManager()
+          .getAllRules()
+          .values()
+          .forEach(
+              rules -> rules.forEach(
+                  rule -> {
+                    if (rule instanceof LoadRule) {
+                      ((LoadRule) rule).getTieredReplicants()
+                                       .forEach(
+                                           (tier, replica) -> stats.accumulateMaxTieredStat(
+                                               MAX_REPLICATION_FACTOR,
+                                               tier,
+                                               replica
+                                           ));
+                    }
+                  }
+              ));
+
+    emitTieredStats(emitter, "tier/required/capacity", stats, LoadRule.REQUIRED_CAPACITY);
+    emitTieredStats(emitter, "tier/total/capacity", stats, TOTAL_CAPACITY);
+
+    emitTieredStats(emitter, "tier/replication/factor", stats, MAX_REPLICATION_FACTOR);
+    emitTieredStats(emitter, "tier/historical/count", stats, TOTAL_HISTORICAL_COUNT);
 
     // Emit coordinator metrics
     params

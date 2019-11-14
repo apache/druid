@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -38,7 +39,7 @@ public class UserCompactionTaskQueryTuningConfigTest
   public void testSerdeNulls() throws IOException
   {
     final UserCompactionTaskQueryTuningConfig config =
-        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null);
+        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null);
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
@@ -54,6 +55,7 @@ public class UserCompactionTaskQueryTuningConfigTest
         1000,
         10000L,
         2000L,
+        new SegmentsSplitHintSpec(42L),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(false),
             CompressionStrategy.LZF,
@@ -61,7 +63,8 @@ public class UserCompactionTaskQueryTuningConfigTest
             CompressionFactory.LongEncodingStrategy.LONGS
         ),
         1,
-        3000L
+        3000L,
+        5
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);

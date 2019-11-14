@@ -1034,7 +1034,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.2
+version: 2.10.5
 libraries:
   - joda-time: joda-time
 notices:
@@ -1269,20 +1269,33 @@ notice: |
     - Apache License 2.0
     - BSD License
 
-
 ---
 
 name: Apache HttpClient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.3
+version: 4.5.10
 libraries:
   - org.apache.httpcomponents: httpclient
 notices:
   - httpclient: |
       Apache HttpClient
       Copyright 1999-2017 The Apache Software Foundation
+
+---
+
+name: Apache HttpClient
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.5.2
+libraries:
+  - org.apache.httpcomponents: httpclient
+notices:
+  - httpclient: |
+      Apache HttpClient
+      Copyright 1999-2016 The Apache Software Foundation
 
 ---
 
@@ -2769,20 +2782,6 @@ notices:
 
 ---
 
-name: Apache HttpClient
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 4.5.2
-libraries:
-  - org.apache.httpcomponents: httpclient
-notices:
-  - httpclient: |
-      Apache HttpClient
-      Copyright 1999-2016 The Apache Software Foundation
-
----
-
 name: Apache Zookeeper
 license_category: binary
 module: hadoop-client
@@ -3059,7 +3058,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.1.0
+version: 2.2.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0

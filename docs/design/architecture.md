@@ -58,7 +58,7 @@ this is typically going to be local disk. Druid uses deep storage to store any d
 system.
 
 Druid uses deep storage only as a backup of your data and as a way to transfer data in the background between
-Druid processes. To respond to queries, Historical processes do not read from deep storage, but instead read pre-fetched
+Druid processes. To respond to queries, Historical processes do not read from deep storage, but instead read prefetched
 segments from their local disks before any queries are served. This means that Druid never needs to access deep storage
 during a query, helping it offer the best query latencies possible. It also means that you must have enough disk space
 both in deep storage and across your Historical processes for the data you plan to load.

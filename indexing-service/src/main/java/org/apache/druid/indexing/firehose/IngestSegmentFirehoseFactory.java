@@ -34,6 +34,8 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -63,6 +65,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -78,7 +81,6 @@ import java.util.stream.Stream;
 public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<InputRowParser, List<WindowedSegmentId>>
 {
   private static final EmittingLogger log = new EmittingLogger(IngestSegmentFirehoseFactory.class);
-  private static final long DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK = 150 * 1024 * 1024;
   private final String dataSource;
   // Exactly one of interval and segmentIds should be non-null. Typically 'interval' is specified directly
   // by the user creating this firehose and 'segmentIds' is used for sub-tasks if it is split for parallel
@@ -90,7 +92,8 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   private final DimFilter dimFilter;
   private final List<String> dimensions;
   private final List<String> metrics;
-  private final long maxInputSegmentBytesPerTask;
+  @Nullable
+  private final Long maxInputSegmentBytesPerTask;
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
@@ -108,7 +111,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
-      @JsonProperty("maxInputSegmentBytesPerTask") Long maxInputSegmentBytesPerTask,
+      @JsonProperty("maxInputSegmentBytesPerTask") @Deprecated @Nullable Long maxInputSegmentBytesPerTask,
       @JacksonInject IndexIO indexIO,
       @JacksonInject CoordinatorClient coordinatorClient,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
@@ -125,9 +128,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     this.dimFilter = dimFilter;
     this.dimensions = dimensions;
     this.metrics = metrics;
-    this.maxInputSegmentBytesPerTask = maxInputSegmentBytesPerTask == null
-                                       ? DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK
-                                       : maxInputSegmentBytesPerTask;
+    this.maxInputSegmentBytesPerTask = maxInputSegmentBytesPerTask;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
     this.segmentLoaderFactory = Preconditions.checkNotNull(segmentLoaderFactory, "null SegmentLoaderFactory");
@@ -190,8 +191,9 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     return metrics;
   }
 
+  @Nullable
   @JsonProperty
-  public long getMaxInputSegmentBytesPerTask()
+  public Long getMaxInputSegmentBytesPerTask()
   {
     return maxInputSegmentBytesPerTask;
   }
@@ -312,7 +314,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
     // as TaskActionClient.
     final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    List<DataSegment> usedSegments;
+    Collection<DataSegment> usedSegments;
     while (true) {
       try {
         List<Interval> intervals = Collections.singletonList(interval);
@@ -388,11 +390,25 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     return new ArrayList<>(timeline.values());
   }
 
-  private void initializeSplitsIfNeeded()
+  private void initializeSplitsIfNeeded(@Nullable SplitHintSpec splitHintSpec)
   {
     if (splits != null) {
       return;
     }
+
+    final SegmentsSplitHintSpec nonNullSplitHintSpec;
+    if (!(splitHintSpec instanceof SegmentsSplitHintSpec)) {
+      if (splitHintSpec != null) {
+        log.warn("Given splitHintSpec[%s] is not a SegmentsSplitHintSpec. Ingoring it.", splitHintSpec);
+      }
+      nonNullSplitHintSpec = new SegmentsSplitHintSpec(null);
+    } else {
+      nonNullSplitHintSpec = (SegmentsSplitHintSpec) splitHintSpec;
+    }
+
+    final long maxInputSegmentBytesPerTask = this.maxInputSegmentBytesPerTask == null
+                                             ? nonNullSplitHintSpec.getMaxInputSegmentBytesPerTask()
+                                             : this.maxInputSegmentBytesPerTask;
 
     // isSplittable() ensures this is only called when we have an interval.
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval();
@@ -456,16 +472,16 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   }
 
   @Override
-  public Stream<InputSplit<List<WindowedSegmentId>>> getSplits()
+  public Stream<InputSplit<List<WindowedSegmentId>>> getSplits(@Nullable SplitHintSpec splitHintSpec)
   {
-    initializeSplitsIfNeeded();
+    initializeSplitsIfNeeded(splitHintSpec);
     return splits.stream();
   }
 
   @Override
-  public int getNumSplits()
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
   {
-    initializeSplitsIfNeeded();
+    initializeSplitsIfNeeded(splitHintSpec);
     return splits.size();
   }
 

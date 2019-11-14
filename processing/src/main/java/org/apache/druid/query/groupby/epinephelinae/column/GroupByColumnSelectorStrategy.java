@@ -21,8 +21,11 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -136,4 +139,12 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @param keyBuffer         grouping key
    */
   void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer);
+
+  /**
+   * Return BufferComparator for values written using this strategy when limit is pushed down to segment scan.
+   * @param keyBufferPosition starting offset for this column's value within the grouping key
+   * @param stringComparator stringComparator from LimitSpec for this column
+   * @return BufferComparator for comparing values written
+   */
+  Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator);
 }

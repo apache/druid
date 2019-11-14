@@ -34,17 +34,20 @@ public class BasicAuthorizerRoleFull
 {
   private final String name;
   private final Set<String> users;
+  private final Set<String> groups;
   private final List<BasicAuthorizerPermission> permissions;
 
   @JsonCreator
   public BasicAuthorizerRoleFull(
       @JsonProperty("name") String name,
       @JsonProperty("users") Set<String> users,
+      @JsonProperty("groups") Set<String> groups,
       @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
   )
   {
     this.name = name;
     this.users = users;
+    this.groups = groups;
     this.permissions = permissions == null ? new ArrayList<>() : permissions;
   }
 
@@ -66,6 +69,12 @@ public class BasicAuthorizerRoleFull
     return users;
   }
 
+  @JsonProperty
+  public Set<String> getGroups()
+  {
+    return groups;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -84,6 +93,9 @@ public class BasicAuthorizerRoleFull
     if (getUsers() != null ? !getUsers().equals(that.getUsers()) : that.getUsers() != null) {
       return false;
     }
+    if (getGroups() != null ? !getGroups().equals(that.getGroups()) : that.getGroups() != null) {
+      return false;
+    }
     return getPermissions() != null ? getPermissions().equals(that.getPermissions()) : that.getPermissions() == null;
 
   }
@@ -93,6 +105,7 @@ public class BasicAuthorizerRoleFull
   {
     int result = getName() != null ? getName().hashCode() : 0;
     result = 31 * result + (getUsers() != null ? getUsers().hashCode() : 0);
+    result = 31 * result + (getGroups() != null ? getGroups().hashCode() : 0);
     result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
     return result;
   }

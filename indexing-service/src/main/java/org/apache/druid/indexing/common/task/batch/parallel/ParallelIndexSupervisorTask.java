@@ -158,6 +158,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
+      @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
@@ -170,7 +171,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     super(
         getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
-        null,
+        groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context
@@ -183,13 +184,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       throw new IAE("[%s] should implement FiniteFirehoseFactory", firehoseFactory.getClass().getSimpleName());
     }
 
-    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()
-        && (ingestionSchema.getTuningConfig().getNumShards() == null
-            || ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty())) {
-      throw new ISE(
-          "forceGuaranteedRollup is set "
-          + "but numShards is missing in partitionsSpec or intervals is missing in granularitySpec"
-      );
+    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
+      if (ingestionSchema.getTuningConfig().getNumShards() == null) {
+        throw new ISE("forceGuaranteedRollup is set but numShards is missing in partitionsSpec");
+      }
+
+      if (ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+        throw new ISE("forceGuaranteedRollup is set but intervals is missing in granularitySpec");
+      }
     }
 
     this.baseFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
@@ -395,10 +397,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
               "firehoseFactory[%s] is not splittable. Running sequentially.",
               baseFirehoseFactory.getClass().getSimpleName()
           );
-        } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() == 1) {
+        } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
           LOG.warn(
-              "maxNumConcurrentSubTasks is 1. Running sequentially. "
-              + "Please set maxNumConcurrentSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
+              "maxNumConcurrentSubTasks[%s] is less than or equal to 1. Running sequentially. "
+              + "Please set maxNumConcurrentSubTasks to something higher than 1 if you want to run in parallel "
+              + "ingestion mode.",
+              ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks()
           );
         } else {
           throw new ISE("Unknown reason for sequentail mode. Failing this task.");

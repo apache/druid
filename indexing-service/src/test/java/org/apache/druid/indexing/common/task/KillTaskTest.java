@@ -22,10 +22,12 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.assertj.core.api.Assertions;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,18 +78,16 @@ public class KillTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
-    final List<DataSegment> unusedSegments = getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
-        DATA_SOURCE,
-        Intervals.of("2019/2020")
-    );
+    final List<DataSegment> unusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"));
 
     Assert.assertEquals(ImmutableList.of(newSegment(Intervals.of("2019-02-01/2019-03-01"), version)), unusedSegments);
-    Assert.assertEquals(
-        ImmutableList.of(
-            newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
-            newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
-        ),
-        getMetadataStorageCoordinator().retrieveUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"))
+    Assertions.assertThat(
+        getMetadataStorageCoordinator()
+            .retrieveUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"), Segments.ONLY_VISIBLE)
+    ).containsExactlyInAnyOrder(
+        newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
+        newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
   }
 
