@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.data.input.impl.CsvReader;
+import org.apache.druid.data.input.TextReader;
 import org.apache.druid.java.util.common.collect.Utils;
 
 import javax.annotation.Nullable;
@@ -100,7 +100,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   public void setFieldNames(final Iterable<String> fieldNames)
   {
     if (fieldNames != null) {
-      this.fieldNames = CsvReader.findOrCreateColumnNames(Lists.newArrayList(fieldNames));
+      this.fieldNames = TextReader.findOrCreateColumnNames(Lists.newArrayList(fieldNames));
     }
   }
 

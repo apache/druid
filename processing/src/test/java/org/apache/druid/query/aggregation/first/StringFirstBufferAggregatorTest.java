@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class StringFirstBufferAggregatorTest
 {
@@ -65,13 +64,7 @@ public class StringFirstBufferAggregatorTest
         maxStringBytes
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -83,7 +76,7 @@ public class StringFirstBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expectec last string value", strings[0], sp.rhs);
+    Assert.assertEquals("expected last string value", strings[0], sp.rhs);
     Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[0]), new Long(sp.lhs));
 
   }
@@ -109,13 +102,7 @@ public class StringFirstBufferAggregatorTest
         maxStringBytes
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -127,12 +114,12 @@ public class StringFirstBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expectec last string value", strings[1], sp.rhs);
+    Assert.assertEquals("expected last string value", strings[1], sp.rhs);
     Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[1]), new Long(sp.lhs));
 
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testNoStringValue()
   {
 
@@ -153,13 +140,7 @@ public class StringFirstBufferAggregatorTest
         maxStringBytes
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -167,5 +148,10 @@ public class StringFirstBufferAggregatorTest
     for (int i = 0; i < timestamps.length; i++) {
       aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
     }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+    Assert.assertEquals(1526724600L, (long) sp.lhs);
+    Assert.assertEquals("2.0", sp.rhs);
   }
 }

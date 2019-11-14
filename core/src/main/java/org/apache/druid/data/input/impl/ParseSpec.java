@@ -29,7 +29,6 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.parsers.Parser;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 @Deprecated
 @ExtensionPoint
@@ -65,12 +64,6 @@ public abstract class ParseSpec
   public DimensionsSpec getDimensionsSpec()
   {
     return dimensionsSpec;
-  }
-
-  @PublicApi
-  public void verify(List<String> usedCols)
-  {
-    // do nothing
   }
 
   public Parser<String, Object> makeParser()

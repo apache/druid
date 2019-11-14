@@ -154,8 +154,8 @@ public class DatasourcePathSpecTest
   @Test
   public void testSerde() throws Exception
   {
-    final UsedSegmentLister segmentList = EasyMock.createMock(
-        UsedSegmentLister.class
+    final UsedSegmentsRetriever segmentsRetriever = EasyMock.createMock(
+        UsedSegmentsRetriever.class
     );
 
     Injector injector = Initialization.makeInjectorWithModules(
@@ -166,7 +166,7 @@ public class DatasourcePathSpecTest
               @Override
               public void configure(Binder binder)
               {
-                binder.bind(UsedSegmentLister.class).toInstance(segmentList);
+                binder.bind(UsedSegmentsRetriever.class).toInstance(segmentsRetriever);
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),

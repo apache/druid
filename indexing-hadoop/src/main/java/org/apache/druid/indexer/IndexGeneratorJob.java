@@ -809,7 +809,7 @@ public class IndexGeneratorJob implements Jobby
             metricNames,
             shardSpecForPublishing,
             -1,
-            -1
+            0
         );
 
         final DataSegment segment = JobHelper.serializeOutIndex(

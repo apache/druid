@@ -19,14 +19,17 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.base.Strings;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -108,4 +111,22 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
    * Processes a header line. This will be called if {@link #needsToProcessHeaderLine()} = true.
    */
   public abstract void processHeaderLine(String line) throws IOException;
+
+  public static List<String> findOrCreateColumnNames(List<String> parsedLine)
+  {
+    final List<String> columns = new ArrayList<>(parsedLine.size());
+    for (int i = 0; i < parsedLine.size(); i++) {
+      if (Strings.isNullOrEmpty(parsedLine.get(i))) {
+        columns.add(ParserUtils.getDefaultColumnName(i));
+      } else {
+        columns.add(parsedLine.get(i));
+      }
+    }
+    if (columns.isEmpty()) {
+      return ParserUtils.generateFieldNames(parsedLine.size());
+    } else {
+      ParserUtils.validateFields(columns);
+      return columns;
+    }
+  }
 }

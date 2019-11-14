@@ -1017,11 +1017,13 @@ public class TaskLifecycleTest
           throw new ISE("Failed to get a lock");
         }
 
-        final DataSegment segment = DataSegment.builder()
-                                               .dataSource("ds")
-                                               .interval(interval)
-                                               .version(lock.getVersion())
-                                               .build();
+        final DataSegment segment = DataSegment
+            .builder()
+            .dataSource("ds")
+            .interval(interval)
+            .version(lock.getVersion())
+            .size(0)
+            .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
@@ -1056,11 +1058,13 @@ public class TaskLifecycleTest
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
-        final DataSegment segment = DataSegment.builder()
-                                               .dataSource("ds")
-                                               .interval(Intervals.of("2012-01-01/P2D"))
-                                               .version(myLock.getVersion())
-                                               .build();
+        final DataSegment segment = DataSegment
+            .builder()
+            .dataSource("ds")
+            .interval(Intervals.of("2012-01-01/P2D"))
+            .version(myLock.getVersion())
+            .size(0)
+            .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
@@ -1096,11 +1100,13 @@ public class TaskLifecycleTest
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
-        final DataSegment segment = DataSegment.builder()
-                                               .dataSource("ds")
-                                               .interval(Intervals.of("2012-01-01/P1D"))
-                                               .version(myLock.getVersion() + "1!!!1!!")
-                                               .build();
+        final DataSegment segment = DataSegment
+            .builder()
+            .dataSource("ds")
+            .interval(Intervals.of("2012-01-01/P1D"))
+            .version(myLock.getVersion() + "1!!!1!!")
+            .size(0)
+            .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());

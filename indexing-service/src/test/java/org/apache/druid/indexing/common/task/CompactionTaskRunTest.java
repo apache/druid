@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -83,6 +84,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -151,9 +153,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
@@ -489,7 +491,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Set<DataSegment> usedSegments = new HashSet<>(
         getStorageCoordinator().getUsedSegmentsForIntervals(
             DATA_SOURCE,
-            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
         )
     );
 

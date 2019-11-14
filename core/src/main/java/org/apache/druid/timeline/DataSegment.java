@@ -215,6 +215,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                ? null
                                : prepareCompactionState(lastCompactionState);
     this.binaryVersion = binaryVersion;
+    Preconditions.checkArgument(size >= 0);
     this.size = size;
   }
 

@@ -43,10 +43,17 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -314,21 +321,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-          .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-          .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-          .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-          .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-          .add(new Object[]{"druid", "aview", "VIEW"})
-          .add(new Object[]{"druid", "bview", "VIEW"})
-          .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-          .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-          .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-          .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-          .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-          .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-          .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-          .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
-          .build()
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
+            .add(new Object[]{"druid", "aview", "VIEW"})
+            .add(new Object[]{"druid", "bview", "VIEW"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .build()
     );
 
     testQuery(
@@ -885,6 +892,123 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1"},
             new Object[]{"1"},
             new Object[]{""}
+        )
+    );
+  }
+
+  @Test
+  public void testEarliestAggregators() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT "
+        + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), "
+        + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ValueType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ValueType.FLOAT),
+                      expressionVirtualColumn("v2", "concat(\"dim1\",CAST(\"cnt\", 'STRING'))", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongFirstAggregatorFactory("a0", "cnt"),
+                          new FloatFirstAggregatorFactory("a1", "m1"),
+                          new StringFirstAggregatorFactory("a2", "dim1", 10),
+                          new LongFirstAggregatorFactory("a3", "v0"),
+                          new FloatFirstAggregatorFactory("a4", "v1"),
+                          new StringFirstAggregatorFactory("a5", "v2", 10)
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1.0f, NullHandling.sqlCompatible() ? "" : "10.1", 2L, 2.0f, "1"}
+        )
+    );
+  }
+
+  @Test
+  public void testLatestAggregators() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT "
+        + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
+        + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ValueType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ValueType.FLOAT),
+                      expressionVirtualColumn("v2", "concat(\"dim1\",CAST(\"cnt\", 'STRING'))", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongLastAggregatorFactory("a0", "cnt"),
+                          new FloatLastAggregatorFactory("a1", "m1"),
+                          new StringLastAggregatorFactory("a2", "dim1", 10),
+                          new LongLastAggregatorFactory("a3", "v0"),
+                          new FloatLastAggregatorFactory("a4", "v1"),
+                          new StringLastAggregatorFactory("a5", "v2", 10)
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
+        )
+    );
+  }
+
+  @Test
+  public void testLatestInSubquery() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val) FROM (SELECT dim2, LATEST(m1) AS val FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0:a", "m1")))
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", "a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? 18.0 : 15.0}
         )
     );
   }
@@ -8411,7 +8535,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"1\",\"2\"]", ""}
+            new Object[]{"[1,2]", ""}
         )
     );
   }

@@ -104,6 +104,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -243,9 +244,9 @@ public class IndexTaskTest extends IngestionTestBase
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("2014-01-01T00:00:10Z,a,1\n");
-      writer.write("2014-01-01T01:00:20Z,b,1\n");
-      writer.write("2014-01-01T02:00:30Z,c,1\n");
+      writer.write("2014-01-01T00:00:10Z,a,an|array,1|2|3,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,another|array,3|4,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,and|another,0|1,1\n");
     }
 
     IndexTask indexTask = new IndexTask(
@@ -255,11 +256,40 @@ public class IndexTaskTest extends IngestionTestBase
             useInputFormatApi,
             jsonMapper,
             tmpDir,
-            null,
+            new CSVParseSpec(
+                new TimestampSpec(
+                    "ts",
+                    "auto",
+                    null
+                ),
+                new DimensionsSpec(
+                    DimensionsSpec.getDefaultSchemas(
+                        Arrays.asList(
+                            "ts",
+                            "dim",
+                            "dim_array",
+                            "dim_num_array",
+                            "dimt",
+                            "dimtarray1",
+                            "dimtarray2",
+                            "dimtnum_array"
+                        )
+                    ),
+                    new ArrayList<>(),
+                    new ArrayList<>()
+                ),
+                "|",
+                Arrays.asList("ts", "dim", "dim_array", "dim_num_array", "val"),
+                false,
+                0
+            ),
             new TransformSpec(
                 new SelectorDimFilter("dim", "b", null),
                 ImmutableList.of(
-                    new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil())
+                    new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil()),
+                    new ExpressionTransform("dimtarray1", "array(dim, dim)", ExprMacroTable.nil()),
+                    new ExpressionTransform("dimtarray2", "map(d -> concat(d, 'foo'), dim_array)", ExprMacroTable.nil()),
+                    new ExpressionTransform("dimtnum_array", "map(d -> d + 3, dim_num_array)", ExprMacroTable.nil())
                 )
             ),
             null,
@@ -278,6 +308,47 @@ public class IndexTaskTest extends IngestionTestBase
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(1, segments.size());
+    DataSegment segment = segments.get(0);
+    final File segmentFile = segmentLoader.getSegmentFiles(segment);
+
+    final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+        new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
+        segment.getInterval()
+    );
+    final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+        null,
+        segment.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+    final List<Map<String, Object>> transforms = cursorSequence
+        .map(cursor -> {
+          final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
+                                                   .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
+          final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
+                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimtarray1", "dimtarray1"));
+          final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
+                                                   .makeDimensionSelector(new DefaultDimensionSpec("dimtarray2", "dimtarray2"));
+          final DimensionSelector selector4 = cursor.getColumnSelectorFactory()
+                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimtnum_array", "dimtnum_array"));
+
+
+          Map<String, Object> row = new HashMap<>();
+          row.put("dimt", selector1.defaultGetObject());
+          row.put("dimtarray1", selector2.defaultGetObject());
+          row.put("dimtarray2", selector3.defaultGetObject());
+          row.put("dimtnum_array", selector4.defaultGetObject());
+          cursor.advance();
+          return row;
+        })
+        .toList();
+    Assert.assertEquals(1, transforms.size());
+    Assert.assertEquals("bb", transforms.get(0).get("dimt"));
+    Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
+    Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
+    Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());

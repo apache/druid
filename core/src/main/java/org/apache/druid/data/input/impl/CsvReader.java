@@ -22,9 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import com.opencsv.CSVParser;
+import com.opencsv.RFC4180Parser;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
@@ -36,7 +35,6 @@ import org.apache.druid.java.util.common.parsers.Parsers;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -44,7 +42,7 @@ import java.util.Map;
 
 public class CsvReader extends TextReader
 {
-  private final CSVParser parser = new CSVParser();
+  private final RFC4180Parser parser = new RFC4180Parser();
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Function<String, Object> multiValueFunction;
@@ -70,7 +68,6 @@ public class CsvReader extends TextReader
       for (String column : this.columns) {
         Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
       }
-      verify(this.columns, inputRowSchema.getDimensionsSpec().getDimensionNames());
     } else {
       Preconditions.checkArgument(
           findColumnsFromHeader,
@@ -130,31 +127,6 @@ public class CsvReader extends TextReader
     columns = findOrCreateColumnNames(Arrays.asList(parser.parseLine(line)));
     if (columns.isEmpty()) {
       throw new ISE("Empty columns");
-    }
-  }
-
-  public static void verify(List<String> columns, List<String> dimensionNames)
-  {
-    for (String columnName : dimensionNames) {
-      Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
-    }
-  }
-
-  public static List<String> findOrCreateColumnNames(List<String> parsedLine)
-  {
-    final List<String> columns = new ArrayList<>(parsedLine.size());
-    for (int i = 0; i < parsedLine.size(); i++) {
-      if (Strings.isNullOrEmpty(parsedLine.get(i))) {
-        columns.add(ParserUtils.getDefaultColumnName(i));
-      } else {
-        columns.add(parsedLine.get(i));
-      }
-    }
-    if (columns.isEmpty()) {
-      return ParserUtils.generateFieldNames(parsedLine.size());
-    } else {
-      ParserUtils.validateFields(columns);
-      return columns;
     }
   }
 }

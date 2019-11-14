@@ -55,14 +55,17 @@ public class DruidCoordinatorCleanupOvershadowedTest
   private DataSegment segmentV0 = new DataSegment.Builder().dataSource("test")
                                                            .interval(new Interval(start, start.plusHours(1)))
                                                            .version("0")
+                                                           .size(0)
                                                            .build();
   private DataSegment segmentV1 = new DataSegment.Builder().dataSource("test")
                                                            .interval(new Interval(start, start.plusHours(1)))
                                                            .version("1")
+                                                           .size(0)
                                                            .build();
   private DataSegment segmentV2 = new DataSegment.Builder().dataSource("test")
                                                            .interval(new Interval(start, start.plusHours(1)))
                                                            .version("2")
+                                                           .size(0)
                                                            .build();
 
   @Test

@@ -19,10 +19,11 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
@@ -52,17 +53,12 @@ public class SerializingQueryRunner<T> implements QueryRunner<T>
   {
     return Sequences.map(
         baseRunner.run(queryPlus, responseContext),
-        new Function<T, T>()
-        {
-          @Override
-          public T apply(T input)
-          {
-            try {
-              return smileMapper.readValue(smileMapper.writeValueAsBytes(input), clazz);
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
+        input -> {
+          try {
+            return JacksonUtils.readValue(smileMapper, smileMapper.writeValueAsBytes(input), clazz);
+          }
+          catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
           }
         }
     );
