@@ -319,8 +319,8 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class=" ace_editor ace-tm"
-        id="ace-editor"
+        class=" ace_editor ace-tm json-input"
+        id="brace-editor"
         style="width: 100%; height: 8vh;"
       >
         <textarea
@@ -425,8 +425,8 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class=" ace_editor ace-tm"
-        id="ace-editor"
+        class=" ace_editor ace-tm json-input"
+        id="brace-editor"
         style="width: 100%; height: 8vh;"
       >
         <textarea

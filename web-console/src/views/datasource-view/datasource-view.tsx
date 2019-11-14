@@ -648,11 +648,6 @@ GROUP BY 1`;
     } else {
       return goToActions.concat([
         {
-          icon: IconNames.GANTT_CHART,
-          title: 'Go to tasks',
-          onAction: () => goToTask(datasource),
-        },
-        {
           icon: IconNames.AUTOMATIC_UPDATES,
           title: 'Edit retention rules',
           onAction: () => {

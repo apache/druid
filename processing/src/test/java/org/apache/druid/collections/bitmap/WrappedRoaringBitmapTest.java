@@ -46,7 +46,7 @@ public class WrappedRoaringBitmapTest
             new RoaringBitmapFactory(false)
         },
         new RoaringBitmapFactory[] {
-            new RoaringBitmapFactory(false)
+            new RoaringBitmapFactory(true)
         }
     );
   }
