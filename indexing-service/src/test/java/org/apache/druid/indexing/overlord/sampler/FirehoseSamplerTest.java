@@ -211,6 +211,69 @@ public class FirehoseSamplerTest
   }
 
   @Test
+  public void testCSVColumnAllNull()
+  {
+    final List<Object> str_csv_rows = ImmutableList.of(
+        "FirstName,LastName,Number,Gender",
+        "J,G,,Male",
+        "Kobe,Bryant,,Male",
+        "Lisa, Krystal,,Female",
+        "Michael,Jackson,,Male"
+    );
+    FirehoseFactory firehoseFactory = getFirehoseFactory(str_csv_rows);
+
+    ParseSpec parseSpec = new DelimitedParseSpec(
+        new TimestampSpec(null, null, DateTimes.of("1970")),
+        new DimensionsSpec(null),
+        ",",
+        null,
+        null,
+        true,
+        0
+    );
+
+    DataSchema dataSchema = new DataSchema("sampler", OBJECT_MAPPER.convertValue(
+        new StringInputRowParser(parseSpec, StandardCharsets.UTF_8.name()),
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    ), null, null, null, OBJECT_MAPPER);
+
+    SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
+
+    Assert.assertEquals(4, (int) response.getNumRowsRead());
+    Assert.assertEquals(4, (int) response.getNumRowsIndexed());
+    Assert.assertEquals(4, response.getData().size());
+
+    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+
+    Assert.assertEquals(new SamplerResponseRow(
+        str_csv_rows.get(1).toString(),
+        ImmutableMap.of("__time", 0L, "Number", "", "FirstName", "J", "LastName", "G", "Gender", "Male"),
+        null,
+        null
+    ), data.get(0));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_csv_rows.get(2).toString(),
+        ImmutableMap.of("__time", 0L, "Number", "", "FirstName", "Kobe", "LastName", "Bryant", "Gender", "Male"),
+        null,
+        null
+    ), data.get(1));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_csv_rows.get(3).toString(),
+        ImmutableMap.of("__time", 0L, "Number", "", "FirstName", "Lisa", "LastName", " Krystal", "Gender", "Female"),
+        null,
+        null
+    ), data.get(2));
+    Assert.assertEquals(new SamplerResponseRow(
+        str_csv_rows.get(4).toString(),
+        ImmutableMap.of("__time", 0L, "Number", "", "FirstName", "Michael", "LastName", "Jackson", "Gender", "Male"),
+        null,
+        null
+    ), data.get(3));
+  }
+
+  @Test
   public void testMissingValueTimestampSpec()
   {
     FirehoseFactory firehoseFactory = getFirehoseFactory(getTestRows());
@@ -228,25 +291,25 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo", "met1", "1"),
+        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim2", "", "dim1", "foo", "met1", "1"),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo", "met1", "2"),
+        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim2", "", "dim1", "foo", "met1", "2"),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:01", "dim1", "foo", "met1", "3"),
+        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:01", "dim2", "", "dim1", "foo", "met1", "3"),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo2", "met1", "4"),
+        ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim2", "", "dim1", "foo2", "met1", "4"),
         null,
         null
     ), data.get(3));
@@ -258,7 +321,7 @@ public class FirehoseSamplerTest
     ), data.get(4));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(5).toString(),
-        ImmutableMap.of("__time", 0L, "t", "bad_timestamp", "dim1", "foo", "met1", "6"),
+        ImmutableMap.of("__time", 0L, "t", "bad_timestamp", "dim2", "", "dim1", "foo", "met1", "6"),
         null,
         null
     ), data.get(5));
@@ -282,25 +345,25 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "1"),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", "1"),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "2"),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", "2"),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        ImmutableMap.of("__time", 1555934460000L, "dim1", "foo", "met1", "3"),
+        ImmutableMap.of("__time", 1555934460000L, "dim2", "", "dim1", "foo", "met1", "3"),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", "4"),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo2", "met1", "4"),
         null,
         null
     ), data.get(3));
@@ -405,25 +468,25 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 1L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", 1L),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 2L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", 2L),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 3L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", 3L),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo2", "met1", 4L),
         null,
         null
     ), data.get(3));
@@ -468,13 +531,13 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 6L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", 6L),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo2", "met1", 4L),
         null,
         null
     ), data.get(1));
@@ -628,13 +691,13 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 6L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", 6L),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo2", "met1", 4L),
         null,
         null
     ), data.get(1));
@@ -742,7 +805,7 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 6L),
+        ImmutableMap.of("__time", 1555934400000L, "dim2", "", "dim1", "foo", "met1", 6L),
         null,
         null
     ), data.get(0));
