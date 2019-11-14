@@ -22,7 +22,6 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
 import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
@@ -49,7 +48,7 @@ public class JsonReader extends TextReader
   }
 
   @Override
-  public List<InputRow> readLine(String line) throws IOException, ParseException
+  public List<InputRow> parseInputRows(String line) throws IOException, ParseException
   {
     final JsonNode document = mapper.readValue(line, JsonNode.class);
     final Map<String, Object> flattened = flattener.flatten(document);
@@ -63,24 +62,10 @@ public class JsonReader extends TextReader
   }
 
   @Override
-  public InputRowListPlusJson sampleLine(String line) throws IOException
+  public String toJson(String intermediateRow) throws IOException
   {
-    final JsonNode document = mapper.readValue(line, JsonNode.class);
-    final String rawJson = SAMPLER_JSON_WRITER.writeValueAsString(document);
-    final Map<String, Object> flattened = flattener.flatten(document);
-    try {
-      return InputRowListPlusJson.ofJson(
-          MapInputRowParser.parse(
-              getInputRowSchema().getTimestampSpec(),
-              getInputRowSchema().getDimensionsSpec(),
-              flattened
-          ),
-          rawJson
-      );
-    }
-    catch (ParseException e) {
-      return InputRowListPlusJson.of(rawJson, e);
-    }
+    final JsonNode document = mapper.readValue(intermediateRow, JsonNode.class);
+    return DEFAULT_JSON_WRITER.writeValueAsString(document);
   }
 
   @Override

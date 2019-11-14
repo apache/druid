@@ -26,7 +26,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.opencsv.CSVParser;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
 import org.apache.druid.java.util.common.ISE;
@@ -82,7 +81,7 @@ public class CsvReader extends TextReader
   }
 
   @Override
-  public List<InputRow> readLine(String line) throws IOException, ParseException
+  public List<InputRow> parseInputRows(String line) throws IOException, ParseException
   {
     final Map<String, Object> zipped = parseLine(line);
     return Collections.singletonList(
@@ -95,17 +94,10 @@ public class CsvReader extends TextReader
   }
 
   @Override
-  public InputRowListPlusJson sampleLine(String line) throws IOException
+  public String toJson(String intermediateRow) throws IOException
   {
-    final Map<String, Object> zipped = parseLine(line);
-    return InputRowListPlusJson.ofJson(
-        MapInputRowParser.parse(
-            getInputRowSchema().getTimestampSpec(),
-            getInputRowSchema().getDimensionsSpec(),
-            zipped
-        ),
-        SAMPLER_JSON_WRITER.writeValueAsString(zipped)
-    );
+    final Map<String, Object> zipped = parseLine(intermediateRow);
+    return DEFAULT_JSON_WRITER.writeValueAsString(zipped);
   }
 
   private Map<String, Object> parseLine(String line) throws IOException

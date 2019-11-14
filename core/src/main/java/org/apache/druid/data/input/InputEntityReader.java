@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
@@ -34,5 +36,14 @@ import java.io.IOException;
 @ExtensionPoint
 public interface InputEntityReader
 {
+  /**
+   * Default JSON writer for sampler. This writer can be used to create an {@link InputRowListPlusJson}.
+   * Note that this writer uses the default serializer of Jackson. You may want to create a custom writer
+   * to serialize your custom types.
+   */
+  ObjectWriter DEFAULT_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
+
   CloseableIterator<InputRow> read(InputEntity<?> source, File temporaryDirectory) throws IOException;
+
+  CloseableIterator<InputRowListPlusJson> sample(InputEntity<?> source, File temporaryDirectory) throws IOException;
 }

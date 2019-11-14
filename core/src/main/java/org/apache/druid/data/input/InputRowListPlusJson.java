@@ -31,26 +31,18 @@ public class InputRowListPlusJson
   @Nullable
   private final List<InputRow> inputRows;
 
-  // TODO: remove
   @Nullable
   private final byte[] raw;
 
   @Nullable
-  private final String jsonRaw;
+  private final String rawJson;
 
   @Nullable
   private final ParseException parseException;
 
-  //TODO: remove
   public static InputRowListPlusJson of(@Nullable InputRow inputRow, @Nullable byte[] raw)
   {
     return new InputRowListPlusJson(inputRow == null ? null : Collections.singletonList(inputRow), raw, null, null);
-  }
-
-  // TODO: rename
-  public static InputRowListPlusJson ofJson(@Nullable InputRow inputRow, @Nullable String jsonRaw)
-  {
-    return of(inputRow == null ? null : Collections.singletonList(inputRow), jsonRaw);
   }
 
   public static InputRowListPlusJson of(@Nullable List<InputRow> inputRows, @Nullable String jsonRaw)
@@ -58,7 +50,6 @@ public class InputRowListPlusJson
     return new InputRowListPlusJson(inputRows, null, jsonRaw, null);
   }
 
-  // TODO: remove
   public static InputRowListPlusJson of(@Nullable byte[] raw, @Nullable ParseException parseException)
   {
     return new InputRowListPlusJson(null, raw, null, parseException);
@@ -69,19 +60,18 @@ public class InputRowListPlusJson
     return new InputRowListPlusJson(null, null, jsonRaw, parseException);
   }
 
-  // TODO: remove byte[]
-  private InputRowListPlusJson(@Nullable List<InputRow> inputRows, @Nullable byte[] raw, @Nullable String jsonRaw, @Nullable ParseException parseException)
+  private InputRowListPlusJson(@Nullable List<InputRow> inputRows, @Nullable byte[] raw, @Nullable String rawJson, @Nullable ParseException parseException)
   {
     this.inputRows = inputRows;
     this.raw = raw;
-    this.jsonRaw = jsonRaw;
+    this.rawJson = rawJson;
     this.parseException = parseException;
   }
 
   @Nullable
   public InputRow getInputRow()
   {
-    return Iterables.getOnlyElement(inputRows);
+    return inputRows == null ? null : Iterables.getOnlyElement(inputRows);
   }
 
   @Nullable
@@ -90,7 +80,6 @@ public class InputRowListPlusJson
     return inputRows;
   }
 
-  // TODO: remove
   /**
    * The raw, unparsed event (as opposed to an {@link InputRow} which is the output of a parser). The interface default
    * for {@link Firehose#nextRowWithRaw()} sets this to null, so this will only be non-null if nextRowWithRaw() is
@@ -106,9 +95,9 @@ public class InputRowListPlusJson
   }
 
   @Nullable
-  public String getJsonRaw()
+  public String getRawJson()
   {
-    return jsonRaw;
+    return rawJson;
   }
 
   @Nullable
@@ -119,6 +108,6 @@ public class InputRowListPlusJson
 
   public boolean isEmpty()
   {
-    return (inputRows == null || inputRows.isEmpty()) && raw == null && jsonRaw == null && parseException == null;
+    return (inputRows == null || inputRows.isEmpty()) && raw == null && rawJson == null && parseException == null;
   }
 }

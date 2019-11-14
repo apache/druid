@@ -20,7 +20,6 @@
 package org.apache.druid.data.input;
 
 import org.apache.commons.io.LineIterator;
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -33,7 +32,7 @@ import java.util.List;
 /**
  * Abstract {@link InputEntityReader} for text format readers such as CSV or JSON.
  */
-public abstract class TextReader implements InputEntityReader, InputEntitySampler
+public abstract class TextReader extends IntermediateRowParsingReader<String>
 {
   private final InputRowSchema inputRowSchema;
 
@@ -48,39 +47,8 @@ public abstract class TextReader implements InputEntityReader, InputEntitySample
   }
 
   @Override
-  public CloseableIterator<InputRow> read(InputEntity source, File temporaryDirectory) throws IOException
-  {
-    return lineIterator(source).flatMap(line -> {
-      try {
-        // since readLine() returns a list, the below line always iterates over the list,
-        // which means it calls Iterator.hasNext() and Iterator.next() at least once per line.
-        // This could be unnecessary if the line wouldn't be exploded into multiple rows.
-        // If this line turned out to be a performance bottleneck, perhaps readLine() interface might not be a good
-        // idea. Subclasses could implement read() with some duplicate codes to avoid unnecessary iteration on
-        // a singleton list.
-        return CloseableIterators.withEmptyBaggage(readLine(line).iterator());
-      }
-      catch (IOException e) {
-        throw new ParseException(e, "Unable to parse row [%s]", line);
-      }
-    });
-  }
-
-  @Override
-  public CloseableIterator<InputRowListPlusJson> sample(InputEntity<?> source, File temporaryDirectory)
+  public CloseableIterator<String> intermediateRowIterator(InputEntity<?> source, File temporaryDirectory)
       throws IOException
-  {
-    return lineIterator(source).map(line -> {
-      try {
-        return sampleLine(line);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private CloseableIterator<String> lineIterator(InputEntity source) throws IOException
   {
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
@@ -121,18 +89,8 @@ public abstract class TextReader implements InputEntityReader, InputEntitySample
    *
    * This method will be called after {@link #getNumHeaderLinesToSkip()} and {@link #processHeaderLine}.
    */
-  public abstract List<InputRow> readLine(String line) throws IOException, ParseException;
-
-  /**
-   * TODO
-   *
-   * Should handle {@link ParseException} properly.
-   *
-   * @param line
-   * @return
-   * @throws IOException
-   */
-  public abstract InputRowListPlusJson sampleLine(String line) throws IOException;
+  @Override
+  public abstract List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException;
 
   /**
    * Returns the number of header lines to skip.

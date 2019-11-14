@@ -21,7 +21,6 @@ package org.apache.druid.data.input.impl;
 
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputEntitySampler;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusJson;
@@ -80,9 +79,9 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntitySampler is stateful and so a new one should be created per entity.
-      final InputEntitySampler sampler = inputFormat.createSampler(inputRowSchema);
+      final InputEntityReader reader = inputFormat.createReader(inputRowSchema);
       try {
-        return sampler.sample(sourceIterator.next(), temporaryDirectory);
+        return reader.sample(sourceIterator.next(), temporaryDirectory);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
