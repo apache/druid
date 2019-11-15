@@ -33,6 +33,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.ConstantAveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.LongMeanAveragerFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
@@ -47,7 +48,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class MovingAverageIterableTest
+public class MovingAverageIterableTest extends InitializedNullHandlingTest
 {
   private static final DateTime JAN_1 = new DateTime(2017, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_2 = new DateTime(2017, 1, 2, 0, 0, 0, 0, ISOChronology.getInstanceUTC());

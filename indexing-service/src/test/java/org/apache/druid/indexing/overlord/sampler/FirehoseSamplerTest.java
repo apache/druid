@@ -49,6 +49,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -64,7 +65,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class FirehoseSamplerTest
+public class FirehoseSamplerTest extends InitializedNullHandlingTest
 {
   private enum ParserType
   {
@@ -72,10 +73,6 @@ public class FirehoseSamplerTest
   }
 
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
-  private static final boolean USE_DEFAULT_VALUE_FOR_NULL = Boolean.valueOf(System.getProperty(
-      NullHandling.NULL_HANDLING_CONFIG_STRING,
-      "true"
-  ));
 
   private static final List<Object> MAP_ROWS = ImmutableList.of(
       ImmutableMap.of("t", "2019-04-22T12:00", "dim1", "foo", "met1", "1"),
@@ -814,7 +811,7 @@ public class FirehoseSamplerTest
   private String getUnparseableTimestampString()
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? (USE_DEFAULT_VALUE_FOR_NULL
+           ? (NullHandling.replaceWithDefault()
               ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
               : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=, met1=6}")
            : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, met1=6}";
@@ -822,7 +819,7 @@ public class FirehoseSamplerTest
 
   private List<SamplerResponseRow> removeEmptyColumns(List<SamplerResponseRow> rows)
   {
-    return USE_DEFAULT_VALUE_FOR_NULL
+    return NullHandling.replaceWithDefault()
            ? rows
            : rows.stream().map(x -> x.withParsed(removeEmptyValues(x.getParsed()))).collect(Collectors.toList());
   }

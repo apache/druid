@@ -17,20 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.query.expression;
+package org.apache.druid.testing;
 
-import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.apache.druid.common.config.NullHandling;
 
-public abstract class MacroTestBase extends InitializedNullHandlingTest
+public class InitializedNullHandlingTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  void expectException(Class<? extends Throwable> type, String message)
-  {
-    expectedException.expect(type);
-    expectedException.expectMessage(message);
+  static {
+    NullHandling.initializeForTests();
   }
 }

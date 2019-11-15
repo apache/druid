@@ -19,6 +19,7 @@
 
 package org.apache.druid.common.config;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
 
@@ -31,8 +32,6 @@ import javax.annotation.Nullable;
  */
 public class NullHandling
 {
-  public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
-
   /**
    * use these values to ensure that {@link NullHandling#defaultDoubleValue()},
    * {@link NullHandling#defaultFloatValue()} , {@link NullHandling#defaultFloatValue()}
@@ -50,9 +49,17 @@ public class NullHandling
    * It does not take effect in all unit tests since we don't use Guice Injection.
    */
   @Inject
-  private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
-      Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
-  );
+  private static NullValueHandlingConfig INSTANCE;
+
+  /**
+   * Many unit tests do not setup modules for this value to be injected, this method provides a manual way to initialize
+   * {@link #INSTANCE}
+   */
+  @VisibleForTesting
+  public static void initializeForTests()
+  {
+    INSTANCE = new NullValueHandlingConfig(null);
+  }
 
   /**
    * whether nulls should be replaced with default value.

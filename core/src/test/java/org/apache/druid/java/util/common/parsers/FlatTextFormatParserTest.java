@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.AbstractFlatTextFormatParser.FlatTextFormat;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class FlatTextFormatParserTest
+public class FlatTextFormatParserTest extends InitializedNullHandlingTest
 {
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()

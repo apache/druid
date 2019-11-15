@@ -38,6 +38,7 @@ import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Period;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +53,7 @@ import java.util.stream.Collectors;
  *
  */
 @RunWith(Parameterized.class)
-public class VarianceGroupByQueryTest
+public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
 {
   private final GroupByQueryConfig config;
   private final QueryRunner<Row> runner;

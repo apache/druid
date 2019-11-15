@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.lookup.DataFetcher;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,7 +38,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
-public class JdbcDataFetcherTest
+public class JdbcDataFetcherTest extends InitializedNullHandlingTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
