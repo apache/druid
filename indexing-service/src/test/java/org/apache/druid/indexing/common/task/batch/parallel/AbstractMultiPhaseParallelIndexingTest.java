@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskState;
@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -48,9 +47,11 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -78,10 +79,12 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   );
 
   private final LockGranularity lockGranularity;
+  private final boolean useInputFormatApi;
 
-  AbstractMultiPhaseParallelIndexingTest(LockGranularity lockGranularity)
+  AbstractMultiPhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
   {
     this.lockGranularity = lockGranularity;
+    this.useInputFormatApi = useInputFormatApi;
   }
 
   @Before
@@ -102,14 +105,16 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   Set<DataSegment> runTestTask(
       ParseSpec parseSpec,
       Interval interval,
-      FirehoseFactory firehoseFactory,
+      File inputDir,
+      String filter,
       DimensionBasedPartitionsSpec partitionsSpec
   ) throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
         parseSpec,
         interval,
-        new ParallelIndexIOConfig(firehoseFactory, false),
+        inputDir,
+        filter,
         partitionsSpec
     );
 
@@ -130,77 +135,93 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   private ParallelIndexSupervisorTask newTask(
       ParseSpec parseSpec,
       Interval interval,
-      ParallelIndexIOConfig ioConfig,
+      File inputDir,
+      String filter,
       DimensionBasedPartitionsSpec partitionsSpec
   )
   {
-    return newTask(
-        parseSpec,
-        interval,
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,
-        ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            partitionsSpec,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        Granularities.MINUTE,
+        interval == null ? null : Collections.singletonList(interval)
     );
-  }
 
-  private ParallelIndexSupervisorTask newTask(
-      ParseSpec parseSpec,
-      Interval interval,
-      Granularity segmentGranularity,
-      ParallelIndexIOConfig ioConfig,
-      ParallelIndexTuningConfig tuningConfig
-  )
-  {
-    // set up ingestion spec
-    //noinspection unchecked
-    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            getObjectMapper().convertValue(
-                new StringInputRowParser(parseSpec, null),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                segmentGranularity,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null,
-            getObjectMapper()
-        ),
-        ioConfig,
-        tuningConfig
+    ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        partitionsSpec,
+        null,
+        null,
+        null,
+        true,
+        null,
+        null,
+        null,
+        null,
+        2,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
+
+    final ParallelIndexIngestionSpec ingestionSpec;
+
+    if (useInputFormatApi) {
+      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new LocalInputSource(inputDir, filter),
+          parseSpec.toInputFormat(),
+          false
+      );
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              parseSpec.getTimestampSpec(),
+              parseSpec.getDimensionsSpec(),
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              granularitySpec,
+              null
+          ),
+          ioConfig,
+          tuningConfig
+      );
+    } else {
+      ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          new LocalFirehoseFactory(inputDir, filter, null),
+          false
+      );
+      //noinspection unchecked
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              getObjectMapper().convertValue(
+                  new StringInputRowParser(parseSpec, null),
+                  Map.class
+              ),
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              granularitySpec,
+              null,
+              getObjectMapper()
+          ),
+          ioConfig,
+          tuningConfig
+      );
+    }
 
     // set up test tools
     return createParallelIndexSupervisorTask(

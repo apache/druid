@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
@@ -79,20 +78,21 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       0
   );
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK},
-        new Object[]{LockGranularity.SEGMENT}
+        new Object[]{LockGranularity.TIME_CHUNK, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.SEGMENT, true}
     );
   }
 
   private File inputDir;
 
-  public HashPartitionMultiPhaseParallelIndexingTest(LockGranularity lockGranularity)
+  public HashPartitionMultiPhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
   {
-    super(lockGranularity);
+    super(lockGranularity, useInputFormatApi);
   }
 
   @Override
@@ -127,7 +127,8 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     final Set<DataSegment> publishedSegments = runTestTask(
         PARSE_SPEC,
         Intervals.of("2017/2018"),
-        new LocalFirehoseFactory(inputDir, "test_*", null),
+        inputDir,
+        "test_*",
         new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2"))
     );
     assertHashedPartition(publishedSegments);

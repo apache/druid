@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 
-import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowIterator;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.easymock.EasyMock;
@@ -43,7 +43,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
 {
   public static class BuildTest
   {
-    private static final Firehose FIRHOSE = EasyMock.mock(Firehose.class);
+    private static final CloseableIterator<InputRow> ITERATOR = EasyMock.mock(CloseableIterator.class);
     private static final GranularitySpec GRANULARITY_SPEC = EasyMock.mock(GranularitySpec.class);
     private static final Runnable NULL_ROW_RUNNABLE = IndexTaskInputRowIteratorBuilder.NOOP_RUNNABLE;
     private static final Consumer<InputRow> ABSENT_BUCKET_INTERVAL_CONSUMER =
@@ -53,10 +53,10 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     public ExpectedException exception = ExpectedException.none();
 
     @Test
-    public void requiresFirehose()
+    public void requiresDelegate()
     {
       exception.expect(NullPointerException.class);
-      exception.expectMessage("firehose required");
+      exception.expectMessage("delegate required");
 
       new DefaultIndexTaskInputRowIteratorBuilder()
           .granularitySpec(GRANULARITY_SPEC)
@@ -72,7 +72,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
       exception.expectMessage("granularitySpec required");
 
       new DefaultIndexTaskInputRowIteratorBuilder()
-          .firehose(FIRHOSE)
+          .delegate(ITERATOR)
           .nullRowRunnable(NULL_ROW_RUNNABLE)
           .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
           .build();
@@ -85,7 +85,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
       exception.expectMessage("nullRowRunnable required");
 
       new DefaultIndexTaskInputRowIteratorBuilder()
-          .firehose(FIRHOSE)
+          .delegate(ITERATOR)
           .granularitySpec(GRANULARITY_SPEC)
           .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
           .build();
@@ -98,7 +98,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
       exception.expectMessage("absentBucketIntervalConsumer required");
 
       new DefaultIndexTaskInputRowIteratorBuilder()
-          .firehose(FIRHOSE)
+          .delegate(ITERATOR)
           .granularitySpec(GRANULARITY_SPEC)
           .nullRowRunnable(NULL_ROW_RUNNABLE)
           .build();
@@ -108,7 +108,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     public void succeedsIfAllRequiredPresent()
     {
       new DefaultIndexTaskInputRowIteratorBuilder()
-          .firehose(FIRHOSE)
+          .delegate(ITERATOR)
           .granularitySpec(GRANULARITY_SPEC)
           .nullRowRunnable(NULL_ROW_RUNNABLE)
           .absentBucketIntervalConsumer(ABSENT_BUCKET_INTERVAL_CONSUMER)
@@ -129,12 +129,12 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     public void invokesNullRowHandlerFirst()
     {
       DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
-      Firehose nullRowFirehose = Factory.createFirehose(null);
+      CloseableIterator<InputRow> nullInputRowIterator = Factory.createInputRowIterator(null);
       GranularitySpec absentBucketIntervalGranularitySpec =
           Factory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
 
       List<Factory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-          nullRowFirehose,
+          nullInputRowIterator,
           absentBucketIntervalGranularitySpec,
           NO_NEXT_INPUT_ROW
       );
@@ -147,14 +147,14 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     {
       DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
       InputRow inputRow = Factory.createInputRow(invalidTimestamp);
-      Firehose firehose = Factory.createFirehose(inputRow);
+      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
       GranularitySpec absentBucketIntervalGranularitySpec =
           Factory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
 
       exception.expect(ParseException.class);
       exception.expectMessage("Encountered row with timestamp that cannot be represented as a long");
 
-      HANDLER_TESTER.invokeHandlers(firehose, absentBucketIntervalGranularitySpec, NO_NEXT_INPUT_ROW);
+      HANDLER_TESTER.invokeHandlers(inputRowIterator, absentBucketIntervalGranularitySpec, NO_NEXT_INPUT_ROW);
     }
 
     @Test
@@ -162,11 +162,11 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     {
       DateTime timestamp = Factory.TIMESTAMP;
       InputRow inputRow = Factory.createInputRow(timestamp);
-      Firehose firehose = Factory.createFirehose(inputRow);
+      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
       GranularitySpec absentBucketIntervalGranularitySpec = Factory.createAbsentBucketIntervalGranularitySpec(timestamp);
 
       List<Factory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-          firehose,
+          inputRowIterator,
           absentBucketIntervalGranularitySpec,
           NO_NEXT_INPUT_ROW
       );
@@ -182,13 +182,13 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     {
       DateTime timestamp = Factory.TIMESTAMP;
       InputRow inputRow = Factory.createInputRow(timestamp);
-      Firehose firehose = Factory.createFirehose(inputRow);
+      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
       GranularitySpec granularitySpec = Factory.createGranularitySpec(timestamp, Factory.PRESENT_BUCKET_INTERVAL_OPT);
 
-      List<InputRowIterator.InputRowHandler> appendedHandlers = Collections.singletonList(row -> true);
+      List<HandlingInputRowIterator.InputRowHandler> appendedHandlers = Collections.singletonList(row -> true);
 
       List<Factory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-          firehose,
+          inputRowIterator,
           granularitySpec,
           appendedHandlers,
           NO_NEXT_INPUT_ROW
@@ -205,11 +205,11 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     {
       DateTime timestamp = DateTimes.utc(0);
       InputRow inputRow = Factory.createInputRow(timestamp);
-      Firehose firehose = Factory.createFirehose(inputRow);
+      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
       GranularitySpec granularitySpec = Factory.createGranularitySpec(timestamp, Factory.PRESENT_BUCKET_INTERVAL_OPT);
 
       List<Factory.HandlerTester.Handler> handlerInvocationHistory =
-          HANDLER_TESTER.invokeHandlers(firehose, granularitySpec, inputRow);
+          HANDLER_TESTER.invokeHandlers(inputRowIterator, granularitySpec, inputRow);
 
       Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
     }

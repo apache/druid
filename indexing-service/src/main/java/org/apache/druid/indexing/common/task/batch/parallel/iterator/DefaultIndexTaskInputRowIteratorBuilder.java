@@ -22,12 +22,12 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowIterator;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.joda.time.Interval;
@@ -38,7 +38,7 @@ import java.util.function.Consumer;
 
 /**
  * <pre>
- * Build a default {@link InputRowIterator} for {@link IndexTask}s. Each {@link InputRow} is
+ * Build a default {@link HandlingInputRowIterator} for {@link IndexTask}s. Each {@link InputRow} is
  * processed by the following handlers, in order:
  *
  *   1. Null row: If {@link InputRow} is null, invoke the null row {@link Runnable} callback.
@@ -49,22 +49,22 @@ import java.util.function.Consumer;
  *      {@link GranularitySpec} bucket intervals, invoke the absent bucket interval {@link Consumer}
  *      callback.
  *
- * If any of the handlers invoke their respective callback, the {@link InputRowIterator} will yield
+ * If any of the handlers invoke their respective callback, the {@link HandlingInputRowIterator} will yield
  * a null {@link InputRow} next; otherwise, the next {@link InputRow} is yielded.
  * </pre>
  */
 public class DefaultIndexTaskInputRowIteratorBuilder implements IndexTaskInputRowIteratorBuilder
 {
-  private Firehose firehose = null;
+  private CloseableIterator<InputRow> delegate = null;
   private GranularitySpec granularitySpec = null;
-  private InputRowIterator.InputRowHandler nullRowHandler = null;
-  private InputRowIterator.InputRowHandler absentBucketIntervalHandler = null;
-  private List<InputRowIterator.InputRowHandler> appendedInputRowHandlers = new ArrayList<>();
+  private HandlingInputRowIterator.InputRowHandler nullRowHandler = null;
+  private HandlingInputRowIterator.InputRowHandler absentBucketIntervalHandler = null;
+  private List<HandlingInputRowIterator.InputRowHandler> appendedInputRowHandlers = new ArrayList<>();
 
   @Override
-  public DefaultIndexTaskInputRowIteratorBuilder firehose(Firehose firehose)
+  public DefaultIndexTaskInputRowIteratorBuilder delegate(CloseableIterator<InputRow> inputRowIterator)
   {
-    this.firehose = firehose;
+    this.delegate = inputRowIterator;
     return this;
   }
 
@@ -105,32 +105,32 @@ public class DefaultIndexTaskInputRowIteratorBuilder implements IndexTaskInputRo
   }
 
   @Override
-  public InputRowIterator build()
+  public HandlingInputRowIterator build()
   {
-    Preconditions.checkNotNull(firehose, "firehose required");
+    Preconditions.checkNotNull(delegate, "delegate required");
     Preconditions.checkNotNull(granularitySpec, "granularitySpec required");
     Preconditions.checkNotNull(nullRowHandler, "nullRowRunnable required");
     Preconditions.checkNotNull(absentBucketIntervalHandler, "absentBucketIntervalConsumer required");
 
-    ImmutableList.Builder<InputRowIterator.InputRowHandler> handlersBuilder = ImmutableList.<InputRowIterator.InputRowHandler>builder()
+    ImmutableList.Builder<HandlingInputRowIterator.InputRowHandler> handlersBuilder = ImmutableList.<HandlingInputRowIterator.InputRowHandler>builder()
         .add(nullRowHandler)
         .add(createInvalidTimestampHandler())
         .add(absentBucketIntervalHandler)
         .addAll(appendedInputRowHandlers);
 
-    return new InputRowIterator(firehose, handlersBuilder.build());
+    return new HandlingInputRowIterator(delegate, handlersBuilder.build());
   }
 
   /**
    * @param inputRowHandler Optionally, append this input row handler to the required ones.
    */
-  DefaultIndexTaskInputRowIteratorBuilder appendInputRowHandler(InputRowIterator.InputRowHandler inputRowHandler)
+  DefaultIndexTaskInputRowIteratorBuilder appendInputRowHandler(HandlingInputRowIterator.InputRowHandler inputRowHandler)
   {
     this.appendedInputRowHandlers.add(inputRowHandler);
     return this;
   }
 
-  private InputRowIterator.InputRowHandler createInvalidTimestampHandler()
+  private HandlingInputRowIterator.InputRowHandler createInvalidTimestampHandler()
   {
     return inputRow -> {
       if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {

@@ -20,19 +20,17 @@
 package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 
 import com.google.common.base.Optional;
-import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowIterator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -58,19 +56,28 @@ class Factory
     return inputRow;
   }
 
-  static Firehose createFirehose(InputRow inputRow)
+  static CloseableIterator<InputRow> createInputRowIterator(InputRow inputRow)
   {
-    Firehose firehose = EasyMock.mock(Firehose.class);
-    try {
-      EasyMock.expect(firehose.hasMore()).andStubReturn(true);
-      EasyMock.expect(firehose.nextRow()).andStubReturn(inputRow);
-    }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-    EasyMock.replay(firehose);
+    return new CloseableIterator<InputRow>()
+    {
+      @Override
+      public void close()
+      {
+        // nothing
+      }
 
-    return firehose;
+      @Override
+      public boolean hasNext()
+      {
+        return true;
+      }
+
+      @Override
+      public InputRow next()
+      {
+        return inputRow;
+      }
+    };
   }
 
   static GranularitySpec createAbsentBucketIntervalGranularitySpec(DateTime timestamp)
@@ -108,13 +115,13 @@ class Factory
     }
 
     List<Handler> invokeHandlers(
-        Firehose firehose,
+        CloseableIterator<InputRow> inputRowIterator,
         GranularitySpec granularitySpec,
         InputRow expectedNextInputRow
     )
     {
       return invokeHandlers(
-          firehose,
+          inputRowIterator,
           granularitySpec,
           Collections.emptyList(),
           expectedNextInputRow
@@ -122,15 +129,15 @@ class Factory
     }
 
     List<Handler> invokeHandlers(
-        Firehose firehose,
+        CloseableIterator<InputRow> inputRowIterator,
         GranularitySpec granularitySpec,
-        List<InputRowIterator.InputRowHandler> appendedHandlers,
+        List<HandlingInputRowIterator.InputRowHandler> appendedHandlers,
         InputRow expectedNextInputRow
     )
     {
       List<Handler> handlerInvocationHistory = new ArrayList<>();
       IndexTaskInputRowIteratorBuilder iteratorBuilder = iteratorBuilderSupplier.get()
-          .firehose(firehose)
+          .delegate(inputRowIterator)
           .granularitySpec(granularitySpec)
           .nullRowRunnable(() -> handlerInvocationHistory.add(Handler.NULL_ROW))
           .absentBucketIntervalConsumer(row -> handlerInvocationHistory.add(Handler.ABSENT_BUCKET_INTERVAL));
@@ -141,7 +148,7 @@ class Factory
                         .forEach(((DefaultIndexTaskInputRowIteratorBuilder) iteratorBuilder)::appendInputRowHandler);
       }
 
-      InputRowIterator iterator = iteratorBuilder.build();
+      HandlingInputRowIterator iterator = iteratorBuilder.build();
 
       InputRow nextInputRow = iterator.next();
       Assert.assertEquals(expectedNextInputRow, nextInputRow);

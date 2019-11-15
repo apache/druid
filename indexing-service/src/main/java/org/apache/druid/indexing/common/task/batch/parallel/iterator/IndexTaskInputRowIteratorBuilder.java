@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 
 import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowIterator;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.function.Consumer;
@@ -35,9 +36,9 @@ public interface IndexTaskInputRowIteratorBuilder
   };
 
   /**
-   * @param firehose Source of {@link InputRow}s.
+   * @param inputRowIterator Source of {@link InputRow}s.
    */
-  IndexTaskInputRowIteratorBuilder firehose(Firehose firehose);
+  IndexTaskInputRowIteratorBuilder delegate(CloseableIterator<InputRow> inputRowIterator);
 
   /**
    * @param granularitySpec {@link GranularitySpec} for the {@link org.apache.druid.segment.indexing.DataSchema}
@@ -56,5 +57,5 @@ public interface IndexTaskInputRowIteratorBuilder
    */
   IndexTaskInputRowIteratorBuilder absentBucketIntervalConsumer(Consumer<InputRow> absentBucketIntervalConsumer);
 
-  InputRowIterator build();
+  HandlingInputRowIterator build();
 }

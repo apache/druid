@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,32 +35,32 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @RunWith(Enclosed.class)
-public class InputRowIteratorTest
+public class HandlingInputRowIteratorTest
 {
   public static class AbsentRowTest
   {
-    private static final Firehose EMPTY_FIREHOSE = new TestFirehose()
+    private static final CloseableIterator<InputRow> EMPTY_ITERATOR = new TestCloseableIterator()
     {
       @Override
-      public boolean hasMore()
+      public boolean hasNext()
       {
         return false;
       }
 
       @Nullable
       @Override
-      public InputRow nextRow()
+      public InputRow next()
       {
-        return null;
+        throw new NoSuchElementException();
       }
     };
 
-    private InputRowIterator target;
+    private HandlingInputRowIterator target;
 
     @Before
     public void setup()
     {
-      target = new InputRowIterator(EMPTY_FIREHOSE, Collections.emptyList());
+      target = new HandlingInputRowIterator(EMPTY_ITERATOR, Collections.emptyList());
     }
 
     @Test
@@ -94,7 +95,7 @@ public class InputRowIteratorTest
     @Test
     public void hasNext()
     {
-      InputRowIterator target = createInputRowIterator(unsuccessfulHandler, unsuccessfulHandler);
+      HandlingInputRowIterator target = createInputRowIterator(unsuccessfulHandler, unsuccessfulHandler);
       Assert.assertTrue(target.hasNext());
       Assert.assertFalse(unsuccessfulHandler.invoked);
     }
@@ -102,7 +103,7 @@ public class InputRowIteratorTest
     @Test
     public void yieldsNextIfUnhandled()
     {
-      InputRowIterator target = createInputRowIterator(unsuccessfulHandler, unsuccessfulHandler);
+      HandlingInputRowIterator target = createInputRowIterator(unsuccessfulHandler, unsuccessfulHandler);
       Assert.assertEquals(INPUT_ROW1, target.next());
       Assert.assertTrue(unsuccessfulHandler.invoked);
     }
@@ -110,7 +111,7 @@ public class InputRowIteratorTest
     @Test
     public void yieldsNullIfHandledByFirst()
     {
-      InputRowIterator target = createInputRowIterator(successfulHandler, unsuccessfulHandler);
+      HandlingInputRowIterator target = createInputRowIterator(successfulHandler, unsuccessfulHandler);
       Assert.assertNull(target.next());
       Assert.assertTrue(successfulHandler.invoked);
       Assert.assertFalse(unsuccessfulHandler.invoked);
@@ -119,39 +120,39 @@ public class InputRowIteratorTest
     @Test
     public void yieldsNullIfHandledBySecond()
     {
-      InputRowIterator target = createInputRowIterator(unsuccessfulHandler, successfulHandler);
+      HandlingInputRowIterator target = createInputRowIterator(unsuccessfulHandler, successfulHandler);
       Assert.assertNull(target.next());
       Assert.assertTrue(unsuccessfulHandler.invoked);
       Assert.assertTrue(successfulHandler.invoked);
     }
 
-    private static InputRowIterator createInputRowIterator(
-        InputRowIterator.InputRowHandler firstHandler,
-        InputRowIterator.InputRowHandler secondHandler
+    private static HandlingInputRowIterator createInputRowIterator(
+        HandlingInputRowIterator.InputRowHandler firstHandler,
+        HandlingInputRowIterator.InputRowHandler secondHandler
     )
     {
-      Firehose firehose = new TestFirehose()
+      CloseableIterator<InputRow> iterator = new TestCloseableIterator()
       {
         private final Iterator<InputRow> delegate = INPUT_ROWS.iterator();
 
         @Override
-        public boolean hasMore()
+        public boolean hasNext()
         {
           return delegate.hasNext();
         }
 
         @Nullable
         @Override
-        public InputRow nextRow()
+        public InputRow next()
         {
           return delegate.next();
         }
       };
 
-      return new InputRowIterator(firehose, Arrays.asList(firstHandler, secondHandler));
+      return new HandlingInputRowIterator(iterator, Arrays.asList(firstHandler, secondHandler));
     }
 
-    private static class TestInputRowHandler implements InputRowIterator.InputRowHandler
+    private static class TestInputRowHandler implements HandlingInputRowIterator.InputRowHandler
     {
       boolean invoked = false;
 
@@ -171,7 +172,7 @@ public class InputRowIteratorTest
     }
   }
 
-  private abstract static class TestFirehose implements Firehose
+  private abstract static class TestCloseableIterator implements CloseableIterator<InputRow>
   {
     @Override
     public void close()

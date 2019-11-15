@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Optional;
+import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowIterator;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
@@ -104,17 +104,6 @@ public class InputSourceProcessor
                                                         : null;
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
 
-    try (
-        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
-    ) {
-      InputRowIterator iterator = inputRowIteratorBuilder
-          .firehose(firehose)
-          .granularitySpec(granularitySpec)
-          .nullRowRunnable(buildSegmentsMeters::incrementThrownAway)
-          .absentBucketIntervalConsumer(inputRow -> buildSegmentsMeters.incrementThrownAway())
-          .build();
-
-      while (iterator.hasNext()) {
     final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
                                             .map(AggregatorFactory::getName)
                                             .collect(Collectors.toList());
@@ -130,13 +119,16 @@ public class InputSourceProcessor
         )
     );
     try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
-      while (inputRowIterator.hasNext()) {
+      HandlingInputRowIterator iterator = inputRowIteratorBuilder
+          .delegate(inputRowIterator)
+          .granularitySpec(granularitySpec)
+          .nullRowRunnable(buildSegmentsMeters::incrementThrownAway)
+          .absentBucketIntervalConsumer(inputRow -> buildSegmentsMeters.incrementThrownAway())
+          .build();
+
+      while (iterator.hasNext()) {
         try {
-          final InputRow inputRow = firehose.nextRow();
-
-          InputRow inputRow = iterator.next();
-          final InputRow inputRow = inputRowIterator.next();
-
+          final InputRow inputRow = iterator.next();
           if (inputRow == null) {
             continue;
           }

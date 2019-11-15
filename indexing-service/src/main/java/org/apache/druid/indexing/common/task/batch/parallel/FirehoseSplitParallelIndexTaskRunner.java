@@ -82,33 +82,7 @@ abstract class FirehoseSplitParallelIndexTaskRunner<T extends Task, R extends Su
     );
   }
 
-  @VisibleForTesting
-  ParallelIndexIngestionSpec getIngestionSchema()
-  {
-    return ingestionSchema;
-  }
-
-  @VisibleForTesting
-  FiniteFirehoseFactory<?, ?> getBaseFirehoseFactory()
-  {
-    return baseFirehoseFactory;
-  }
-
-  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
   final SubTaskSpec<T> newTaskSpec(InputSplit split)
-  @VisibleForTesting
-  ParallelIndexIngestionSpec getIngestionSchema()
-  {
-    return ingestionSchema;
-  }
-
-  @VisibleForTesting
-  SplittableInputSource<?> getBaseInputSource()
-  {
-    return baseInputSource;
-  }
-
-  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
   {
     final FirehoseFactory firehoseFactory;
     final SplittableInputSource inputSource;

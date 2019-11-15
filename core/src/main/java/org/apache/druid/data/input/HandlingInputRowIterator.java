@@ -19,17 +19,16 @@
 
 package org.apache.druid.data.input;
 
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
+
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
- * {@link Iterator} for {@link InputRow}s from a {@link Firehose}.
+ * Decorated {@link CloseableIterator<InputRow>} that can process rows with {@link InputRowHandler}s.
  */
-public class InputRowIterator implements Iterator<InputRow>
+public class HandlingInputRowIterator implements Iterator<InputRow>
 {
   @FunctionalInterface
   public interface InputRowHandler
@@ -40,33 +39,28 @@ public class InputRowIterator implements Iterator<InputRow>
     boolean handle(InputRow inputRow);
   }
 
-  private final Firehose firehose;
+  private final CloseableIterator<InputRow> delegate;
   private final List<InputRowHandler> inputRowHandlers;
 
   /**
-   * @param firehose         Source of {@link InputRow}s
+   * @param inputRowIterator Source of {@link InputRow}s
    * @param inputRowHandlers Before yielding the next {@link InputRow}, each {@link InputRowHandler} is sequentially
    *                         applied to the {@link InputRow} until one of them returns true or all of the handlers are
    *                         applied.
    */
-  public InputRowIterator(
-      Firehose firehose,
+  public HandlingInputRowIterator(
+      CloseableIterator<InputRow> inputRowIterator,
       List<InputRowHandler> inputRowHandlers
   )
   {
-    this.firehose = firehose;
+    this.delegate = inputRowIterator;
     this.inputRowHandlers = inputRowHandlers;
   }
 
   @Override
   public boolean hasNext()
   {
-    try {
-      return firehose.hasMore();
-    }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return delegate.hasNext();
   }
 
   /**
@@ -76,17 +70,7 @@ public class InputRowIterator implements Iterator<InputRow>
   @Nullable
   public InputRow next()
   {
-    if (!hasNext()) {
-      throw new NoSuchElementException();
-    }
-
-    InputRow inputRow;
-    try {
-      inputRow = firehose.nextRow();
-    }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    InputRow inputRow = delegate.next();
 
     for (InputRowHandler inputRowHandler : inputRowHandlers) {
       if (inputRowHandler.handle(inputRow)) {
