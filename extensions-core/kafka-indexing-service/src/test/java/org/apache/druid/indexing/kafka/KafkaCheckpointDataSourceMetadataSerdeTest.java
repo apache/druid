@@ -35,7 +35,7 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   @Test
-  public void CheckPointDataSourceMetadataActionSerdeTest() throws IOException
+  public void testCheckPointDataSourceMetadataActionSerde() throws IOException
   {
     MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
 
@@ -63,7 +63,7 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
   }
 
   @Test
-  public void CheckPointDataSourceMetadataActionOldJsonSerdeTest() throws IOException
+  public void testCheckPointDataSourceMetadataActionOldJsonSerde() throws IOException
   {
     MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
     final String jsonStr = "{\n"
