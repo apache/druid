@@ -38,10 +38,14 @@ import java.util.List;
 public abstract class TextReader extends IntermediateRowParsingReader<String>
 {
   private final InputRowSchema inputRowSchema;
+  final InputEntity source;
+  final File temporaryDirectory;
 
-  public TextReader(InputRowSchema inputRowSchema)
+  public TextReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
     this.inputRowSchema = inputRowSchema;
+    this.source = source;
+    this.temporaryDirectory = temporaryDirectory;
   }
 
   public InputRowSchema getInputRowSchema()
@@ -50,7 +54,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIterator<String> intermediateRowIterator(InputEntity source, File temporaryDirectory)
+  public CloseableIterator<String> intermediateRowIterator()
       throws IOException
   {
     final LineIterator delegate = new LineIterator(

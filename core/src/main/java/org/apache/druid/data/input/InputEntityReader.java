@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
@@ -44,7 +43,7 @@ public interface InputEntityReader
    */
   ObjectWriter DEFAULT_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
 
-  CloseableIterator<InputRow> read(InputEntity source, File temporaryDirectory) throws IOException;
+  CloseableIterator<InputRow> read() throws IOException;
 
-  CloseableIterator<InputRowListPlusJson> sample(InputEntity source, File temporaryDirectory) throws IOException;
+  CloseableIterator<InputRowListPlusJson> sample() throws IOException;
 }
