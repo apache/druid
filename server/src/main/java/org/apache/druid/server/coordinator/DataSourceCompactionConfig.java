@@ -40,7 +40,7 @@ public class DataSourceCompactionConfig
   private final long inputSegmentSizeBytes;
   /**
    * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * {@link org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig#maxZnodeBytes}.
+   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
    */
   @Nullable
   private final Integer maxRowsPerSegment;

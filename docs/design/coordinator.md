@@ -36,7 +36,7 @@ For a list of API endpoints supported by the Coordinator, see [Coordinator API](
 The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the
 Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The
 Druid Coordinator is responsible for loading new segments, dropping outdated segments, ensuring that segments are
-"replicated" (that is, loaded on multiple different Historical nodes) proper (configurated) number of times, and moving
+"replicated" (that is, loaded on multiple different Historical nodes) proper (configured) number of times, and moving
 ("balancing") segments between Historical nodes to keep the latter evenly loaded.
 
 The Druid Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
