@@ -17,35 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.collections.bitmap;
 
-import org.junit.Test;
+import org.apache.druid.extendedset.intset.IntSet;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-
-public class CSVParseSpecTest
+public class ConcisePeekableIteratorAdapter extends PeekableIteratorAdapter<IntSet.IntIterator>
 {
-  @Test(expected = IllegalArgumentException.class)
-  public void testComma()
+  ConcisePeekableIteratorAdapter(IntSet.IntIterator iterator)
   {
-    @SuppressWarnings("unused") // expected exception
-    final ParseSpec spec = new CSVParseSpec(
-        new TimestampSpec(
-            "timestamp",
-            "auto",
-            null
-        ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
-        ",",
-        Collections.singletonList("a,"),
-        false,
-        0
-    );
+    super(iterator);
+  }
+
+  @Override
+  public void advanceIfNeeded(int i)
+  {
+    if (mark < i) {
+      baseIterator.skipAllBefore(i);
+      if (baseIterator.hasNext()) {
+        mark = baseIterator.next();
+      } else {
+        mark = NOT_SET;
+      }
+    }
   }
 }

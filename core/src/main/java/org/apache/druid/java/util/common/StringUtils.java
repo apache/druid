@@ -112,7 +112,7 @@ public class StringUtils
 
   /**
    * Encodes "string" into the buffer "byteBuffer", using no more than the number of bytes remaining in the buffer.
-   * Will only encode whole characters. The byteBuffer's position and limit be changed during operation, but will
+   * Will only encode whole characters. The byteBuffer's position and limit may be changed during operation, but will
    * be reset before this method call ends.
    *
    * @return the number of bytes written, which may be shorter than the full encoded string length if there

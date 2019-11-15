@@ -62,7 +62,8 @@ public class LikeFilterTest extends BaseFilterTest
       PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "foobar")).get(0),
       PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "bar")).get(0),
       PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "foobarbaz")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "foo%bar")).get(0)
+      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "foo%bar")).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "new\nline")).get(0)
   );
 
   public LikeFilterTest(
@@ -160,7 +161,7 @@ public class LikeFilterTest extends BaseFilterTest
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(
           new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
-          ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
       );
     } else {
       assertFilterMatches(
@@ -184,7 +185,7 @@ public class LikeFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new LikeDimFilter("dim1", "%", "@", null),
-        ImmutableList.of("0", "1", "2", "3", "4", "5")
+        ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
     );
   }
 
@@ -221,6 +222,44 @@ public class LikeFilterTest extends BaseFilterTest
     assertFilterMatches(
         new LikeDimFilter("dim1", "%ar", null, new SubstringDimExtractionFn(3, 3)),
         ImmutableList.of("2", "4")
+    );
+  }
+
+  @Test
+  public void testNewlineMatch()
+  {
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "ne%", null, null),
+        ImmutableList.of("6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "%ine", null, null),
+        ImmutableList.of("6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "new_line", null, null),
+        ImmutableList.of("6")
+    );
+  }
+
+  @Test
+  public void testNewlineMatchWithExtractionFn()
+  {
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "e%", null, new SubstringDimExtractionFn(1, 100)),
+        ImmutableList.of("6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "%ine", null, new SubstringDimExtractionFn(1, 100)),
+        ImmutableList.of("6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "ew_line", null, new SubstringDimExtractionFn(1, 100)),
+        ImmutableList.of("6")
     );
   }
 }
