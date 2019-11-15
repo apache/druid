@@ -27,6 +27,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
 {
@@ -135,5 +136,30 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
            ", taskGroupId='" + taskGroupId + '\'' +
            ", checkpointMetadata=" + checkpointMetadata +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    CheckPointDataSourceMetadataAction that = (CheckPointDataSourceMetadataAction) o;
+    if (!supervisorId.equals(that.supervisorId)) {
+      return false;
+    }
+    if (taskGroupId != that.taskGroupId) {
+      return false;
+    }
+
+    if (!Objects.equals(checkpointMetadata, that.checkpointMetadata)) {
+      return false;
+    }
+
+    return true;
   }
 }
