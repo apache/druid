@@ -228,7 +228,6 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
             throw new RuntimeException(e);
           }
         });
-
       }
     }
 

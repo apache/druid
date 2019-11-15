@@ -23,7 +23,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -73,14 +73,14 @@ public class InlineFirehose implements Firehose
   }
 
   @Override
-  public InputRowPlusRaw nextRowWithRaw()
+  public InputRowListPlusJson nextRowWithRaw()
   {
     String raw = nextRaw();
     try {
-      return InputRowPlusRaw.of(parser.parse(raw), StringUtils.toUtf8(raw));
+      return InputRowListPlusJson.of(parser.parse(raw), StringUtils.toUtf8(raw));
     }
     catch (ParseException e) {
-      return InputRowPlusRaw.of(StringUtils.toUtf8(raw), e);
+      return InputRowListPlusJson.of(StringUtils.toUtf8(raw), e);
     }
   }
 

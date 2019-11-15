@@ -294,9 +294,9 @@ public class TaskToolbox
     return indexMergerV9;
   }
 
-  public File getFirehoseTemporaryDir()
+  public File getIndexingTmpDir()
   {
-    return new File(taskWorkDir, "firehose");
+    return new File(taskWorkDir, "indexing-tmp");
   }
 
   public File getMergeDir()

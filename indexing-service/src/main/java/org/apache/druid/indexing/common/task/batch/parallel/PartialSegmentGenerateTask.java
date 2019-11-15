@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -36,9 +36,9 @@ import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.CachingLocalSegmentAllocator;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
-import org.apache.druid.indexing.common.task.FiniteFirehoseProcessor;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
+import org.apache.druid.indexing.common.task.InputSourceProcessor;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
@@ -206,11 +206,13 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+        ingestionSchema.getDataSchema().getParser()
+    );
 
-    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    final File tmpDir = toolbox.getIndexingTmpDir();
     // Firehose temporary directory is automatically removed when this IndexTask completes.
-    FileUtils.forceMkdir(firehoseTempDir);
+    FileUtils.forceMkdir(tmpDir);
 
     final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
@@ -220,7 +222,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
 
-    final List<DataSegment> segments = generateSegments(toolbox, firehoseFactory, firehoseTempDir);
+    final List<DataSegment> segments = generateSegments(toolbox, inputSource, tmpDir);
     final List<PartitionStat> partitionStats = segments
         .stream()
         .map(segment -> new PartitionStat(
@@ -240,8 +242,8 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
 
   private List<DataSegment> generateSegments(
       final TaskToolbox toolbox,
-      final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir
+      final InputSource inputSource,
+      final File tmpDir
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
@@ -295,19 +297,20 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final FiniteFirehoseProcessor firehoseProcessor = new FiniteFirehoseProcessor(
+      final InputSourceProcessor inputSourceProcessor = new InputSourceProcessor(
           buildSegmentsMeters,
           null,
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions(),
           pushTimeout
       );
-      final SegmentsAndMetadata pushed = firehoseProcessor.process(
+      final SegmentsAndMetadata pushed = inputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
-          firehoseFactory,
-          firehoseTempDir,
+          inputSource,
+          ParallelIndexSupervisorTask.getInputFormat(ingestionSchema),
+          tmpDir,
           segmentAllocator
       );
 

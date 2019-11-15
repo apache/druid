@@ -20,7 +20,7 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -116,7 +116,7 @@ public class InlineFirehoseTest
   {
     final String data = PARSEABLE;
     InlineFirehose target = create(data);
-    InputRowPlusRaw rowPlusRaw = target.nextRowWithRaw();
+    InputRowListPlusJson rowPlusRaw = target.nextRowWithRaw();
 
     InputRow row = rowPlusRaw.getInputRow();
     assertRowValue(VALUE_0, row);
@@ -132,7 +132,7 @@ public class InlineFirehoseTest
   {
     final String data = NOT_PARSEABLE;
     InlineFirehose target = create(data);
-    InputRowPlusRaw rowPlusRaw = target.nextRowWithRaw();
+    InputRowListPlusJson rowPlusRaw = target.nextRowWithRaw();
 
     InputRow row = rowPlusRaw.getInputRow();
     Assert.assertNull(row);
@@ -185,7 +185,7 @@ public class InlineFirehoseTest
     assertRowValue(VALUE_0, row0);
 
     // Second line
-    InputRowPlusRaw rowPlusRaw = target.nextRowWithRaw();
+    InputRowListPlusJson rowPlusRaw = target.nextRowWithRaw();
     assertRowValue(VALUE_1, rowPlusRaw.getInputRow());
     assertRawValue(LINE_1, rowPlusRaw.getRaw());
     Assert.assertNull(rowPlusRaw.getParseException());

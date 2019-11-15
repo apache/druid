@@ -19,32 +19,65 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
-public class InputRowPlusRaw
+public class InputRowListPlusJson
 {
   @Nullable
-  private final InputRow inputRow;
+  private final List<InputRow> inputRows;
 
   @Nullable
   private final byte[] raw;
 
   @Nullable
+  private final String rawJson;
+
+  @Nullable
   private final ParseException parseException;
 
-  private InputRowPlusRaw(@Nullable InputRow inputRow, @Nullable byte[] raw, @Nullable ParseException parseException)
+  public static InputRowListPlusJson of(@Nullable InputRow inputRow, @Nullable byte[] raw)
   {
-    this.inputRow = inputRow;
+    return new InputRowListPlusJson(inputRow == null ? null : Collections.singletonList(inputRow), raw, null, null);
+  }
+
+  public static InputRowListPlusJson of(@Nullable List<InputRow> inputRows, @Nullable String jsonRaw)
+  {
+    return new InputRowListPlusJson(inputRows, null, jsonRaw, null);
+  }
+
+  public static InputRowListPlusJson of(@Nullable byte[] raw, @Nullable ParseException parseException)
+  {
+    return new InputRowListPlusJson(null, raw, null, parseException);
+  }
+
+  public static InputRowListPlusJson of(@Nullable String jsonRaw, @Nullable ParseException parseException)
+  {
+    return new InputRowListPlusJson(null, null, jsonRaw, parseException);
+  }
+
+  private InputRowListPlusJson(@Nullable List<InputRow> inputRows, @Nullable byte[] raw, @Nullable String rawJson, @Nullable ParseException parseException)
+  {
+    this.inputRows = inputRows;
     this.raw = raw;
+    this.rawJson = rawJson;
     this.parseException = parseException;
   }
 
   @Nullable
   public InputRow getInputRow()
   {
-    return inputRow;
+    return inputRows == null ? null : Iterables.getOnlyElement(inputRows);
+  }
+
+  @Nullable
+  public List<InputRow> getInputRows()
+  {
+    return inputRows;
   }
 
   /**
@@ -62,6 +95,12 @@ public class InputRowPlusRaw
   }
 
   @Nullable
+  public String getRawJson()
+  {
+    return rawJson;
+  }
+
+  @Nullable
   public ParseException getParseException()
   {
     return parseException;
@@ -69,16 +108,6 @@ public class InputRowPlusRaw
 
   public boolean isEmpty()
   {
-    return inputRow == null && raw == null && parseException == null;
-  }
-
-  public static InputRowPlusRaw of(@Nullable InputRow inputRow, @Nullable byte[] raw)
-  {
-    return new InputRowPlusRaw(inputRow, raw, null);
-  }
-
-  public static InputRowPlusRaw of(@Nullable byte[] raw, @Nullable ParseException parseException)
-  {
-    return new InputRowPlusRaw(null, raw, parseException);
+    return (inputRows == null || inputRows.isEmpty()) && raw == null && rawJson == null && parseException == null;
   }
 }
