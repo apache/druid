@@ -885,9 +885,7 @@ public class FirehoseSamplerTest
 
   private List<SamplerResponseRow> removeEmptyColumns(List<SamplerResponseRow> rows)
   {
-    return USE_DEFAULT_VALUE_FOR_NULL
-           ? rows
-           : rows.stream().map(x -> x.withParsed(removeEmptyValues(x.getParsed()))).collect(Collectors.toList());
+    return rows;
   }
 
   @Nullable
