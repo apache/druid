@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.FirehoseSampler;
@@ -129,7 +129,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     @Override
     public InputRow nextRow()
     {
-      InputRowPlusRaw row = nextRowWithRaw();
+      InputRowListPlusJson row = nextRowWithRaw();
       if (row.getParseException() != null) {
         throw row.getParseException();
       }
@@ -138,21 +138,21 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public InputRowPlusRaw nextRowWithRaw()
+    public InputRowListPlusJson nextRowWithRaw()
     {
       if (recordDataIterator == null || !recordDataIterator.hasNext()) {
         if (recordIterator == null || !recordIterator.hasNext()) {
           recordIterator = recordSupplier.poll(POLL_TIMEOUT_MS).iterator();
 
           if (!recordIterator.hasNext()) {
-            return InputRowPlusRaw.of((InputRow) null, null);
+            return InputRowListPlusJson.of((InputRow) null, null);
           }
         }
 
         recordDataIterator = recordIterator.next().getData().iterator();
 
         if (!recordDataIterator.hasNext()) {
-          return InputRowPlusRaw.of((InputRow) null, null);
+          return InputRowListPlusJson.of((InputRow) null, null);
         }
       }
 
@@ -160,10 +160,10 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
 
       try {
         List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(raw));
-        return InputRowPlusRaw.of(rows.isEmpty() ? null : rows.get(0), raw);
+        return InputRowListPlusJson.of(rows.isEmpty() ? null : rows.get(0), raw);
       }
       catch (ParseException e) {
-        return InputRowPlusRaw.of(raw, e);
+        return InputRowListPlusJson.of(raw, e);
       }
     }
 

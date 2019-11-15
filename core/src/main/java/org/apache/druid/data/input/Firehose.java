@@ -74,13 +74,13 @@ public interface Firehose extends Closeable
    *
    * @return an InputRowPlusRaw which may contain any of: an InputRow, the raw data, or a ParseException
    */
-  default InputRowPlusRaw nextRowWithRaw() throws IOException
+  default InputRowListPlusJson nextRowWithRaw() throws IOException
   {
     try {
-      return InputRowPlusRaw.of(nextRow(), null);
+      return InputRowListPlusJson.of(nextRow(), null);
     }
     catch (ParseException e) {
-      return InputRowPlusRaw.of(null, e);
+      return InputRowListPlusJson.of((byte[]) null, e);
     }
   }
 

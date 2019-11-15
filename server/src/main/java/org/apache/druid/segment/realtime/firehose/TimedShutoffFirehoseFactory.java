@@ -25,7 +25,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -120,7 +120,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     }
 
     @Override
-    public InputRowPlusRaw nextRowWithRaw() throws IOException
+    public InputRowListPlusJson nextRowWithRaw() throws IOException
     {
       return firehose.nextRowWithRaw();
     }

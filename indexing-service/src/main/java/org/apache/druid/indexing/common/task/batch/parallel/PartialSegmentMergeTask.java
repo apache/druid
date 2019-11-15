@@ -216,7 +216,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       Map<Interval, Int2ObjectMap<List<P>>> intervalToPartitions
   ) throws IOException
   {
-    final File tempDir = toolbox.getFirehoseTemporaryDir();
+    final File tempDir = toolbox.getIndexingTmpDir();
     FileUtils.deleteQuietly(tempDir);
     FileUtils.forceMkdir(tempDir);
 

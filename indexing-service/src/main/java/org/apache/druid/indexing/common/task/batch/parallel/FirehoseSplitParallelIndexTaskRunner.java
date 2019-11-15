@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.Task;
 
@@ -37,7 +39,7 @@ abstract class FirehoseSplitParallelIndexTaskRunner<T extends Task, R extends Su
     extends ParallelIndexPhaseRunner<T, R>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
+  private final SplittableInputSource<?> baseInputSource;
 
   FirehoseSplitParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -57,27 +59,72 @@ abstract class FirehoseSplitParallelIndexTaskRunner<T extends Task, R extends Su
         indexingServiceClient
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseFirehoseFactory = (FiniteFirehoseFactory) ingestionSchema.getIOConfig().getFirehoseFactory();
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(
+        ingestionSchema.getDataSchema().getParser()
+    );
   }
 
   @Override
   Iterator<SubTaskSpec<T>> subTaskSpecIterator() throws IOException
   {
-    return baseFirehoseFactory.getSplits(getTuningConfig().getSplitHintSpec()).map(this::newTaskSpec).iterator();
+    return baseInputSource.createSplits(
+        ingestionSchema.getIOConfig().getInputFormat(),
+        getTuningConfig().getSplitHintSpec()
+    ).map(this::newTaskSpec).iterator();
   }
 
   @Override
   final int getTotalNumSubTasks() throws IOException
   {
-    return baseFirehoseFactory.getNumSplits(getTuningConfig().getSplitHintSpec());
+    return baseInputSource.getNumSplits(
+        ingestionSchema.getIOConfig().getInputFormat(),
+        getTuningConfig().getSplitHintSpec()
+    );
   }
 
-  final SubTaskSpec<T> newTaskSpec(InputSplit split)
+  @VisibleForTesting
+  ParallelIndexIngestionSpec getIngestionSchema()
   {
+    return ingestionSchema;
+  }
+
+  @VisibleForTesting
+  FiniteFirehoseFactory<?, ?> getBaseFirehoseFactory()
+  {
+    return baseFirehoseFactory;
+  }
+
+  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
+  final SubTaskSpec<T> newTaskSpec(InputSplit split)
+  @VisibleForTesting
+  ParallelIndexIngestionSpec getIngestionSchema()
+  {
+    return ingestionSchema;
+  }
+
+  @VisibleForTesting
+  SplittableInputSource<?> getBaseInputSource()
+  {
+    return baseInputSource;
+  }
+
+  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
+  {
+    final FirehoseFactory firehoseFactory;
+    final SplittableInputSource inputSource;
+    if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
+      firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
+      inputSource = null;
+    } else {
+      firehoseFactory = null;
+      inputSource = baseInputSource.withSplit(split);
+    }
     final ParallelIndexIngestionSpec subTaskIngestionSpec = new ParallelIndexIngestionSpec(
         ingestionSchema.getDataSchema(),
         new ParallelIndexIOConfig(
-            baseFirehoseFactory.withSplit(split),
+            firehoseFactory,
+            inputSource,
+            ingestionSchema.getIOConfig().getInputFormat(),
             ingestionSchema.getIOConfig().isAppendToExisting()
         ),
         ingestionSchema.getTuningConfig()

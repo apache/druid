@@ -20,17 +20,21 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Optional;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowIterator;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -42,12 +46,15 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
-public class FiniteFirehoseProcessor
+public class InputSourceProcessor
 {
-  private static final Logger LOG = new Logger(FiniteFirehoseProcessor.class);
+  private static final Logger LOG = new Logger(InputSourceProcessor.class);
 
   private final RowIngestionMeters buildSegmentsMeters;
   @Nullable
@@ -57,7 +64,7 @@ public class FiniteFirehoseProcessor
   private final long pushTimeout;
   private final IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder;
 
-  public FiniteFirehoseProcessor(
+  public InputSourceProcessor(
       RowIngestionMeters buildSegmentsMeters,
       @Nullable CircularBuffer<Throwable> buildSegmentsSavedParseExceptions,
       boolean logParseExceptions,
@@ -75,7 +82,7 @@ public class FiniteFirehoseProcessor
   }
 
   /**
-   * This method connects the given {@link FirehoseFactory} and processes data from the connected {@link Firehose}.
+   * This method opens the given {@link InputSource} and processes data via {@link InputSourceReader}.
    * All read data is consumed by {@link BatchAppenderatorDriver} which creates new segments.
    * All created segments are pushed when all input data is processed successfully.
    *
@@ -85,8 +92,9 @@ public class FiniteFirehoseProcessor
       DataSchema dataSchema,
       BatchAppenderatorDriver driver,
       PartitionsSpec partitionsSpec,
-      FirehoseFactory firehoseFactory,
-      File firehoseTempDir,
+      InputSource inputSource,
+      InputFormat inputFormat,
+      File tmpDir,
       IndexTaskSegmentAllocator segmentAllocator
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
@@ -107,8 +115,28 @@ public class FiniteFirehoseProcessor
           .build();
 
       while (iterator.hasNext()) {
+    final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
+                                            .map(AggregatorFactory::getName)
+                                            .collect(Collectors.toList());
+    final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
+        inputSource.reader(
+            new InputRowSchema(
+                dataSchema.getTimestampSpec(),
+                dataSchema.getDimensionsSpec(),
+                metricsNames
+            ),
+            inputFormat,
+            tmpDir
+        )
+    );
+    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
+      while (inputRowIterator.hasNext()) {
         try {
+          final InputRow inputRow = firehose.nextRow();
+
           InputRow inputRow = iterator.next();
+          final InputRow inputRow = inputRowIterator.next();
+
           if (inputRow == null) {
             continue;
           }
@@ -120,7 +148,6 @@ public class FiniteFirehoseProcessor
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-
             // incremental segment publishment is allowed only when rollup doesn't have to be perfect.
             if (dynamicPartitionsSpec != null) {
               final boolean isPushRequired = addResult.isPushRequired(

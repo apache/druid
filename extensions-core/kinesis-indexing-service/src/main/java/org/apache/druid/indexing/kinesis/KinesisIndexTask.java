@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -77,7 +78,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     //noinspection unchecked
     return new KinesisIndexTaskRunner(
         this,
-        dataSchema.getParser(),
+        Preconditions.checkNotNull(dataSchema.getParser(), "inputRowParser"),
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,

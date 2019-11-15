@@ -26,10 +26,12 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -234,10 +236,14 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
               } else {
                 final SinglePhaseSubTaskSpec spec =
                     (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
+                final InputRowParser inputRowParser = spec.getIngestionSpec().getDataSchema().getParser();
                 LOG.error(
                     "Failed to run sub tasks for inputSplits[%s]",
                     getSplitsIfSplittable(
-                        spec.getIngestionSpec().getIOConfig().getFirehoseFactory(),
+                        spec.getIngestionSpec().getIOConfig().getNonNullInputSource(inputRowParser),
+                        spec.getIngestionSpec().getIOConfig().getNonNullInputFormat(
+                            inputRowParser == null ? null : inputRowParser.getParseSpec()
+                        ),
                         tuningConfig.getSplitHintSpec()
                     )
                 );
@@ -294,15 +300,16 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   }
 
   private static List<InputSplit> getSplitsIfSplittable(
-      FirehoseFactory firehoseFactory,
+      InputSource inputSource,
+      InputFormat inputFormat,
       @Nullable SplitHintSpec splitHintSpec
   ) throws IOException
   {
-    if (firehoseFactory instanceof FiniteFirehoseFactory) {
-      final FiniteFirehoseFactory<?, ?> finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
-      return finiteFirehoseFactory.getSplits(splitHintSpec).collect(Collectors.toList());
+    if (inputSource instanceof SplittableInputSource) {
+      final SplittableInputSource<?> splittableInputSource = (SplittableInputSource) inputSource;
+      return splittableInputSource.createSplits(inputFormat, splitHintSpec).collect(Collectors.toList());
     } else {
-      throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
+      throw new ISE("inputSource[%s] is not splittable", inputSource.getClass().getSimpleName());
     }
   }
 
