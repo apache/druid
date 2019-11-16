@@ -20,89 +20,71 @@
 package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.sql.http.ResultFormat.Writer;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 
-public class ObjectWriter implements ResultFormat.Writer
+public class WrappedObjectWriter implements Writer
 {
+
+  private final ObjectWriter objectWriter;
   private final JsonGenerator jsonGenerator;
   private final OutputStream outputStream;
 
-  public ObjectWriter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
+  public WrappedObjectWriter(ObjectWriter objectWriter)
   {
-    this(outputStream, jsonMapper.getFactory().createGenerator(outputStream));
-  }
-
-  public ObjectWriter(OutputStream outputStream, JsonGenerator jsonGenerator)
-  {
-    this.jsonGenerator = jsonGenerator;
-    this.outputStream = outputStream;
-  }
-
-  JsonGenerator getJsonGenerator()
-  {
-    return jsonGenerator;
-  }
-
-  OutputStream getOutputStream()
-  {
-    return outputStream;
+    this.objectWriter = objectWriter;
+    this.jsonGenerator = objectWriter.getJsonGenerator();
+    this.outputStream = objectWriter.getOutputStream();
   }
 
   @Override
   public void writeResponseStart() throws IOException
   {
+    jsonGenerator.writeStartObject();
+    jsonGenerator.writeFieldName("data");
     jsonGenerator.writeStartArray();
+  }
+
+  @Override
+  public void writeHeader(List<String> columnNames) throws IOException
+  {
+    objectWriter.writeHeader(columnNames);
+  }
+
+  @Override
+  public void writeRowStart() throws IOException
+  {
+    objectWriter.writeRowStart();
+  }
+
+  @Override
+  public void writeRowField(String name, Object value) throws IOException
+  {
+    objectWriter.writeRowField(name, value);
+  }
+
+  @Override
+  public void writeRowEnd() throws IOException
+  {
+    objectWriter.writeRowEnd();
   }
 
   @Override
   public void writeResponseEnd() throws IOException
   {
     jsonGenerator.writeEndArray();
-
-    // End with LF.
+    jsonGenerator.writeEndObject();
     jsonGenerator.flush();
     outputStream.write('\n');
   }
 
   @Override
-  public void writeHeader(final List<String> columnNames) throws IOException
-  {
-    jsonGenerator.writeStartObject();
-
-    for (String columnName : columnNames) {
-      jsonGenerator.writeNullField(columnName);
-    }
-
-    jsonGenerator.writeEndObject();
-  }
-
-  @Override
-  public void writeRowStart() throws IOException
-  {
-    jsonGenerator.writeStartObject();
-  }
-
-  @Override
-  public void writeRowField(final String name, @Nullable final Object value) throws IOException
-  {
-    jsonGenerator.writeFieldName(name);
-    jsonGenerator.writeObject(value);
-  }
-
-  @Override
-  public void writeRowEnd() throws IOException
-  {
-    jsonGenerator.writeEndObject();
-  }
-
-  @Override
   public void close() throws IOException
   {
-    jsonGenerator.close();
+    objectWriter.close();
   }
+
 }

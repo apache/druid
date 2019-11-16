@@ -500,6 +500,54 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testWrappedObjectResultFormat() throws Exception
+  {
+    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo  LIMIT 2";
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
+    final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
+      return Maps.transformEntries(
+          m,
+          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+      );
+    };
+
+    Assert.assertEquals(
+        ImmutableMap.of("data",
+          ImmutableList.of(
+              ImmutableMap
+                  .<String, Object>builder()
+                  .put("__time", "2000-01-01T00:00:00.000Z")
+                  .put("cnt", 1)
+                  .put("dim1", "")
+                  .put("dim2", "a")
+                  .put("dim3", "[\"a\",\"b\"]")
+                  .put("m1", 1.0)
+                  .put("m2", 1.0)
+                  .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                  .put("EXPR$8", "")
+                  .build(),
+              ImmutableMap
+                  .<String, Object>builder()
+                  .put("__time", "2000-01-02T00:00:00.000Z")
+                  .put("cnt", 1)
+                  .put("dim1", "10.1")
+                  .put("dim2", "")
+                  .put("dim3", "[\"b\",\"c\"]")
+                  .put("m1", 2.0)
+                  .put("m2", 2.0)
+                  .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                  .put("EXPR$8", "")
+                  .build()
+          ).stream().map(transformer).collect(Collectors.toList())
+        ),
+        doPost(
+            new SqlQuery(query, ResultFormat.WRAPPEDOBJECT, false, null),
+            new TypeReference<Map<String, List<Map<String, Object>>>>() {}
+        ).rhs
+    );
+  }
+  
+  @Test
   public void testObjectLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
