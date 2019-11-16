@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -31,6 +32,7 @@ import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -117,10 +119,12 @@ public class CsvInputFormat implements InputFormat
   }
 
   @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema)
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
     return new CsvReader(
         inputRowSchema,
+        source,
+        temporaryDirectory,
         listDelimiter,
         columns,
         findColumnsFromHeader,

@@ -23,11 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -66,9 +68,9 @@ public class JsonInputFormat extends NestedInputFormat
   }
 
   @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema)
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new JsonReader(inputRowSchema, getFlattenSpec(), objectMapper);
+    return new JsonReader(inputRowSchema, source, temporaryDirectory, getFlattenSpec(), objectMapper);
   }
 
   @Override
