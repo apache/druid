@@ -95,7 +95,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.30.Final</netty4.version>
-        <node.version>v10.14.2</node.version>
+        <node.version>v12.13.0</node.version>
         <npm.version>6.13.0</npm.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
