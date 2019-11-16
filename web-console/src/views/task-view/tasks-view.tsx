@@ -16,17 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Alert,
-  Button,
-  ButtonGroup,
-  Intent,
-  Label,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-} from '@blueprintjs/core';
+import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -39,6 +29,7 @@ import {
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  MoreButton,
   RefreshButton,
   TableColumnSelector,
   ViewControlBar,
@@ -925,44 +916,38 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   renderBulkSupervisorActions() {
     const { capabilities, goToQuery } = this.props;
 
-    const bulkSupervisorActionsMenu = (
-      <Menu>
-        {capabilities.hasSql() && (
-          <MenuItem
-            icon={IconNames.APPLICATION}
-            text="View SQL query for table"
-            onClick={() => goToQuery(TasksView.SUPERVISOR_SQL)}
-          />
-        )}
-        <MenuItem
-          icon={IconNames.MANUALLY_ENTERED_DATA}
-          text="Submit JSON supervisor"
-          onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-        />
-        <MenuItem
-          icon={IconNames.PLAY}
-          text="Resume all supervisors"
-          onClick={() => this.setState({ showResumeAllSupervisors: true })}
-        />
-        <MenuItem
-          icon={IconNames.PAUSE}
-          text="Suspend all supervisors"
-          onClick={() => this.setState({ showSuspendAllSupervisors: true })}
-        />
-        <MenuItem
-          icon={IconNames.CROSS}
-          text="Terminate all supervisors"
-          intent={Intent.DANGER}
-          onClick={() => this.setState({ showTerminateAllSupervisors: true })}
-        />
-      </Menu>
-    );
-
     return (
       <>
-        <Popover content={bulkSupervisorActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
+        <MoreButton>
+          {capabilities.hasSql() && (
+            <MenuItem
+              icon={IconNames.APPLICATION}
+              text="View SQL query for table"
+              onClick={() => goToQuery(TasksView.SUPERVISOR_SQL)}
+            />
+          )}
+          <MenuItem
+            icon={IconNames.MANUALLY_ENTERED_DATA}
+            text="Submit JSON supervisor"
+            onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+          />
+          <MenuItem
+            icon={IconNames.PLAY}
+            text="Resume all supervisors"
+            onClick={() => this.setState({ showResumeAllSupervisors: true })}
+          />
+          <MenuItem
+            icon={IconNames.PAUSE}
+            text="Suspend all supervisors"
+            onClick={() => this.setState({ showSuspendAllSupervisors: true })}
+          />
+          <MenuItem
+            icon={IconNames.CROSS}
+            text="Terminate all supervisors"
+            intent={Intent.DANGER}
+            onClick={() => this.setState({ showTerminateAllSupervisors: true })}
+          />
+        </MoreButton>
         {this.renderResumeAllSupervisorAction()}
         {this.renderSuspendAllSupervisorAction()}
         {this.renderTerminateAllSupervisorAction()}
@@ -1051,8 +1036,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   renderBulkTasksActions() {
     const { goToQuery, capabilities } = this.props;
 
-    const bulkTaskActionsMenu = (
-      <Menu>
+    return (
+      <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
@@ -1065,15 +1050,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           text="Submit JSON task"
           onClick={() => this.setState({ taskSpecDialogOpen: true })}
         />
-      </Menu>
-    );
-
-    return (
-      <>
-        <Popover content={bulkTaskActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
-      </>
+      </MoreButton>
     );
   }
 

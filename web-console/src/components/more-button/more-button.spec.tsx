@@ -16,18 +16,29 @@
  * limitations under the License.
  */
 
+import { MenuItem } from '@blueprintjs/core';
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils/capabilities';
+import { MoreButton } from './more-button';
 
-import { LookupsCard } from './lookups-card';
+describe('more button', () => {
+  it('matches snapshot (full)', () => {
+    const moreButton = (
+      <MoreButton>
+        <MenuItem>LOL 1</MenuItem>
+        <MenuItem>LOL 2</MenuItem>
+      </MoreButton>
+    );
 
-describe('lookups card', () => {
-  it('matches snapshot', () => {
-    const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
+    const { container } = render(moreButton);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 
-    const { container } = render(lookupsCard);
+  it('matches snapshot (empty)', () => {
+    const moreButton = <MoreButton>{null}</MoreButton>;
+
+    const { container } = render(moreButton);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

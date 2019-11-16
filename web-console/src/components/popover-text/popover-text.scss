@@ -16,18 +16,11 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.popover-text {
+  max-width: 400px;
+  padding: 15px;
 
-import { Capabilities } from '../../../utils/capabilities';
-
-import { LookupsCard } from './lookups-card';
-
-describe('lookups card', () => {
-  it('matches snapshot', () => {
-    const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
-
-    const { container } = render(lookupsCard);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
