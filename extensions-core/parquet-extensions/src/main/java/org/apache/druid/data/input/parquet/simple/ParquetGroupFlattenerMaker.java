@@ -41,7 +41,7 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   private final Configuration jsonPathConfiguration;
   private final ParquetGroupConverter converter;
 
-  ParquetGroupFlattenerMaker(boolean binaryAsString)
+  public ParquetGroupFlattenerMaker(boolean binaryAsString)
   {
     this.converter = new ParquetGroupConverter(binaryAsString);
     this.jsonPathConfiguration = Configuration.builder()

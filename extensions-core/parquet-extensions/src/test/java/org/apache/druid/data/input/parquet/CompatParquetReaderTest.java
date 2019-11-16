@@ -20,85 +20,80 @@
 package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.path.StaticPathSpec;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Job;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
-public class CompatParquetInputTest extends BaseParquetInputTest
+/**
+ * Duplicate of {@link CompatParquetInputTest} but for {@link DruidParquetReader} instead of Hadoop
+ */
+public class CompatParquetReaderTest extends BaseParquetReaderTest
 {
-  @Parameterized.Parameters(name = "type = {0}")
-  public static Iterable<Object[]> constructorFeeder()
-  {
-    return ImmutableList.of(
-        new Object[]{ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE},
-        new Object[]{ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE}
-    );
-  }
-
-  private final String parserType;
-  private final Job job;
-
-  public CompatParquetInputTest(String parserType) throws IOException
-  {
-    this.parserType = parserType;
-    this.job = Job.getInstance(new Configuration());
-  }
-
   @Test
-  public void testBinaryAsString() throws IOException, InterruptedException
+  public void testBinaryAsString() throws IOException
   {
-    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/compat/impala_hadoop_parquet_job.json",
-        parserType,
-        false
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("ts", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("field"))),
+        ImmutableList.of()
     );
-    config.intoConfiguration(job);
-    Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
-
-    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
-
-    // without binaryAsString: true, the value would be "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg=="
-    Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", row.getDimension("field").get(0));
-    Assert.assertEquals(1471800234, row.getTimestampFromEpoch());
-  }
-
-
-  @Test
-  public void testParquet1217() throws IOException, InterruptedException
-  {
-    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/compat/parquet_1217.json",
-        parserType,
+    InputEntityReader reader = createReader(
+        "example/compat/284a0e001476716b-56d5676f53bd6e85_115466471_data.0.parq",
+        schema,
+        JSONPathSpec.DEFAULT,
         true
     );
-    config.intoConfiguration(job);
-    Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
-    List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    List<InputRow> rows2 = getAllRows(parserType, config);
+
+    List<InputRow> rows = readAllRows(reader);
+
+    // without binaryAsString: true, the value would be "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg=="
+    Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", rows.get(0).getDimension("field").get(0));
+    Assert.assertEquals(1471800234, rows.get(0).getTimestampFromEpoch());
+  }
+
+
+  @Test
+  public void testParquet1217() throws IOException
+  {
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
+        ImmutableList.of("metric1")
+    );
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.ROOT, "col", "col"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "metric1", "$.col")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        "example/compat/parquet-1217.parquet",
+        schema,
+        flattenSpec
+    );
+
+    List<InputRow> rows = readAllRows(reader);
+
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
     Assert.assertEquals("-1", rows.get(0).getDimension("col").get(0));
     Assert.assertEquals(-1, rows.get(0).getMetric("metric1"));
-    Assert.assertTrue(rows2.get(2).getDimension("col").isEmpty());
+    Assert.assertTrue(rows.get(4).getDimension("col").isEmpty());
   }
 
   @Test
-  public void testParquetThriftCompat() throws IOException, InterruptedException
+  public void testParquetThriftCompat() throws IOException
   {
-    // parquet-avro does not support this conversion:
-    // Map key type must be binary (UTF8): required int32 key
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
     /*
       message ParquetSchema {
         required boolean boolColumn;
@@ -147,15 +142,24 @@ public class CompatParquetInputTest extends BaseParquetInputTest
       }
      */
 
-    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/compat/parquet_thrift_compat.json",
-        parserType,
-        true
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
+        Collections.emptyList()
+    );
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByLogicalMap", "$.intToStringColumn.1"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByComplexLogicalMap", "$.complexColumn.1[0].nestedIntsColumn[1]")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        "example/compat/parquet-thrift-compat.snappy.parquet",
+        schema,
+        flattenSpec
     );
 
-    config.intoConfiguration(job);
-    Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
-    List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    List<InputRow> rows = readAllRows(reader);
+
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
     Assert.assertEquals("true", rows.get(0).getDimension("boolColumn").get(0));
     Assert.assertEquals("0", rows.get(0).getDimension("byteColumn").get(0));
@@ -183,66 +187,78 @@ public class CompatParquetInputTest extends BaseParquetInputTest
   }
 
   @Test
-  public void testOldRepeatedInt() throws IOException, InterruptedException
+  public void testOldRepeatedInt() throws IOException
   {
-    // parquet-avro does not support this conversion:
-    // REPEATED not supported outside LIST or MAP. Type: repeated int32 repeatedInt
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
-    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/compat/old_repeated_int.json",
-        parserType,
-        true
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("repeatedInt"))),
+        Collections.emptyList()
     );
-    config.intoConfiguration(job);
-    List<InputRow> rows = getAllRows(parserType, config);
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.ROOT, "repeatedInt", "repeatedInt")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        "example/compat/old-repeated-int.parquet",
+        schema,
+        flattenSpec
+    );
+
+    List<InputRow> rows = readAllRows(reader);
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
     Assert.assertEquals("1", rows.get(0).getDimension("repeatedInt").get(0));
     Assert.assertEquals("2", rows.get(0).getDimension("repeatedInt").get(1));
     Assert.assertEquals("3", rows.get(0).getDimension("repeatedInt").get(2));
   }
 
+
   @Test
-  public void testReadNestedArrayStruct() throws IOException, InterruptedException
+  public void testReadNestedArrayStruct() throws IOException
   {
-    // parquet-avro does not support this conversion
-    // REPEATED not supported outside LIST or MAP. Type: repeated group repeatedMessage {
-    //  optional int32 someId;
-    // }
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
-    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/compat/nested_array_struct.json",
-        parserType,
-        true
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i32_dec", "extracted1", "extracted2"))),
+        Collections.emptyList()
+    );
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extracted1", "$.myComplex[0].id"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extracted2", "$.myComplex[0].repeatedMessage[*].someId")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        "example/compat/nested-array-struct.parquet",
+        schema,
+        flattenSpec
     );
 
-    config.intoConfiguration(job);
-    List<InputRow> rows = getAllRows(parserType, config);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("5", rows.get(0).getDimension("primitive").get(0));
-    Assert.assertEquals("4", rows.get(0).getDimension("extracted1").get(0));
-    Assert.assertEquals("6", rows.get(0).getDimension("extracted2").get(0));
+    List<InputRow> rows = readAllRows(reader);
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
+    Assert.assertEquals("5", rows.get(1).getDimension("primitive").get(0));
+    Assert.assertEquals("4", rows.get(1).getDimension("extracted1").get(0));
+    Assert.assertEquals("6", rows.get(1).getDimension("extracted2").get(0));
   }
 
   @Test
-  public void testProtoStructWithArray() throws IOException, InterruptedException
+  public void testProtoStructWithArray() throws IOException
   {
-    // parquet-avro does not support this conversion:
-    // "REPEATED not supported outside LIST or MAP. Type: repeated int32 repeatedPrimitive"
-    if (parserType.equals(ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE)) {
-      return;
-    }
-
-    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
-        "example/compat/proto_struct_with_array.json",
-        parserType,
-        true
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
+        Collections.emptyList()
     );
-    config.intoConfiguration(job);
-    List<InputRow> rows = getAllRows(parserType, config);
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedOptional", "$.optionalMessage.someId"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedRequired", "$.requiredMessage.someId"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedRepeated", "$.repeatedMessage[*]")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        "example/compat/proto-struct-with-array.parquet",
+        schema,
+        flattenSpec
+    );
+
+    List<InputRow> rows = readAllRows(reader);
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
     Assert.assertEquals("10", rows.get(0).getDimension("optionalPrimitive").get(0));
     Assert.assertEquals("9", rows.get(0).getDimension("requiredPrimitive").get(0));
