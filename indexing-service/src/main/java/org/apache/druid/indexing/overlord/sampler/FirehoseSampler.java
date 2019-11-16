@@ -256,7 +256,7 @@ public class FirehoseSampler
         Map<String, Object> parsed = new HashMap<>();
 
         columnNames.forEach(k -> {
-          parsed.put(k, row.getRaw(k) == null ? "" : row.getRaw(k));
+          parsed.put(k, row.getRaw(k));
         });
         parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
 
