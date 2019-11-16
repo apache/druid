@@ -214,6 +214,7 @@ public class FirehoseSamplerTest
   @Test
   public void testCSVColumnAllNull()
   {
+    parserType = ParserType.STR_CSV;
     final List<Object> str_csv_rows = ImmutableList.of(
         "FirstName,LastName,Number,Gender",
         "J,G,,Male",
@@ -246,11 +247,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(4, (int) response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         str_csv_rows.get(1).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -259,13 +260,13 @@ public class FirehoseSamplerTest
             put("LastName", "G");
             put("Gender", "Male");
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         str_csv_rows.get(2).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -274,13 +275,13 @@ public class FirehoseSamplerTest
             put("LastName", "Bryant");
             put("Gender", "Male");
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         str_csv_rows.get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -289,13 +290,13 @@ public class FirehoseSamplerTest
             put("LastName", " Krystal");
             put("Gender", "Female");
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         str_csv_rows.get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -304,7 +305,7 @@ public class FirehoseSamplerTest
             put("LastName", "Jackson");
             put("Gender", "Male");
           }
-        },
+        }),
         null,
         null
     ), data.get(3));
@@ -324,11 +325,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(6, (int) response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -337,13 +338,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "1");
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -352,13 +353,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "2");
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -367,13 +368,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "3");
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -382,13 +383,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo2");
             put("met1", "4");
           }
-        },
+        }),
         null,
         null
     ), data.get(3));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -397,13 +398,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "5");
           }
-        },
+        }),
         null,
         null
     ), data.get(4));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(5).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 0L);
@@ -412,7 +413,7 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "6");
           }
-        },
+        }),
         null,
         null
     ), data.get(5));
@@ -432,11 +433,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(5, (int) response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -444,13 +445,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "1");
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -458,13 +459,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "2");
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934460000L);
@@ -472,13 +473,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "3");
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -486,13 +487,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo2");
             put("met1", "4");
           }
-        },
+        }),
         null,
         null
     ), data.get(3));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -500,7 +501,7 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", "5");
           }
-        },
+        }),
         null,
         null
     ), data.get(4));
@@ -536,66 +537,66 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo");
             put("met1", "1");
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo");
             put("met1", "2");
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934460000L);
             put("dim1", "foo");
             put("met1", "3");
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo2");
             put("met1", "4");
           }
-        },
+        }),
         null,
         null
     ), data.get(3));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo");
             put("met1", "5");
           }
-        },
+        }),
         null,
         null
     ), data.get(4));
@@ -630,11 +631,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(5, (int) response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -642,13 +643,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 1L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(1).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -656,13 +657,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 2L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(2).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -670,13 +671,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 3L);
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -684,13 +685,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo2");
             put("met1", 4L);
           }
-        },
+        }),
         null,
         null
     ), data.get(3));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -698,7 +699,7 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 5L);
           }
-        },
+        }),
         null,
         null
     ), data.get(4));
@@ -733,11 +734,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(5, (int) response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -745,13 +746,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 6L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -759,13 +760,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo2");
             put("met1", 4L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -773,7 +774,7 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 5L);
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
@@ -815,27 +816,27 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo");
             put("met1", 11L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo2");
             put("met1", 4L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
@@ -882,27 +883,27 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo");
             put("met1", 11L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1", "foo2");
             put("met1", 4L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
@@ -945,11 +946,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(5, (int) response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -957,13 +958,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 6L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -971,13 +972,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo2");
             put("met1", 4L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -985,7 +986,7 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 5L);
           }
-        },
+        }),
         null,
         null
     ), data.get(2));
@@ -1038,27 +1039,27 @@ public class FirehoseSamplerTest
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1PlusBar", "foobar");
             put("met1", 11L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(3).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
             put("dim1PlusBar", "foo2bar");
             put("met1", 4L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
@@ -1097,11 +1098,11 @@ public class FirehoseSamplerTest
     Assert.assertEquals(4, (int) response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(0).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -1109,13 +1110,13 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 6L);
           }
-        },
+        }),
         null,
         null
     ), data.get(0));
     Assert.assertEquals(new SamplerResponseRow(
         getTestRows().get(4).toString(),
-        new HashMap<String, Object>()
+        replaceNullValues(new HashMap<String, Object>()
         {
           {
             put("__time", 1555934400000L);
@@ -1123,7 +1124,7 @@ public class FirehoseSamplerTest
             put("dim1", "foo");
             put("met1", 5L);
           }
-        },
+        }),
         null,
         null
     ), data.get(1));
@@ -1197,8 +1198,11 @@ public class FirehoseSamplerTest
 
   private List<SamplerResponseRow> removeEmptyColumns(List<SamplerResponseRow> rows)
   {
-    return rows;
+    return USE_DEFAULT_VALUE_FOR_NULL
+           ? rows
+           : rows.stream().map(x -> x.withParsed(removeEmptyValues(x.getParsed()))).collect(Collectors.toList());
   }
+
 
   @Nullable
   private Map<String, Object> removeEmptyValues(Map<String, Object> data)
@@ -1208,5 +1212,20 @@ public class FirehoseSamplerTest
                         .stream()
                         .filter(x -> !(x.getValue() instanceof String) || !((String) x.getValue()).isEmpty())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  @Nullable
+  private Map<String, Object> replaceNullValues(Map<String, Object> data)
+  {
+    return ParserType.STR_CSV.equals(parserType)
+           ? USE_DEFAULT_VALUE_FOR_NULL
+             ? data
+             : data.entrySet()
+                   .stream()
+                   .collect(Collectors.toMap(
+                       Map.Entry::getKey,
+                       e -> e.getValue() == null ? "" : e.getValue()
+                   ))
+           : data;
   }
 }
