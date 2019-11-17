@@ -19,15 +19,13 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -57,7 +55,6 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -171,29 +168,15 @@ public class ParallelIndexSupervisorTaskSerdeTest
 
   private static class ParallelIndexIngestionSpecBuilder
   {
-    private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-        new TimestampSpec(
-            "ts",
-            "auto",
-            null
-        ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
-        null,
-        Arrays.asList("ts", "dim", "val"),
-        false,
-        0
+    private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
+    private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
     );
 
-    private static final TypeReference<Map<String, Object>> PARSER_TYPE = new TypeReference<Map<String, Object>>()
-    {
-    };
-
     private final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        new LocalFirehoseFactory(new File("tmp"), "test_*", null),
+        null,
+        new LocalInputSource(new File("tmp"), "test_*"),
+        new CsvInputFormat(Arrays.asList("ts", "dim", "val"), null, false, 0),
         false
     );
 
@@ -230,16 +213,13 @@ public class ParallelIndexSupervisorTaskSerdeTest
     {
       DataSchema dataSchema = new DataSchema(
           "dataSource",
-          OBJECT_MAPPER.convertValue(
-              new StringInputRowParser(PARSE_SPEC, null),
-              PARSER_TYPE
-          ),
+          TIMESTAMP_SPEC,
+          DIMENSIONS_SPEC,
           new AggregatorFactory[]{
               new LongSumAggregatorFactory("val", "val")
           },
           new UniformGranularitySpec(Granularities.DAY, Granularities.MINUTE, inputIntervals),
-          null,
-          OBJECT_MAPPER
+          null
       );
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(

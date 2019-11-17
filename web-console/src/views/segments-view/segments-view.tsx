@@ -16,16 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  Intent,
-  Label,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-} from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -37,6 +28,7 @@ import {
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  MoreButton,
   RefreshButton,
   TableColumnSelector,
   ViewControlBar,
@@ -660,8 +652,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     const { goToQuery, capabilities } = this.props;
     const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
 
-    const bulkSegmentsActionsMenu = (
-      <Menu>
+    return (
+      <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
@@ -673,15 +665,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             }}
           />
         )}
-      </Menu>
-    );
-
-    return (
-      <>
-        <Popover content={bulkSegmentsActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
-      </>
+      </MoreButton>
     );
   }
 

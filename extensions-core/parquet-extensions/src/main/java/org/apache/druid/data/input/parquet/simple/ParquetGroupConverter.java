@@ -467,7 +467,7 @@ class ParquetGroupConverter
     return false;
   }
 
-  private boolean binaryAsString;
+  private final boolean binaryAsString;
 
   ParquetGroupConverter(boolean binaryAsString)
   {
