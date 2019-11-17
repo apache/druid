@@ -391,6 +391,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
 
     @Override
+    public String getId()
+    {
+      return null;
+    }
+
+    @Override
     public String getDataSource()
     {
       return null;

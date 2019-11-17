@@ -212,7 +212,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
         toolbox.getIndexMergerV9(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -251,7 +251,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         metrics
     );
   }

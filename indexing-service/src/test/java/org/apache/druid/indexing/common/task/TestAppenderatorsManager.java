@@ -66,6 +66,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
+        taskId,
         schema,
         config,
         metrics,
@@ -98,6 +99,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   )
   {
     return Appenderators.createOffline(
+        taskId,
         schema,
         config,
         storeCompactionState,

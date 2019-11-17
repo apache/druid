@@ -27,11 +27,10 @@ import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
-/**
- */
 public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
 {
   private static final Logger log = new Logger(CuratorDruidNodeAnnouncer.class);
@@ -52,16 +51,18 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   public void announce(DiscoveryDruidNode discoveryDruidNode)
   {
     try {
-      log.info("Announcing [%s].", discoveryDruidNode);
+      final String asString = jsonMapper.writeValueAsString(discoveryDruidNode);
+
+      log.debug("Announcing self [%s].", asString);
 
       String path = ZKPaths.makePath(
           config.getInternalDiscoveryPath(),
           discoveryDruidNode.getNodeType().toString(),
           discoveryDruidNode.getDruidNode().getHostAndPortToUse()
       );
-      announcer.announce(path, jsonMapper.writeValueAsBytes(discoveryDruidNode));
+      announcer.announce(path, StringUtils.toUtf8(asString));
 
-      log.info("Announced [%s].", discoveryDruidNode);
+      log.info("Announced self [%s].", asString);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -71,15 +72,22 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   @Override
   public void unannounce(DiscoveryDruidNode discoveryDruidNode)
   {
-    log.info("Unannouncing [%s].", discoveryDruidNode);
+    try {
+      final String asString = jsonMapper.writeValueAsString(discoveryDruidNode);
 
-    String path = ZKPaths.makePath(
-        config.getInternalDiscoveryPath(),
-        discoveryDruidNode.getNodeType().toString(),
-        discoveryDruidNode.getDruidNode().getHostAndPortToUse()
-    );
-    announcer.unannounce(path);
+      log.debug("Unannouncing self [%s].", asString);
 
-    log.info("Unannounced [%s].", discoveryDruidNode);
+      String path = ZKPaths.makePath(
+          config.getInternalDiscoveryPath(),
+          discoveryDruidNode.getNodeType().toString(),
+          discoveryDruidNode.getDruidNode().getHostAndPortToUse()
+      );
+      announcer.unannounce(path);
+
+      log.info("Unannounced self [%s].", asString);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
