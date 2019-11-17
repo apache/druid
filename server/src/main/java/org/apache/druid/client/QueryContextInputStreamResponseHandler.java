@@ -47,9 +47,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class BufferInputStreamResponseHandler implements HttpResponseHandler<InputStream, InputStream>
+/**
+ * An HTTP response handler which uses sequence input streams to create a final InputStream.
+ *
+ * This implementation takes query context into consideration, e.g. timeout, maxQueuedBytes, backpressue.
+ * It uses a blocking queue to feed a SequenceInputStream that is terminated whenever the handler's Done
+ * method is called or a throwable is detected.
+ *
+ * The resulting InputStream will attempt to terminate normally, but on exception in HttpResponseHandler
+ * may end with an IOException upon read()
+ *
+ * {@link org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler} also uses
+ * sequence input streams to create final InputStream, but it does not have timeout, backpressue,
+ * or any query context. 
+ */
+public class QueryContextInputStreamResponseHandler implements HttpResponseHandler<InputStream, InputStream>
 {
-  private static final Logger log = new Logger(BufferInputStreamResponseHandler.class);
+  private static final Logger log = new Logger(QueryContextInputStreamResponseHandler.class);
 
   private final long requestStartTimeNs = System.nanoTime();
   private final AtomicLong totalByteCount = new AtomicLong(0);
@@ -71,7 +85,7 @@ public class BufferInputStreamResponseHandler implements HttpResponseHandler<Inp
   private final long maxQueuedBytes;
   private final boolean usingBackpressure;
 
-  public BufferInputStreamResponseHandler(
+  public QueryContextInputStreamResponseHandler(
       Query<?> query,
       ResponseContext context,
       QueryToolChestWarehouse warehouse,

@@ -144,7 +144,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
 
       final long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
-      final HttpResponseHandler<InputStream, InputStream> responseHandler = new BufferInputStreamResponseHandler(query, context, warehouse, url, timeoutAt, objectMapper);
+      final HttpResponseHandler<InputStream, InputStream> responseHandler = new QueryContextInputStreamResponseHandler(query, context, warehouse, url, timeoutAt, objectMapper);
 
       long timeLeft = timeoutAt - System.currentTimeMillis();
 
