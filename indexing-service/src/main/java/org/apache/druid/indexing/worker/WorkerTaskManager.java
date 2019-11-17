@@ -180,7 +180,8 @@ public abstract class WorkerTaskManager
   }
 
   /**
-   * This method is mostly non-blocking because exec is a ThreadPoolExecutor with unbounded queue used by default.
+   * This method is mostly non-blocking because {@link #exec} is a {@link ThreadPoolExecutor} with unbounded
+   * queue used by default.
    */
   private void submitNoticeToExec(Notice notice)
   {

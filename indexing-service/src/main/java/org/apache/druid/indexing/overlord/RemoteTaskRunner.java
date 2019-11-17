@@ -175,6 +175,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
   private final ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy;
+  private final ExecutorService monitorSyncHandler;
   private ProvisioningService provisioningService;
 
   public RemoteTaskRunner(
@@ -209,6 +210,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         config.getPendingTasksRunnerNumThreads(),
         "rtr-pending-tasks-runner-%d"
     );
+    this.monitorSyncHandler = Execs.singleThreaded("monitor-sync-handler");
   }
 
   @Override
@@ -257,8 +259,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                         }
                       }
                     },
-                    // The callback is mostly non-blocking and quick, so it's OK to schedule it using directExecutor()
-                    Execs.directExecutor()
+                    // The callback is blocking, synchrnoization of waitingForMonitor involves while loop, use dedicated thread
+                    monitorSyncHandler
                 );
                 break;
               case CHILD_UPDATED:

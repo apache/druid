@@ -210,7 +210,6 @@ public class SegmentListerResource
             }
           }
         },
-        // use dedicated thread for async json write
         jsonWriter
     );
 
@@ -324,7 +323,6 @@ public class SegmentListerResource
             }
           }
         },
-        // use dedicated thread for async json write
         jsonWriter
     );
 

@@ -587,7 +587,10 @@ public class TaskQueue
             }
           }
         },
-        //Using dedicated statusHandler executor instead of directExecutor() because the callback's onSuccess() is not trivial and because the statusFuture is completed in some incapsulated thread pool in TaskRunner; directExecutor() may create operational instability and subtle dependency between components here. See https://github.com/code-review-checklists/java-concurrency#cf-beware-non-async for details
+        // Using dedicated statusHandler executor instead of directExecutor() because the callback's onSuccess() is not
+        // trivial and because the statusFuture is completed in some incapsulated thread pool in TaskRunner;
+        // directExecutor() may create operational instability and subtle dependency between components here.
+        // See https://github.com/code-review-checklists/java-concurrency#cf-beware-non-async for details
         statusHandler
     );
     return statusFuture;
