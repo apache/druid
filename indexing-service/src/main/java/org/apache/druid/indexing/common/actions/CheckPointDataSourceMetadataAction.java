@@ -69,17 +69,15 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   // For backwards compatibility
-  @Deprecated
   @JsonProperty
-  public SeekableStreamDataSourceMetadata getPreviousCheckPoint()
+  private SeekableStreamDataSourceMetadata getPreviousCheckPoint()
   {
     return checkpointMetadata;
   }
 
   // For backwards compatibility
-  @Deprecated
   @JsonProperty
-  public SeekableStreamDataSourceMetadata getCurrentCheckPoint()
+  private SeekableStreamDataSourceMetadata getCurrentCheckPoint()
   {
     return checkpointMetadata;
   }
@@ -91,9 +89,8 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
    *
    * @return dummy value
    */
-  @Deprecated
   @JsonProperty("sequenceName")
-  public String getBaseSequenceName()
+  private String getBaseSequenceName()
   {
     return "dummy";
   }
@@ -159,7 +156,17 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     if (!Objects.equals(checkpointMetadata, that.checkpointMetadata)) {
       return false;
     }
-
     return true;
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        supervisorId,
+        taskGroupId,
+        checkpointMetadata
+    );
+  }
+
 }
