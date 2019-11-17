@@ -19,17 +19,19 @@
 
 package org.apache.druid.segment.transform;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +46,7 @@ public class Transformer
   private final ThreadLocal<Row> rowSupplierForValueMatcher = new ThreadLocal<>();
   private final ValueMatcher valueMatcher;
 
-  Transformer(final TransformSpec transformSpec, final Map<String, ValueType> rowSignature)
+  Transformer(final TransformSpec transformSpec)
   {
     for (final Transform transform : transformSpec.getTransforms()) {
       transforms.put(transform.getName(), transform.getRowFunction());
@@ -55,7 +57,7 @@ public class Transformer
                                   .makeMatcher(
                                       RowBasedColumnSelectorFactory.create(
                                           rowSupplierForValueMatcher::get,
-                                          rowSignature
+                                          null
                                       )
                                   );
     } else {
@@ -85,6 +87,36 @@ public class Transformer
 
     if (valueMatcher != null) {
       rowSupplierForValueMatcher.set(transformedRow);
+      if (!valueMatcher.matches()) {
+        return null;
+      }
+    }
+
+    return transformedRow;
+  }
+
+  @Nullable
+  public InputRowListPlusJson transform(@Nullable final InputRowListPlusJson row)
+  {
+    if (row == null) {
+      return null;
+    }
+
+    final InputRowListPlusJson transformedRow;
+
+    if (transforms.isEmpty()) {
+      transformedRow = row;
+    } else {
+      final List<InputRow> originalRows = Preconditions.checkNotNull(row.getInputRows(), "rows before transform");
+      final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
+      for (InputRow originalRow : originalRows) {
+        transformedRows.add(new TransformedInputRow(originalRow, transforms));
+      }
+      transformedRow = InputRowListPlusJson.of(transformedRows, row.getRawJson());
+    }
+
+    if (valueMatcher != null) {
+      rowSupplierForValueMatcher.set(transformedRow.getInputRow());
       if (!valueMatcher.matches()) {
         return null;
       }

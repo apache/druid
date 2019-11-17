@@ -284,7 +284,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
       Map<Interval, Int2ObjectMap<List<PartitionLocation>>> intervalToPartitions
   ) throws IOException
   {
-    final File tempDir = toolbox.getFirehoseTemporaryDir();
+    final File tempDir = toolbox.getIndexingTmpDir();
     FileUtils.deleteQuietly(tempDir);
     FileUtils.forceMkdir(tempDir);
 

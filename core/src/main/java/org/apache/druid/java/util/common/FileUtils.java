@@ -272,7 +272,7 @@ public class FileUtils
    * @param outFile             file to write data
    * @param fetchBuffer         a buffer to copy data from the input stream to the file
    * @param retryCondition      condition which should be satisfied for retry
-   * @param numRetries          max number of retries
+   * @param numTries          max number of retries
    * @param messageOnRetry      log message on retry
    *
    * @return the number of bytes copied
@@ -283,7 +283,7 @@ public class FileUtils
       File outFile,
       byte[] fetchBuffer,
       Predicate<Throwable> retryCondition,
-      int numRetries,
+      int numTries,
       String messageOnRetry
   ) throws IOException
   {
@@ -297,7 +297,34 @@ public class FileUtils
           },
           retryCondition,
           outFile::delete,
-          numRetries,
+          numTries,
+          messageOnRetry
+      );
+    }
+    catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  public static long copyLarge(
+      InputStream inputStream,
+      File outFile,
+      byte[] fetchBuffer,
+      Predicate<Throwable> retryCondition,
+      int numTries,
+      String messageOnRetry
+  ) throws IOException
+  {
+    try {
+      return RetryUtils.retry(
+          () -> {
+            try (OutputStream out = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+            }
+          },
+          retryCondition,
+          outFile::delete,
+          numTries,
           messageOnRetry
       );
     }

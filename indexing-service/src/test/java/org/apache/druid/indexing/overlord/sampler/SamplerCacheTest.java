@@ -26,7 +26,7 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -91,7 +91,7 @@ public class SamplerCacheTest
 
       Assert.assertTrue(firehose1.hasMore());
 
-      InputRowPlusRaw row = firehose1.nextRowWithRaw();
+      InputRowListPlusJson row = firehose1.nextRowWithRaw();
       Assert.assertArrayEquals(VALUE_1_1, row.getRaw());
       Assert.assertEquals("The quick", row.getInputRow().getDimension("col").get(0));
       row = firehose1.nextRowWithRaw();
@@ -144,7 +144,7 @@ public class SamplerCacheTest
 
       Assert.assertTrue(firehose1.hasMore());
 
-      InputRowPlusRaw row = firehose1.nextRowWithRaw();
+      InputRowListPlusJson row = firehose1.nextRowWithRaw();
       Assert.assertArrayEquals(VALUE_1_1, row.getRaw());
       Assert.assertEquals("The quick", row.getInputRow().getDimension("col").get(0));
       row = firehose1.nextRowWithRaw();

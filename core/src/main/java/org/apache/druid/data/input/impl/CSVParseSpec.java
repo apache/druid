@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.CSVParser;
 import org.apache.druid.java.util.common.parsers.Parser;
 
@@ -66,17 +67,6 @@ public class CSVParseSpec extends ParseSpec
     }
   }
 
-  @Deprecated
-  public CSVParseSpec(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      String listDelimiter,
-      List<String> columns
-  )
-  {
-    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
-  }
-
   @JsonProperty
   public String getListDelimiter()
   {
@@ -108,6 +98,12 @@ public class CSVParseSpec extends ParseSpec
   }
 
   @Override
+  public InputFormat toInputFormat()
+  {
+    return new CsvInputFormat(columns, listDelimiter, hasHeaderRow, skipHeaderRows);
+  }
+
+  @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
     return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow, skipHeaderRows);
@@ -118,5 +114,4 @@ public class CSVParseSpec extends ParseSpec
   {
     return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
-
 }
