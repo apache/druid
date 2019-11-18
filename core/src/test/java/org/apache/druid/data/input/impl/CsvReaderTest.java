@@ -120,9 +120,9 @@ public class CsvReaderTest
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", true, 0);
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
         Assert.assertEquals(
@@ -216,10 +216,12 @@ public class CsvReaderTest
             new TimestampSpec("Timestamp", "auto", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
             Collections.emptyList()
-        )
+        ),
+        source,
+        null
     );
 
-    try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
       final Iterator<InputRow> expectedRowIterator = expectedResults.iterator();
       while (iterator.hasNext()) {
         Assert.assertTrue(expectedRowIterator.hasNext());
@@ -237,8 +239,8 @@ public class CsvReaderTest
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, false, 0);
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA);
-    try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       Assert.assertEquals(DateTimes.of("2019-01-01T00:00:10Z"), row.getTimestamp());
@@ -267,9 +269,9 @@ public class CsvReaderTest
 
   private void assertResult(ByteEntity source, CsvInputFormat format) throws IOException
   {
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
         Assert.assertEquals(

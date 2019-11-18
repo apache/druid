@@ -19,11 +19,15 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { Capabilities } from '../../utils/capabilities';
+
 import { SegmentTimeline } from './segment-timeline';
 
 describe('Segment Timeline', () => {
   it('matches snapshot', () => {
-    const tableColumn = <SegmentTimeline chartHeight={100} chartWidth={100} />;
+    const tableColumn = (
+      <SegmentTimeline capabilities={Capabilities.FULL} chartHeight={100} chartWidth={100} />
+    );
     const { container } = render(tableColumn);
     expect(container.firstChild).toMatchSnapshot();
   });

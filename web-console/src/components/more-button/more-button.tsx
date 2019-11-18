@@ -16,18 +16,30 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { Button, Menu, Popover, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { Capabilities } from '../../../utils/capabilities';
+export interface MoreButtonProps {
+  children: React.ReactNode;
+}
 
-import { LookupsCard } from './lookups-card';
+export const MoreButton = React.memo(function MoreButton(props: MoreButtonProps) {
+  const { children } = props;
 
-describe('lookups card', () => {
-  it('matches snapshot', () => {
-    const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
-
-    const { container } = render(lookupsCard);
-    expect(container.firstChild).toMatchSnapshot();
+  let childCount = 0;
+  // Sadly React.Children.count does not ignore nulls correctly
+  React.Children.forEach(children, child => {
+    if (child) childCount++;
   });
+
+  return (
+    <Popover
+      className="more-button"
+      content={<Menu>{children}</Menu>}
+      position={Position.BOTTOM_LEFT}
+    >
+      <Button icon={IconNames.MORE} disabled={!childCount} />
+    </Popover>
+  );
 });

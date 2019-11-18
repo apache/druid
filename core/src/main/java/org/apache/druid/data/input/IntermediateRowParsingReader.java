@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -37,9 +36,9 @@ import java.util.List;
 public abstract class IntermediateRowParsingReader<T> implements InputEntityReader
 {
   @Override
-  public CloseableIterator<InputRow> read(InputEntity source, File temporaryDirectory) throws IOException
+  public CloseableIterator<InputRow> read() throws IOException
   {
-    return intermediateRowIterator(source, temporaryDirectory).flatMap(row -> {
+    return intermediateRowIterator().flatMap(row -> {
       try {
         // since parseInputRows() returns a list, the below line always iterates over the list,
         // which means it calls Iterator.hasNext() and Iterator.next() at least once per row.
@@ -56,10 +55,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample(InputEntity source, File temporaryDirectory)
+  public CloseableIterator<InputRowListPlusJson> sample()
       throws IOException
   {
-    return intermediateRowIterator(source, temporaryDirectory).map(row -> {
+    return intermediateRowIterator().map(row -> {
       final String json;
       try {
         json = toJson(row);
@@ -83,7 +82,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * Creates an iterator of intermediate rows. The returned rows will be consumed by {@link #parseInputRows} and
    * {@link #toJson}.
    */
-  protected abstract CloseableIterator<T> intermediateRowIterator(InputEntity source, File temporaryDirectory)
+  protected abstract CloseableIterator<T> intermediateRowIterator()
       throws IOException;
 
   /**

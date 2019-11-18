@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.opencsv.RFC4180Parser;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
@@ -34,6 +35,7 @@ import org.apache.druid.java.util.common.parsers.ParserUtils;
 import org.apache.druid.java.util.common.parsers.Parsers;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,13 +53,15 @@ public class CsvReader extends TextReader
 
   CsvReader(
       InputRowSchema inputRowSchema,
+      InputEntity source,
+      File temporaryDirectory,
       @Nullable String listDelimiter,
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows
   )
   {
-    super(inputRowSchema);
+    super(inputRowSchema, source, temporaryDirectory);
     this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
