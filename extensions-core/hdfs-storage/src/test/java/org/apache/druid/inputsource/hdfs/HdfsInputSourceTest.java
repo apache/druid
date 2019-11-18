@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -197,7 +198,9 @@ public class HdfsInputSourceTest
     {
       try {
         Path path = new Path(PATH + pathSuffix);
-        try (Writer writer = new BufferedWriter(new OutputStreamWriter(dfsCluster.getFileSystem().create(path)))) {
+        try (Writer writer = new BufferedWriter(
+            new OutputStreamWriter(dfsCluster.getFileSystem().create(path), StandardCharsets.UTF_8)
+        )) {
           writer.write(contents);
         }
         return path;
