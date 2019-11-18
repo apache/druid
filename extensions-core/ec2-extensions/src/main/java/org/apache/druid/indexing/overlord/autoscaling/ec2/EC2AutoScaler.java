@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
 
   private final int minNumWorkers;
   private final int maxNumWorkers;
+  private final String category;
   private final EC2EnvironmentConfig envConfig;
   private final AmazonEC2 amazonEC2Client;
   private final SimpleWorkerProvisioningConfig config;
@@ -65,11 +67,13 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       @JsonProperty("maxNumWorkers") int maxNumWorkers,
       @JsonProperty("envConfig") EC2EnvironmentConfig envConfig,
       @JacksonInject AmazonEC2 amazonEC2Client,
-      @JacksonInject SimpleWorkerProvisioningConfig config
+      @JacksonInject SimpleWorkerProvisioningConfig config,
+      @JsonProperty(value = "category", defaultValue = CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY) String category
   )
   {
     this.minNumWorkers = minNumWorkers;
     this.maxNumWorkers = maxNumWorkers;
+    this.category = category;
     this.envConfig = envConfig;
     this.amazonEC2Client = amazonEC2Client;
     this.config = config;
@@ -87,6 +91,12 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   public int getMaxNumWorkers()
   {
     return maxNumWorkers;
+  }
+
+  @Override
+  public String getCategory()
+  {
+    return category;
   }
 
   @Override

@@ -36,6 +36,8 @@ public interface AutoScaler<T>
 
   int getMaxNumWorkers();
 
+  String getCategory();
+
   /**
    * This method is unused, but AutoScaler is an {@link ExtensionPoint}, so we cannot remove it.
    */

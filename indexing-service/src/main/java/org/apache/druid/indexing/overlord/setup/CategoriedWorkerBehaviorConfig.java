@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
 public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
@@ -33,19 +33,16 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
   public static final String DEFAULT_AUTOSCALER_CATEGORY = WorkerConfig.DEFAULT_CATEGORY;
 
   private final WorkerSelectStrategy selectStrategy;
-  private final AutoScaler defaultAutoScaler;
-  private final Map<String, AutoScaler> categoryAutoScalers;
+  private final List<AutoScaler> autoScalers;
 
   @JsonCreator
   public CategoriedWorkerBehaviorConfig(
       @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
-      @JsonProperty("defaultAutoScaler") AutoScaler defaultAutoScaler,
-      @JsonProperty("categoryAutoScalers") Map<String, AutoScaler> categoryAutoScalers
+      @JsonProperty("autoScalers") List<AutoScaler> autoScalers
   )
   {
     this.selectStrategy = selectStrategy;
-    this.defaultAutoScaler = defaultAutoScaler;
-    this.categoryAutoScalers = categoryAutoScalers;
+    this.autoScalers = autoScalers;
   }
 
   @Override
@@ -56,20 +53,9 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
   }
 
   @JsonProperty
-  public AutoScaler getDefaultAutoScaler()
+  public List<AutoScaler> getAutoScalers()
   {
-    return defaultAutoScaler;
-  }
-
-  @JsonProperty
-  public Map<String, AutoScaler> getAutoScalers()
-  {
-    return categoryAutoScalers;
-  }
-
-  public boolean isStrong()
-  {
-    return defaultAutoScaler == null;
+    return autoScalers;
   }
 
   @Override
@@ -83,14 +69,13 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
     }
     CategoriedWorkerBehaviorConfig that = (CategoriedWorkerBehaviorConfig) o;
     return Objects.equals(selectStrategy, that.selectStrategy) &&
-           Objects.equals(defaultAutoScaler, that.defaultAutoScaler) &&
-           Objects.equals(categoryAutoScalers, that.categoryAutoScalers);
+           Objects.equals(autoScalers, that.autoScalers);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(selectStrategy, defaultAutoScaler, categoryAutoScalers);
+    return Objects.hash(selectStrategy, autoScalers);
   }
 
   @Override
@@ -98,8 +83,7 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
   {
     return "WorkerConfiguration{" +
            "selectStrategy=" + selectStrategy +
-           ", defaultAutoScaler=" + defaultAutoScaler +
-           ", categoryAutoScalers=" + categoryAutoScalers +
+           ", autoScalers=" + autoScalers +
            '}';
   }
 }

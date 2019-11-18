@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -30,6 +32,14 @@ import java.util.List;
 public class NoopAutoScaler<Void> implements AutoScaler<Void>
 {
   private static final EmittingLogger log = new EmittingLogger(NoopAutoScaler.class);
+  private final String category;
+
+  public NoopAutoScaler(
+      @JsonProperty(value = "category", defaultValue = CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY) String category
+  )
+  {
+    this.category = category;
+  }
 
   @Override
   public int getMinNumWorkers()
@@ -44,6 +54,12 @@ public class NoopAutoScaler<Void> implements AutoScaler<Void>
   }
 
   @Override
+  public String getCategory()
+  {
+    return category;
+  }
+
+  @Override
   public Void getEnvConfig()
   {
     throw new UOE("No config for Noop!");
@@ -52,14 +68,14 @@ public class NoopAutoScaler<Void> implements AutoScaler<Void>
   @Override
   public AutoScalingData provision()
   {
-    log.info("If I were a real strategy I'd create something now");
+    log.info("If I were a real strategy I'd create something now in category %s", category);
     return null;
   }
 
   @Override
   public AutoScalingData terminate(List<String> ips)
   {
-    log.info("If I were a real strategy I'd terminate %s now", ips);
+    log.info("If I were a real strategy I'd terminate %s now in category %s", ips, category);
     return null;
   }
 
