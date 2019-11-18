@@ -58,7 +58,7 @@ import { Capabilities } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
-import './tasks-view.scss';
+import './ingestion-view.scss';
 
 const supervisorTableColumns: string[] = [
   'Datasource',
@@ -101,7 +101,7 @@ interface TaskQueryResultRow {
   rank: number;
 }
 
-export interface TasksViewProps {
+export interface IngestionViewProps {
   taskId: string | undefined;
   datasourceId: string | undefined;
   openDialog: string | undefined;
@@ -112,7 +112,7 @@ export interface TasksViewProps {
   capabilities: Capabilities;
 }
 
-export interface TasksViewState {
+export interface IngestionViewState {
   supervisorsLoading: boolean;
   supervisors?: SupervisorQueryResultRow[];
   supervisorsError?: string;
@@ -186,7 +186,7 @@ function stateToColor(status: string): string {
   }
 }
 
-export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
+export class IngestionView extends React.PureComponent<IngestionViewProps, IngestionViewState> {
   private supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
@@ -212,7 +212,7 @@ FROM sys.supervisors`;
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`;
 
-  constructor(props: TasksViewProps, context: any) {
+  constructor(props: IngestionViewProps, context: any) {
     super(props, context);
 
     const taskFilter: Filter[] = [];
@@ -252,7 +252,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       processQuery: async capabilities => {
         if (capabilities.hasSql()) {
           return await queryDruidSql({
-            query: TasksView.SUPERVISOR_SQL,
+            query: IngestionView.SUPERVISOR_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
           const supervisors = (await axios.get('/druid/indexer/v1/supervisor?full')).data;
@@ -287,11 +287,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       processQuery: async capabilities => {
         if (capabilities.hasSql()) {
           return await queryDruidSql({
-            query: TasksView.TASK_SQL,
+            query: IngestionView.TASK_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
           const resp = await axios.get(`/druid/indexer/v1/tasks`);
-          return TasksView.parseTasks(resp.data);
+          return IngestionView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
@@ -319,7 +319,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
         status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
         rank:
-          TasksView.statusRanking[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
+          IngestionView.statusRanking[
+            d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode
+          ],
       };
     });
   };
@@ -852,11 +854,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 if (typeofD1 !== typeofD2) return 0;
                 switch (typeofD1) {
                   case 'string':
-                    return TasksView.statusRanking[d1] - TasksView.statusRanking[d2];
+                    return IngestionView.statusRanking[d1] - IngestionView.statusRanking[d2];
 
                   case 'object':
                     return (
-                      TasksView.statusRanking[d1.status] - TasksView.statusRanking[d2.status] ||
+                      IngestionView.statusRanking[d1.status] -
+                        IngestionView.statusRanking[d2.status] ||
                       d1.created_time.localeCompare(d2.created_time)
                     );
 
@@ -923,7 +926,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             <MenuItem
               icon={IconNames.APPLICATION}
               text="View SQL query for table"
-              onClick={() => goToQuery(TasksView.SUPERVISOR_SQL)}
+              onClick={() => goToQuery(IngestionView.SUPERVISOR_SQL)}
             />
           )}
           <MenuItem
@@ -1042,7 +1045,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(TasksView.TASK_SQL)}
+            onClick={() => goToQuery(IngestionView.TASK_SQL)}
           />
         )}
         <MenuItem
@@ -1072,7 +1075,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <SplitterLayout
-          customClassName={'tasks-view app-view'}
+          customClassName={'ingestion-view app-view'}
           vertical
           percentage
           secondaryInitialSize={
