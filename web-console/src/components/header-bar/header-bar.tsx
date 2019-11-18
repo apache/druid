@@ -54,11 +54,11 @@ import './header-bar.scss';
 export type HeaderActiveTab =
   | null
   | 'load-data'
-  | 'query'
+  | 'ingestion'
   | 'datasources'
   | 'segments'
-  | 'ingestion'
   | 'services'
+  | 'query'
   | 'lookups';
 
 const DruidLogo = React.memo(function DruidLogo() {
