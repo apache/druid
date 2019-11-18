@@ -63,7 +63,7 @@
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>install --verbose domhandler@2.4.2</arguments>
+              <arguments>run test-domhandler-wget</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
