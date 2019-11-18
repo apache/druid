@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.movingaverage;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -613,7 +614,7 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
   public void testMissingDaysInMiddle()
   {
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
-
+    NullHandling.initializeForTests();
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
 
@@ -733,7 +734,7 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
   public void testMissingDaysAtEnd()
   {
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
-
+    NullHandling.initializeForTests();
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
 

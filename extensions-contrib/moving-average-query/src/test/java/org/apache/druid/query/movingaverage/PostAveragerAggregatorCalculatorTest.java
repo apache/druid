@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.movingaverage;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -28,7 +29,6 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.movingaverage.averagers.DoubleMeanAveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
@@ -41,7 +41,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PostAveragerAggregatorCalculatorTest extends InitializedNullHandlingTest
+public class PostAveragerAggregatorCalculatorTest
 {
   private PostAveragerAggregatorCalculator pac;
   private Map<String, Object> event;
@@ -51,6 +51,7 @@ public class PostAveragerAggregatorCalculatorTest extends InitializedNullHandlin
   public void setup()
   {
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
+    NullHandling.initializeForTests();
     MovingAverageQuery query = new MovingAverageQuery(
         new TableDataSource("d"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval(
