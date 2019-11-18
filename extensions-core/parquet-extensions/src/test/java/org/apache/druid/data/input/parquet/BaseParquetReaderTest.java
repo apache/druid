@@ -21,6 +21,7 @@ package org.apache.druid.data.input.parquet;
 
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -55,6 +56,17 @@ public class BaseParquetReaderTest
   {
     List<InputRow> rows = new ArrayList<>();
     try (CloseableIterator<InputRow> iterator = reader.read()) {
+      while (iterator.hasNext()) {
+        rows.add(iterator.next());
+      }
+    }
+    return rows;
+  }
+
+  List<InputRowListPlusJson> sampleAllRows(InputEntityReader reader) throws IOException
+  {
+    List<InputRowListPlusJson> rows = new ArrayList<>();
+    try (CloseableIterator<InputRowListPlusJson> iterator = reader.sample()) {
       while (iterator.hasNext()) {
         rows.add(iterator.next());
       }

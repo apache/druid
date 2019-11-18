@@ -29,8 +29,6 @@ import org.apache.parquet.schema.Type;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -97,15 +95,6 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
    */
   private Object finalizeConversion(Object o)
   {
-    // conversion can leave 'wrapped' list primitives
-    if (ParquetGroupConverter.isWrappedListPrimitive(o)) {
-      return converter.unwrapListPrimitive(o);
-    } else if (o instanceof List) {
-      List<Object> asList = ((List<Object>) o).stream().filter(Objects::nonNull).collect(Collectors.toList());
-      if (asList.stream().allMatch(ParquetGroupConverter::isWrappedListPrimitive)) {
-        return asList.stream().map(Group.class::cast).map(converter::unwrapListPrimitive).collect(Collectors.toList());
-      }
-    }
-    return o;
+    return converter.finalizeConversion(o);
   }
 }

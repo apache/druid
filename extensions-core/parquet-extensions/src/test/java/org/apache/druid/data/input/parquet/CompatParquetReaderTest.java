@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -44,13 +45,14 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
   @Test
   public void testBinaryAsString() throws IOException
   {
+    final String file = "example/compat/284a0e001476716b-56d5676f53bd6e85_115466471_data.0.parq";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("field"))),
         ImmutableList.of()
     );
     InputEntityReader reader = createReader(
-        "example/compat/284a0e001476716b-56d5676f53bd6e85_115466471_data.0.parq",
+        file,
         schema,
         JSONPathSpec.DEFAULT,
         true
@@ -61,12 +63,26 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     // without binaryAsString: true, the value would be "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg=="
     Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", rows.get(0).getDimension("field").get(0));
     Assert.assertEquals(1471800234, rows.get(0).getTimestampFromEpoch());
+
+    reader = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT,
+        true
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
+                                + "  \"ts\" : 1471800234\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 
 
   @Test
   public void testParquet1217() throws IOException
   {
+    final String file = "example/compat/parquet-1217.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
@@ -78,7 +94,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/compat/parquet-1217.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -89,6 +105,17 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("-1", rows.get(0).getDimension("col").get(0));
     Assert.assertEquals(-1, rows.get(0).getMetric("metric1"));
     Assert.assertTrue(rows.get(4).getDimension("col").isEmpty());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"col\" : -1\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 
   @Test
@@ -141,7 +168,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         }
       }
      */
-
+    final String file = "example/compat/parquet-thrift-compat.snappy.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
@@ -153,7 +180,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/compat/parquet-thrift-compat.snappy.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -184,11 +211,79 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("0", rows.get(0).getDimension("intSetColumn").get(0));
     Assert.assertEquals("val_1", rows.get(0).getDimension("extractByLogicalMap").get(0));
     Assert.assertEquals("1", rows.get(0).getDimension("extractByComplexLogicalMap").get(0));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"enumColumn\" : \"SPADES\",\n"
+                                + "  \"maybeStringColumn\" : { },\n"
+                                + "  \"maybeBinaryColumn\" : { },\n"
+                                + "  \"shortColumn\" : 1,\n"
+                                + "  \"byteColumn\" : 0,\n"
+                                + "  \"maybeBoolColumn\" : { },\n"
+                                + "  \"intColumn\" : 2,\n"
+                                + "  \"doubleColumn\" : 0.2,\n"
+                                + "  \"maybeByteColumn\" : { },\n"
+                                + "  \"intSetColumn\" : [ 0 ],\n"
+                                + "  \"boolColumn\" : true,\n"
+                                + "  \"binaryColumn\" : \"val_0\",\n"
+                                + "  \"maybeIntColumn\" : { },\n"
+                                + "  \"intToStringColumn\" : {\n"
+                                + "    \"0\" : \"val_0\",\n"
+                                + "    \"1\" : \"val_1\",\n"
+                                + "    \"2\" : \"val_2\"\n"
+                                + "  },\n"
+                                + "  \"maybeDoubleColumn\" : { },\n"
+                                + "  \"maybeEnumColumn\" : { },\n"
+                                + "  \"maybeLongColumn\" : { },\n"
+                                + "  \"stringsColumn\" : [ \"arr_0\", \"arr_1\", \"arr_2\" ],\n"
+                                + "  \"longColumn\" : 0,\n"
+                                + "  \"stringColumn\" : \"val_0\",\n"
+                                + "  \"maybeShortColumn\" : { },\n"
+                                + "  \"complexColumn\" : {\n"
+                                + "    \"0\" : [ {\n"
+                                + "      \"nestedStringColumn\" : \"val_0\",\n"
+                                + "      \"nestedIntsColumn\" : [ 0, 1, 2 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_1\",\n"
+                                + "      \"nestedIntsColumn\" : [ 1, 2, 3 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_2\",\n"
+                                + "      \"nestedIntsColumn\" : [ 2, 3, 4 ]\n"
+                                + "    } ],\n"
+                                + "    \"1\" : [ {\n"
+                                + "      \"nestedStringColumn\" : \"val_0\",\n"
+                                + "      \"nestedIntsColumn\" : [ 0, 1, 2 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_1\",\n"
+                                + "      \"nestedIntsColumn\" : [ 1, 2, 3 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_2\",\n"
+                                + "      \"nestedIntsColumn\" : [ 2, 3, 4 ]\n"
+                                + "    } ],\n"
+                                + "    \"2\" : [ {\n"
+                                + "      \"nestedStringColumn\" : \"val_0\",\n"
+                                + "      \"nestedIntsColumn\" : [ 0, 1, 2 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_1\",\n"
+                                + "      \"nestedIntsColumn\" : [ 1, 2, 3 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_2\",\n"
+                                + "      \"nestedIntsColumn\" : [ 2, 3, 4 ]\n"
+                                + "    } ]\n"
+                                + "  }\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testOldRepeatedInt() throws IOException
   {
+    final String file = "example/compat/old-repeated-int.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("repeatedInt"))),
@@ -199,7 +294,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/compat/old-repeated-int.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -209,12 +304,24 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("1", rows.get(0).getDimension("repeatedInt").get(0));
     Assert.assertEquals("2", rows.get(0).getDimension("repeatedInt").get(1));
     Assert.assertEquals("3", rows.get(0).getDimension("repeatedInt").get(2));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"repeatedInt\" : [ 1, 2, 3 ]\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 
 
   @Test
   public void testReadNestedArrayStruct() throws IOException
   {
+    final String file = "example/compat/nested-array-struct.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i32_dec", "extracted1", "extracted2"))),
@@ -226,7 +333,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/compat/nested-array-struct.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -236,11 +343,27 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("5", rows.get(1).getDimension("primitive").get(0));
     Assert.assertEquals("4", rows.get(1).getDimension("extracted1").get(0));
     Assert.assertEquals("6", rows.get(1).getDimension("extracted2").get(0));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"primitive\" : 2,\n"
+                                + "  \"myComplex\" : [ {\n"
+                                + "    \"id\" : 1,\n"
+                                + "    \"repeatedMessage\" : [ 3 ]\n"
+                                + "  } ]\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testProtoStructWithArray() throws IOException
   {
+    final String file = "example/compat/proto-struct-with-array.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
@@ -253,7 +376,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/compat/proto-struct-with-array.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -267,5 +390,23 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("9", rows.get(0).getDimension("extractedRequired").get(0));
     Assert.assertEquals("9", rows.get(0).getDimension("extractedRepeated").get(0));
     Assert.assertEquals("10", rows.get(0).getDimension("extractedRepeated").get(1));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"optionalMessage\" : { },\n"
+                                + "  \"requiredPrimitive\" : 9,\n"
+                                + "  \"repeatedPrimitive\" : { },\n"
+                                + "  \"repeatedMessage\" : [ 9, 10 ],\n"
+                                + "  \"optionalPrimitive\" : 10,\n"
+                                + "  \"requiredMessage\" : {\n"
+                                + "    \"someId\" : 9\n"
+                                + "  }\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 }

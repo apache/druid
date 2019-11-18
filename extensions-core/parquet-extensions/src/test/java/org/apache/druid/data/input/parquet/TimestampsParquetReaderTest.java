@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -41,6 +42,7 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
   @Test
   public void testDateHandling() throws IOException
   {
+    final String file = "example/timestamps/test_date_data.snappy.parquet";
     InputRowSchema schemaAsString = new InputRowSchema(
         new TimestampSpec("date_as_string", "Y-M-d", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
@@ -52,12 +54,12 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
         Collections.emptyList()
     );
     InputEntityReader readerAsString = createReader(
-        "example/timestamps/test_date_data.snappy.parquet",
+        file,
         schemaAsString,
         JSONPathSpec.DEFAULT
     );
     InputEntityReader readerAsDate = createReader(
-        "example/timestamps/test_date_data.snappy.parquet",
+        file,
         schemaAsDate,
         JSONPathSpec.DEFAULT
     );
@@ -69,6 +71,28 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     for (int i = 0; i < rowsWithDate.size(); i++) {
       Assert.assertEquals(rowsWithString.get(i).getTimestamp(), rowsWithDate.get(i).getTimestamp());
     }
+
+    readerAsString = createReader(
+        file,
+        schemaAsString,
+        JSONPathSpec.DEFAULT
+    );
+    readerAsDate = createReader(
+        file,
+        schemaAsDate,
+        JSONPathSpec.DEFAULT
+    );
+    List<InputRowListPlusJson> sampledAsString = sampleAllRows(readerAsString);
+    List<InputRowListPlusJson> sampledAsDate = sampleAllRows(readerAsDate);
+    final String expectedJson = "{\n"
+                                      + "  \"date_as_string\" : \"2017-06-18\",\n"
+                                      + "  \"timestamp_as_timestamp\" : 1497702471815,\n"
+                                      + "  \"timestamp_as_string\" : \"2017-06-17 14:27:51.815\",\n"
+                                      + "  \"idx\" : 1,\n"
+                                      + "  \"date_as_date\" : 1497744000000\n"
+                                      + "}";
+    Assert.assertEquals(expectedJson, sampledAsString.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, sampledAsDate.get(0).getRawJson());
   }
 
   @Test
@@ -76,32 +100,56 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
   {
     // the source parquet file was found in apache spark sql repo tests, where it is known as impala_timestamp.parq
     // it has a single column, "ts" which is an int96 timestamp
+    final String file = "example/timestamps/int96_timestamp.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         Collections.emptyList()
     );
-    InputEntityReader reader = createReader("example/timestamps/int96_timestamp.parquet", schema, JSONPathSpec.DEFAULT);
+    InputEntityReader reader = createReader(file, schema, JSONPathSpec.DEFAULT);
 
     List<InputRow> rows = readAllRows(reader);
     Assert.assertEquals("2001-01-01T01:01:01.000Z", rows.get(0).getTimestamp().toString());
+
+    reader = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"ts\" : 978310861000\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testTimeMillisInInt64() throws IOException
   {
+    final String file = "example/timestamps/timemillis-in-i64.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         Collections.emptyList()
     );
     InputEntityReader reader = createReader(
-        "example/timestamps/timemillis-in-i64.parquet",
+        file,
         schema,
         JSONPathSpec.DEFAULT
     );
 
     List<InputRow> rows = readAllRows(reader);
     Assert.assertEquals("1970-01-01T00:00:00.010Z", rows.get(0).getTimestamp().toString());
+
+    reader = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"time\" : 10\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 }

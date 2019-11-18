@@ -42,9 +42,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-class ParquetGroupConverter
+public class ParquetGroupConverter
 {
   private static final int JULIAN_EPOCH_OFFSET_DAYS = 2_440_588;
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
@@ -469,7 +471,7 @@ class ParquetGroupConverter
 
   private final boolean binaryAsString;
 
-  ParquetGroupConverter(boolean binaryAsString)
+  public ParquetGroupConverter(boolean binaryAsString)
   {
     this.binaryAsString = binaryAsString;
   }
@@ -482,7 +484,7 @@ class ParquetGroupConverter
    * if a field is not present, this method will return null.
    */
   @Nullable
-  Object convertField(Group g, String fieldName)
+  public Object convertField(Group g, String fieldName)
   {
     return convertField(g, fieldName, binaryAsString);
   }
@@ -492,10 +494,24 @@ class ParquetGroupConverter
    * return lists which contain 'wrapped' primitives, that are a {@link Group} with a single, primitive field (see
    * {@link ParquetGroupConverter#isWrappedListPrimitive(Object)})
    */
-  Object unwrapListPrimitive(Object o)
+  public Object unwrapListPrimitive(Object o)
   {
     assert isWrappedListPrimitive(o);
     Group g = (Group) o;
     return convertPrimitiveField(g, 0, binaryAsString);
+  }
+
+  public Object finalizeConversion(Object o)
+  {
+    // conversion can leave 'wrapped' list primitives
+    if (isWrappedListPrimitive(o)) {
+      return unwrapListPrimitive(o);
+    } else if (o instanceof List) {
+      List<Object> asList = ((List<?>) o).stream().filter(Objects::nonNull).collect(Collectors.toList());
+      if (asList.stream().allMatch(ParquetGroupConverter::isWrappedListPrimitive)) {
+        return asList.stream().map(Group.class::cast).map(this::unwrapListPrimitive).collect(Collectors.toList());
+      }
+    }
+    return o;
   }
 }

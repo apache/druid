@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -40,9 +41,30 @@ import java.util.List;
  */
 public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
 {
+  private static final String FLAT_JSON = "{\n"
+                                          + "  \"listDim\" : [ \"listDim1v1\", \"listDim1v2\" ],\n"
+                                          + "  \"dim3\" : 1,\n"
+                                          + "  \"dim2\" : \"d2v1\",\n"
+                                          + "  \"dim1\" : \"d1v1\",\n"
+                                          + "  \"metric1\" : 1,\n"
+                                          + "  \"timestamp\" : 1537229880023\n"
+                                          + "}";
+
+  private static final String NESTED_JSON = "{\n"
+                                            + "  \"nestedData\" : {\n"
+                                            + "    \"listDim\" : [ \"listDim1v1\", \"listDim1v2\" ],\n"
+                                            + "    \"dim3\" : 1,\n"
+                                            + "    \"dim2\" : \"d2v1\",\n"
+                                            + "    \"metric2\" : 2\n"
+                                            + "  },\n"
+                                            + "  \"dim1\" : \"d1v1\",\n"
+                                            + "  \"metric1\" : 1,\n"
+                                            + "  \"timestamp\" : 1537229880023\n"
+                                            + "}";
   @Test
   public void testFlat1NoFlattenSpec() throws IOException, InterruptedException
   {
+    final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "listDim"))),
@@ -50,7 +72,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of());
     InputEntityReader reader = createReader(
-        "example/flattening/test_flat_1.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -63,18 +85,27 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(FLAT_JSON, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testFlat1Autodiscover() throws IOException, InterruptedException
   {
+    final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         ImmutableList.of("metric1", "metric2")
     );
     InputEntityReader reader = createReader(
-        "example/flattening/test_flat_1.parquet",
+        file,
         schema,
         JSONPathSpec.DEFAULT
     );
@@ -87,11 +118,20 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(FLAT_JSON, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testFlat1Flatten() throws IOException, InterruptedException
   {
+    final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "list"))),
@@ -106,7 +146,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/flattening/test_flat_1.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -119,11 +159,20 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(FLAT_JSON, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testFlat1FlattenSelectListItem() throws IOException, InterruptedException
   {
+    final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "listExtracted"))),
@@ -137,7 +186,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/flattening/test_flat_1.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -148,21 +197,32 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listExtracted").get(0));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+
+    Assert.assertEquals(FLAT_JSON, sampled.get(0).getRawJson());
   }
 
 
   @Test
   public void testNested1NoFlattenSpec() throws IOException
   {
+    final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1"))),
         ImmutableList.of("metric1")
     );
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of());
     InputEntityReader reader = createReader(
-        "example/flattening/test_nested_1.parquet",
+        file,
         schema,
-        new JSONPathSpec(false, ImmutableList.of())
+        flattenSpec
     );
 
     List<InputRow> rows = readAllRows(reader);
@@ -175,18 +235,27 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertFalse(dims.contains("listDim"));
     Assert.assertFalse(dims.contains("nestedData"));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(NESTED_JSON, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testNested1Autodiscover() throws IOException
   {
+    final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
         ImmutableList.of("metric1", "metric2")
     );
     InputEntityReader reader = createReader(
-        "example/flattening/test_nested_1.parquet",
+        file,
         schema,
         JSONPathSpec.DEFAULT
     );
@@ -199,11 +268,20 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertFalse(dims.contains("dim3"));
     Assert.assertFalse(dims.contains("listDim"));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(NESTED_JSON, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testNested1Flatten() throws IOException
   {
+    final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
@@ -219,7 +297,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/flattening/test_nested_1.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -233,11 +311,20 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
     Assert.assertEquals(2, rows.get(0).getMetric("metric2").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(NESTED_JSON, sampled.get(0).getRawJson());
   }
 
   @Test
   public void testNested1FlattenSelectListItem() throws IOException
   {
+    final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of())),
@@ -252,7 +339,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/flattening/test_nested_1.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -265,5 +352,13 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    Assert.assertEquals(NESTED_JSON, sampled.get(0).getRawJson());
   }
 }

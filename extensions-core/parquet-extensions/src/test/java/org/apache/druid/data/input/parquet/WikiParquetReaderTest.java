@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -54,5 +55,28 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
     String s2 = rows.get(0).getDimension("language").get(1);
     Assert.assertEquals("en", s1);
     Assert.assertEquals("zh", s2);
+
+    reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+
+    final String expectedJson = "{\n"
+                                + "  \"continent\" : \"North America\",\n"
+                                + "  \"country\" : \"United States\",\n"
+                                + "  \"added\" : 57,\n"
+                                + "  \"city\" : \"San Francisco\",\n"
+                                + "  \"unpatrolled\" : \"true\",\n"
+                                + "  \"delta\" : -143,\n"
+                                + "  \"language\" : [ \"en\", \"zh\" ],\n"
+                                + "  \"robot\" : \"false\",\n"
+                                + "  \"deleted\" : 200,\n"
+                                + "  \"newPage\" : \"true\",\n"
+                                + "  \"namespace\" : \"article\",\n"
+                                + "  \"anonymous\" : \"false\",\n"
+                                + "  \"page\" : \"Gypsy Danger\",\n"
+                                + "  \"region\" : \"Bay Area\",\n"
+                                + "  \"user\" : \"nuclear\",\n"
+                                + "  \"timestamp\" : \"2013-08-31T01:02:33Z\"\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
   }
 }

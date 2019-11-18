@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -44,6 +45,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
   @Test
   public void testReadParquetDecimalFixedLen() throws IOException
   {
+    final String file = "example/decimals/dec-in-fixed-len.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("fixed_len_dec"))),
@@ -55,7 +57,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/decimals/dec-in-fixed-len.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -64,11 +66,23 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
     Assert.assertEquals("1.0", rows.get(1).getDimension("fixed_len_dec").get(0));
     Assert.assertEquals(new BigDecimal("1.0"), rows.get(1).getMetric("metric1"));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"fixed_len_dec\" : 1.0\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(1).getRawJson());
   }
 
   @Test
   public void testReadParquetDecimali32() throws IOException
   {
+    final String file = "example/decimals/dec-in-i32.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i32_dec"))),
@@ -80,7 +94,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/decimals/dec-in-i32.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -89,11 +103,23 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
     Assert.assertEquals("100", rows.get(1).getDimension("i32_dec").get(0));
     Assert.assertEquals(new BigDecimal(100), rows.get(1).getMetric("metric1"));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"i32_dec\" : 100\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(1).getRawJson());
   }
 
   @Test
   public void testReadParquetDecimali64() throws IOException, InterruptedException
   {
+    final String file = "example/decimals/dec-in-i64.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("i64_dec"))),
@@ -105,7 +131,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
-        "example/decimals/dec-in-i64.parquet",
+        file,
         schema,
         flattenSpec
     );
@@ -114,5 +140,16 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
     Assert.assertEquals("100", rows.get(1).getDimension("i64_dec").get(0));
     Assert.assertEquals(new BigDecimal(100), rows.get(1).getMetric("metric1"));
+
+    reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"i64_dec\" : 100\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, sampled.get(1).getRawJson());
   }
 }
