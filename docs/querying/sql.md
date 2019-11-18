@@ -115,13 +115,18 @@ milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore
 timezone information, but only carry information about the exact moment in time they represent. See the
 [Time functions](#time-functions) section for more information about timestamp handling.
 
-Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
-Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
+### Default Null handling
+By default Druid treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
+in this mode Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
 and both will evaluate to true if `col` contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will
 return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)`
 aggregator will count the number of rows where expr is neither null nor the empty string. String columns in Druid are
 NULLable. Numeric columns are NOT NULL; if you query a numeric column that is not present in all segments of your Druid
 datasource, then it will be treated as zero for rows from those segments.
+
+### SQL compatible null handling
+If `druid.generic.useDefaultValueForNull` is set to `false` _systemwide, at indexing time_, segments
+will be stored in a manner that allows distinguishing `''` from `null` for string columns, and will allow `null` values for numeric columns. Druid SQL will generally operate more properly in this mode, however this comes at a cost. See the [segment documentation on SQL compatible null-handling](../design/segments.md#sql-compatible-null-handling) for more details.
 
 For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
 Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
