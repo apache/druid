@@ -63,7 +63,7 @@
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>run test-domhandler-wget</arguments>
+              <arguments>run test-domhandler</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
