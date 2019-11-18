@@ -327,7 +327,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   };
 
   private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
-    localStorageSet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE, String(secondaryPaneSize));
+    localStorageSet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
   componentDidMount(): void {
@@ -1079,7 +1079,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           vertical
           percentage
           secondaryInitialSize={
-            Number(localStorageGet(LocalStorageKeys.TASKS_VIEW_PANE_SIZE) as string) || 60
+            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE) as string) || 60
           }
           primaryMinSize={30}
           secondaryMinSize={30}
