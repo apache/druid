@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -146,32 +145,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
   }
 
-  private static String makeGroupId(
-      IndexIngestionSpec ingestionSchema,
-      DataSchema dataSchema,
-      IndexIOConfig ioConfig,
-      TuningConfig tuningConfig
-  )
-  {
-    final boolean isValid = (ingestionSchema != null) ^ (dataSchema != null
-                                                         && ioConfig != null
-                                                         && tuningConfig != null);
-    if (!isValid) {
-      if (ingestionSchema == null) {
-        throw new ISE("invalid spec input, please add dataSchema, ioConfig, tuningConfig to spec");
-      } else {
-        throw new ISE("invalid spec input, please either add spec section or dataSchema, ioConfig, tuningConfig");
-      }
-    }
-    if (ingestionSchema == null) {
-      assert (ioConfig != null);
-      assert (dataSchema != null);
-      return makeGroupId(ioConfig.appendToExisting, dataSchema.getDataSource());
-    } else {
-      return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
-    }
-  }
-
   private static String makeGroupId(boolean isAppendToExisting, String dataSource)
   {
     if (isAppendToExisting) {
@@ -213,8 +186,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonIgnore
   private final AppenderatorsManager appenderatorsManager;
 
-  @Deprecated
-  @VisibleForTesting
+  @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
@@ -232,35 +204,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
         ingestionSchema,
-        context,
-        authorizerMapper,
-        chatHandlerProvider,
-        rowIngestionMetersFactory,
-        appenderatorsManager
-    );
-  }
-
-  @JsonCreator
-  public IndexTask(
-      @JsonProperty("id") final String id,
-      @JsonProperty("resource") final TaskResource taskResource,
-      @Deprecated @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("ioConfig") IndexIOConfig ioConfig,
-      @JsonProperty("tuningConfig") IndexTuningConfig tuningConfig,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
-  )
-  {
-    this(
-        id,
-        makeGroupId(ingestionSchema, dataSchema, ioConfig, tuningConfig),
-        taskResource,
-        ingestionSchema == null ? dataSchema.getDataSource() : ingestionSchema.dataSchema.getDataSource(),
-        ingestionSchema == null ? new IndexIngestionSpec(dataSchema, ioConfig, tuningConfig) : ingestionSchema,
         context,
         authorizerMapper,
         chatHandlerProvider,
