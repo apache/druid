@@ -20,6 +20,7 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.google.common.base.Strings;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -28,15 +29,10 @@ import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -62,44 +58,31 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
-    final Long lastDBUpdate = lastUpdates(entryId, namespace);
-    if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
-      return null;
-    }
-    final long dbQueryStart = System.currentTimeMillis();
-    final DBI dbi = ensureDBI(entryId, namespace);
-    final String table = namespace.getTable();
-    final String filter = namespace.getFilter();
-    final String valueColumn = namespace.getValueColumn();
-    final String keyColumn = namespace.getKeyColumn();
+    final Long lastDBUpdate;
+    final List<Pair<String, String>> pairs;
+    final long dbQueryStart;
 
-    LOG.debug("Updating %s", entryId);
-    final List<Pair<String, String>> pairs = dbi.withHandle(
-        new HandleCallback<List<Pair<String, String>>>()
-        {
-          @Override
-          public List<Pair<String, String>> withHandle(Handle handle)
-          {
-            return handle
-                .createQuery(
-                    buildLookupQuery(table, filter, keyColumn, valueColumn)
-                ).map(
-                    new ResultSetMapper<Pair<String, String>>()
-                    {
-                      @Override
-                      public Pair<String, String> map(
-                          final int index,
-                          final ResultSet r,
-                          final StatementContext ctx
-                      ) throws SQLException
-                      {
-                        return new Pair<>(r.getString(keyColumn), r.getString(valueColumn));
-                      }
-                    }
-                ).list();
-          }
-        }
-    );
+    try {
+      lastDBUpdate = lastUpdates(entryId, namespace);
+      if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
+        return null;
+      }
+      dbQueryStart = System.currentTimeMillis();
+
+      LOG.debug("Updating %s", entryId);
+      pairs = getLookupPairs(entryId, namespace);
+    }
+    catch (UnableToObtainConnectionException e) {
+      if (e.getMessage().contains("No suitable driver found")) {
+        throw new ISE(
+            e,
+            "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory"
+        );
+      } else {
+        throw e;
+      }
+    }
+
     final String newVersion;
     if (lastDBUpdate != null) {
       newVersion = lastDBUpdate.toString();
@@ -126,7 +109,26 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     }
   }
 
-  private String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
+  private List<Pair<String, String>> getLookupPairs(
+      final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
+      final JdbcExtractionNamespace namespace
+  )
+  {
+    final DBI dbi = ensureDBI(key, namespace);
+    final String table = namespace.getTable();
+    final String filter = namespace.getFilter();
+    final String valueColumn = namespace.getValueColumn();
+    final String keyColumn = namespace.getKeyColumn();
+
+    return dbi.withHandle(
+        handle -> handle
+            .createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
+            .map((index, r, ctx) -> new Pair<>(r.getString(keyColumn), r.getString(valueColumn)))
+            .list()
+    );
+  }
+
+  private static String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
   {
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
@@ -148,9 +150,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     );
   }
 
-  private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
+  private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
   {
-    final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key = id;
     DBI dbi = null;
     if (dbiCache.containsKey(key)) {
       dbi = dbiCache.get(key);
@@ -167,33 +168,27 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     return dbi;
   }
 
-  private Long lastUpdates(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
+  @Nullable
+  private Long lastUpdates(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
   {
-    final DBI dbi = ensureDBI(id, namespace);
+    final DBI dbi = ensureDBI(key, namespace);
     final String table = namespace.getTable();
     final String tsColumn = namespace.getTsColumn();
     if (tsColumn == null) {
       return null;
     }
     final Timestamp update = dbi.withHandle(
-        new HandleCallback<Timestamp>()
-        {
-
-          @Override
-          public Timestamp withHandle(Handle handle)
-          {
-            final String query = StringUtils.format(
-                "SELECT MAX(%s) FROM %s",
-                tsColumn, table
-            );
-            return handle
-                .createQuery(query)
-                .map(TimestampMapper.FIRST)
-                .first();
-          }
+        handle -> {
+          final String query = StringUtils.format(
+              "SELECT MAX(%s) FROM %s",
+              tsColumn, table
+          );
+          return handle
+              .createQuery(query)
+              .map(TimestampMapper.FIRST)
+              .first();
         }
     );
     return update.getTime();
-
   }
 }
