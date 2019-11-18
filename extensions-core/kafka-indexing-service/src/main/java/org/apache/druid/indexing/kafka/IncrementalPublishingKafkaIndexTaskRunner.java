@@ -66,9 +66,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
   private final KafkaIndexTask task;
 
-  public IncrementalPublishingKafkaIndexTaskRunner(
+  IncrementalPublishingKafkaIndexTaskRunner(
       KafkaIndexTask task,
-      InputRowParser<ByteBuffer> parser,
+      @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,

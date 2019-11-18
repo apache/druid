@@ -20,15 +20,12 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
-import com.opencsv.RFC4180Parser;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
@@ -36,94 +33,90 @@ import org.apache.druid.java.util.common.parsers.Parsers;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class CsvReader extends TextReader
+public class RegexReader extends TextReader
 {
-  private final RFC4180Parser parser = new RFC4180Parser();
-  private final boolean findColumnsFromHeader;
-  private final int skipHeaderRows;
+  private final String pattern;
+  private final Pattern compiled;
   private final Function<String, Object> multiValueFunction;
-  @Nullable
+
   private List<String> columns;
 
-  CsvReader(
+  RegexReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
+      String pattern,
       @Nullable String listDelimiter,
-      @Nullable List<String> columns,
-      boolean findColumnsFromHeader,
-      int skipHeaderRows
+      @Nullable List<String> columns
   )
   {
     super(inputRowSchema, source, temporaryDirectory);
-    this.findColumnsFromHeader = findColumnsFromHeader;
-    this.skipHeaderRows = skipHeaderRows;
+    this.pattern = pattern;
+    this.compiled = Pattern.compile(pattern);
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
-    this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
-
-    if (this.columns != null) {
-      for (String column : this.columns) {
-        Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
-      }
-    } else {
-      Preconditions.checkArgument(
-          findColumnsFromHeader,
-          "If columns field is not set, the first row of your data must have your header"
-          + " and hasHeaderRow must be set to true."
-      );
-    }
+    this.columns = columns;
   }
 
   @Override
-  public List<InputRow> parseInputRows(String line) throws IOException, ParseException
+  public List<InputRow> parseInputRows(String intermediateRow) throws ParseException
   {
-    final Map<String, Object> zipped = parseLine(line);
-    return Collections.singletonList(MapInputRowParser.parse(getInputRowSchema(), zipped));
+    return Collections.singletonList(MapInputRowParser.parse(getInputRowSchema(), parseLine(intermediateRow)));
   }
 
   @Override
-  public Map<String, Object> toMap(String intermediateRow) throws IOException
+  protected Map<String, Object> toMap(String intermediateRow)
   {
     return parseLine(intermediateRow);
   }
 
-  private Map<String, Object> parseLine(String line) throws IOException
+  private Map<String, Object> parseLine(String line)
   {
-    final String[] parsed = parser.parseLine(line);
-    return Utils.zipMapPartial(
-        Preconditions.checkNotNull(columns, "columns"),
-        Iterables.transform(Arrays.asList(parsed), multiValueFunction)
-    );
+    try {
+      final Matcher matcher = compiled.matcher(line);
+
+      if (!matcher.matches()) {
+        throw new ParseException("Incorrect Regex: %s . No match found.", pattern);
+      }
+
+      final List<String> values = new ArrayList<>();
+      for (int i = 1; i <= matcher.groupCount(); i++) {
+        values.add(matcher.group(i));
+      }
+
+      if (columns == null) {
+        columns = ParserUtils.generateFieldNames(matcher.groupCount());
+      }
+
+      return Utils.zipMapPartial(columns, Iterables.transform(values, multiValueFunction));
+    }
+    catch (Exception e) {
+      throw new ParseException(e, "Unable to parse row [%s]", line);
+    }
   }
 
   @Override
   public int getNumHeaderLinesToSkip()
   {
-    return skipHeaderRows;
+    return 0;
   }
 
   @Override
   public boolean needsToProcessHeaderLine()
   {
-    return findColumnsFromHeader;
+    return false;
   }
 
   @Override
-  public void processHeaderLine(String line) throws IOException
+  public void processHeaderLine(String line)
   {
-    if (!findColumnsFromHeader) {
-      throw new ISE("Don't call this if findColumnsFromHeader = false");
-    }
-    columns = findOrCreateColumnNames(Arrays.asList(parser.parseLine(line)));
-    if (columns.isEmpty()) {
-      throw new ISE("Empty columns");
-    }
+    // do nothing
   }
 }

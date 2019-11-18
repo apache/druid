@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -59,31 +60,30 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       throws IOException
   {
     return intermediateRowIterator().map(row -> {
-      final String json;
+      final Map<String, Object> rawColumns;
       try {
-        json = toJson(row);
+        rawColumns = toMap(row);
       }
-      catch (IOException e) {
-        throw new RuntimeException(e);
+      catch (Exception e) {
+        return InputRowListPlusJson.of(null, new ParseException(e, "Unable to parse row [%s] into JSON", row));
       }
       try {
-        return InputRowListPlusJson.of(parseInputRows(row), json);
+        return InputRowListPlusJson.of(parseInputRows(row), rawColumns);
       }
       catch (ParseException e) {
-        return InputRowListPlusJson.of(json, e);
+        return InputRowListPlusJson.of(rawColumns, e);
       }
       catch (IOException e) {
-        return InputRowListPlusJson.of(json, new ParseException(e, "Unable to parse row [%s]", row));
+        return InputRowListPlusJson.of(rawColumns, new ParseException(e, "Unable to parse row [%s] into inputRow", row));
       }
     });
   }
 
   /**
    * Creates an iterator of intermediate rows. The returned rows will be consumed by {@link #parseInputRows} and
-   * {@link #toJson}.
+   * {@link #toMap}.
    */
-  protected abstract CloseableIterator<T> intermediateRowIterator()
-      throws IOException;
+  protected abstract CloseableIterator<T> intermediateRowIterator() throws IOException;
 
   /**
    * Parses the given intermediate row into a list of {@link InputRow}s.
@@ -91,10 +91,8 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   protected abstract List<InputRow> parseInputRows(T intermediateRow) throws IOException, ParseException;
 
   /**
-   * Converts the given intermediate row into a JSON string. The returned JSON will be used by FirehoseSampler.
-   * Implementations can use any method to convert the given row into JSON string. If the implementation knows how
-   * to convert the given row into {@link java.util.Map}, {@link InputEntityReader#DEFAULT_JSON_WRITER} can be
-   * used to convert the Map into JSON string.
+   * Converts the given intermediate row into a {@link Map}. The returned JSON will be used by FirehoseSampler.
+   * Implementations can use any method to convert the given row into a Map.
    */
-  protected abstract String toJson(T intermediateRow) throws IOException;
+  protected abstract Map<String, Object> toMap(T intermediateRow) throws IOException;
 }

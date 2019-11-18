@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.transform;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.Row;
@@ -102,27 +101,33 @@ public class Transformer
       return null;
     }
 
-    final InputRowListPlusJson transformedRow;
+    final InputRowListPlusJson inputRowListPlusJson;
 
-    if (transforms.isEmpty()) {
-      transformedRow = row;
+    if (transforms.isEmpty() || row.getInputRows() == null) {
+      inputRowListPlusJson = row;
     } else {
-      final List<InputRow> originalRows = Preconditions.checkNotNull(row.getInputRows(), "rows before transform");
+      final List<InputRow> originalRows = row.getInputRows();
       final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
       for (InputRow originalRow : originalRows) {
         transformedRows.add(new TransformedInputRow(originalRow, transforms));
       }
-      transformedRow = InputRowListPlusJson.of(transformedRows, row.getRawJson());
+      inputRowListPlusJson = InputRowListPlusJson.of(transformedRows, row.getRawValues());
     }
 
     if (valueMatcher != null) {
-      rowSupplierForValueMatcher.set(transformedRow.getInputRow());
-      if (!valueMatcher.matches()) {
-        return null;
+      if (inputRowListPlusJson.getInputRows() != null) {
+        final List<InputRow> filteredRows = new ArrayList<>(inputRowListPlusJson.getInputRows().size());
+        for (InputRow inputRow : inputRowListPlusJson.getInputRows()) {
+          rowSupplierForValueMatcher.set(inputRow);
+          if (valueMatcher.matches()) {
+            filteredRows.add(inputRow);
+          }
+        }
+        return InputRowListPlusJson.of(filteredRows, row.getRawValues());
       }
     }
 
-    return transformedRow;
+    return inputRowListPlusJson;
   }
 
   public static class TransformedInputRow implements InputRow

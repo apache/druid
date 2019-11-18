@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -33,7 +34,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @SuppressWarnings("ConstantConditions")
@@ -118,11 +121,14 @@ public class InlineFirehoseTest
     InlineFirehose target = create(data);
     InputRowListPlusJson rowPlusRaw = target.nextRowWithRaw();
 
-    InputRow row = rowPlusRaw.getInputRow();
+    InputRow row = Iterables.getOnlyElement(rowPlusRaw.getInputRows());
     assertRowValue(VALUE_0, row);
 
-    byte[] raw = rowPlusRaw.getRaw();
-    assertRawValue(data, raw);
+    Map<String, Object> raw = rowPlusRaw.getRawValues();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put("timestamp", TIMESTAMP_0);
+    expected.put("value", VALUE_0);
+    Assert.assertEquals(expected, raw);
 
     Assert.assertNull(rowPlusRaw.getParseException());
   }
@@ -134,11 +140,14 @@ public class InlineFirehoseTest
     InlineFirehose target = create(data);
     InputRowListPlusJson rowPlusRaw = target.nextRowWithRaw();
 
-    InputRow row = rowPlusRaw.getInputRow();
-    Assert.assertNull(row);
+    Assert.assertNull(rowPlusRaw.getInputRows());
 
-    byte[] raw = rowPlusRaw.getRaw();
-    assertRawValue(data, raw);
+    Map<String, Object> raw = rowPlusRaw.getRawValues();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put("timestamp", VALUE_0);
+    expected.put("value", TIMESTAMP_0);
+    Assert.assertEquals(expected, raw);
+
 
     Assert.assertNotNull(rowPlusRaw.getParseException());
   }
@@ -186,8 +195,12 @@ public class InlineFirehoseTest
 
     // Second line
     InputRowListPlusJson rowPlusRaw = target.nextRowWithRaw();
-    assertRowValue(VALUE_1, rowPlusRaw.getInputRow());
-    assertRawValue(LINE_1, rowPlusRaw.getRaw());
+    assertRowValue(VALUE_1, Iterables.getOnlyElement(rowPlusRaw.getInputRows()));
+    Map<String, Object> raw = rowPlusRaw.getRawValues();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put("timestamp", TIMESTAMP_1);
+    expected.put("value", VALUE_1);
+    Assert.assertEquals(expected, raw);
     Assert.assertNull(rowPlusRaw.getParseException());
 
     Assert.assertFalse(target.hasMore());
@@ -211,12 +224,5 @@ public class InlineFirehoseTest
     Assert.assertEquals(1, values.size());
     Assert.assertEquals(expected, values.get(0));
   }
-
-  private static void assertRawValue(String expected, byte[] raw)
-  {
-    Assert.assertNotNull(raw);
-    Assert.assertEquals(expected, new String(raw, CHARSET));
-  }
-
 }
 

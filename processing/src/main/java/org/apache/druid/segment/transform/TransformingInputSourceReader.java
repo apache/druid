@@ -26,12 +26,12 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
 
-public class TransformingReader implements InputSourceReader
+public class TransformingInputSourceReader implements InputSourceReader
 {
   private final InputSourceReader delegate;
   private final Transformer transformer;
 
-  TransformingReader(InputSourceReader delegate, Transformer transformer)
+  TransformingInputSourceReader(InputSourceReader delegate, Transformer transformer)
   {
     this.delegate = delegate;
     this.transformer = transformer;

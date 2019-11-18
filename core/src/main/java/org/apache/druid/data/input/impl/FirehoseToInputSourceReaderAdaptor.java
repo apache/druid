@@ -38,12 +38,12 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
 
   public FirehoseToInputSourceReaderAdaptor(
       FirehoseFactory firehoseFactory,
-      InputRowParser inputRowPlusRaw,
+      InputRowParser inputRowParser,
       File temporaryDirectory
   )
   {
     this.firehoseFactory = firehoseFactory;
-    this.inputRowParser = inputRowPlusRaw;
+    this.inputRowParser = inputRowParser;
     this.temporaryDirectory = temporaryDirectory;
   }
 

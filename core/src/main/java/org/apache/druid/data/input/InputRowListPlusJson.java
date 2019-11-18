@@ -19,12 +19,13 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.collect.Iterables;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class InputRowListPlusJson
 {
@@ -32,46 +33,35 @@ public class InputRowListPlusJson
   private final List<InputRow> inputRows;
 
   @Nullable
-  private final byte[] raw;
-
-  @Nullable
-  private final String rawJson;
+  private final Map<String, Object> rawColumns;
 
   @Nullable
   private final ParseException parseException;
 
-  public static InputRowListPlusJson of(@Nullable InputRow inputRow, @Nullable byte[] raw)
+  public static InputRowListPlusJson of(@Nullable InputRow inputRow, Map<String, Object> rawColumns)
   {
-    return new InputRowListPlusJson(inputRow == null ? null : Collections.singletonList(inputRow), raw, null, null);
+    return of(inputRow == null ? null : Collections.singletonList(inputRow), rawColumns);
   }
 
-  public static InputRowListPlusJson of(@Nullable List<InputRow> inputRows, @Nullable String jsonRaw)
+  public static InputRowListPlusJson of(@Nullable List<InputRow> inputRows, Map<String, Object> rawColumns)
   {
-    return new InputRowListPlusJson(inputRows, null, jsonRaw, null);
+    return new InputRowListPlusJson(inputRows, Preconditions.checkNotNull(rawColumns, "rawColumns"), null);
   }
 
-  public static InputRowListPlusJson of(@Nullable byte[] raw, @Nullable ParseException parseException)
+  public static InputRowListPlusJson of(@Nullable Map<String, Object> rawColumns, ParseException parseException)
   {
-    return new InputRowListPlusJson(null, raw, null, parseException);
+    return new InputRowListPlusJson(null, rawColumns, Preconditions.checkNotNull(parseException, "parseException"));
   }
 
-  public static InputRowListPlusJson of(@Nullable String jsonRaw, @Nullable ParseException parseException)
-  {
-    return new InputRowListPlusJson(null, null, jsonRaw, parseException);
-  }
-
-  private InputRowListPlusJson(@Nullable List<InputRow> inputRows, @Nullable byte[] raw, @Nullable String rawJson, @Nullable ParseException parseException)
+  private InputRowListPlusJson(
+      @Nullable List<InputRow> inputRows,
+      @Nullable Map<String, Object> rawColumns,
+      @Nullable ParseException parseException
+  )
   {
     this.inputRows = inputRows;
-    this.raw = raw;
-    this.rawJson = rawJson;
+    this.rawColumns = rawColumns;
     this.parseException = parseException;
-  }
-
-  @Nullable
-  public InputRow getInputRow()
-  {
-    return inputRows == null ? null : Iterables.getOnlyElement(inputRows);
   }
 
   @Nullable
@@ -80,34 +70,15 @@ public class InputRowListPlusJson
     return inputRows;
   }
 
-  /**
-   * The raw, unparsed event (as opposed to an {@link InputRow} which is the output of a parser). The interface default
-   * for {@link Firehose#nextRowWithRaw()} sets this to null, so this will only be non-null if nextRowWithRaw() is
-   * overridden by an implementation, such as in
-   * {@link org.apache.druid.data.input.impl.FileIteratingFirehose#nextRowWithRaw()}. Note that returning the raw row
-   * does not make sense for some sources (e.g. non-row based types), so clients should be able to handle this field
-   * being unset.
-   */
   @Nullable
-  public byte[] getRaw()
+  public Map<String, Object> getRawValues()
   {
-    return raw;
-  }
-
-  @Nullable
-  public String getRawJson()
-  {
-    return rawJson;
+    return rawColumns;
   }
 
   @Nullable
   public ParseException getParseException()
   {
     return parseException;
-  }
-
-  public boolean isEmpty()
-  {
-    return (inputRows == null || inputRows.isEmpty()) && raw == null && rawJson == null && parseException == null;
   }
 }

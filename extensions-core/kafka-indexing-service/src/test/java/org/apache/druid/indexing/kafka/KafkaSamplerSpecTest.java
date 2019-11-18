@@ -23,19 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.curator.test.TestingCluster;
-import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.test.TestBroker;
-import org.apache.druid.indexing.overlord.sampler.FirehoseSampler;
-import org.apache.druid.indexing.overlord.sampler.SamplerCache;
+import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,11 +51,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 public class KafkaSamplerSpecTest
 {
@@ -66,35 +61,24 @@ public class KafkaSamplerSpecTest
   private static final String TOPIC = "sampling";
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
-      OBJECT_MAPPER.convertValue(
-          new StringInputRowParser(
-              new JSONParseSpec(
-                  new TimestampSpec("timestamp", "iso", null),
-                  new DimensionsSpec(
-                      Arrays.asList(
-                          new StringDimensionSchema("dim1"),
-                          new StringDimensionSchema("dim1t"),
-                          new StringDimensionSchema("dim2"),
-                          new LongDimensionSchema("dimLong"),
-                          new FloatDimensionSchema("dimFloat")
-                      ),
-                      null,
-                      null
-                  ),
-                  new JSONPathSpec(true, ImmutableList.of()),
-                  ImmutableMap.of()
-              ),
-              StandardCharsets.UTF_8.name()
+      new TimestampSpec("timestamp", "iso", null),
+      new DimensionsSpec(
+          Arrays.asList(
+              new StringDimensionSchema("dim1"),
+              new StringDimensionSchema("dim1t"),
+              new StringDimensionSchema("dim2"),
+              new LongDimensionSchema("dimLong"),
+              new FloatDimensionSchema("dimFloat")
           ),
-          Map.class
+          null,
+          null
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
           new CountAggregatorFactory("rows")
       },
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null,
-      OBJECT_MAPPER
+      null
   );
 
   private static TestingCluster zkServer;
@@ -139,6 +123,7 @@ public class KafkaSamplerSpecTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
+            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of()),
             null,
             null,
             null,
@@ -167,22 +152,28 @@ public class KafkaSamplerSpecTest
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, null, null, null),
-        new FirehoseSampler(OBJECT_MAPPER, new SamplerCache(MapCache.create(100000))),
+        new SamplerConfig(5, null),
+        new InputSourceSampler(),
         OBJECT_MAPPER
     );
 
     SamplerResponse response = samplerSpec.sample();
 
-    Assert.assertNotNull(response.getCacheKey());
-    Assert.assertEquals(5, (int) response.getNumRowsRead());
-    Assert.assertEquals(3, (int) response.getNumRowsIndexed());
+    Assert.assertEquals(5, response.getNumRowsRead());
+    Assert.assertEquals(3, response.getNumRowsIndexed());
     Assert.assertEquals(5, response.getData().size());
 
     Iterator<SamplerResponse.SamplerResponseRow> it = response.getData().iterator();
 
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        "{\"timestamp\":\"2008\",\"dim1\":\"a\",\"dim2\":\"y\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
+        ImmutableMap.<String, Object>builder()
+            .put("timestamp", "2008")
+            .put("dim1", "a")
+            .put("dim2", "y")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         ImmutableMap.<String, Object>builder()
             .put("__time", 1199145600000L)
             .put("dim1", "a")
@@ -196,7 +187,14 @@ public class KafkaSamplerSpecTest
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        "{\"timestamp\":\"2009\",\"dim1\":\"b\",\"dim2\":\"y\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
+        ImmutableMap.<String, Object>builder()
+            .put("timestamp", "2009")
+            .put("dim1", "b")
+            .put("dim2", "y")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         ImmutableMap.<String, Object>builder()
             .put("__time", 1230768000000L)
             .put("dim1", "b")
@@ -210,7 +208,14 @@ public class KafkaSamplerSpecTest
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        "{\"timestamp\":\"2010\",\"dim1\":\"c\",\"dim2\":\"y\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
+        ImmutableMap.<String, Object>builder()
+            .put("timestamp", "2010")
+            .put("dim1", "c")
+            .put("dim2", "y")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         ImmutableMap.<String, Object>builder()
             .put("__time", 1262304000000L)
             .put("dim1", "c")
@@ -224,16 +229,23 @@ public class KafkaSamplerSpecTest
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        "{\"timestamp\":\"246140482-04-24T15:36:27.903Z\",\"dim1\":\"x\",\"dim2\":\"z\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
+        ImmutableMap.<String, Object>builder()
+            .put("timestamp", "246140482-04-24T15:36:27.903Z")
+            .put("dim1", "x")
+            .put("dim2", "z")
+            .put("dimLong", "10")
+            .put("dimFloat", "20.0")
+            .put("met1", "1.0")
+            .build(),
         null,
         true,
         "Timestamp cannot be represented as a long: [MapBasedInputRow{timestamp=246140482-04-24T15:36:27.903Z, event={timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}]"
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        "unparseable",
+        null,
         null,
         true,
-        "Unable to parse row [unparseable]"
+        "Unable to parse row [unparseable] into JSON"
     ), it.next());
 
     Assert.assertFalse(it.hasNext());

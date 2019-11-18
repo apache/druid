@@ -17,24 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.data.input;
+package org.apache.druid.segment.transform;
 
-import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
 
-/**
- * InputEntityReader knows how to parse data into {@link InputRow}.
- * This class is <i>stateful</i> and a new InputEntityReader should be created per {@link InputEntity}.
- *
- * @see IntermediateRowParsingReader
- * @see TextReader
- */
-@UnstableApi
-public interface InputEntityReader
+public class TransformingInputEntityReader implements InputEntityReader
 {
-  CloseableIterator<InputRow> read() throws IOException;
+  private final InputEntityReader delegate;
+  private final Transformer transformer;
 
-  CloseableIterator<InputRowListPlusJson> sample() throws IOException;
+  public TransformingInputEntityReader(InputEntityReader delegate, Transformer transformer)
+  {
+    this.delegate = delegate;
+    this.transformer = transformer;
+  }
+
+  @Override
+  public CloseableIterator<InputRow> read() throws IOException
+  {
+    return delegate.read().map(transformer::transform);
+  }
+
+  @Override
+  public CloseableIterator<InputRowListPlusJson> sample() throws IOException
+  {
+    return delegate.sample().map(transformer::transform);
+  }
 }

@@ -23,7 +23,6 @@ import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusJson;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
@@ -90,10 +89,10 @@ public class FileIteratingFirehose implements Firehose
 
     String raw = lineIterator.next();
     try {
-      return InputRowListPlusJson.of(parser.parse(raw), StringUtils.toUtf8(raw));
+      return InputRowListPlusJson.of(parser.parse(raw), parser.parseString(raw));
     }
     catch (ParseException e) {
-      return InputRowListPlusJson.of(StringUtils.toUtf8(raw), e);
+      return InputRowListPlusJson.of(parser.parseString(raw), e);
     }
   }
 
