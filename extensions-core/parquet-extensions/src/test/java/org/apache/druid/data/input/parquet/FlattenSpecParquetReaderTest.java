@@ -61,8 +61,9 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
                                             + "  \"metric1\" : 1,\n"
                                             + "  \"timestamp\" : 1537229880023\n"
                                             + "}";
+
   @Test
-  public void testFlat1NoFlattenSpec() throws IOException, InterruptedException
+  public void testFlat1NoFlattenSpec() throws IOException
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
@@ -96,7 +97,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   }
 
   @Test
-  public void testFlat1Autodiscover() throws IOException, InterruptedException
+  public void testFlat1Autodiscover() throws IOException
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
@@ -129,7 +130,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   }
 
   @Test
-  public void testFlat1Flatten() throws IOException, InterruptedException
+  public void testFlat1Flatten() throws IOException
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
@@ -170,7 +171,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
   }
 
   @Test
-  public void testFlat1FlattenSelectListItem() throws IOException, InterruptedException
+  public void testFlat1FlattenSelectListItem() throws IOException
   {
     final String file = "example/flattening/test_flat_1.parquet";
     InputRowSchema schema = new InputRowSchema(
