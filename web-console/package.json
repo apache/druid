@@ -136,7 +136,7 @@
     "ts-node": "^8.4.1",
     "tslint": "^5.20.0",
     "tslint-loader": "^3.5.4",
-    "typescript": "^3.6.4",
+    "typescript": "^3.7.2",
     "webpack": "^4.41.2",
     "webpack-bundle-analyzer": "^3.6.0",
     "webpack-cli": "^3.3.9",
