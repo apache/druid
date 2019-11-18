@@ -33,7 +33,7 @@
     "endOfLine": "lf"
   },
   "scripts": {
-    "test-domhandler": "curl -v -k https://registry.npmjs.org/domhandler/-/domhandler-2.4.2.tgz --output test.tgz",
+    "full-ci": "./script/full-ci",
     "compile": "./script/build",
     "pretest": "./script/build",
     "test": "npm run tslint && npm run sasslint && jest --silent 2>&1",

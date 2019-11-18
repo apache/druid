@@ -58,56 +58,14 @@
             </configuration>
           </execution>
           <execution>
-            <id>npm-precache</id>
+            <id>full-ci</id>
             <goals>
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>cache add https://static.imply.io/npm/domhandler-2.4.2.tgz</arguments>
+              <arguments>run full-ci</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
               <installDirectory>${project.build.directory}</installDirectory>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>npm-install</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>ci</arguments>
-              <installDirectory>${project.build.directory}</installDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>license-check</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>run check-licenses</arguments>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>test-console</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <arguments>run test-ci</arguments>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-            </configuration>
-          </execution>
-
-          <execution>
-            <id>generate-licenses-file</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>run generate-licenses-file</arguments>
-              <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>
         </executions>
