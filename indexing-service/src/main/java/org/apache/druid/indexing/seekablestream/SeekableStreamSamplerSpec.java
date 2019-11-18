@@ -27,7 +27,7 @@ import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -180,7 +180,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public InputRowListPlusJson nextRowWithRaw()
+    public InputRowListPlusRawValues nextRowWithRaw()
     {
       final ByteBuffer bb = ((ByteEntity) entityIterator.next()).getBuffer();
 
@@ -193,15 +193,15 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         }
       }
       catch (ParseException e) {
-        return InputRowListPlusJson.of(null, e);
+        return InputRowListPlusRawValues.of(null, e);
       }
 
       try {
         final List<InputRow> rows = parser.parseBatch(bb);
-        return InputRowListPlusJson.of(rows.isEmpty() ? null : rows, rawColumns);
+        return InputRowListPlusRawValues.of(rows.isEmpty() ? null : rows, rawColumns);
       }
       catch (ParseException e) {
-        return InputRowListPlusJson.of(rawColumns, e);
+        return InputRowListPlusRawValues.of(rawColumns, e);
       }
     }
 

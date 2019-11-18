@@ -47,8 +47,6 @@ public class SamplerConfig
   /**
    * The maximum number of rows to return in a response. The actual number of returned rows may be less if:
    *   - The sampled source contains less data.
-   *   - We are reading from the cache ({@link SamplerConfig#cacheKey} is set and {@link SamplerConfig#isSkipCache()}
-   *     is false) and the cache contains less data.
    *   - {@link SamplerConfig#timeoutMs} elapses before this value is reached.
    *   - {@link org.apache.druid.segment.indexing.granularity.GranularitySpec#isRollup()} is true and input rows get
    *     rolled-up into fewer indexed rows.

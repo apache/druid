@@ -23,7 +23,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -84,7 +84,7 @@ public class InputEntityIteratingReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample()
+  public CloseableIterator<InputRowListPlusRawValues> sample()
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.

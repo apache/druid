@@ -25,7 +25,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
@@ -83,7 +83,8 @@ public class InputSourceSampler
 
   public SamplerResponse sample(
       final InputSource inputSource,
-      @Nullable final InputFormat inputFormat, // can be null only if inputSource.needsFormat() = false
+      // inputFormat can be null only if inputSource.needsFormat() = false or parser is specified.
+      @Nullable final InputFormat inputFormat,
       @Nullable final DataSchema dataSchema,
       @Nullable final SamplerConfig samplerConfig
   )
@@ -110,7 +111,7 @@ public class InputSourceSampler
         inputFormat,
         tempDir
     );
-    try (final CloseableIterator<InputRowListPlusJson> iterator = reader.sample();
+    try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
          final IncrementalIndex<Aggregator> index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
          final Closer closer1 = closer) {
       SamplerResponseRow[] responseRows = new SamplerResponseRow[nonNullSamplerConfig.getNumRows()];
@@ -119,21 +120,21 @@ public class InputSourceSampler
       while (counter < responseRows.length && iterator.hasNext()) {
         Map<String, Object> rawColumns = null;
         try {
-          final InputRowListPlusJson inputRowListPlusJson = iterator.next();
+          final InputRowListPlusRawValues inputRowListPlusRawValues = iterator.next();
 
-          if (inputRowListPlusJson.getRawValues() != null) {
-            rawColumns = inputRowListPlusJson.getRawValues();
+          if (inputRowListPlusRawValues.getRawValues() != null) {
+            rawColumns = inputRowListPlusRawValues.getRawValues();
           }
 
-          if (inputRowListPlusJson.getParseException() != null) {
-            throw inputRowListPlusJson.getParseException();
+          if (inputRowListPlusRawValues.getParseException() != null) {
+            throw inputRowListPlusRawValues.getParseException();
           }
 
-          if (inputRowListPlusJson.getInputRows() == null) {
+          if (inputRowListPlusRawValues.getInputRows() == null) {
             continue;
           }
 
-          for (InputRow row : inputRowListPlusJson.getInputRows()) {
+          for (InputRow row : inputRowListPlusRawValues.getInputRows()) {
             if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
               throw new ParseException("Timestamp cannot be represented as a long: [%s]", row);
             }

@@ -56,7 +56,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample()
+  public CloseableIterator<InputRowListPlusRawValues> sample()
       throws IOException
   {
     return intermediateRowIterator().map(row -> {
@@ -65,16 +65,16 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
         rawColumns = toMap(row);
       }
       catch (Exception e) {
-        return InputRowListPlusJson.of(null, new ParseException(e, "Unable to parse row [%s] into JSON", row));
+        return InputRowListPlusRawValues.of(null, new ParseException(e, "Unable to parse row [%s] into JSON", row));
       }
       try {
-        return InputRowListPlusJson.of(parseInputRows(row), rawColumns);
+        return InputRowListPlusRawValues.of(parseInputRows(row), rawColumns);
       }
       catch (ParseException e) {
-        return InputRowListPlusJson.of(rawColumns, e);
+        return InputRowListPlusRawValues.of(rawColumns, e);
       }
       catch (IOException e) {
-        return InputRowListPlusJson.of(rawColumns, new ParseException(e, "Unable to parse row [%s] into inputRow", row));
+        return InputRowListPlusRawValues.of(rawColumns, new ParseException(e, "Unable to parse row [%s] into inputRow", row));
       }
     });
   }
@@ -91,7 +91,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   protected abstract List<InputRow> parseInputRows(T intermediateRow) throws IOException, ParseException;
 
   /**
-   * Converts the given intermediate row into a {@link Map}. The returned JSON will be used by FirehoseSampler.
+   * Converts the given intermediate row into a {@link Map}. The returned JSON will be used by InputSourceSampler.
    * Implementations can use any method to convert the given row into a Map.
    */
   protected abstract Map<String, Object> toMap(T intermediateRow) throws IOException;

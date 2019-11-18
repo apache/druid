@@ -29,6 +29,10 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.File;
 
+/**
+ * A wrapping InputSource that will close the underlying InputSource at {@link #shutoffTime}.
+ * This InputSource is supposed to be used only for InputSourceSampler.
+ */
 public class TimedShutoffInputSource implements InputSource
 {
   private final InputSource delegate;

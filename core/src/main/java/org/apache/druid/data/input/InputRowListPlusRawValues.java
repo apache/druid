@@ -27,40 +27,52 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class InputRowListPlusJson
+/**
+ * A triple of a list of {@link InputRow}s, a {@link Map} of raw values, and a {@link ParseException}.
+ * The rawValues map contains the raw values before being parsed into InputRows. Note that a single map can be parsed
+ * into multiple InputRows, for example, with explodeSpec.
+ * The ParseException is the exception thrown when parsing bytes into either the rawValues map or the list of InputRows.
+ *
+ * In any case, one of triple must not be null.
+ */
+public class InputRowListPlusRawValues
 {
   @Nullable
   private final List<InputRow> inputRows;
 
   @Nullable
-  private final Map<String, Object> rawColumns;
+  private final Map<String, Object> rawValues;
 
   @Nullable
   private final ParseException parseException;
 
-  public static InputRowListPlusJson of(@Nullable InputRow inputRow, Map<String, Object> rawColumns)
+  public static InputRowListPlusRawValues of(@Nullable InputRow inputRow, Map<String, Object> rawColumns)
   {
     return of(inputRow == null ? null : Collections.singletonList(inputRow), rawColumns);
   }
 
-  public static InputRowListPlusJson of(@Nullable List<InputRow> inputRows, Map<String, Object> rawColumns)
+  public static InputRowListPlusRawValues of(@Nullable List<InputRow> inputRows, Map<String, Object> rawColumns)
   {
-    return new InputRowListPlusJson(inputRows, Preconditions.checkNotNull(rawColumns, "rawColumns"), null);
+    return new InputRowListPlusRawValues(inputRows, Preconditions.checkNotNull(rawColumns, "rawColumns"), null);
   }
 
-  public static InputRowListPlusJson of(@Nullable Map<String, Object> rawColumns, ParseException parseException)
+  public static InputRowListPlusRawValues of(@Nullable Map<String, Object> rawColumns, ParseException parseException)
   {
-    return new InputRowListPlusJson(null, rawColumns, Preconditions.checkNotNull(parseException, "parseException"));
+    return new InputRowListPlusRawValues(
+        null,
+        rawColumns,
+        Preconditions.checkNotNull(parseException, "parseException")
+    );
   }
 
-  private InputRowListPlusJson(
+  private InputRowListPlusRawValues(
       @Nullable List<InputRow> inputRows,
-      @Nullable Map<String, Object> rawColumns,
+      @Nullable Map<String, Object> rawValues,
       @Nullable ParseException parseException
   )
   {
     this.inputRows = inputRows;
-    this.rawColumns = rawColumns;
+    this.rawValues = rawValues;
     this.parseException = parseException;
   }
 
@@ -73,7 +85,7 @@ public class InputRowListPlusJson
   @Nullable
   public Map<String, Object> getRawValues()
   {
-    return rawColumns;
+    return rawValues;
   }
 
   @Nullable

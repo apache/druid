@@ -20,7 +20,7 @@
 package org.apache.druid.segment.transform;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
@@ -95,39 +95,39 @@ public class Transformer
   }
 
   @Nullable
-  public InputRowListPlusJson transform(@Nullable final InputRowListPlusJson row)
+  public InputRowListPlusRawValues transform(@Nullable final InputRowListPlusRawValues row)
   {
     if (row == null) {
       return null;
     }
 
-    final InputRowListPlusJson inputRowListPlusJson;
+    final InputRowListPlusRawValues inputRowListPlusRawValues;
 
     if (transforms.isEmpty() || row.getInputRows() == null) {
-      inputRowListPlusJson = row;
+      inputRowListPlusRawValues = row;
     } else {
       final List<InputRow> originalRows = row.getInputRows();
       final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
       for (InputRow originalRow : originalRows) {
         transformedRows.add(new TransformedInputRow(originalRow, transforms));
       }
-      inputRowListPlusJson = InputRowListPlusJson.of(transformedRows, row.getRawValues());
+      inputRowListPlusRawValues = InputRowListPlusRawValues.of(transformedRows, row.getRawValues());
     }
 
     if (valueMatcher != null) {
-      if (inputRowListPlusJson.getInputRows() != null) {
-        final List<InputRow> filteredRows = new ArrayList<>(inputRowListPlusJson.getInputRows().size());
-        for (InputRow inputRow : inputRowListPlusJson.getInputRows()) {
+      if (inputRowListPlusRawValues.getInputRows() != null) {
+        final List<InputRow> filteredRows = new ArrayList<>(inputRowListPlusRawValues.getInputRows().size());
+        for (InputRow inputRow : inputRowListPlusRawValues.getInputRows()) {
           rowSupplierForValueMatcher.set(inputRow);
           if (valueMatcher.matches()) {
             filteredRows.add(inputRow);
           }
         }
-        return InputRowListPlusJson.of(filteredRows, row.getRawValues());
+        return InputRowListPlusRawValues.of(filteredRows, row.getRawValues());
       }
     }
 
-    return inputRowListPlusJson;
+    return inputRowListPlusRawValues;
   }
 
   public static class TransformedInputRow implements InputRow

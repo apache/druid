@@ -22,7 +22,7 @@ package org.apache.druid.data.input.impl;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
@@ -85,9 +85,9 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample() throws IOException
+  public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
-    return new CloseableIterator<InputRowListPlusJson>()
+    return new CloseableIterator<InputRowListPlusRawValues>()
     {
       final Firehose firehose = firehoseFactory.connectForSampler(inputRowParser, temporaryDirectory);
 
@@ -103,7 +103,7 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
       }
 
       @Override
-      public InputRowListPlusJson next()
+      public InputRowListPlusRawValues next()
       {
         try {
           return firehose.nextRowWithRaw();

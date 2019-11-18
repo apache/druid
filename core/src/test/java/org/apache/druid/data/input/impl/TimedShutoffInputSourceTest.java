@@ -21,7 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
@@ -49,7 +49,7 @@ public class TimedShutoffInputSourceTest
         inputFormat,
         null
     );
-    try (CloseableIterator<InputRowListPlusJson> iterator = reader.sample()) {
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
       Thread.sleep(timeoutMs + 1000);
       Assert.assertFalse(iterator.hasNext());
     }

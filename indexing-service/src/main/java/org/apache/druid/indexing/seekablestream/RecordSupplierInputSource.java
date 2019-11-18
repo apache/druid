@@ -38,13 +38,17 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * {@link org.apache.druid.data.input.InputSource} wrapping {@link RecordSupplier}. It will fetch data via
+ * RecordSupplier and convert it into {@link ByteEntity}. See {@link #createEntityIterator}.
+ */
 public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> extends AbstractInputSource
 {
   private final String topic;
   private final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
   private final boolean useEarliestOffset;
 
-  public RecordSupplierInputSource(
+  RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
       boolean useEarliestOffset
@@ -106,6 +110,10 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
     );
   }
 
+  /**
+   * Returns an iterator converting each byte array from RecordSupplier into a ByteEntity. Note that the
+   * returned iterator will be blocked until the RecordSupplier gives any data.
+   */
   CloseableIterator<InputEntity> createEntityIterator()
   {
     return new CloseableIterator<InputEntity>()
