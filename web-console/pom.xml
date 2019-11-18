@@ -60,10 +60,10 @@
           <execution>
             <id>npm-test</id>
             <goals>
-              <goal>wget</goal>
+              <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>https://registry.npmjs.org/domhandler/-/domhandler-2.4.2.tgz</arguments>
+              <arguments>install domhandler@2.4.2</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
