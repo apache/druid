@@ -58,6 +58,17 @@
             </configuration>
           </execution>
           <execution>
+            <id>npm-config</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>config set strict-ssl false</arguments>
+              <installDirectory>${project.build.directory}</installDirectory>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+          <execution>
             <id>npm-install</id>
             <goals>
               <goal>npm</goal>
