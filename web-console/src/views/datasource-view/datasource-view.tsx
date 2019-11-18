@@ -16,17 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  FormGroup,
-  InputGroup,
-  Intent,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-  Switch,
-} from '@blueprintjs/core';
+import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
@@ -38,11 +28,12 @@ import {
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  ActionIcon,
+  MoreButton,
   RefreshButton,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import { ActionIcon } from '../../components/action-icon/action-icon';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
@@ -61,14 +52,14 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
-const tableColumns: Record<Capabilities, string[]> = {
+const tableColumns: Record<CapabilitiesMode, string[]> = {
   full: [
     'Datasource',
     'Availability',
@@ -101,7 +92,6 @@ const tableColumns: Record<Capabilities, string[]> = {
     'Num rows',
     ACTION_COLUMN_LABEL,
   ],
-  broken: ['Datasource'],
 };
 
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
@@ -247,9 +237,9 @@ GROUP BY 1`;
     this.datasourceQueryManager = new QueryManager({
       processQuery: async capabilities => {
         let datasources: DatasourceQueryResultRow[];
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
-        } else {
+        } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
@@ -272,9 +262,11 @@ GROUP BY 1`;
               };
             },
           );
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
         }
 
-        if (capabilities === 'no-proxy') {
+        if (!capabilities.hasCoordinatorAccess()) {
           datasources.forEach((ds: any) => {
             ds.rules = [];
           });
@@ -494,24 +486,17 @@ GROUP BY 1`;
 
   renderBulkDatasourceActions() {
     const { goToQuery, capabilities } = this.props;
-    const bulkDatasourceActionsMenu = (
-      <Menu>
-        {capabilities !== 'no-sql' && (
+
+    return (
+      <MoreButton>
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}
-      </Menu>
-    );
-
-    return (
-      <>
-        <Popover content={bulkDatasourceActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
-      </>
+      </MoreButton>
     );
   }
 
@@ -621,7 +606,7 @@ GROUP BY 1`;
       },
     ];
 
-    if (capabilities === 'no-proxy') {
+    if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;
     }
 
@@ -641,11 +626,6 @@ GROUP BY 1`;
       ];
     } else {
       return goToActions.concat([
-        {
-          icon: IconNames.GANTT_CHART,
-          title: 'Go to tasks',
-          onAction: () => goToTask(datasource),
-        },
         {
           icon: IconNames.AUTOMATIC_UPDATES,
           title: 'Edit retention rules',
@@ -887,7 +867,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: capabilities !== 'no-proxy' && hiddenColumns.exists('Retention'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
             },
             {
               Header: 'Replicated size',
@@ -895,7 +875,7 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Replicated size'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
             },
             {
               Header: 'Size',
@@ -941,7 +921,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: capabilities !== 'no-proxy' && hiddenColumns.exists('Compaction'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
             },
             {
               Header: 'Avg. segment size',
@@ -957,7 +937,7 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatNumber(row.value),
-              show: capabilities !== 'no-sql' && hiddenColumns.exists('Num rows'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Num rows'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -1029,16 +1009,16 @@ GROUP BY 1`;
             checked={showChart}
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
-          {capabilities !== 'no-proxy' && (
-            <Switch
-              checked={showDisabled}
-              label="Show disabled"
-              onChange={() => this.toggleDisabled(showDisabled)}
-            />
-          )}
+          <Switch
+            checked={showDisabled}
+            label="Show disabled"
+            onChange={() => this.toggleDisabled(showDisabled)}
+            disabled={!capabilities.hasCoordinatorAccess()}
+          />
           <TableColumnSelector
-            columns={tableColumns[capabilities]}
+            columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),
@@ -1049,7 +1029,11 @@ GROUP BY 1`;
         </ViewControlBar>
         {showChart && (
           <div className={'chart-container'}>
-            <SegmentTimeline chartHeight={chartHeight} chartWidth={chartWidth} />
+            <SegmentTimeline
+              capabilities={capabilities}
+              chartHeight={chartHeight}
+              chartWidth={chartWidth}
+            />
           </div>
         )}
         {this.renderDatasourceTable()}

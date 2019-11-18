@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class StringLastBufferAggregatorTest
 {
@@ -65,13 +64,7 @@ public class StringLastBufferAggregatorTest
         maxStringBytes
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -109,13 +102,7 @@ public class StringLastBufferAggregatorTest
         maxStringBytes
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -132,8 +119,8 @@ public class StringLastBufferAggregatorTest
 
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testNoStringValue()
+  @Test
+  public void testNonStringValue()
   {
 
     final long[] timestamps = {1526724000L, 1526724600L};
@@ -153,13 +140,7 @@ public class StringLastBufferAggregatorTest
         maxStringBytes
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -167,5 +148,10 @@ public class StringLastBufferAggregatorTest
     for (int i = 0; i < timestamps.length; i++) {
       aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
     }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+    Assert.assertEquals(1526724600L, (long) sp.lhs);
+    Assert.assertEquals("2.0", sp.rhs);
   }
 }

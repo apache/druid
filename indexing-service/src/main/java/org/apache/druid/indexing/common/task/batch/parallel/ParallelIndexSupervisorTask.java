@@ -29,7 +29,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -117,7 +119,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private static final Logger LOG = new Logger(ParallelIndexSupervisorTask.class);
 
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
+  private final InputSource baseInputSource;
   private final IndexingServiceClient indexingServiceClient;
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
@@ -179,11 +181,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     this.ingestionSchema = ingestionSchema;
 
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-    if (!(firehoseFactory instanceof FiniteFirehoseFactory)) {
-      throw new IAE("[%s] should implement FiniteFirehoseFactory", firehoseFactory.getClass().getSimpleName());
-    }
-
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
       if (ingestionSchema.getTuningConfig().getNumShards() == null) {
         throw new ISE("forceGuaranteedRollup is set but numShards is missing in partitionsSpec");
@@ -194,7 +191,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
-    this.baseFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
+    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+        ingestionSchema.getDataSchema().getParser()
+    );
     this.indexingServiceClient = indexingServiceClient;
     this.chatHandlerProvider = chatHandlerProvider;
     this.authorizerMapper = authorizerMapper;
@@ -392,10 +391,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           return runSinglePhaseParallel(toolbox);
         }
       } else {
-        if (!baseFirehoseFactory.isSplittable()) {
+        if (!baseInputSource.isSplittable()) {
           LOG.warn(
               "firehoseFactory[%s] is not splittable. Running sequentially.",
-              baseFirehoseFactory.getClass().getSimpleName()
+              baseInputSource.getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
           LOG.warn(
@@ -434,7 +433,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private boolean isParallelMode()
   {
-    return baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() > 1;
+    return baseInputSource.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() > 1;
   }
 
   /**
@@ -776,6 +775,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                    .map(Entry::getValue)
                    .findFirst()
                    .orElse(null);
+  }
+
+  static InputFormat getInputFormat(ParallelIndexIngestionSpec ingestionSchema)
+  {
+    final InputRowParser parser = ingestionSchema.getDataSchema().getParser();
+    return ingestionSchema.getIOConfig().getNonNullInputFormat(
+        parser == null ? null : parser.getParseSpec()
+    );
   }
 
   /**

@@ -4292,19 +4292,6 @@ public class TopNQueryRunnerTest
     return runWithMerge(query, ResponseContext.createEmpty());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, ResponseContext context)
-  {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
-    final QueryRunner<Result<TopNResultValue>> _runner = new FinalizeResultsQueryRunner(
-        chest.mergeResults(chest.preMergeQueryDecoration(runner)),
-        chest
-    );
-    return _runner.run(QueryPlus.wrap(query), context);
-  }
-
   @Test
   public void testTopNWithExtractionFilterNoExistingValue()
   {

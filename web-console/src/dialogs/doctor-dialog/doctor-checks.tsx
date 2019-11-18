@@ -38,7 +38,7 @@ const RUNTIME_PROPERTIES_ALL_NODES_MUST_AGREE_ON: string[] = [
   'druid.zk.service.host',
 ];
 
-// In the future (when we can query other nodes) is will also be cool to check:
+// In the future (when we can query other services) is will also be cool to check:
 // 'druid.storage.type' <=> historicals, overlords, mm
 // 'druid.indexer.logs.type' <=> overlord, mm, + peons
 
@@ -60,7 +60,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         status = (await axios.get(`/status`)).data;
       } catch (e) {
         controls.addIssue(
-          `Did not get a /status response from the Router node. Try confirming that it is running and accessible. Got: ${e.message}`,
+          `Did not get a /status response from the Router service. Try confirming that it is running and accessible. Got: ${e.message}`,
         );
         controls.terminateChecks();
         return;
@@ -137,7 +137,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         coordinatorStatus = (await axios.get(`/proxy/coordinator/status`)).data;
       } catch (e) {
         controls.addIssue(
-          'Did not get a /status response from the Coordinator node. Try confirming that it is running and accessible.',
+          'Did not get a /status response from the Coordinator service. Try confirming that it is running and accessible.',
         );
         return;
       }
@@ -147,20 +147,20 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         overlordStatus = (await axios.get(`/proxy/overlord/status`)).data;
       } catch (e) {
         controls.addIssue(
-          'Did not get a /status response from the Overlord node. Try confirming that it is running and accessible.',
+          'Did not get a /status response from the Overlord service. Try confirming that it is running and accessible.',
         );
         return;
       }
 
       if (myStatus.version !== coordinatorStatus.version) {
         controls.addSuggestion(
-          `It looks like the Router and Coordinator nodes are on different versions of Druid. This may indicate a problem if you are not in the middle of a rolling upgrade.`,
+          `It looks like the Router and Coordinator services are on different versions of Druid. This may indicate a problem if you are not in the middle of a rolling upgrade.`,
         );
       }
 
       if (myStatus.version !== overlordStatus.version) {
         controls.addSuggestion(
-          `It looks like the Router and Overlord nodes are on different versions of Druid. This may indicate a problem if you are not in the middle of a rolling upgrade.`,
+          `It looks like the Router and Overlord services are on different versions of Druid. This may indicate a problem if you are not in the middle of a rolling upgrade.`,
         );
       }
     },
@@ -280,7 +280,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         sqlResult = await queryDruidSql({ query: `SELECT 1 + 1 AS "two"` });
       } catch (e) {
         controls.addIssue(
-          `Could not query SQL ensure that "druid.sql.enable" is set to "true" and that there is a Broker node running. Got: ${e.message}`,
+          `Could not query SQL ensure that "druid.sql.enable" is set to "true" and that there is a Broker service running. Got: ${e.message}`,
         );
         controls.terminateChecks();
         return;
@@ -292,9 +292,9 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
     },
   },
   {
-    name: 'Verify that there are historical nodes',
+    name: 'Verify that there are historical services',
     check: async controls => {
-      // Make sure that there are broker and historical nodes reported from sys.servers
+      // Make sure that there are broker and historical services reported from sys.servers
       let sqlResult: any[];
       try {
         sqlResult = await queryDruidSql({
@@ -309,19 +309,19 @@ WHERE "server_type" = 'historical'`,
       }
 
       if (sqlResult.length === 1 && sqlResult[0]['historicals'] === 0) {
-        controls.addIssue(`There do not appear to be any historical nodes.`);
+        controls.addIssue(`There do not appear to be any historical services.`);
       }
     },
   },
   {
     name: 'Verify that the historicals are not overfilled',
     check: async controls => {
-      // Make sure that no nodes are reported that are over 95% capacity
+      // Make sure that no services are reported that are over 95% capacity
       let sqlResult: any[];
       try {
         sqlResult = await queryDruidSql({
           query: `SELECT
-  "server",
+  "server" AS "service",
   "curr_size" * 1.0 / "max_size" AS "fill"
 FROM sys.servers
 WHERE "server_type" = 'historical' AND "curr_size" * 1.0 / "max_size" > 0.9
@@ -332,21 +332,21 @@ ORDER BY "server" DESC`,
         return;
       }
 
-      function formatPercent(server: any): string {
-        return (server['fill'] * 100).toFixed(2);
+      function formatPercent(service: any): string {
+        return (service['fill'] * 100).toFixed(2);
       }
 
-      for (const server of sqlResult) {
-        if (server['fill'] > 0.95) {
+      for (const service of sqlResult) {
+        if (service['fill'] > 0.95) {
           controls.addIssue(
-            `Server "${server['server']}" appears to be over 95% full (is ${formatPercent(
-              server,
+            `Historical "${service['service']}" appears to be over 95% full (is ${formatPercent(
+              service,
             )}%). Increase capacity.`,
           );
         } else {
           controls.addSuggestion(
-            `Server "${server['server']}" appears to be over 90% full (is ${formatPercent(
-              server,
+            `Historical "${service['service']}" appears to be over 90% full (is ${formatPercent(
+              service,
             )}%)`,
           );
         }

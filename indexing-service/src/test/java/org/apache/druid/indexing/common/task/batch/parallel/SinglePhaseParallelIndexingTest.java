@@ -20,9 +20,11 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -31,6 +33,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -41,8 +44,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -57,31 +60,36 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @RunWith(Parameterized.class)
 public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK},
-        new Object[]{LockGranularity.SEGMENT}
+        new Object[]{LockGranularity.TIME_CHUNK, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.SEGMENT, true}
     );
   }
 
   private final LockGranularity lockGranularity;
+  private final boolean useInputFormatApi;
+
   private File inputDir;
 
-  public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity)
+  public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
   {
     this.lockGranularity = lockGranularity;
+    this.useInputFormatApi = useInputFormatApi;
   }
 
   @Before
@@ -118,13 +126,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testIsReady() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2017/2018"), false, true);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -157,14 +159,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   private void runTestTask(@Nullable Interval interval, Granularity segmentGranularity, boolean appendToExisting)
       throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        interval,
-        segmentGranularity,
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            appendToExisting
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(interval, segmentGranularity, appendToExisting, true);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -187,21 +182,19 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     runTestTask(inputInterval, Granularities.DAY);
 
     final Interval interval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
-    final List<DataSegment> allSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Collection<DataSegment> oldSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
     runTestTask(inputInterval, secondSegmentGranularity);
 
     // Verify that the segment has been replaced.
-    final List<DataSegment> newSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
-    allSegments.addAll(newSegments);
+    final Collection<DataSegment> newSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+    Set<DataSegment> allSegments = ImmutableSet.<DataSegment>builder().addAll(oldSegments).addAll(newSegments).build();
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
-    final List<DataSegment> visibles = timeline.lookup(interval)
-                                               .stream()
-                                               .flatMap(holder -> holder.getObject().stream())
-                                               .map(PartitionChunk::getObject)
-                                               .collect(Collectors.toList());
-    Assert.assertEquals(newSegments, visibles);
+    final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+    Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
   @Test
@@ -233,20 +226,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testRunInSequential() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null)
-            {
-              @Override
-              public boolean isSplittable()
-              {
-                return false;
-              }
-            },
-            false
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2017/2018"), false, false);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -259,13 +239,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testPublishEmptySegments() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2020/2021"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2020/2021"), false, true);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -281,10 +255,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
         Granularities.DAY,
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        ),
+        false,
+        true,
         new ParallelIndexTuningConfig(
             null,
             null,
@@ -329,35 +301,39 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   {
     final Interval interval = Intervals.of("2017/2018");
     runTestTask(interval, Granularities.DAY, true);
-    final List<DataSegment> oldSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Collection<DataSegment> oldSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
 
     runTestTask(interval, Granularities.DAY, true);
-    final List<DataSegment> newSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Collection<DataSegment> newSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(newSegments.containsAll(oldSegments));
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
-    final List<DataSegment> visibles = timeline.lookup(interval)
-                                               .stream()
-                                               .flatMap(holder -> holder.getObject().stream())
-                                               .map(PartitionChunk::getObject)
-                                               .collect(Collectors.toList());
-    Assert.assertEquals(newSegments, visibles);
+    final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+    Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
-  private ParallelIndexSupervisorTask newTask(@Nullable Interval interval, ParallelIndexIOConfig ioConfig)
+  private ParallelIndexSupervisorTask newTask(
+      @Nullable Interval interval,
+      boolean appendToExisting,
+      boolean splittableInputSource
+  )
   {
-    return newTask(interval, Granularities.DAY, ioConfig);
+    return newTask(interval, Granularities.DAY, appendToExisting, splittableInputSource);
   }
 
   private ParallelIndexSupervisorTask newTask(
       @Nullable Interval interval,
       Granularity segmentGranularity,
-      ParallelIndexIOConfig ioConfig
+      boolean appendToExisting,
+      boolean splittableInputSource
   )
   {
     return newTask(
         interval,
         segmentGranularity,
-        ioConfig,
+        appendToExisting,
+        splittableInputSource,
         new ParallelIndexTuningConfig(
             null,
             null,
@@ -392,36 +368,73 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   private ParallelIndexSupervisorTask newTask(
       @Nullable Interval interval,
       Granularity segmentGranularity,
-      ParallelIndexIOConfig ioConfig,
+      boolean appendToExisting,
+      boolean splittableInputSource,
       ParallelIndexTuningConfig tuningConfig
   )
   {
     // set up ingestion spec
-    //noinspection unchecked
-    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            getObjectMapper().convertValue(
-                new StringInputRowParser(
-                    DEFAULT_PARSE_SPEC,
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                segmentGranularity,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null,
-            getObjectMapper()
-        ),
-        ioConfig,
-        tuningConfig
-    );
+    final ParallelIndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              DEFAULT_TIMESTAMP_SPEC,
+              DEFAULT_DIMENSIONS_SPEC,
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  Granularities.MINUTE,
+                  interval == null ? null : Collections.singletonList(interval)
+              ),
+              null
+          ),
+          new ParallelIndexIOConfig(
+              null,
+              new LocalInputSource(inputDir, "test_*")
+              {
+                @Override
+                public boolean isSplittable()
+                {
+                  return splittableInputSource;
+                }
+              },
+              DEFAULT_INPUT_FORMAT,
+              appendToExisting
+          ),
+          tuningConfig
+      );
+    } else {
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              getObjectMapper().convertValue(
+                  new StringInputRowParser(
+                      DEFAULT_PARSE_SPEC,
+                      null
+                  ),
+                  Map.class
+              ),
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  Granularities.MINUTE,
+                  interval == null ? null : Collections.singletonList(interval)
+              ),
+              null,
+              getObjectMapper()
+          ),
+          new ParallelIndexIOConfig(
+              new LocalFirehoseFactory(inputDir, "test_*", null),
+              appendToExisting
+          ),
+          tuningConfig
+      );
+    }
 
     // set up test tools
     return new TestSupervisorTask(
@@ -477,9 +490,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     @Override
     SinglePhaseSubTaskSpec newTaskSpec(InputSplit split)
     {
-      final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
+      final SplittableInputSource baseInputSource = (SplittableInputSource) getIngestionSchema()
           .getIOConfig()
-          .getFirehoseFactory();
+          .getNonNullInputSource(getIngestionSchema().getDataSchema().getParser());
       return new TestSinglePhaseSubTaskSpec(
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
@@ -487,7 +500,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
-                  baseFirehoseFactory.withSplit(split),
+                  null,
+                  baseInputSource.withSplit(split),
+                  getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting()
               ),
               getIngestionSchema().getTuningConfig()

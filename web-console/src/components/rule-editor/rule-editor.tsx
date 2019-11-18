@@ -25,6 +25,7 @@ import {
   HTMLSelect,
   InputGroup,
   NumericInput,
+  Switch,
   TagInput,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -139,7 +140,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
   function renderColocatedDataSources() {
     const { rule, onChange } = props;
-
     return (
       <FormGroup label="Colocated datasources:">
         <TagInput
@@ -150,7 +150,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </FormGroup>
     );
   }
-
   return (
     <div className="rule-editor">
       <div className="title">
@@ -193,13 +192,30 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 <option value="ByInterval">by interval</option>
               </HTMLSelect>
               {ruleTimeType === 'ByPeriod' && (
-                <InputGroup
-                  value={rule.period || ''}
-                  onChange={(e: any) =>
-                    onChange(RuleUtil.changePeriod(rule, e.target.value as any))
-                  }
-                  placeholder="P1D"
-                />
+                <div className={`by-period`}>
+                  <InputGroup
+                    value={rule.period || ''}
+                    onChange={(e: any) =>
+                      onChange(RuleUtil.changePeriod(rule, e.target.value as any))
+                    }
+                    placeholder="P1D"
+                  />
+                  <Switch
+                    large
+                    checked={rule.includeFuture !== undefined ? rule.includeFuture : true}
+                    label={`Include future`}
+                    onChange={() => {
+                      onChange(
+                        RuleUtil.changeIncludeFuture(
+                          rule,
+                          rule.includeFuture !== undefined
+                            ? (!rule.includeFuture as boolean)
+                            : false,
+                        ),
+                      );
+                    }}
+                  />
+                </div>
               )}
               {ruleTimeType === 'ByInterval' && (
                 <InputGroup

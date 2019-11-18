@@ -31,7 +31,7 @@ public class FloatValueMatcherColumnSelectorStrategy
   {
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
     if (matchVal == null) {
-      return ValueMatcher.nullValueMatcher(selector);
+      return ValueMatcher.primitiveNullValueMatcher(selector);
     }
 
     final int matchValIntBits = Float.floatToIntBits(matchVal);

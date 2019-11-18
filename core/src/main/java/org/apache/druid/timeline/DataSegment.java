@@ -102,6 +102,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final CompactionState lastCompactionState;
   private final long size;
 
+  @VisibleForTesting
   public DataSegment(
       SegmentId segmentId,
       Map<String, Object> loadSpec,
@@ -214,6 +215,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                ? null
                                : prepareCompactionState(lastCompactionState);
     this.binaryVersion = binaryVersion;
+    Preconditions.checkArgument(size >= 0);
     this.size = size;
   }
 
