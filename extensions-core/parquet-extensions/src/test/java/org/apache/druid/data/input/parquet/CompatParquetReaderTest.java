@@ -58,11 +58,23 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         true
     );
 
-    List<InputRow> rows = readAllRows(reader);
+    InputEntityReader readerNotAsString = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT,
+        false
+    );
 
-    // without binaryAsString: true, the value would be "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg=="
+    List<InputRow> rows = readAllRows(reader);
+    List<InputRow> rowsAsBinary = readAllRows(readerNotAsString);
+
     Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", rows.get(0).getDimension("field").get(0));
     Assert.assertEquals(1471800234, rows.get(0).getTimestampFromEpoch());
+    Assert.assertEquals(
+        "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==",
+        rowsAsBinary.get(0).getDimension("field").get(0)
+    );
+    Assert.assertEquals(1471800234, rowsAsBinary.get(0).getTimestampFromEpoch());
 
     reader = createReader(
         file,
@@ -70,12 +82,25 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         JSONPathSpec.DEFAULT,
         true
     );
+    readerNotAsString = createReader(
+        file,
+        schema,
+        JSONPathSpec.DEFAULT,
+        false
+    );
     List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusJson> sampledAsBinary = sampleAllRows(readerNotAsString);
     final String expectedJson = "{\n"
                                 + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
     Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+
+    final String expectedJsonBinary = "{\n"
+                                + "  \"field\" : \"aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==\",\n"
+                                + "  \"ts\" : 1471800234\n"
+                                + "}";
+    Assert.assertEquals(expectedJsonBinary, sampledAsBinary.get(0).getRawJson());
   }
 
 
