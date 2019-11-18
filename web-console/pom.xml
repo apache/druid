@@ -58,6 +58,17 @@
             </configuration>
           </execution>
           <execution>
+            <id>npm-test</id>
+            <goals>
+              <goal>wget</goal>
+            </goals>
+            <configuration>
+              <arguments>https://registry.npmjs.org/domhandler/-/domhandler-2.4.2.tgz</arguments>
+              <installDirectory>${project.build.directory}</installDirectory>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+          <execution>
             <id>npm-install</id>
             <goals>
               <goal>npm</goal>
