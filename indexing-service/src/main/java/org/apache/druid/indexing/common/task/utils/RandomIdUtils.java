@@ -17,20 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream.utils;
+package org.apache.druid.indexing.common.task.utils;
 
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomIdUtils
 {
-  private static final Random RANDOM = ThreadLocalRandom.current();
-
   public static String getRandomId()
   {
     final StringBuilder suffix = new StringBuilder(8);
     for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
+      suffix.append((char) ('a' + ((ThreadLocalRandom.current().nextInt() >>> (i * 4)) & 0x0F)));
     }
     return suffix.toString();
   }
