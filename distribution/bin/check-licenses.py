@@ -317,7 +317,7 @@ def check_licenses(license_yaml, dependency_reports_root):
     registered_dep_to_licenses = {}
     skipping_licenses = {}
     with open(license_yaml) as registry_file:
-        licenses_list = list(yaml.load_all(registry_file))
+        licenses_list = list(yaml.full_load(registry_file))
     for license in licenses_list:
         if 'libraries' in license:
             for library in license['libraries']:
