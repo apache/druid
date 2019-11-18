@@ -16,6 +16,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if [ -z ${LGTM_RAM+x} ];
+then
+  echo "Not in LGTM"
+else
+  echo "LGTM bye bye"
+  exit 0
+fi
+
 echo "Copying web-console files to $1..."
 mkdir -p "$1"
 cp *.html "$1"
