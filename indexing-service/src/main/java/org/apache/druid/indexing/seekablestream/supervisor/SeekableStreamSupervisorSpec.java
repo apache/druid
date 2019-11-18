@@ -50,6 +50,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   protected final SeekableStreamIndexTaskClientFactory indexTaskClientFactory;
   protected final ObjectMapper mapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final SeekableStreamSupervisorIngestionSpec ingestionSchema;
   private final DataSchema dataSchema;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamSupervisorIOConfig ioConfig;
@@ -62,6 +63,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
+      @JsonProperty("spec") final SeekableStreamSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") SeekableStreamSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") SeekableStreamSupervisorIOConfig ioConfig,
@@ -78,6 +80,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
+    this.ingestionSchema = ingestionSchema;
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = tuningConfig; // null check done in concrete class
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
@@ -93,6 +96,12 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.suspended = suspended != null ? suspended : false;
     this.supervisorStateManagerConfig = supervisorStateManagerConfig;
+  }
+
+  @JsonProperty
+  public SeekableStreamSupervisorIngestionSpec getSpec()
+  {
+    return ingestionSchema;
   }
 
   @JsonProperty
@@ -170,6 +179,5 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
-
 
 }

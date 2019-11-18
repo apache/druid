@@ -135,6 +135,7 @@ public class KafkaSamplerSpecTest
     insertData(generateRecords(TOPIC));
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(

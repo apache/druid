@@ -45,8 +45,23 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   private static final String SUPERVISOR_TYPE = "kinesis";
   private final AWSCredentialsConfig awsCredentialsConfig;
 
+  private static KinesisSupervisorTuningConfig getTuningConfig(
+      KinesisSupervisorIngestionSpec ingestionSchema,
+      KinesisSupervisorTuningConfig tuningConfig
+  )
+  {
+    if (ingestionSchema != null) {
+      return ingestionSchema.getTuningConfig() != null
+             ? ingestionSchema.getTuningConfig()
+             : KinesisSupervisorTuningConfig.defaultConfig();
+    } else {
+      return tuningConfig != null ? tuningConfig : KinesisSupervisorTuningConfig.defaultConfig();
+    }
+  }
+
   @JsonCreator
   public KinesisSupervisorSpec(
+      @JsonProperty("spec") final KinesisSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KinesisSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KinesisSupervisorIOConfig ioConfig,
@@ -65,43 +80,10 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
-        dataSchema,
-        tuningConfig != null
-        ? tuningConfig
-        : new KinesisSupervisorTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        ioConfig,
+        ingestionSchema,
+        ingestionSchema != null ? ingestionSchema.getDataSchema() : dataSchema,
+        getTuningConfig(ingestionSchema, tuningConfig),
+        ingestionSchema != null ? ingestionSchema.getIOConfig() : ioConfig,
         context,
         suspended,
         taskStorage,
@@ -159,6 +141,13 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @Override
   @JsonProperty
+  public DataSchema getDataSchema()
+  {
+    return super.getDataSchema();
+  }
+
+  @Override
+  @JsonProperty
   public KinesisSupervisorTuningConfig getTuningConfig()
   {
     return (KinesisSupervisorTuningConfig) super.getTuningConfig();
@@ -172,9 +161,17 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @JsonProperty
+  public KinesisSupervisorIngestionSpec getSpec()
+  {
+    return (KinesisSupervisorIngestionSpec) super.getSpec();
+  }
+
+  @Override
   protected KinesisSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KinesisSupervisorSpec(
+        getSpec(),
         getDataSchema(),
         getTuningConfig(),
         getIoConfig(),

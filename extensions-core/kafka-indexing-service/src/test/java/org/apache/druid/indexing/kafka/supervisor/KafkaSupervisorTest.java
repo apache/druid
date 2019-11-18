@@ -3288,6 +3288,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,
@@ -3396,6 +3397,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,
@@ -3481,6 +3483,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,

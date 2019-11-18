@@ -42,8 +42,23 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
   private static final String TASK_TYPE = "kafka";
 
+  private static KafkaSupervisorTuningConfig getTuningConfig(
+      KafkaSupervisorIngestionSpec ingestionSchema,
+      KafkaSupervisorTuningConfig tuningConfig
+  )
+  {
+    if (ingestionSchema != null) {
+      return ingestionSchema.getTuningConfig() != null
+             ? ingestionSchema.getTuningConfig()
+             : KafkaSupervisorTuningConfig.defaultConfig();
+    } else {
+      return tuningConfig != null ? tuningConfig : KafkaSupervisorTuningConfig.defaultConfig();
+    }
+  }
+
   @JsonCreator
   public KafkaSupervisorSpec(
+      @JsonProperty("spec") KafkaSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KafkaSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaSupervisorIOConfig ioConfig,
@@ -61,36 +76,10 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
-        dataSchema,
-        tuningConfig != null
-        ? tuningConfig
-        : new KafkaSupervisorTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        ioConfig,
+        ingestionSchema,
+        ingestionSchema != null ? ingestionSchema.getDataSchema() : dataSchema,
+        getTuningConfig(ingestionSchema, tuningConfig),
+        ingestionSchema != null ? ingestionSchema.getIOConfig() : ioConfig,
         context,
         suspended,
         taskStorage,
@@ -133,6 +122,13 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @Override
   @JsonProperty
+  public DataSchema getDataSchema()
+  {
+    return super.getDataSchema();
+  }
+
+  @Override
+  @JsonProperty
   public KafkaSupervisorTuningConfig getTuningConfig()
   {
     return (KafkaSupervisorTuningConfig) super.getTuningConfig();
@@ -146,9 +142,17 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @JsonProperty
+  public KafkaSupervisorIngestionSpec getSpec()
+  {
+    return (KafkaSupervisorIngestionSpec) super.getSpec();
+  }
+
+  @Override
   protected KafkaSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KafkaSupervisorSpec(
+        getSpec(),
         getDataSchema(),
         getTuningConfig(),
         getIoConfig(),
