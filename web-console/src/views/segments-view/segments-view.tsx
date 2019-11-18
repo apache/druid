@@ -425,9 +425,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               filtered: state.filtered,
               sorted: state.sorted,
             });
-            if (this.segmentsSqlQueryManager.getLastQuery) {
-              this.fetchData(groupByInterval, state);
-            }
+            this.fetchData(groupByInterval, state);
           } else if (capabilities.hasCoordinatorAccess()) {
             this.fetchClientSideData(state);
           }
