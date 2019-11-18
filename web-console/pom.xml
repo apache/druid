@@ -63,7 +63,7 @@
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>install domhandler@3.0.0</arguments>
+              <arguments>install --verbose domhandler@2.4.2</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
