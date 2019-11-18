@@ -163,7 +163,8 @@ import {
 import './load-data-view.scss';
 
 function showRawLine(line: SampleEntry): string {
-  const raw = line.raw;
+  if (!line.parsed) return 'No parse';
+  const raw = line.parsed.raw;
   if (raw.includes('\n')) {
     return `[Multi-line row, length: ${raw.length}]`;
   }
@@ -1022,7 +1023,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           className="raw-lines"
           value={
             inputData.length
-              ? (inputData.every(l => !l.raw)
+              ? (inputData.every(l => !l.parsed)
                   ? inputData.map(showBlankLine)
                   : inputData.map(showRawLine)
                 ).join('\n')
@@ -1144,7 +1145,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             } else {
               this.updateSpec(
                 fillDataSourceNameIfNeeded(
-                  fillInputFormat(spec, inputQueryState.data.data.map(l => l.raw)),
+                  fillInputFormat(
+                    spec,
+                    filterMap(inputQueryState.data.data, l =>
+                      l.parsed ? l.parsed.raw : undefined,
+                    ),
+                  ),
                 ),
               );
             }
@@ -1254,7 +1260,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let sugestedFlattenFields: FlattenField[] | null = null;
     if (canFlatten && !flattenFields.length && parserQueryState.data) {
       sugestedFlattenFields = computeFlattenPathsForData(
-        filterMap(parserQueryState.data.rows, r => parseJson(r.raw)),
+        filterMap(parserQueryState.data.rows, r => r.input),
         'path',
         'ignore-arrays',
       );

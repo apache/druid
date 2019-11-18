@@ -73,7 +73,7 @@ export interface SampleResponseWithExtraInfo extends SampleResponse {
 }
 
 export interface SampleEntry {
-  raw: string;
+  input: Record<string, any>;
   parsed?: Record<string, any>;
   unparseable?: boolean;
   error?: string;
@@ -157,9 +157,11 @@ export async function postToSampler(
   forStr: string,
 ): Promise<SampleResponse> {
   sampleSpec = fixSamplerTypes(sampleSpec);
-  console.log('pre downgrade', sampleSpec);
-  sampleSpec = deepSet(sampleSpec, 'spec', downgradeSpec(sampleSpec.spec)); // ToDo: remove this line when new format is supported by sampler
-  console.log('post downgrade', sampleSpec);
+  if (sampleSpec.type === 'kafka' || sampleSpec.type === 'kinesis') {
+    console.log('pre downgrade', sampleSpec);
+    sampleSpec = deepSet(sampleSpec, 'spec', downgradeSpec(sampleSpec.spec)); // ToDo: remove this line when new format is supported by sampler
+    console.log('post downgrade', sampleSpec);
+  }
 
   let sampleResp: any;
   try {
@@ -168,7 +170,19 @@ export async function postToSampler(
     throw new Error(getDruidErrorMessage(e));
   }
 
-  return sampleResp.data;
+  const sample = sampleResp.data;
+
+  // ToDo: remove this temp converter when Jihoon delivers `input`
+  if (Array.isArray(sample.data)) {
+    sample.data.forEach((d: any) => {
+      if (typeof d.input === 'undefined' && typeof d.raw === 'string') {
+        d.input = JSON.parse(d.raw);
+        delete d.raw;
+      }
+    });
+  }
+
+  return sample;
 }
 
 export type SampleStrategy = 'start' | 'end';
@@ -263,7 +277,7 @@ export async function sampleForConnect(
       ioConfig: deepSet(ioConfig, 'inputFormat', {
         type: 'regex',
         pattern: '(.*)',
-        columns: ['a'],
+        columns: ['raw'],
       }),
       dataSchema: {
         dataSource: 'sample',
