@@ -125,7 +125,7 @@ NULLable. Numeric columns are NOT NULL; if you query a numeric column that is no
 datasource, then it will be treated as zero for rows from those segments.
 
 ### SQL compatible null handling
-If `druid.generic.useDefaultValueForNull` is set to `false` _systemwide, at indexing time_, segments
+If `druid.generic.useDefaultValueForNull` is set to `false` _system-wide, at indexing time_, segments
 will be stored in a manner that allows distinguishing `''` from `null` for string columns, and will allow `null` values for numeric columns. Druid SQL will generally operate more properly in this mode, however this comes at a cost. See the [segment documentation on SQL compatible null-handling](../design/segments.md#sql-compatible-null-handling) for more details.
 
 For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
