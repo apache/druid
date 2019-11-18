@@ -58,12 +58,12 @@
             </configuration>
           </execution>
           <execution>
-            <id>npm-test</id>
+            <id>npm-precache</id>
             <goals>
               <goal>npm</goal>
             </goals>
             <configuration>
-              <arguments>run test-domhandler</arguments>
+              <arguments>cache add https://static.imply.io/npm/domhandler-2.4.2.tgz</arguments>
               <installDirectory>${project.build.directory}</installDirectory>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
