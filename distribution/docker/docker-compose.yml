@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-version: "2.2"
+version: "3.7"
 
 volumes:
   metadata_data: {}
@@ -50,7 +50,7 @@ services:
     container_name: coordinator
     volumes:
       - coordinator_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
     ports:
@@ -58,14 +58,15 @@ services:
     command:
       - coordinator
     env_file:
-      - environment
+      - env/common.env
+      - env/coordinator-overlord.env
 
   broker:
     image: apache/incubator-druid
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -74,14 +75,15 @@ services:
     command:
       - broker
     env_file:
-      - environment
+      - env/common.env
+      - env/broker.env
 
   historical:
     image: apache/incubator-druid
     container_name: historical
     volumes:
       - historical_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -90,14 +92,15 @@ services:
     command:
       - historical
     env_file:
-      - environment
+      - env/common.env
+      - env/historical.env
 
   overlord:
     image: apache/incubator-druid
     container_name: overlord
     volumes:
       - overlord_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
     ports:
@@ -105,14 +108,15 @@ services:
     command:
       - overlord
     env_file:
-      - environment
+      - env/common.env
+      - env/coordinator-overlord.env
 
   middlemanager:
     image: apache/incubator-druid
     container_name: middlemanager
     volumes:
       - middle_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -121,7 +125,8 @@ services:
     command:
       - middleManager
     env_file:
-      - environment
+      - env/common.env
+      - env/middleManager.env
 
   router:
     image: apache/incubator-druid
@@ -137,4 +142,5 @@ services:
     command:
       - router
     env_file:
-      - environment
+      - env/common.env
+      - env/router.env
