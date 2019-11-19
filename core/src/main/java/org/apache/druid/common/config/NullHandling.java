@@ -66,6 +66,9 @@ public class NullHandling
    */
   public static boolean replaceWithDefault()
   {
+    if (INSTANCE == null) {
+      throw new IllegalStateException("NullHandling module not initialized");
+    }
     return INSTANCE.isUseDefaultValuesForNull();
   }
 
