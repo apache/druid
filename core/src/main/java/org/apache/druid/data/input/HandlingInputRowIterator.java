@@ -22,13 +22,13 @@ package org.apache.druid.data.input;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.List;
 
 /**
  * Decorated {@link CloseableIterator<InputRow>} that can process rows with {@link InputRowHandler}s.
  */
-public class HandlingInputRowIterator implements Iterator<InputRow>
+public class HandlingInputRowIterator implements CloseableIterator<InputRow>
 {
   @FunctionalInterface
   public interface InputRowHandler
@@ -72,6 +72,8 @@ public class HandlingInputRowIterator implements Iterator<InputRow>
   {
     InputRow inputRow = delegate.next();
 
+    // NOTE: This loop invokes a virtual call per input row, which may have significant overhead for large inputs
+    // (e.g. InputSourceProcessor). If performance suffers, this implementation or the clients will need to change.
     for (InputRowHandler inputRowHandler : inputRowHandlers) {
       if (inputRowHandler.handle(inputRow)) {
         return null;
@@ -79,6 +81,12 @@ public class HandlingInputRowIterator implements Iterator<InputRow>
     }
 
     return inputRow;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    delegate.close();
   }
 }
 

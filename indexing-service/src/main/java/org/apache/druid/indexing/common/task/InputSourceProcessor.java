@@ -118,14 +118,15 @@ public class InputSourceProcessor
             tmpDir
         )
     );
-    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
-      HandlingInputRowIterator iterator = inputRowIteratorBuilder
-          .delegate(inputRowIterator)
-          .granularitySpec(granularitySpec)
-          .nullRowRunnable(buildSegmentsMeters::incrementThrownAway)
-          .absentBucketIntervalConsumer(inputRow -> buildSegmentsMeters.incrementThrownAway())
-          .build();
-
+    try (
+        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read();
+        HandlingInputRowIterator iterator = inputRowIteratorBuilder
+            .delegate(inputRowIterator)
+            .granularitySpec(granularitySpec)
+            .nullRowRunnable(buildSegmentsMeters::incrementThrownAway)
+            .absentBucketIntervalConsumer(inputRow -> buildSegmentsMeters.incrementThrownAway())
+            .build()
+    ) {
       while (iterator.hasNext()) {
         try {
           final InputRow inputRow = iterator.next();

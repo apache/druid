@@ -255,12 +255,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   }
 
   @Override
-  public int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
-  }
-
-  @Override
   public String getType()
   {
     return TYPE;
