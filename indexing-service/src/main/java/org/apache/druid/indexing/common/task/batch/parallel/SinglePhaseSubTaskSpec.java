@@ -66,4 +66,28 @@ class SinglePhaseSubTaskSpec extends SubTaskSpec<SinglePhaseSubTask>
         new DummyForInjectionAppenderatorsManager()
     );
   }
+
+  @Override
+  public SinglePhaseSubTask newSubTaskWithBackwardCompatibleType(int numAttempts)
+  {
+    return new SinglePhaseSubTask(
+        null,
+        getGroupId(),
+        null,
+        getSupervisorTaskId(),
+        numAttempts,
+        getIngestionSpec(),
+        getContext(),
+        null,
+        null,
+        new DummyForInjectionAppenderatorsManager()
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return SinglePhaseSubTask.OLD_TYPE_NAME;
+      }
+    };
+  }
 }

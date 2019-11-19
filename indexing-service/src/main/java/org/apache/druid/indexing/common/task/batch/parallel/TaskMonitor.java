@@ -222,11 +222,10 @@ public class TaskMonitor<T extends Task>
   {
     synchronized (startStopLock) {
       if (!running) {
-        return Futures.immediateFailedFuture(new ISE("TaskMonitore is not running"));
+        return Futures.immediateFailedFuture(new ISE("TaskMonitor is not running"));
       }
-      final T task = spec.newSubTask(0);
-      log.info("Submitting a new task[%s] for spec[%s]", task.getId(), spec.getId());
-      indexingServiceClient.runTask(task);
+      final T task = submitTask(spec, 0);
+      log.info("Submitted a new task[%s] for spec[%s]", task.getId(), spec.getId());
       incrementNumRunningTasks();
 
       final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
@@ -248,9 +247,8 @@ public class TaskMonitor<T extends Task>
     synchronized (startStopLock) {
       if (running) {
         final SubTaskSpec<T> spec = monitorEntry.spec;
-        final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
-        log.info("Submitting a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
-        indexingServiceClient.runTask(task);
+        final T task = submitTask(spec, monitorEntry.taskHistory.size() + 1);
+        log.info("Submitted a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
         incrementNumRunningTasks();
 
         runningTasks.put(
@@ -263,6 +261,22 @@ public class TaskMonitor<T extends Task>
         );
       }
     }
+  }
+
+  private T submitTask(SubTaskSpec<T> spec, int numAttempts)
+  {
+    T task = spec.newSubTask(numAttempts);
+    try {
+      indexingServiceClient.runTask(task);
+    }
+    catch (IllegalStateException e) {
+      if (e.getMessage().contains("Could not resolve type id")) {
+        log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
+        task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
+        indexingServiceClient.runTask(task);
+      }
+    }
+    return task;
   }
 
   private void incrementNumRunningTasks()
