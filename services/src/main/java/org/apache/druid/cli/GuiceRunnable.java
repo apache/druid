@@ -88,7 +88,7 @@ public abstract class GuiceRunnable implements Runnable
       }
 
       log.info(
-          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d]%s.",
+          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d]%s. Properties follow.",
           JvmUtils.getRuntimeInfo().getAvailableProcessors(),
           JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
           JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),

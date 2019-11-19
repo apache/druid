@@ -458,7 +458,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     try {
       if (chatHandlerProvider.isPresent()) {
-        log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
+        log.debug("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
 
         if (chatHandlerProvider.get().get(getId()).isPresent()) {
           // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
@@ -609,7 +609,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final PartitionsSpec nonNullPartitionsSpec
   ) throws IOException
   {
-    final ObjectMapper jsonMapper = toolbox.getObjectMapper();
+    final ObjectMapper jsonMapper = toolbox.getJsonMapper();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
 

@@ -72,7 +72,7 @@ public final class BatchAppenderators
         storeCompactionState,
         metrics,
         segmentPusher,
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
         toolbox.getIndexMergerV9()
     );
