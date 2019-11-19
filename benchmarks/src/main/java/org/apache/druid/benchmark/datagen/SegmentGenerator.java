@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.datagen;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -71,7 +70,7 @@ public class SegmentGenerator implements Closeable
   static {
     NullHandling.initializeForTests();
   }
-  
+
   private final File cacheDir;
   private final boolean cleanupCacheDir;
 
@@ -145,30 +144,8 @@ public class SegmentGenerator implements Closeable
         numRows
     );
 
-    final List<DimensionSchema> dimensions = new ArrayList<>();
-    for (BenchmarkColumnSchema columnSchema : schemaInfo.getColumnSchemas()) {
-      if (schemaInfo.getAggs().stream().noneMatch(agg -> agg.getName().equals(columnSchema.getName()))) {
-        switch (columnSchema.getType()) {
-          case STRING:
-            dimensions.add(new StringDimensionSchema(columnSchema.getName()));
-            break;
-          case LONG:
-            dimensions.add(new LongDimensionSchema(columnSchema.getName()));
-            break;
-          case DOUBLE:
-            dimensions.add(new DoubleDimensionSchema(columnSchema.getName()));
-            break;
-          case FLOAT:
-            dimensions.add(new FloatDimensionSchema(columnSchema.getName()));
-            break;
-          default:
-            throw new ISE("Unhandleable type[%s]", columnSchema.getType());
-        }
-      }
-    }
-
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dimensions, ImmutableList.of(), ImmutableList.of()))
+        .withDimensionsSpec(schemaInfo.getDimensionsSpec())
         .withMetrics(schemaInfo.getAggsArray())
         .withRollup(schemaInfo.isWithRollup())
         .withQueryGranularity(granularity)
