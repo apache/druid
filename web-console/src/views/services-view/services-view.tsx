@@ -16,16 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  Intent,
-  Label,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-} from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
@@ -38,6 +29,7 @@ import {
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  MoreButton,
   RefreshButton,
   TableColumnSelector,
   ViewControlBar,
@@ -648,8 +640,8 @@ ORDER BY "rank" DESC, "service" DESC`;
   renderBulkServicesActions() {
     const { goToQuery, capabilities } = this.props;
 
-    const bulkservicesActionsMenu = (
-      <Menu>
+    return (
+      <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
@@ -657,15 +649,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             onClick={() => goToQuery(ServicesView.SERVICE_SQL)}
           />
         )}
-      </Menu>
-    );
-
-    return (
-      <>
-        <Popover content={bulkservicesActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
-      </>
+      </MoreButton>
     );
   }
 

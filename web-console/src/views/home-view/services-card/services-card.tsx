@@ -82,10 +82,8 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
             query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
           });
           return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
-        } else if (capabilities.hasCoordinatorAccess() || capabilities.hasOverlordAccess()) {
-          const services = capabilities.hasCoordinatorAccess()
-            ? (await axios.get('/druid/coordinator/v1/servers?simple')).data
-            : [];
+        } else if (capabilities.hasCoordinatorAccess()) {
+          const services = (await axios.get('/druid/coordinator/v1/servers?simple')).data;
 
           const middleManager = capabilities.hasOverlordAccess()
             ? (await axios.get('/druid/indexer/v1/workers')).data
@@ -97,7 +95,7 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
             peon: services.filter((s: any) => s.type === 'indexer-executor').length,
           };
         } else {
-          throw new Error(`must have SQL or coordinator/overlord access`);
+          throw new Error(`must have SQL or coordinator access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {
