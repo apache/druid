@@ -83,9 +83,11 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   /**
-   * Returning a dummy value so the objects from older versions still work
-   * with current version
-   * TODO : this should be removed in the next release
+   * This method is for backwards compatibility to add the missing property (sequenceName) in serialized JSON,
+   * so rolling-updates from older versions are compatible, a dummy value is returned since the value is not
+   * used in any production code as long as the json property is present
+   *
+   * TODO : this should be removed when we don't need rolling-update compatibility with version 0.15 or earlier anymore
    *
    * @return dummy value
    */
