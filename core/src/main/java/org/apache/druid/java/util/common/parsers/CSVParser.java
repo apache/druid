@@ -24,6 +24,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
 import org.apache.druid.common.config.NullHandling;
+
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
@@ -32,9 +33,9 @@ import java.util.List;
 public class CSVParser extends AbstractFlatTextFormatParser
 {
   private final RFC4180Parser parser = NullHandling.replaceWithDefault()
-                                               ? new RFC4180Parser()
-                                               : new RFC4180ParserBuilder().withFieldAsNull(
-                                                   CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).build();
+                                       ? new RFC4180Parser()
+                                       : new RFC4180ParserBuilder().withFieldAsNull(
+                                           CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).build();
 
   public CSVParser(
       @Nullable final String listDelimiter,
