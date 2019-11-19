@@ -225,4 +225,32 @@ public class BenchmarkSchemas
     );
     SCHEMA_MAP.put("rollo", rolloSchema);
   }
+
+  static { // simple schema with null valued rows, no aggs on numeric columns
+    List<BenchmarkColumnSchema> simpleNullsSchemaColumns = ImmutableList.of(
+        // dims
+        BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, 0.5, 1, 101, 1.5),
+        BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, 0.25, 1, 100000),
+        BenchmarkColumnSchema.makeSequential("stringSequentialHalfNull", ValueType.STRING, false, 1, 0.5, 0, 1000),
+
+        // metrics
+        BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, 0.5, 0, 10000),
+        BenchmarkColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, 0.25, 0, 500),
+        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.25, 0, 1000, 2.0)
+    );
+
+    List<AggregatorFactory> simpleNullsSchemaIngestAggs = new ArrayList<>();
+    simpleNullsSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
+
+    Interval simpleNullsSchemaDataInterval = Intervals.of("2000-01-01/P1D");
+
+    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+        simpleNullsSchemaColumns,
+        simpleNullsSchemaIngestAggs,
+        simpleNullsSchemaDataInterval,
+        false
+    );
+
+    SCHEMA_MAP.put("simple-nulls", basicSchema);
+  }
 }
