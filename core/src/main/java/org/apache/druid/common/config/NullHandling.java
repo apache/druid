@@ -59,6 +59,7 @@ public class NullHandling
    */
   public static boolean replaceWithDefault()
   {
+    // INSTANCE should only be null in unit tests, otherwise the null handling module will inject this value
     if (isReplaceWithDefault == null) {
       isReplaceWithDefault = INSTANCE != null
                              ? INSTANCE.isUseDefaultValuesForNull()
