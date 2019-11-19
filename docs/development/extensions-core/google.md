@@ -42,7 +42,7 @@ Deep storage can be written to Google Cloud Storage either via this extension or
 
 ## Google cloud storage batch ingestion input source
 
-This extension also provides an input source for Druid native batch ingestion to support reading objects directly from Google CloudStorage. Objects can be specified as list of Google CloudStorage URI strings. The Google CloudStorage input source is splittable and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task), where each worker task of `index_parallel` will read a single object.
+This extension also provides an input source for Druid native batch ingestion to support reading objects directly from Google Cloud Storage. Objects can be specified as list of Google Cloud Storage URI strings. The Google Cloud Storage input source is splittable and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task), where each worker task of `index_parallel` will read a single object.
 
 ```json
 ...
@@ -63,7 +63,7 @@ This extension also provides an input source for Druid native batch ingestion to
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `google`.|N/A|yes|
-|uris|JSON array of URIs where Google CloudStorage files to be ingested are located.|N/A|yes|
+|uris|JSON array of URIs where Google Cloud Storage files to be ingested are located.|N/A|yes|
 
 
 ## Firehose
