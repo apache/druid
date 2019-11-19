@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kafka;
 
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
+import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.HashMap;
