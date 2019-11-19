@@ -159,7 +159,7 @@ public class TaskToolboxTest
   @Test
   public void testGetObjectMapper()
   {
-    Assert.assertEquals(ObjectMapper, taskToolbox.build(task).getObjectMapper());
+    Assert.assertEquals(ObjectMapper, taskToolbox.build(task).getJsonMapper());
   }
 
   @Test

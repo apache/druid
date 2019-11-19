@@ -22,26 +22,47 @@ package org.apache.druid.java.util.common.logger;
 import org.apache.druid.java.util.common.StringUtils;
 import org.slf4j.LoggerFactory;
 
-/**
- */
+import java.util.function.BiConsumer;
+
 public class Logger
 {
   private final org.slf4j.Logger log;
+  private final boolean stackTraces;
 
   public Logger(String name)
   {
-    log = LoggerFactory.getLogger(name);
+    this(LoggerFactory.getLogger(name), true);
   }
 
   public Logger(Class clazz)
   {
-    log = LoggerFactory.getLogger(clazz);
+    this(LoggerFactory.getLogger(clazz), true);
+  }
+
+  protected Logger(org.slf4j.Logger log, boolean stackTraces)
+  {
+    this.log = log;
+    this.stackTraces = stackTraces;
+  }
+
+  protected org.slf4j.Logger getSlf4jLogger()
+  {
+    return log;
   }
 
   @Override
   public String toString()
   {
     return StringUtils.format("Logger{name=[%s], class[%s]}", log.getName(), log.getClass());
+  }
+
+  /**
+   * Create a copy of this Logger that does not log exception stack traces, unless the log level is DEBUG or lower.
+   * Useful for writing code like: {@code log.noStackTrace().warn(e, "Something happened.");}
+   */
+  public Logger noStackTrace()
+  {
+    return new Logger(log, false);
   }
 
   public void trace(String message, Object... formatArgs)
@@ -61,7 +82,7 @@ public class Logger
   public void debug(Throwable t, String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
-      log.debug(StringUtils.nonStrictFormat(message, formatArgs), t);
+      logException(log::debug, t, StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
@@ -75,7 +96,7 @@ public class Logger
   public void info(Throwable t, String message, Object... formatArgs)
   {
     if (log.isInfoEnabled()) {
-      log.info(StringUtils.nonStrictFormat(message, formatArgs), t);
+      logException(log::info, t, StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
@@ -88,7 +109,7 @@ public class Logger
   @Deprecated
   public void warn(String message, Throwable t)
   {
-    log.warn(message, t);
+    warn(t, message);
   }
 
   public void warn(String message, Object... formatArgs)
@@ -98,7 +119,7 @@ public class Logger
 
   public void warn(Throwable t, String message, Object... formatArgs)
   {
-    log.warn(StringUtils.nonStrictFormat(message, formatArgs), t);
+    logException(log::warn, t, StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   public void error(String message, Object... formatArgs)
@@ -115,12 +136,12 @@ public class Logger
   @Deprecated
   public void error(String message, Throwable t)
   {
-    log.error(message, t);
+    error(t, message);
   }
 
   public void error(Throwable t, String message, Object... formatArgs)
   {
-    log.error(StringUtils.nonStrictFormat(message, formatArgs), t);
+    logException(log::error, t, StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   public void assertionError(String message, Object... formatArgs)
@@ -151,5 +172,18 @@ public class Logger
   public boolean isInfoEnabled()
   {
     return log.isInfoEnabled();
+  }
+
+  private void logException(BiConsumer<String, Throwable> fn, Throwable t, String message)
+  {
+    if (stackTraces || log.isDebugEnabled()) {
+      fn.accept(message, t);
+    } else {
+      if (message.isEmpty()) {
+        fn.accept(t.toString(), null);
+      } else {
+        fn.accept(StringUtils.nonStrictFormat("%s (%s)", message, t.toString()), null);
+      }
+    }
   }
 }

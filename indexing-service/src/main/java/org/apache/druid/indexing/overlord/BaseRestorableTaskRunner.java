@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -54,7 +55,9 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
 
   protected final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
-  /** Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting. */
+  /**
+   * Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting.
+   */
   protected final ConcurrentHashMap<String, WorkItemType> tasks = new ConcurrentHashMap<>();
   protected final ObjectMapper jsonMapper;
   protected final TaskConfig taskConfig;
@@ -105,7 +108,9 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       }
     }
 
-    LOG.info("Restored %,d tasks.", retVal.size());
+    if (!retVal.isEmpty()) {
+      LOG.info("Restored %,d tasks: %s", retVal.size(), Joiner.on(", ").join(retVal));
+    }
 
     return retVal;
   }
@@ -127,7 +132,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       }
 
       listeners.add(listenerPair);
-      LOG.info("Registered listener [%s]", listener.getListenerId());
+      LOG.debug("Registered listener [%s]", listener.getListenerId());
     }
   }
 
@@ -137,7 +142,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
       if (pair.lhs.getListenerId().equals(listenerId)) {
         listeners.remove(pair);
-        LOG.info("Unregistered listener [%s]", listenerId);
+        LOG.debug("Unregistered listener [%s]", listenerId);
         return;
       }
     }
