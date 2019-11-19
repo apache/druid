@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.DefaultCachingLocalSegmentAllocator;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -36,7 +37,6 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -136,7 +136,7 @@ public class DefaultCachingLocalSegmentAllocatorTest
   {
     long timestamp = INTERVAL.getStartMillis();
     InputRow inputRow = EasyMock.mock(InputRow.class);
-    EasyMock.expect(inputRow.getTimestamp()).andStubReturn(new DateTime(timestamp));
+    EasyMock.expect(inputRow.getTimestamp()).andStubReturn(DateTimes.utc(timestamp));
     EasyMock.expect(inputRow.getTimestampFromEpoch()).andStubReturn(timestamp);
     EasyMock.expect(inputRow.getDimension(DIMENSION)).andStubReturn(Collections.singletonList(DIMENSION));
     EasyMock.replay(inputRow);
