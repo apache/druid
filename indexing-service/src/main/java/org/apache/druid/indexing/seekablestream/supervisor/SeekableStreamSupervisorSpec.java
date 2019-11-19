@@ -104,6 +104,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return ingestionSchema;
   }
 
+  @Deprecated
   @JsonProperty
   public DataSchema getDataSchema()
   {

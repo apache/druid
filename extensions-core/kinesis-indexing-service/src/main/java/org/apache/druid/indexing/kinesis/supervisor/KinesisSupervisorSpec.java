@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
@@ -61,10 +62,10 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @JsonCreator
   public KinesisSupervisorSpec(
-      @JsonProperty("spec") final KinesisSupervisorIngestionSpec ingestionSchema,
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") KinesisSupervisorTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") KinesisSupervisorIOConfig ioConfig,
+      @JsonProperty("spec") @Nullable KinesisSupervisorIngestionSpec ingestionSchema,
+      @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
+      @JsonProperty("tuningConfig") @Nullable KinesisSupervisorTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") @Nullable KinesisSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
@@ -140,13 +141,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
-  @JsonProperty
-  public DataSchema getDataSchema()
-  {
-    return super.getDataSchema();
-  }
-
-  @Override
+  @Deprecated
   @JsonProperty
   public KinesisSupervisorTuningConfig getTuningConfig()
   {
@@ -154,6 +149,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @Deprecated
   @JsonProperty
   public KinesisSupervisorIOConfig getIoConfig()
   {
@@ -161,6 +157,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @Nullable
   @JsonProperty
   public KinesisSupervisorIngestionSpec getSpec()
   {
