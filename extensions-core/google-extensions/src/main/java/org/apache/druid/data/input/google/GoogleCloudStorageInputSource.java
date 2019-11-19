@@ -40,13 +40,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class GoogleCloudStoreInputSource extends AbstractInputSource implements SplittableInputSource<URI>
+public class GoogleCloudStorageInputSource extends AbstractInputSource implements SplittableInputSource<URI>
 {
   private final GoogleStorage storage;
   private final List<URI> uris;
 
   @JsonCreator
-  public GoogleCloudStoreInputSource(
+  public GoogleCloudStorageInputSource(
       @JacksonInject("googleStorage") GoogleStorage storage,
       @JsonProperty("uris") List<URI> uris
   )
@@ -77,7 +77,7 @@ public class GoogleCloudStoreInputSource extends AbstractInputSource implements 
   @Override
   public SplittableInputSource<URI> withSplit(InputSplit<URI> split)
   {
-    return new GoogleCloudStoreInputSource(storage, ImmutableList.of(split.get()));
+    return new GoogleCloudStorageInputSource(storage, ImmutableList.of(split.get()));
   }
 
   @Override
@@ -96,7 +96,7 @@ public class GoogleCloudStoreInputSource extends AbstractInputSource implements 
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new GoogleCloudStoreEntity(storage, split.get())),
+        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(storage, split.get())),
         temporaryDirectory
     );
   }
@@ -110,7 +110,7 @@ public class GoogleCloudStoreInputSource extends AbstractInputSource implements 
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GoogleCloudStoreInputSource that = (GoogleCloudStoreInputSource) o;
+    GoogleCloudStorageInputSource that = (GoogleCloudStorageInputSource) o;
     return Objects.equals(uris, that.uris);
   }
 

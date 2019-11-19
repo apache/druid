@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class GoogleCloudStoreInputSourceTest
+public class GoogleCloudStorageInputSourceTest
 {
   private static final GoogleStorage STORAGE = new GoogleStorage(null);
 
@@ -62,9 +62,9 @@ public class GoogleCloudStoreInputSourceTest
         new URI("gs://bar/foo")
     );
 
-    final GoogleCloudStoreInputSource withUris = new GoogleCloudStoreInputSource(STORAGE, uris);
-    final GoogleCloudStoreInputSource serdeWithUris =
-        mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStoreInputSource.class);
+    final GoogleCloudStorageInputSource withUris = new GoogleCloudStorageInputSource(STORAGE, uris);
+    final GoogleCloudStorageInputSource serdeWithUris =
+        mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
 
@@ -76,7 +76,7 @@ public class GoogleCloudStoreInputSourceTest
         URI.create("gs://bar/foo/file2.gz")
     );
 
-    GoogleCloudStoreInputSource inputSource = new GoogleCloudStoreInputSource(STORAGE, uris);
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(STORAGE, uris);
 
     Stream<InputSplit<URI>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),

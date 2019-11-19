@@ -31,12 +31,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class GoogleCloudStoreEntity implements InputEntity
+public class GoogleCloudStorageEntity implements InputEntity
 {
   private final GoogleStorage storage;
   private final URI uri;
 
-  GoogleCloudStoreEntity(GoogleStorage storage, URI uri)
+  GoogleCloudStorageEntity(GoogleStorage storage, URI uri)
   {
     this.storage = storage;
     this.uri = uri;

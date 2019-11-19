@@ -21,7 +21,7 @@ package org.apache.druid.firehose.google;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.google.GoogleCloudStoreInputSourceTest;
+import org.apache.druid.data.input.google.GoogleCloudStorageInputSourceTest;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class StaticGoogleBlobStoreFirehoseFactoryTest
   @Test
   public void testSerde() throws IOException
   {
-    final ObjectMapper mapper = GoogleCloudStoreInputSourceTest.createGoogleObjectMapper();
+    final ObjectMapper mapper = GoogleCloudStorageInputSourceTest.createGoogleObjectMapper();
 
     final List<GoogleBlob> blobs = ImmutableList.of(
         new GoogleBlob("foo", "bar"),
