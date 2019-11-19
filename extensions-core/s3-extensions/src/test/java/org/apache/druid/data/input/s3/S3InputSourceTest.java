@@ -77,7 +77,7 @@ public class S3InputSourceTest
         new URI("s3://bar/foo")
     );
 
-    final S3InputSource withUris = new S3InputSource(SERVICE, uris,null);
+    final S3InputSource withUris = new S3InputSource(SERVICE, uris, null);
     final S3InputSource serdeWithUris = mapper.readValue(mapper.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
 
