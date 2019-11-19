@@ -45,7 +45,6 @@ import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -117,8 +116,8 @@ public class S3InputSourceTest
         URI.create("s3://foo/bar/file.gz"),
         URI.create("s3://bar/foo/file2.gz")
     );
-    addExpectedPrefixObjects(SERVICE, URI.create("s3://foo/bar"), ImmutableList.of(prefixes.get(0)));
-    addExpectedPrefixObjects(SERVICE, URI.create("s3://bar/foo"), ImmutableList.of(prefixes.get(1)));
+    addExpectedPrefixObjects(SERVICE, URI.create("s3://foo/bar"), ImmutableList.of(expectedUris.get(0)));
+    addExpectedPrefixObjects(SERVICE, URI.create("s3://bar/foo"), ImmutableList.of(expectedUris.get(1)));
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(SERVICE, null, prefixes);

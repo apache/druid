@@ -60,7 +60,6 @@ public abstract class AbstractInputSource implements InputSource
   }
 
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
-      throws IOException
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = false");
   }
