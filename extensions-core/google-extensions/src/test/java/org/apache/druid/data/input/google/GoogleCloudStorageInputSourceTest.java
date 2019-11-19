@@ -113,7 +113,7 @@ public class GoogleCloudStorageInputSourceTest
     }
 
     @Provides
-    public GoogleStorage getRestS3Service()
+    public GoogleStorage getGoogleStorage()
     {
       return STORAGE;
     }
