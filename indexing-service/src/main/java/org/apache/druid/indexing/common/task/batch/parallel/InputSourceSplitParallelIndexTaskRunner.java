@@ -33,15 +33,15 @@ import java.util.Map;
 
 /**
  * Base class for different implementations of {@link ParallelIndexTaskRunner} that operate on
- * {@link org.apache.druid.data.input.Firehose} splits.
+ * {@link org.apache.druid.data.input.InputSource} splits.
  */
-abstract class FirehoseSplitParallelIndexTaskRunner<T extends Task, R extends SubTaskReport>
+abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends SubTaskReport>
     extends ParallelIndexPhaseRunner<T, R>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 
-  FirehoseSplitParallelIndexTaskRunner(
+  InputSourceSplitParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
@@ -115,6 +115,9 @@ abstract class FirehoseSplitParallelIndexTaskRunner<T extends Task, R extends Su
     );
   }
 
+  /**
+   * @return Ingestion spec split suitable for this parallel worker
+   */
   abstract SubTaskSpec<T> createSubTaskSpec(
       String id,
       String groupId,

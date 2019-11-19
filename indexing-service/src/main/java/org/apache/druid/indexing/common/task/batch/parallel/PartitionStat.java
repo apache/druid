@@ -101,8 +101,14 @@ abstract class PartitionStat<T>
     return sizeBytes;
   }
 
+  /**
+   * @return Uniquely identifying index from 0..N-1 of the N partitions
+   */
   abstract int getPartitionId();
 
+  /**
+   * @return Definition of secondary partition. For example, for range partitioning, this should include the start/end.
+   */
   abstract T getSecondaryPartition();
 
   @Override

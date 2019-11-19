@@ -188,6 +188,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   @Nullable
   public abstract Granularity getSegmentGranularity();
 
+  @Override
+  public final int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
+
   public boolean isUseSegmentLock()
   {
     return useSegmentLock;

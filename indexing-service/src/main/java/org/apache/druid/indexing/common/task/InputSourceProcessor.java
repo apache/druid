@@ -133,9 +133,11 @@ public class InputSourceProcessor
             continue;
           }
 
+          // IndexTaskInputRowIteratorBuilder.absentBucketIntervalConsumer() ensures the interval will be present here
           Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-          @SuppressWarnings("OptionalGetWithoutIsPresent")  // always present via IndexTaskInputRowIteratorBuilder
+          @SuppressWarnings("OptionalGetWithoutIsPresent")
           final Interval interval = optInterval.get();
+
           final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 

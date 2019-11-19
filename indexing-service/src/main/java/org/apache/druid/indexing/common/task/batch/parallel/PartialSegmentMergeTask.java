@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -93,8 +92,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   private final HttpClient shuffleClient;
   private final byte[] buffer;
 
-  @JsonCreator
-  public PartialSegmentMergeTask(
+  PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
       @Nullable String id,
       final String groupId,

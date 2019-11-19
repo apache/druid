@@ -24,7 +24,6 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -80,12 +79,6 @@ abstract class PerfectRollupWorkerTask extends AbstractBatchIndexTask
       String msg = "forceGuaranteedRollup is incompatible with partitionsSpec: " + incompatibiltyMsg;
       throw new IllegalArgumentException(msg);
     }
-  }
-
-  @Override
-  public final int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   @Override

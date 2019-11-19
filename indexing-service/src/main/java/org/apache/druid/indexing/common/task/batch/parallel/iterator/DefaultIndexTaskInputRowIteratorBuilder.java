@@ -49,6 +49,9 @@ import java.util.function.Consumer;
  *      {@link GranularitySpec} bucket intervals, invoke the absent bucket interval {@link Consumer}
  *      callback.
  *
+ *   4. Any additional handlers in the order they are added by calls to
+ *      {@link #appendInputRowHandler(HandlingInputRowIterator.InputRowHandler)}.
+ *
  * If any of the handlers invoke their respective callback, the {@link HandlingInputRowIterator} will yield
  * a null {@link InputRow} next; otherwise, the next {@link InputRow} is yielded.
  * </pre>
@@ -59,7 +62,7 @@ public class DefaultIndexTaskInputRowIteratorBuilder implements IndexTaskInputRo
   private GranularitySpec granularitySpec = null;
   private HandlingInputRowIterator.InputRowHandler nullRowHandler = null;
   private HandlingInputRowIterator.InputRowHandler absentBucketIntervalHandler = null;
-  private List<HandlingInputRowIterator.InputRowHandler> appendedInputRowHandlers = new ArrayList<>();
+  private final List<HandlingInputRowIterator.InputRowHandler> appendedInputRowHandlers = new ArrayList<>();
 
   @Override
   public DefaultIndexTaskInputRowIteratorBuilder delegate(CloseableIterator<InputRow> inputRowIterator)
