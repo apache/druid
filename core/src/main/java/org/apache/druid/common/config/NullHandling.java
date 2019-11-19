@@ -66,8 +66,9 @@ public class NullHandling
    */
   public static boolean replaceWithDefault()
   {
+    // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
-      throw new IllegalStateException("NullHandling module not initialized");
+      throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
     }
     return INSTANCE.isUseDefaultValuesForNull();
   }
