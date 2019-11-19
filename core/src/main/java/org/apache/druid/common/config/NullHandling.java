@@ -52,7 +52,7 @@ public class NullHandling
   @Inject
   private static NullValueHandlingConfig INSTANCE;
 
-  private static Boolean isReplaceWithDefault = null;
+  private static volatile Boolean isReplaceWithDefault = null;
 
   /**
    * whether nulls should be replaced with default value.
