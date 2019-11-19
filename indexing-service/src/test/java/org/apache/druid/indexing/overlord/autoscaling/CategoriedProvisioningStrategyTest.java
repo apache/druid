@@ -108,9 +108,15 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
-    setupAutoscaler(autoScalerDefault, CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, 3, 5, Collections.emptyList());
+    setupAutoscaler(
+        autoScalerDefault,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        3,
+        5,
+        Collections.emptyList()
+    );
     setupAutoscaler(autoScalerCategory1, CATEGORY_1, 2, 4, Collections.emptyList());
-    setupAutoscaler(autoScalerCategory2, CATEGORY_2,4, 6, Collections.emptyList());
+    setupAutoscaler(autoScalerCategory2, CATEGORY_2, 4, 6, Collections.emptyList());
     autoScalers.addAll(Arrays.asList(autoScalerDefault, autoScalerCategory1, autoScalerCategory2));
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -203,7 +209,13 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
-    setupAutoscaler(autoScalerDefault, CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, 3, 5, Collections.emptyList());
+    setupAutoscaler(
+        autoScalerDefault,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        3,
+        5,
+        Collections.emptyList()
+    );
     autoScalers.add(autoScalerDefault);
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -281,7 +293,7 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
-    setupAutoscaler(autoScalerCategory1, CATEGORY_1,5, 7, Collections.emptyList());
+    setupAutoscaler(autoScalerCategory1, CATEGORY_1, 5, 7, Collections.emptyList());
     autoScalers.add(autoScalerCategory1);
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -515,7 +527,13 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
-    setupAutoscaler(autoScalerDefault, CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, 3, 5, Collections.emptyList());
+    setupAutoscaler(
+        autoScalerDefault,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        3,
+        5,
+        Collections.emptyList()
+    );
     setupAutoscaler(autoScalerCategory1, CATEGORY_1, 1, 3, Collections.emptyList());
     setupAutoscaler(autoScalerCategory2, CATEGORY_2, 1, 3, Collections.emptyList());
     autoScalers.addAll(Arrays.asList(autoScalerDefault, autoScalerCategory1, autoScalerCategory2));
@@ -606,7 +624,9 @@ public class CategoriedProvisioningStrategyTest
 
     EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScalerDefault.getMaxNumWorkers()).andReturn(5);
-    EasyMock.expect(autoScalerDefault.getCategory()).andReturn(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY).times(2);
+    EasyMock.expect(autoScalerDefault.getCategory())
+            .andReturn(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
+            .times(2);
     EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.emptyList()).times(2);
     EasyMock.expect(autoScalerDefault.terminateWithIds(EasyMock.anyObject()))
@@ -728,7 +748,13 @@ public class CategoriedProvisioningStrategyTest
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
 
-    setupAutoscaler(autoScalerDefault, CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, 1, 3, Collections.emptyList());
+    setupAutoscaler(
+        autoScalerDefault,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        1,
+        3,
+        Collections.emptyList()
+    );
     setupAutoscaler(autoScalerCategory1, CATEGORY_1, 1, 2, Collections.emptyList());
     setupAutoscaler(autoScalerCategory2, CATEGORY_2, 1, 4, Collections.emptyList());
     autoScalers.addAll(Arrays.asList(autoScalerDefault, autoScalerCategory1, autoScalerCategory2));
@@ -822,7 +848,12 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
 
-    setupAutoscaler(autoScalerDefault, CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, 1, Collections.emptyList());
+    setupAutoscaler(
+        autoScalerDefault,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        1,
+        Collections.emptyList()
+    );
     setupAutoscaler(autoScalerCategory1, CATEGORY_1, 1, Collections.emptyList());
     setupAutoscaler(autoScalerCategory2, CATEGORY_2, 1, Collections.emptyList());
     autoScalers.addAll(Arrays.asList(autoScalerDefault, autoScalerCategory1, autoScalerCategory2));
@@ -886,7 +917,9 @@ public class CategoriedProvisioningStrategyTest
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
 
     EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(1);
-    EasyMock.expect(autoScalerDefault.getCategory()).andReturn(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY).times(2);
+    EasyMock.expect(autoScalerDefault.getCategory())
+            .andReturn(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
+            .times(2);
     EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip")).times(2);
     EasyMock.expect(autoScalerDefault.terminate(EasyMock.anyObject())).andReturn(
@@ -962,7 +995,13 @@ public class CategoriedProvisioningStrategyTest
   }
 
 
-  private void setupAutoscaler(AutoScaler autoScaler, String category, int minWorkers, int maxWorkers, List<String> pendingTasks)
+  private void setupAutoscaler(
+      AutoScaler autoScaler,
+      String category,
+      int minWorkers,
+      int maxWorkers,
+      List<String> pendingTasks
+  )
   {
     setupAutoscaler(autoScaler, category, minWorkers, pendingTasks);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxWorkers);
