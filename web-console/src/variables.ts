@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-export const LEGACY_COORDINATOR_CONSOLE = '/index.html';
-export const LEGACY_OVERLORD_CONSOLE = '/console.html';
-
 // This is set to the latest available version and should be updated to the next version before release
 export const DRUID_DOCS_VERSION = '0.16.0-incubating';
 

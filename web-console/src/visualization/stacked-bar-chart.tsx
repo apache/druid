@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import * as d3 from 'd3';
-import { AxisScale } from 'd3';
+import { axisBottom, axisLeft, AxisScale } from 'd3-axis';
 import React, { useState } from 'react';
 
 import { BarChartMargin, BarUnitData } from '../components/segment-timeline/segment-timeline';
@@ -80,8 +79,7 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
           <ChartAxis
             className={'gridline-x'}
             transform={'translate(60, 0)'}
-            scale={d3
-              .axisLeft(yScale)
+            scale={axisLeft(yScale)
               .ticks(5)
               .tickSize(-width)
               .tickFormat(() => '')
@@ -90,13 +88,12 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
           <ChartAxis
             className={'axis--x'}
             transform={`translate(65, ${height})`}
-            scale={d3.axisBottom(xScale)}
+            scale={axisBottom(xScale)}
           />
           <ChartAxis
             className={'axis--y'}
             transform={'translate(60, 0)'}
-            scale={d3
-              .axisLeft(yScale)
+            scale={axisLeft(yScale)
               .ticks(5)
               .tickFormat((e: number) => formatTick(e))}
           />

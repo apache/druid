@@ -19,15 +19,13 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils/capabilities';
+import { PopoverText } from './popover-text';
 
-import { LookupsCard } from './lookups-card';
-
-describe('lookups card', () => {
+describe('popover text', () => {
   it('matches snapshot', () => {
-    const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
+    const popoverText = <PopoverText>Hello world</PopoverText>;
 
-    const { container } = render(lookupsCard);
+    const { container } = render(popoverText);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

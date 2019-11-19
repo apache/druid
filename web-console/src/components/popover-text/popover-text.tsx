@@ -16,18 +16,14 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils/capabilities';
+import './popover-text.scss';
 
-import { LookupsCard } from './lookups-card';
+export interface PopoverTextProps {
+  children: React.ReactNode;
+}
 
-describe('lookups card', () => {
-  it('matches snapshot', () => {
-    const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
-
-    const { container } = render(lookupsCard);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+export const PopoverText = React.memo(function PopoverText(props: PopoverTextProps) {
+  return <div className="popover-text">{props.children}</div>;
 });

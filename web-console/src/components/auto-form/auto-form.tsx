@@ -24,6 +24,7 @@ import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
+import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
 
 import './auto-form.scss';
@@ -322,7 +323,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       <FormGroupWithInfo
         key={field.name}
         label={label}
-        info={field.info ? <div className="label-info-text">{field.info}</div> : undefined}
+        info={field.info ? <PopoverText>{field.info}</PopoverText> : undefined}
       >
         {this.renderFieldInput(field)}
       </FormGroupWithInfo>

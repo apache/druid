@@ -24,80 +24,54 @@ exports[`tasks view matches snapshot 1`] = `
           localStorageKey="supervisors-refresh-rate"
           onRefresh={[Function]}
         />
-        <Blueprint3.Popover
-          boundary="scrollParent"
-          captureDismiss={false}
-          content={
-            <Blueprint3.Menu>
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="application"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="View SQL query for table"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="manually-entered-data"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Submit JSON supervisor"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="play"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Resume all supervisors"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="pause"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Suspend all supervisors"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="cross"
-                intent="danger"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Terminate all supervisors"
-              />
-            </Blueprint3.Menu>
-          }
-          defaultIsOpen={false}
-          disabled={false}
-          fill={false}
-          hasBackdrop={false}
-          hoverCloseDelay={300}
-          hoverOpenDelay={150}
-          inheritDarkTheme={true}
-          interactionKind="click"
-          minimal={false}
-          modifiers={Object {}}
-          openOnTargetFocus={true}
-          position="bottom-left"
-          targetTagName="span"
-          transitionDuration={300}
-          usePortal={true}
-          wrapperTagName="span"
-        >
-          <Blueprint3.Button
-            icon="more"
+        <Memo(MoreButton)>
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="application"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="View SQL query for table"
           />
-        </Blueprint3.Popover>
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="manually-entered-data"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Submit JSON supervisor"
+          />
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="play"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Resume all supervisors"
+          />
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="pause"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Suspend all supervisors"
+          />
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="cross"
+            intent="danger"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Terminate all supervisors"
+          />
+        </Memo(MoreButton)>
         <Memo(TableColumnSelector)
           columns={
             Array [
@@ -344,52 +318,26 @@ exports[`tasks view matches snapshot 1`] = `
           localStorageKey="task-refresh-rate"
           onRefresh={[Function]}
         />
-        <Blueprint3.Popover
-          boundary="scrollParent"
-          captureDismiss={false}
-          content={
-            <Blueprint3.Menu>
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="application"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="View SQL query for table"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="manually-entered-data"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Submit JSON task"
-              />
-            </Blueprint3.Menu>
-          }
-          defaultIsOpen={false}
-          disabled={false}
-          fill={false}
-          hasBackdrop={false}
-          hoverCloseDelay={300}
-          hoverOpenDelay={150}
-          inheritDarkTheme={true}
-          interactionKind="click"
-          minimal={false}
-          modifiers={Object {}}
-          openOnTargetFocus={true}
-          position="bottom-left"
-          targetTagName="span"
-          transitionDuration={300}
-          usePortal={true}
-          wrapperTagName="span"
-        >
-          <Blueprint3.Button
-            icon="more"
+        <Memo(MoreButton)>
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="application"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="View SQL query for table"
           />
-        </Blueprint3.Popover>
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="manually-entered-data"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Submit JSON task"
+          />
+        </Memo(MoreButton)>
         <Memo(TableColumnSelector)
           columns={
             Array [
