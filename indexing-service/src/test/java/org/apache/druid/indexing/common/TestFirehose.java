@@ -23,7 +23,7 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -168,7 +168,7 @@ public class TestFirehose implements Firehose
   }
 
   @Override
-  public InputRowPlusRaw nextRowWithRaw()
+  public InputRowListPlusJson nextRowWithRaw()
   {
     Object next = queue.removeFirst().orElse(null);
 
@@ -181,10 +181,10 @@ public class TestFirehose implements Firehose
         if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }
-        return InputRowPlusRaw.of(row, next != null ? StringUtils.toUtf8(next.toString()) : null);
+        return InputRowListPlusJson.of(row, next != null ? StringUtils.toUtf8(next.toString()) : null);
       }
       catch (ParseException e) {
-        return InputRowPlusRaw.of(next != null ? StringUtils.toUtf8(next.toString()) : null, e);
+        return InputRowListPlusJson.of(next != null ? StringUtils.toUtf8(next.toString()) : null, e);
       }
     }
   }

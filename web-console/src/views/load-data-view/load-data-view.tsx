@@ -50,6 +50,7 @@ import {
   ExternalLink,
   JsonInput,
   Loader,
+  PopoverText,
 } from '../../components';
 import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
@@ -2229,7 +2230,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <FormGroupWithInfo
                 inlineInfo
                 info={
-                  <div className="label-info-text">
+                  <PopoverText>
                     <p>
                       Select whether or not you want to set an explicit list of{' '}
                       <ExternalLink
@@ -2247,7 +2248,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                       performance. If you disable this option, Druid will try to auto-detect fields
                       in your data and treat them as individual columns.
                     </p>
-                  </div>
+                  </PopoverText>
                 }
               >
                 <Switch
@@ -2282,7 +2283,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <FormGroupWithInfo
                 inlineInfo
                 info={
-                  <div className="label-info-text">
+                  <PopoverText>
                     <p>
                       If you enable{' '}
                       <ExternalLink
@@ -2309,7 +2310,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                       </a>{' '}
                       (fields you want to aggregate on).
                     </p>
-                  </div>
+                  </PopoverText>
                 }
               >
                 <Switch
@@ -2849,12 +2850,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               {'Parallel indexing '}
               <Popover
                 content={
-                  <div className="label-info-text">
+                  <PopoverText>
                     Druid currently has two types of native batch indexing tasks,{' '}
                     <Code>index_parallel</Code> which runs tasks in parallel on multiple
                     MiddleManager processes, and <Code>index</Code> which will run a single indexing
                     task locally on a single MiddleManager.
-                  </div>
+                  </PopoverText>
                 }
                 position="left-bottom"
               >

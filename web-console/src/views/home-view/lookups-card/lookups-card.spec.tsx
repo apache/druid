@@ -19,11 +19,13 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { Capabilities } from '../../../utils/capabilities';
+
 import { LookupsCard } from './lookups-card';
 
 describe('lookups card', () => {
   it('matches snapshot', () => {
-    const lookupsCard = <LookupsCard />;
+    const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
 
     const { container } = render(lookupsCard);
     expect(container.firstChild).toMatchSnapshot();

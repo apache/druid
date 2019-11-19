@@ -17,17 +17,20 @@
  */
 
 import { FormGroup, HTMLSelect, Radio, RadioGroup } from '@blueprintjs/core';
-import * as d3 from 'd3';
-import { AxisScale } from 'd3';
+import axios from 'axios';
+import { AxisScale } from 'd3-axis';
+import { scaleLinear, scaleTime } from 'd3-scale';
 import React from 'react';
 
-import { formatBytes, queryDruidSql, QueryManager } from '../../utils/index';
+import { Capabilities } from '../../utils/capabilities';
+import { formatBytes, queryDruidSql, QueryManager, uniq } from '../../utils/index';
 import { StackedBarChart } from '../../visualization/stacked-bar-chart';
 import { Loader } from '../loader/loader';
 
 import './segment-timeline.scss';
 
 interface SegmentTimelineProps {
+  capabilities: Capabilities;
   chartHeight: number;
   chartWidth: number;
 }
@@ -70,6 +73,14 @@ export interface BarChartMargin {
   left: number;
 }
 
+interface IntervalRow {
+  start: string;
+  end: string;
+  datasource: string;
+  count: number;
+  size: number;
+}
+
 export class SegmentTimeline extends React.PureComponent<
   SegmentTimelineProps,
   SegmentTimelineState
@@ -97,8 +108,111 @@ export class SegmentTimeline extends React.PureComponent<
     return SegmentTimeline.COLORS[index % SegmentTimeline.COLORS.length];
   }
 
-  private dataQueryManager: QueryManager<null, any>;
-  private datasourceQueryManager: QueryManager<null, any>;
+  static processRawData(data: IntervalRow[]) {
+    if (data === null) return [];
+
+    const countData: Record<string, any> = {};
+    const sizeData: Record<string, any> = {};
+    data.forEach(entry => {
+      const start = entry.start;
+      const day = start.split('T')[0];
+      const datasource = entry.datasource;
+      const count = entry.count;
+      const segmentSize = entry.size;
+      if (countData[day] === undefined) {
+        countData[day] = {
+          day,
+          [datasource]: count,
+          total: count,
+        };
+        sizeData[day] = {
+          day,
+          [datasource]: segmentSize,
+          total: segmentSize,
+        };
+      } else {
+        const countDataEntry = countData[day][datasource];
+        countData[day][datasource] = count + (countDataEntry === undefined ? 0 : countDataEntry);
+        const sizeDataEntry = sizeData[day][datasource];
+        sizeData[day][datasource] = segmentSize + (sizeDataEntry === undefined ? 0 : sizeDataEntry);
+        countData[day].total += count;
+        sizeData[day].total += segmentSize;
+      }
+    });
+
+    const countDataArray = Object.keys(countData)
+      .reverse()
+      .map((time: any) => {
+        return countData[time];
+      });
+
+    const sizeDataArray = Object.keys(sizeData)
+      .reverse()
+      .map((time: any) => {
+        return sizeData[time];
+      });
+
+    return { countData: countDataArray, sizeData: sizeDataArray };
+  }
+
+  static calculateStackedData(
+    data: Record<string, any>,
+    datasources: string[],
+  ): Record<string, BarUnitData[]> {
+    const newStackedData: Record<string, BarUnitData[]> = {};
+    Object.keys(data).forEach((type: any) => {
+      const stackedData: any = data[type].map((d: any) => {
+        let y0 = 0;
+        return datasources.map((datasource: string, i) => {
+          const barUnitData = {
+            x: d.day,
+            y: d[datasource] === undefined ? 0 : d[datasource],
+            y0,
+            datasource,
+            color: SegmentTimeline.getColor(i),
+          };
+          y0 += d[datasource] === undefined ? 0 : d[datasource];
+          return barUnitData;
+        });
+      });
+      newStackedData[type] = stackedData.flat();
+    });
+
+    return newStackedData;
+  }
+
+  static calculateSingleDatasourceData(
+    data: Record<string, any>,
+    datasources: string[],
+  ): Record<string, Record<string, BarUnitData[]>> {
+    const singleDatasourceData: Record<string, Record<string, BarUnitData[]>> = {};
+    Object.keys(data).forEach(dataType => {
+      singleDatasourceData[dataType] = {};
+      datasources.forEach((datasource, i) => {
+        const currentData = data[dataType];
+        if (currentData.length === 0) return;
+        const dataResult = currentData.map((d: any) => {
+          let y = 0;
+          if (d[datasource] !== undefined) {
+            y = d[datasource];
+          }
+          return {
+            x: d.day,
+            y,
+            datasource,
+            color: SegmentTimeline.getColor(i),
+          };
+        });
+        if (!dataResult.every((d: any) => d.y === 0)) {
+          singleDatasourceData[dataType][datasource] = dataResult;
+        }
+      });
+    });
+
+    return singleDatasourceData;
+  }
+
+  private dataQueryManager: QueryManager<{ capabilities: Capabilities; timeSpan: number }, any>;
   private chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
 
   constructor(props: SegmentTimelineProps) {
@@ -123,22 +237,65 @@ export class SegmentTimeline extends React.PureComponent<
     };
 
     this.dataQueryManager = new QueryManager({
-      processQuery: async () => {
-        const { timeSpan } = this.state;
-        const query = `SELECT "start", "end", "datasource", COUNT(*) AS "count", sum(size) as "total_size"
-              FROM sys.segments
-              WHERE "start" > time_format(TIMESTAMPADD(MONTH, -${timeSpan}, current_timestamp), 'yyyy-MM-dd''T''hh:mm:ss.SSS')
-              GROUP BY 1, 2, 3
-              ORDER BY "start" DESC`;
-        const resp: any[] = await queryDruidSql({ query });
-        const data = this.processRawData(resp);
-        const stackedData = this.calculateStackedData(data);
-        const singleDatasourceData = this.calculateSingleDatasourceData(data);
-        return { data, stackedData, singleDatasourceData };
+      processQuery: async ({ capabilities, timeSpan }) => {
+        let intervals: IntervalRow[];
+        let datasources: string[];
+        if (capabilities.hasSql()) {
+          const query = `SELECT
+  "start", "end", "datasource",
+  COUNT(*) AS "count", SUM("size") as "size"
+FROM sys.segments
+WHERE "start" > TIME_FORMAT(TIMESTAMPADD(MONTH, -${timeSpan}, CURRENT_TIMESTAMP), 'yyyy-MM-dd''T''hh:mm:ss.SSS')
+GROUP BY 1, 2, 3
+ORDER BY "start" DESC`;
+
+          intervals = await queryDruidSql({ query });
+          datasources = uniq(intervals.map(r => r.datasource));
+        } else if (capabilities.hasCoordinatorAccess()) {
+          const before = new Date();
+          before.setMonth(before.getMonth() - timeSpan);
+          const beforeIso = before.toISOString();
+
+          datasources = (await axios.get(`/druid/coordinator/v1/datasources`)).data;
+          intervals = (await Promise.all(
+            datasources.map(async datasource => {
+              const intervalMap = (await axios.get(
+                `/druid/coordinator/v1/datasources/${datasource}/intervals?simple`,
+              )).data;
+
+              return Object.keys(intervalMap)
+                .map(interval => {
+                  const [start, end] = interval.split('/');
+                  const { count, size } = intervalMap[interval];
+                  return {
+                    start,
+                    end,
+                    datasource,
+                    count,
+                    size,
+                  };
+                })
+                .filter(a => beforeIso < a.start);
+            }),
+          ))
+            .flat()
+            .sort((a, b) => b.start.localeCompare(a.start));
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
+        }
+
+        const data = SegmentTimeline.processRawData(intervals);
+        const stackedData = SegmentTimeline.calculateStackedData(data, datasources);
+        const singleDatasourceData = SegmentTimeline.calculateSingleDatasourceData(
+          data,
+          datasources,
+        );
+        return { data, datasources, stackedData, singleDatasourceData };
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           data: result ? result.data : undefined,
+          datasources: result ? result.datasources : [],
           stackedData: result ? result.stackedData : undefined,
           singleDatasourceData: result ? result.singleDatasourceData : undefined,
           loading,
@@ -146,31 +303,17 @@ export class SegmentTimeline extends React.PureComponent<
         });
       },
     });
-
-    this.datasourceQueryManager = new QueryManager({
-      processQuery: async () => {
-        const query = `SELECT DISTINCT "datasource" FROM sys.segments`;
-        const resp: any[] = await queryDruidSql({ query });
-        const data = resp.map((r: any) => r.datasource);
-        return data;
-      },
-      onStateChange: ({ result }) => {
-        if (result == null) result = [];
-        this.setState({
-          datasources: result,
-        });
-      },
-    });
   }
 
   componentDidMount(): void {
-    this.dataQueryManager.runQuery(null);
-    this.datasourceQueryManager.runQuery(null);
+    const { capabilities } = this.props;
+    const { timeSpan } = this.state;
+
+    this.dataQueryManager.runQuery({ capabilities, timeSpan });
   }
 
   componentWillUnmount(): void {
     this.dataQueryManager.terminate();
-    this.datasourceQueryManager.terminate();
   }
 
   componentDidUpdate(prevProps: SegmentTimelineProps, prevState: SegmentTimelineState): void {
@@ -200,102 +343,6 @@ export class SegmentTimeline extends React.PureComponent<
         });
       }
     }
-  }
-
-  private processRawData(data: any) {
-    if (data === null) return [];
-    const countData: Record<string, any> = {};
-    const sizeData: Record<string, any> = {};
-    data.forEach((entry: any) => {
-      const start = entry.start;
-      const day = start.split('T')[0];
-      const datasource = entry.datasource;
-      const count = entry.count;
-      const segmentSize = entry['total_size'];
-      if (countData[day] === undefined) {
-        countData[day] = {
-          day,
-          [datasource]: count,
-          total: count,
-        };
-        sizeData[day] = {
-          day,
-          [datasource]: segmentSize,
-          total: segmentSize,
-        };
-      } else {
-        const countDataEntry = countData[day][datasource];
-        countData[day][datasource] = count + (countDataEntry === undefined ? 0 : countDataEntry);
-        const sizeDataEntry = sizeData[day][datasource];
-        sizeData[day][datasource] = segmentSize + (sizeDataEntry === undefined ? 0 : sizeDataEntry);
-        countData[day].total += count;
-        sizeData[day].total += segmentSize;
-      }
-    });
-    const countDataArray = Object.keys(countData)
-      .reverse()
-      .map((time: any) => {
-        return countData[time];
-      });
-    const sizeDataArray = Object.keys(sizeData)
-      .reverse()
-      .map((time: any) => {
-        return sizeData[time];
-      });
-    return { countData: countDataArray, sizeData: sizeDataArray };
-  }
-
-  private calculateStackedData(data: Record<string, any>): Record<string, BarUnitData[]> {
-    const { datasources } = this.state;
-    const newStackedData: Record<string, BarUnitData[]> = {};
-    Object.keys(data).forEach((type: any) => {
-      const stackedData: any = data[type].map((d: any) => {
-        let y0 = 0;
-        return datasources.map((datasource: string, i) => {
-          const barUnitData = {
-            x: d.day,
-            y: d[datasource] === undefined ? 0 : d[datasource],
-            y0,
-            datasource,
-            color: SegmentTimeline.getColor(i),
-          };
-          y0 += d[datasource] === undefined ? 0 : d[datasource];
-          return barUnitData;
-        });
-      });
-      newStackedData[type] = stackedData.flat();
-    });
-    return newStackedData;
-  }
-
-  private calculateSingleDatasourceData(
-    data: Record<string, any>,
-  ): Record<string, Record<string, BarUnitData[]>> {
-    const { datasources } = this.state;
-    const singleDatasourceData: Record<string, Record<string, BarUnitData[]>> = {};
-    Object.keys(data).forEach(dataType => {
-      singleDatasourceData[dataType] = {};
-      datasources.forEach((datasource, i) => {
-        const currentData = data[dataType];
-        if (currentData.length === 0) return;
-        const dataResult = currentData.map((d: any) => {
-          let y = 0;
-          if (d[datasource] !== undefined) {
-            y = d[datasource];
-          }
-          return {
-            x: d.day,
-            y,
-            datasource,
-            color: SegmentTimeline.getColor(i),
-          };
-        });
-        if (!dataResult.every((d: any) => d.y === 0)) {
-          singleDatasourceData[dataType][datasource] = dataResult;
-        }
-      });
-    });
-    return singleDatasourceData;
   }
 
   private calculateScales(): BarChartScales | undefined {
@@ -330,13 +377,11 @@ export class SegmentTimeline extends React.PureComponent<
       ];
     }
 
-    const xScale: AxisScale<Date> = d3
-      .scaleTime()
+    const xScale: AxisScale<Date> = scaleTime()
       .domain(xDomain)
       .range([0, chartWidth - this.chartMargin.left - this.chartMargin.right]);
 
-    const yScale: AxisScale<number> = d3
-      .scaleLinear()
+    const yScale: AxisScale<number> = scaleLinear()
       .rangeRound([chartHeight - this.chartMargin.top - this.chartMargin.bottom, 0])
       .domain(yDomain);
 
