@@ -40,6 +40,7 @@ import java.util.concurrent.ExecutorService;
 public class Appenderators
 {
   public static Appenderator createRealtime(
+      String id,
       DataSchema schema,
       AppenderatorConfig config,
       FireDepartmentMetrics metrics,
@@ -57,6 +58,7 @@ public class Appenderators
   )
   {
     return new AppenderatorImpl(
+        id,
         schema,
         config,
         false,
@@ -84,6 +86,7 @@ public class Appenderators
   }
 
   public static Appenderator createOffline(
+      String id,
       DataSchema schema,
       AppenderatorConfig config,
       boolean storeCompactionState,
@@ -95,6 +98,7 @@ public class Appenderators
   )
   {
     return new AppenderatorImpl(
+        id,
         schema,
         config,
         storeCompactionState,

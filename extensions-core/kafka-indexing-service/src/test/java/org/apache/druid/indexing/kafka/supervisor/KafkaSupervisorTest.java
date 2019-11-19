@@ -3855,8 +3855,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Deserializer keyDeserializerObject = new ByteArrayDeserializer();
       Deserializer valueDeserializerObject = new ByteArrayDeserializer();
       return new KafkaRecordSupplier(
-          consumerProperties,
-          sortingMapper,
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject)
       );
     }

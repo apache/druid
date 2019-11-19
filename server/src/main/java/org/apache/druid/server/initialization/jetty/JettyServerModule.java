@@ -395,7 +395,7 @@ public class JettyServerModule extends JerseyServletModule
           @Override
           public void start() throws Exception
           {
-            log.info("Starting Jetty Server...");
+            log.debug("Starting Jetty Server...");
             server.start();
             if (node.isEnableTlsPort()) {
               // Perform validation
@@ -426,12 +426,12 @@ public class JettyServerModule extends JerseyServletModule
             try {
               final long unannounceDelay = config.getUnannouncePropagationDelay().toStandardDuration().getMillis();
               if (unannounceDelay > 0) {
-                log.info("Waiting %s ms for unannouncement to propagate.", unannounceDelay);
+                log.info("Sleeping %s ms for unannouncement to propagate.", unannounceDelay);
                 Thread.sleep(unannounceDelay);
               } else {
                 log.debug("Skipping unannounce wait.");
               }
-              log.info("Stopping Jetty Server...");
+              log.debug("Stopping Jetty Server...");
               server.stop();
             }
             catch (InterruptedException e) {

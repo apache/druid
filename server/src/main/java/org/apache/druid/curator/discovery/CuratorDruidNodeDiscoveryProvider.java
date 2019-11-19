@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 @ManageLifecycle
 public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
@@ -90,7 +91,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     return nodeTypeWatchers.computeIfAbsent(
         nodeType,
         nType -> {
-          log.info("Creating NodeTypeWatcher for nodeType [%s].", nType);
+          log.debug("Creating NodeTypeWatcher for nodeType [%s].", nType);
           NodeTypeWatcher nodeTypeWatcher = new NodeTypeWatcher(
               listenerExecutor,
               curatorFramework,
@@ -99,7 +100,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               nType
           );
           nodeTypeWatcher.start();
-          log.info("Created NodeTypeWatcher for nodeType [%s].", nType);
+          log.debug("Created NodeTypeWatcher for nodeType [%s].", nType);
           return nodeTypeWatcher;
         }
     );
@@ -113,13 +114,11 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     try {
-      log.info("starting");
-
-      // This is single-threaded to ensure that all listener calls are executed precisely in the oder of add/remove
-      // event occurences.
+      // This is single-threaded to ensure that all listener calls are executed precisely in the order of add/remove
+      // event occurrences.
       listenerExecutor = Execs.singleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
 
-      log.info("started");
+      log.debug("Started.");
 
       lifecycleLock.started();
     }
@@ -135,14 +134,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       throw new ISE("can't stop.");
     }
 
-    log.info("stopping");
+    log.debug("Stopping.");
 
     for (NodeTypeWatcher watcher : nodeTypeWatchers.values()) {
       watcher.stop();
     }
     listenerExecutor.shutdownNow();
-
-    log.info("stopped");
   }
 
   private static class NodeTypeWatcher implements DruidNodeDiscovery
@@ -154,7 +151,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     private final NodeType nodeType;
     private final ObjectMapper jsonMapper;
 
-    /** hostAndPort -> DiscoveryDruidNode */
+    /**
+     * hostAndPort -> DiscoveryDruidNode
+     */
     private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
     private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
@@ -205,7 +204,10 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         nodeViewInitialized = false;
       }
       if (!nodeViewInitialized) {
-        log.info("cache is not initialized yet. getAllNodes() might not return full information.");
+        log.info(
+            "Cache for process type [%s] not initialized yet; getAllNodes() might not return full information.",
+            nodeType.getJsonName()
+        );
       }
       return unmodifiableNodes;
     }
@@ -239,7 +241,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
                 data = curatorFramework.getData().decompressed().forPath(event.getData().getPath());
               }
               catch (Exception ex) {
-                log.error(
+                log.noStackTrace().error(
                     ex,
                     "Failed to get data for path [%s]. Ignoring event [%s].",
                     event.getData().getPath(),
@@ -252,14 +254,19 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
               if (!nodeType.equals(druidNode.getNodeType())) {
                 log.warn(
-                    "Node[%s:%s] add is discovered by node watcher of different node type. Ignored.",
-                    druidNode.getDruidNode().getHostAndPortToUse(),
-                    druidNode
+                    "Node[%s] of type[%s] addition ignored due to mismatched type (expected type[%s]).",
+                    druidNode.getDruidNode().getUriToUse(),
+                    druidNode.getNodeType().getJsonName(),
+                    nodeType.getJsonName()
                 );
                 return;
               }
 
-              log.info("Node[%s:%s] appeared.", druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+              log.info(
+                  "Node[%s] of type[%s] detected.",
+                  druidNode.getDruidNode().getUriToUse(),
+                  nodeType.getJsonName()
+              );
 
               addNode(druidNode);
 
@@ -270,17 +277,18 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
               if (!nodeType.equals(druidNode.getNodeType())) {
                 log.warn(
-                    "Node[%s:%s] removal is discovered by node watcher of different type. Ignored.",
-                    druidNode.getDruidNode().getHostAndPortToUse(),
-                    druidNode
+                    "Node[%s] of type[%s] removal ignored due to mismatched type (expected type[%s]).",
+                    druidNode.getDruidNode().getUriToUse(),
+                    druidNode.getNodeType().getJsonName(),
+                    nodeType.getJsonName()
                 );
                 return;
               }
 
               log.info(
-                  "Node[%s:%s] disappeared.",
-                  druidNode.getDruidNode().getHostAndPortToUse(),
-                  druidNode
+                  "Node[%s] of type[%s] went offline.",
+                  druidNode.getDruidNode().getUriToUse(),
+                  nodeType.getJsonName()
               );
 
               removeNode(druidNode);
@@ -295,7 +303,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
                 return;
               }
 
-              log.info("Received INITIALIZED in node watcher.");
+              log.info("Node watcher of type[%s] is now initialized.", nodeType.getJsonName());
 
               for (Listener listener : nodeListeners) {
                 safeSchedule(
@@ -313,12 +321,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               break;
             }
             default: {
-              log.info("Ignored event type [%s] for nodeType watcher.", event.getType());
+              log.warn("Ignored event type[%s] for node watcher of type[%s].", event.getType(), nodeType.getJsonName());
             }
           }
         }
         catch (Exception ex) {
-          log.error(ex, "unknown error in node watcher.");
+          log.error(ex, "Unknown error in node watcher of type[%s].", nodeType.getJsonName());
         }
       }
     }

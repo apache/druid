@@ -60,6 +60,7 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -202,43 +203,55 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         "{\"timestamp\":\"2008\",\"dim1\":\"a\",\"dim2\":\"y\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
-        ImmutableMap.<String, Object>builder()
-            .put("__time", 1199145600000L)
-            .put("dim1", "a")
-            .put("dim2", "y")
-            .put("dimLong", 10L)
-            .put("dimFloat", 20.0F)
-            .put("rows", 1L)
-            .put("met1sum", 1.0)
-            .build(),
+        new HashMap<String, Object>()
+        {
+          {
+            put("__time", 1199145600000L);
+            put("dim1", "a");
+            put("dim1t", null);
+            put("dim2", "y");
+            put("dimLong", 10L);
+            put("dimFloat", 20.0F);
+            put("rows", 1L);
+            put("met1sum", 1.0);
+          }
+        },
         null,
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         "{\"timestamp\":\"2009\",\"dim1\":\"b\",\"dim2\":\"y\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
-        ImmutableMap.<String, Object>builder()
-            .put("__time", 1230768000000L)
-            .put("dim1", "b")
-            .put("dim2", "y")
-            .put("dimLong", 10L)
-            .put("dimFloat", 20.0F)
-            .put("rows", 1L)
-            .put("met1sum", 1.0)
-            .build(),
+        new HashMap<String, Object>()
+        {
+          {
+            put("__time", 1230768000000L);
+            put("dim1", "b");
+            put("dim1t", null);
+            put("dim2", "y");
+            put("dimLong", 10L);
+            put("dimFloat", 20.0F);
+            put("rows", 1L);
+            put("met1sum", 1.0);
+          }
+        },
         null,
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         "{\"timestamp\":\"2010\",\"dim1\":\"c\",\"dim2\":\"y\",\"dimLong\":\"10\",\"dimFloat\":\"20.0\",\"met1\":\"1.0\"}",
-        ImmutableMap.<String, Object>builder()
-            .put("__time", 1262304000000L)
-            .put("dim1", "c")
-            .put("dim2", "y")
-            .put("dimLong", 10L)
-            .put("dimFloat", 20.0F)
-            .put("rows", 1L)
-            .put("met1sum", 1.0)
-            .build(),
+        new HashMap<String, Object>()
+        {
+          {
+            put("__time", 1262304000000L);
+            put("dim1", "c");
+            put("dim1t", null);
+            put("dim2", "y");
+            put("dimLong", 10L);
+            put("dimFloat", 20.0F);
+            put("rows", 1L);
+            put("met1sum", 1.0);
+          }
+        },
         null,
         null
     ), it.next());

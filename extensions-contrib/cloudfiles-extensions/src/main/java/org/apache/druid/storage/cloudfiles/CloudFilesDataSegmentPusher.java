@@ -53,8 +53,6 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
     String container = this.config.getContainer();
     this.objectApi = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
     this.jsonMapper = jsonMapper;
-
-    log.info("Configured CloudFiles as deep storage");
   }
 
   @Override

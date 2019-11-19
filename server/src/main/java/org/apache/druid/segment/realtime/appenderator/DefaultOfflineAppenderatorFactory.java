@@ -55,6 +55,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   public Appenderator build(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics)
   {
     return Appenderators.createOffline(
+        schema.getDataSource(),
         schema,
         config,
         false,

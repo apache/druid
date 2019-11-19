@@ -321,7 +321,7 @@ public class QueryLifecycle
 
         if (e instanceof QueryInterruptedException) {
           // Mimic behavior from QueryResource, where this code was originally taken from.
-          log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+          log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
           statsMap.put("interrupted", true);
           statsMap.put("reason", e.toString());
         }

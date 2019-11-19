@@ -391,7 +391,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
                         partitionId,
                         Preconditions.checkNotNull(partitionsSpec.getNumShards(), "numShards"),
                         partitionsSpec.getPartitionDimensions(),
-                        toolbox.getObjectMapper()
+                        toolbox.getJsonMapper()
                     ),
                     null, // will be filled in the segmentPusher
                     0     // will be filled in the segmentPusher
