@@ -20,12 +20,13 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpResponseException;
+import com.google.common.base.Predicate;
 
 import java.io.IOException;
+import java.net.URI;
 
 public class GoogleUtils
 {
-
   public static boolean isRetryable(Throwable t)
   {
     if (t instanceof HttpResponseException) {
@@ -34,4 +35,11 @@ public class GoogleUtils
     }
     return t instanceof IOException;
   }
+
+  public static String extractGoogleCloudStorageObjectKey(URI uri)
+  {
+    return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
+  }
+
+  public static final Predicate<Throwable> GOOGLE_RETRY = e -> isRetryable(e);
 }
