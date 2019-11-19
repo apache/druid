@@ -19,16 +19,19 @@
 
 package org.apache.druid.inputsource.hdfs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -106,22 +109,22 @@ public class HdfsInputSourceTest
     @Test
     public void serializesDeserializesWithArrayPaths()
     {
-      HdfsInputSource target = hdfsInputSourceBuilder.paths(Collections.singletonList(PATH)).build();
+      Wrapper target = new Wrapper(hdfsInputSourceBuilder.paths(Collections.singletonList(PATH)));
       testSerializesDeserializes(target);
     }
 
     @Test
     public void serializesDeserializesStringPaths()
     {
-      HdfsInputSource target = hdfsInputSourceBuilder.paths(PATH).build();
+      Wrapper target = new Wrapper(hdfsInputSourceBuilder.paths(PATH));
       testSerializesDeserializes(target);
     }
 
-    private static void testSerializesDeserializes(HdfsInputSource hdfsInputSource)
+    private static void testSerializesDeserializes(Wrapper hdfsInputSourceWrapper)
     {
       try {
-        String serialized = OBJECT_MAPPER.writeValueAsString(hdfsInputSource);
-        HdfsInputSource deserialized = OBJECT_MAPPER.readValue(serialized, HdfsInputSource.class);
+        String serialized = OBJECT_MAPPER.writeValueAsString(hdfsInputSourceWrapper);
+        Wrapper deserialized = OBJECT_MAPPER.readValue(serialized, Wrapper.class);
         Assert.assertEquals(serialized, OBJECT_MAPPER.writeValueAsString(deserialized));
       }
       catch (IOException e) {
@@ -133,7 +136,25 @@ public class HdfsInputSourceTest
     {
       final ObjectMapper mapper = new ObjectMapper();
       mapper.setInjectableValues(new InjectableValues.Std().addValue(Configuration.class, new Configuration()));
+      new HdfsStorageDruidModule().getJacksonModules().forEach(mapper::registerModule);
       return mapper;
+    }
+
+    // Helper to test HdfsInputSource is added correctly to HdfsStorageDruidModule
+    private static class Wrapper
+    {
+      @JsonProperty
+      InputSource inputSource;
+
+      @SuppressWarnings("unused")  // used by Jackson
+      private Wrapper()
+      {
+      }
+
+      Wrapper(HdfsInputSource.Builder hdfsInputSourceBuilder)
+      {
+        this.inputSource = hdfsInputSourceBuilder.build();
+      }
     }
   }
 
@@ -177,11 +198,7 @@ public class HdfsInputSourceTest
                        .collect(Collectors.toSet());
 
       target = HdfsInputSource.builder()
-                              .paths(
-                                  paths.stream()
-                                       .map(path -> dfsCluster.getURI() + path.toString())
-                                       .collect(Collectors.toList())
-                              )
+                              .paths(dfsCluster.getURI() + PATH + "*")
                               .configuration(CONFIGURATION)
                               .build();
     }
@@ -267,7 +284,7 @@ public class HdfsInputSourceTest
     }
 
     @Test
-    public void hasCorrectSplits()
+    public void hasCorrectSplits() throws IOException
     {
       List<Path> paths = target.createSplits(null, null)
                                .map(split -> Path.getPathWithoutSchemeAndAuthority(split.get()))

@@ -202,10 +202,6 @@
               <artifactId>jetty-util</artifactId>
             </exclusion>
             <exclusion>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-annotations</artifactId>
-            </exclusion>
-            <exclusion>
               <groupId>com.google.protobuf</groupId>
               <artifactId>protobuf-java</artifactId>
             </exclusion>

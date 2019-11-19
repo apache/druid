@@ -31,12 +31,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class HdfsSource implements InputEntity
+public class HdfsInputEntity implements InputEntity
 {
   private final Configuration conf;
   private final Path path;
 
-  HdfsSource(Configuration conf, Path path)
+  HdfsInputEntity(Configuration conf, Path path)
   {
     this.conf = conf;
     this.path = path;
