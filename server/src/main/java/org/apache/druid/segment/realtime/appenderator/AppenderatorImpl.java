@@ -1351,7 +1351,7 @@ public class AppenderatorImpl implements Appenderator
         return numRows;
       }
       catch (IOException e) {
-        log.makeAlert("Incremental persist failed", schema.getDataSource())
+        log.makeAlert("Incremental persist failed")
            .addData("segment", identifier.toString())
            .addData("dataSource", schema.getDataSource())
            .addData("count", indexToPersist.getCount())

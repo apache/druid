@@ -817,7 +817,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         catch (TimeoutException e) {
           // Handoff timeout is not an indexing failure, but coordination failure. We simply ignore timeout exception
           // here.
-          log.makeAlert("Timeout waiting for handoff", tuningConfig.getHandoffConditionTimeout())
+          log.makeAlert("Timeout waiting for handoff")
              .addData("taskId", task.getId())
              .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
              .emit();

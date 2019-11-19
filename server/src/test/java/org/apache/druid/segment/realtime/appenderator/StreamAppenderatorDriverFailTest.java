@@ -239,7 +239,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   {
     expectedException.expect(ExecutionException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage("Failed to publish segments because of [test].");
+    expectedException.expectMessage("Failed to publish segments because of [test]:");
 
     testFailDuringPublishInternal(false);
   }
