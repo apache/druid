@@ -60,8 +60,6 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
-import static org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
-
 @JsonTypeName("categoriedTaskBased")
 public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningStrategy
 {
@@ -319,7 +317,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
           task -> WorkerSelectUtils.getTaskCategory(
               task,
               workerCategorySpec,
-              DEFAULT_AUTOSCALER_CATEGORY
+              CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
           )
       ));
 
@@ -648,7 +646,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     private AutoScaler getCategoryAutoscaler(String category, Map<String, AutoScaler> autoscalersByCategory)
     {
       AutoScaler autoScaler = autoscalersByCategory.get(category);
-      boolean isStrongAssignment = !autoscalersByCategory.containsKey(DEFAULT_AUTOSCALER_CATEGORY);
+      boolean isStrongAssignment = !autoscalersByCategory.containsKey(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
 
       if (autoScaler == null && isStrongAssignment) {
         log.warn(
@@ -657,7 +655,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         );
         return null;
       }
-      return autoScaler == null ? autoscalersByCategory.get(DEFAULT_AUTOSCALER_CATEGORY) : autoScaler;
+      return autoScaler == null ? autoscalersByCategory.get(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY) : autoScaler;
     }
 
     private Map<String, AutoScaler> mapAutoscalerByCategory(List<AutoScaler> autoScalers)
