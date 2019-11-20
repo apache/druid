@@ -142,7 +142,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   private void doSegmentManagement()
   {
     if (stopped || !mainLoopInProgress.compareAndSet(false, true)) {
-      log.debug("[%s]Ignoring tick. Either in-progress already or stopped.", serverId);
+      log.trace("[%s]Ignoring tick. Either in-progress already or stopped.", serverId);
       return;
     }
 
@@ -168,7 +168,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     }
 
     if (newRequests.size() == 0) {
-      log.debug(
+      log.trace(
           "[%s]Found no load/drop requests. SegmentsToLoad[%d], SegmentsToDrop[%d], batchSize[%d].",
           serverId,
           segmentsToLoad.size(),
@@ -180,7 +180,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     }
 
     try {
-      log.debug("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
+      log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(
           new Request(HttpMethod.POST, changeRequestURL)
@@ -201,15 +201,15 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
               boolean scheduleNextRunImmediately = true;
               try {
                 if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
-                  log.debug("Received NO CONTENT reseponse from [%s]", serverId);
+                  log.trace("Received NO CONTENT reseponse from [%s]", serverId);
                 } else if (HttpServletResponse.SC_OK == responseHandler.getStatus()) {
                   try {
                     List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses =
                         jsonMapper.readValue(result, RESPONSE_ENTITY_TYPE_REF);
-                    log.debug("Server[%s] returned status response [%s].", serverId, statuses);
+                    log.trace("Server[%s] returned status response [%s].", serverId, statuses);
                     synchronized (lock) {
                       if (stopped) {
-                        log.debug("Ignoring response from Server[%s]. We are already stopped.", serverId);
+                        log.trace("Ignoring response from Server[%s]. We are already stopped.", serverId);
                         scheduleNextRunImmediately = false;
                         return;
                       }
@@ -221,7 +221,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                             handleResponseStatus(e.getRequest(), e.getStatus());
                             break;
                           case PENDING:
-                            log.debug("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
+                            log.trace("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
                             break;
                           default:
                             scheduleNextRunImmediately = false;
@@ -380,7 +380,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       SegmentHolder holder = segmentsToLoad.get(segment);
 
       if (holder == null) {
-        log.debug("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
+        log.trace("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
         segmentsToLoad.put(segment, new LoadSegmentHolder(segment, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
@@ -405,7 +405,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       SegmentHolder holder = segmentsToDrop.get(segment);
 
       if (holder == null) {
-        log.debug("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
+        log.trace("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
         segmentsToDrop.put(segment, new DropSegmentHolder(segment, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
@@ -518,7 +518,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
     public void requestSucceeded()
     {
-      log.debug(
+      log.trace(
           "Server[%s] Successfully processed segment[%s] request[%s].",
           serverId,
           segment.getId(),

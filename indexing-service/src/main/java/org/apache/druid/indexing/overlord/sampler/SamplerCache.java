@@ -24,7 +24,7 @@ import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.StringUtils;
@@ -154,7 +154,7 @@ public class SamplerCache
     }
 
     @Override
-    public InputRowPlusRaw nextRowWithRaw()
+    public InputRowListPlusJson nextRowWithRaw()
     {
       if (!hasMore()) {
         throw new NoSuchElementException();
@@ -164,10 +164,10 @@ public class SamplerCache
 
       try {
         List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(raw));
-        return InputRowPlusRaw.of(rows.isEmpty() ? null : rows.get(0), raw);
+        return InputRowListPlusJson.of(rows.isEmpty() ? null : rows.get(0), raw);
       }
       catch (ParseException e) {
-        return InputRowPlusRaw.of(raw, e);
+        return InputRowListPlusJson.of(raw, e);
       }
     }
 

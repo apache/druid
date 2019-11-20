@@ -102,6 +102,17 @@ const siteConfig = {
 
   editUrl: 'https://github.com/apache/incubator-druid/edit/master/docs/',
 
+  algolia: {
+    apiKey: '2de99082a9f38e49dfaa059bbe4c901d',
+    indexName: 'apache_druid',
+    algoliaOptions: {
+      facetFilters: [
+        "language:LANGUAGE",
+        "version:druidVersion",
+      ]
+    },
+  },
+
   // Show documentation's last contributor's name.
   // enableUpdateBy: true,
 

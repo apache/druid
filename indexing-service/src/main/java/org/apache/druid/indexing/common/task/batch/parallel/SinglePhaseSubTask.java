@@ -26,9 +26,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -51,8 +52,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -79,6 +82,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -96,6 +100,7 @@ import java.util.stream.Collectors;
 public class SinglePhaseSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "single_phase_sub_task";
+  public static final String OLD_TYPE_NAME = "index_sub";
 
   private static final Logger LOG = new Logger(SinglePhaseSubTask.class);
 
@@ -208,11 +213,13 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
           + "Forced to use timeChunk lock."
       );
     }
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+        ingestionSchema.getDataSchema().getParser()
+    );
 
-    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    final File tmpDir = toolbox.getIndexingTmpDir();
     // Firehose temporary directory is automatically removed when this IndexTask completes.
-    FileUtils.forceMkdir(firehoseTempDir);
+    FileUtils.forceMkdir(tmpDir);
 
     final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
@@ -224,8 +231,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final Set<DataSegment> pushedSegments = generateAndPushSegments(
         toolbox,
         taskClient,
-        firehoseFactory,
-        firehoseTempDir
+        inputSource,
+        tmpDir
     );
 
     // Find inputSegments overshadowed by pushedSegments
@@ -386,8 +393,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
   private Set<DataSegment> generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexSupervisorTaskClient taskClient,
-      final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir
+      final InputSource inputSource,
+      final File tmpDir
   ) throws IOException, InterruptedException
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
@@ -420,18 +427,33 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         tuningConfig,
         getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
     );
+    final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
+                                            .map(AggregatorFactory::getName)
+                                            .collect(Collectors.toList());
+    final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
+        inputSource.reader(
+            new InputRowSchema(
+                ingestionSchema.getDataSchema().getTimestampSpec(),
+                ingestionSchema.getDataSchema().getDimensionsSpec(),
+                metricsNames
+            ),
+            ParallelIndexSupervisorTask.getInputFormat(ingestionSchema),
+            tmpDir
+        )
+    );
+
     boolean exceptionOccurred = false;
     try (
         final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator);
-        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
+        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()
     ) {
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
 
-      while (firehose.hasMore()) {
+      while (inputRowIterator.hasNext()) {
         try {
-          final InputRow inputRow = firehose.nextRow();
+          final InputRow inputRow = inputRowIterator.next();
 
           if (inputRow == null) {
             fireDepartmentMetrics.incrementThrownAway();

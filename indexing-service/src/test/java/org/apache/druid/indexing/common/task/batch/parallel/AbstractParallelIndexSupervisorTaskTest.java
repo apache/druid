@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -71,7 +72,6 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -82,22 +82,19 @@ import java.util.concurrent.Future;
 
 public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 {
+  static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
+  static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
+      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
+  );
   static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec(
-          "ts",
-          "auto",
-          null
-      ),
-      new DimensionsSpec(
-          DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-          new ArrayList<>(),
-          new ArrayList<>()
-      ),
+      DEFAULT_TIMESTAMP_SPEC,
+      DEFAULT_DIMENSIONS_SPEC,
       null,
       Arrays.asList("ts", "dim", "val"),
       false,
       0
   );
+  static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
 
   protected TestLocalTaskActionClient actionClient;
   protected LocalIndexingServiceClient indexingServiceClient;

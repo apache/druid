@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -30,6 +29,7 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -210,7 +210,7 @@ public class CompactSegments implements CoordinatorDuty
         LOG.info(
             "Submitted a compactionTask[%s] for segments %s",
             taskId,
-            Iterables.transform(segmentsToCompact, DataSegment::getId)
+            SegmentUtils.commaSeparatedIdentifiers(segmentsToCompact)
         );
         // Count the compaction task itself + its sub tasks
         numSubmittedTasks += findNumMaxConcurrentSubTasks(config.getTuningConfig()) + 1;

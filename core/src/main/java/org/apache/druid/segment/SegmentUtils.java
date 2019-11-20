@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.Collections2;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -34,6 +35,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -73,6 +75,17 @@ public class SegmentUtils
     }
 
     throw new IOE("Invalid segment dir [%s]. Can't find either of version.bin or index.drd.", inDir);
+  }
+
+  /**
+   * Returns an object whose toString() returns a String with identifiers of the given segments, comma-separated. Useful
+   * for log messages. Not useful for anything else, because this doesn't take special effort to escape commas that
+   * occur in identifiers (not common, but could potentially occur in a datasource name).
+   */
+  public static Object commaSeparatedIdentifiers(final Collection<DataSegment> segments)
+  {
+    // Lazy, to avoid preliminary string creation if logging level is turned off
+    return Collections2.transform(segments, DataSegment::getId);
   }
 
   private SegmentUtils()

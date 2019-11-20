@@ -51,7 +51,6 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -88,6 +87,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
+  private static final String TYPE = "index_hadoop";
   private TaskConfig taskConfig = null;
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
@@ -152,7 +152,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   )
   {
     super(
-        id != null ? id : StringUtils.format("index_hadoop_%s_%s", getTheDataSource(spec), DateTimes.nowUtc()),
+        getOrMakeId(id, TYPE, getTheDataSource(spec)),
         getTheDataSource(spec),
         hadoopDependencyCoordinates == null
         ? (hadoopCoordinates == null ? null : ImmutableList.of(hadoopCoordinates))
@@ -332,7 +332,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
     String[] determinePartitionsInput = new String[]{
-        toolbox.getObjectMapper().writeValueAsString(spec),
+        toolbox.getJsonMapper().writeValueAsString(spec),
         toolbox.getConfig().getHadoopWorkingPath(),
         toolbox.getSegmentPusher().getPathForHadoop(),
         hadoopJobIdFile
@@ -357,7 +357,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
 
       determineConfigStatus = toolbox
-          .getObjectMapper()
+          .getJsonMapper()
           .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
 
       indexerSchema = determineConfigStatus.getSchema();
@@ -424,7 +424,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
 
     String[] buildSegmentsInput = new String[]{
-        toolbox.getObjectMapper().writeValueAsString(indexerSchema),
+        toolbox.getJsonMapper().writeValueAsString(indexerSchema),
         version,
         hadoopJobIdFile
     };
@@ -441,7 +441,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           new Object[]{buildSegmentsInput}
       );
 
-      buildSegmentsStatus = toolbox.getObjectMapper().readValue(
+      buildSegmentsStatus = toolbox.getJsonMapper().readValue(
           jobStatusString,
           HadoopIndexGeneratorInnerProcessingStatus.class
       );

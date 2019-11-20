@@ -21,8 +21,9 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -69,21 +70,25 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK},
-        new Object[]{LockGranularity.SEGMENT}
+        new Object[]{LockGranularity.TIME_CHUNK, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.SEGMENT, true}
     );
   }
 
   private final LockGranularity lockGranularity;
+  private final boolean useInputFormatApi;
+
   private File inputDir;
 
-  public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity)
+  public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
   {
     this.lockGranularity = lockGranularity;
+    this.useInputFormatApi = useInputFormatApi;
   }
 
   @Before
@@ -120,13 +125,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testIsReady() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2017/2018"), false, true);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -159,14 +158,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   private void runTestTask(@Nullable Interval interval, Granularity segmentGranularity, boolean appendToExisting)
       throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        interval,
-        segmentGranularity,
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            appendToExisting
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(interval, segmentGranularity, appendToExisting, true);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -233,20 +225,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testRunInSequential() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null)
-            {
-              @Override
-              public boolean isSplittable()
-              {
-                return false;
-              }
-            },
-            false
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2017/2018"), false, false);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -259,13 +238,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testPublishEmptySegments() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2020/2021"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
+    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2020/2021"), false, true);
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
 
@@ -281,10 +254,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
         Granularities.DAY,
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        ),
+        false,
+        true,
         new ParallelIndexTuningConfig(
             null,
             null,
@@ -341,21 +312,27 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
-  private ParallelIndexSupervisorTask newTask(@Nullable Interval interval, ParallelIndexIOConfig ioConfig)
+  private ParallelIndexSupervisorTask newTask(
+      @Nullable Interval interval,
+      boolean appendToExisting,
+      boolean splittableInputSource
+  )
   {
-    return newTask(interval, Granularities.DAY, ioConfig);
+    return newTask(interval, Granularities.DAY, appendToExisting, splittableInputSource);
   }
 
   private ParallelIndexSupervisorTask newTask(
       @Nullable Interval interval,
       Granularity segmentGranularity,
-      ParallelIndexIOConfig ioConfig
+      boolean appendToExisting,
+      boolean splittableInputSource
   )
   {
     return newTask(
         interval,
         segmentGranularity,
-        ioConfig,
+        appendToExisting,
+        splittableInputSource,
         new ParallelIndexTuningConfig(
             null,
             null,
@@ -390,36 +367,73 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   private ParallelIndexSupervisorTask newTask(
       @Nullable Interval interval,
       Granularity segmentGranularity,
-      ParallelIndexIOConfig ioConfig,
+      boolean appendToExisting,
+      boolean splittableInputSource,
       ParallelIndexTuningConfig tuningConfig
   )
   {
     // set up ingestion spec
-    //noinspection unchecked
-    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            getObjectMapper().convertValue(
-                new StringInputRowParser(
-                    DEFAULT_PARSE_SPEC,
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                segmentGranularity,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null,
-            getObjectMapper()
-        ),
-        ioConfig,
-        tuningConfig
-    );
+    final ParallelIndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              DEFAULT_TIMESTAMP_SPEC,
+              DEFAULT_DIMENSIONS_SPEC,
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  Granularities.MINUTE,
+                  interval == null ? null : Collections.singletonList(interval)
+              ),
+              null
+          ),
+          new ParallelIndexIOConfig(
+              null,
+              new LocalInputSource(inputDir, "test_*")
+              {
+                @Override
+                public boolean isSplittable()
+                {
+                  return splittableInputSource;
+                }
+              },
+              DEFAULT_INPUT_FORMAT,
+              appendToExisting
+          ),
+          tuningConfig
+      );
+    } else {
+      ingestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "dataSource",
+              getObjectMapper().convertValue(
+                  new StringInputRowParser(
+                      DEFAULT_PARSE_SPEC,
+                      null
+                  ),
+                  Map.class
+              ),
+              new AggregatorFactory[]{
+                  new LongSumAggregatorFactory("val", "val")
+              },
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  Granularities.MINUTE,
+                  interval == null ? null : Collections.singletonList(interval)
+              ),
+              null,
+              getObjectMapper()
+          ),
+          new ParallelIndexIOConfig(
+              new LocalFirehoseFactory(inputDir, "test_*", null),
+              appendToExisting
+          ),
+          tuningConfig
+      );
+    }
 
     // set up test tools
     return new TestSupervisorTask(
@@ -475,9 +489,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     @Override
     SinglePhaseSubTaskSpec newTaskSpec(InputSplit split)
     {
-      final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
+      final SplittableInputSource baseInputSource = (SplittableInputSource) getIngestionSchema()
           .getIOConfig()
-          .getFirehoseFactory();
+          .getNonNullInputSource(getIngestionSchema().getDataSchema().getParser());
       return new TestSinglePhaseSubTaskSpec(
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
@@ -485,7 +499,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
-                  baseFirehoseFactory.withSplit(split),
+                  null,
+                  baseInputSource.withSplit(split),
+                  getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting()
               ),
               getIngestionSchema().getTuningConfig()

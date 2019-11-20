@@ -16,17 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  FormGroup,
-  InputGroup,
-  Intent,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-  Switch,
-} from '@blueprintjs/core';
+import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
@@ -38,11 +28,12 @@ import {
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  ActionIcon,
+  MoreButton,
   RefreshButton,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import { ActionIcon } from '../../components/action-icon/action-icon';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
@@ -496,8 +487,9 @@ GROUP BY 1`;
 
   renderBulkDatasourceActions() {
     const { goToQuery, capabilities } = this.props;
-    const bulkDatasourceActionsMenu = (
-      <Menu>
+
+    return (
+      <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
@@ -505,15 +497,7 @@ GROUP BY 1`;
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}
-      </Menu>
-    );
-
-    return (
-      <>
-        <Popover content={bulkDatasourceActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
-      </>
+      </MoreButton>
     );
   }
 
@@ -904,7 +888,7 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Replicated size'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
             },
             {
               Header: 'Size',
@@ -1038,14 +1022,14 @@ GROUP BY 1`;
             checked={showChart}
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
-          {capabilities.hasCoordinatorAccess() && (
-            <Switch
-              checked={showUnused}
-              label="Show unused"
-              onChange={() => this.toggleUnused(showUnused)}
-            />
-          )}
+          <Switch
+            checked={showUnused}
+            label="Show unused"
+            onChange={() => this.toggleUnused(showUnused)}
+            disabled={!capabilities.hasCoordinatorAccess()}
+          />
           <TableColumnSelector
             columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
@@ -1058,7 +1042,11 @@ GROUP BY 1`;
         </ViewControlBar>
         {showChart && (
           <div className={'chart-container'}>
-            <SegmentTimeline chartHeight={chartHeight} chartWidth={chartWidth} />
+            <SegmentTimeline
+              capabilities={capabilities}
+              chartHeight={chartHeight}
+              chartWidth={chartWidth}
+            />
           </div>
         )}
         {this.renderDatasourceTable()}

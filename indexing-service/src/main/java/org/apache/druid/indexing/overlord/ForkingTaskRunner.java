@@ -421,8 +421,8 @@ public class ForkingTaskRunner
 
                       try {
                         if (!stopping && taskDir.exists()) {
-                          LOGGER.info("Removing task directory: %s", taskDir);
                           FileUtils.deleteDirectory(taskDir);
+                          LOGGER.info("Removing task directory: %s", taskDir);
                         }
                       }
                       catch (Exception e) {

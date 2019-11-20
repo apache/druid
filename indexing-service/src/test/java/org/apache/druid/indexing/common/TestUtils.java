@@ -21,13 +21,18 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.NoopIndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -92,6 +97,7 @@ public class TestUtils
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
             .addValue(AppenderatorsManager.class, new TestAppenderatorsManager())
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
+            .addValue(IndexTaskClientFactory.class, new NoopIndexTaskClientFactory())
     );
 
     jsonMapper.registerModule(
@@ -100,7 +106,11 @@ public class TestUtils
           @Override
           public void setupModule(SetupContext context)
           {
-            context.registerSubtypes(LocalLoadSpec.class);
+            context.registerSubtypes(
+                new NamedType(LocalLoadSpec.class, "local"),
+                new NamedType(NoopInputSource.class, "noop"),
+                new NamedType(NoopInputFormat.class, "noop")
+            );
           }
         }
     );

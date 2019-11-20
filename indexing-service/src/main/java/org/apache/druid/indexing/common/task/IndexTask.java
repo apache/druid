@@ -22,22 +22,33 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
+import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -53,6 +64,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -61,10 +73,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.IOConfig;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -106,6 +121,7 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -116,6 +132,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
@@ -441,7 +458,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     try {
       if (chatHandlerProvider.isPresent()) {
-        log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
+        log.debug("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
 
         if (chatHandlerProvider.get().get(getId()).isPresent()) {
           // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
@@ -461,11 +478,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                          .bucketIntervals()
                                                          .isPresent();
 
-      final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+          ingestionSchema.getDataSchema().getParser()
+      );
 
-      final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
-      // Firehose temporary directory is automatically removed when this IndexTask completes.
-      FileUtils.forceMkdir(firehoseTempDir);
+      final File tmpDir = toolbox.getIndexingTmpDir();
+      // Temporary directory is automatically removed when this IndexTask completes.
+      FileUtils.forceMkdir(tmpDir);
 
       ingestionState = IngestionState.DETERMINE_PARTITIONS;
 
@@ -474,8 +493,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
       final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec = determineShardSpecs(
           toolbox,
-          firehoseFactory,
-          firehoseTempDir,
+          inputSource,
+          tmpDir,
           partitionsSpec
       );
       final List<Interval> allocateIntervals = new ArrayList<>(allocateSpec.keySet());
@@ -498,8 +517,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           toolbox,
           dataSchema,
           allocateSpec,
-          firehoseFactory,
-          firehoseTempDir,
+          inputSource,
+          tmpDir,
           partitionsSpec
       );
     }
@@ -585,12 +604,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
    */
   private Map<Interval, Pair<ShardSpecFactory, Integer>> determineShardSpecs(
       final TaskToolbox toolbox,
-      final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir,
+      final InputSource inputSource,
+      final File tmpDir,
       final PartitionsSpec nonNullPartitionsSpec
   ) throws IOException
   {
-    final ObjectMapper jsonMapper = toolbox.getObjectMapper();
+    final ObjectMapper jsonMapper = toolbox.getJsonMapper();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
 
@@ -616,8 +635,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return createShardSpecsFromInput(
           jsonMapper,
           ingestionSchema,
-          firehoseFactory,
-          firehoseTempDir,
+          inputSource,
+          tmpDir,
           granularitySpec,
           nonNullPartitionsSpec,
           determineIntervals
@@ -628,8 +647,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private Map<Interval, Pair<ShardSpecFactory, Integer>> createShardSpecsFromInput(
       ObjectMapper jsonMapper,
       IndexIngestionSpec ingestionSchema,
-      FirehoseFactory firehoseFactory,
-      File firehoseTempDir,
+      InputSource inputSource,
+      File tmpDir,
       GranularitySpec granularitySpec,
       PartitionsSpec nonNullPartitionsSpec,
       boolean determineIntervals
@@ -641,8 +660,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = collectIntervalsAndShardSpecs(
         jsonMapper,
         ingestionSchema,
-        firehoseFactory,
-        firehoseTempDir,
+        inputSource,
+        tmpDir,
         granularitySpec,
         nonNullPartitionsSpec,
         determineIntervals
@@ -693,8 +712,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private Map<Interval, Optional<HyperLogLogCollector>> collectIntervalsAndShardSpecs(
       ObjectMapper jsonMapper,
       IndexIngestionSpec ingestionSchema,
-      FirehoseFactory firehoseFactory,
-      File firehoseTempDir,
+      InputSource inputSource,
+      File tmpDir,
       GranularitySpec granularitySpec,
       PartitionsSpec nonNullPartitionsSpec,
       boolean determineIntervals
@@ -704,14 +723,25 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
+    final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
+                                            .map(AggregatorFactory::getName)
+                                            .collect(Collectors.toList());
+    final InputSourceReader inputSourceReader = ingestionSchema.getDataSchema().getTransformSpec().decorate(
+        inputSource.reader(
+            new InputRowSchema(
+                ingestionSchema.getDataSchema().getTimestampSpec(),
+                ingestionSchema.getDataSchema().getDimensionsSpec(),
+                metricsNames
+            ),
+            getInputFormat(ingestionSchema),
+            tmpDir
+        )
+    );
 
-    try (
-        final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
-    ) {
-
-      while (firehose.hasMore()) {
+    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
+      while (inputRowIterator.hasNext()) {
         try {
-          final InputRow inputRow = firehose.nextRow();
+          final InputRow inputRow = inputRowIterator.next();
 
           // The null inputRow means the caller must skip this row.
           if (inputRow == null) {
@@ -831,8 +861,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
       final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec,
-      final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir,
+      final InputSource inputSource,
+      final File tmpDir,
       final PartitionsSpec partitionsSpec
   ) throws IOException, InterruptedException
   {
@@ -880,19 +910,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final FiniteFirehoseProcessor firehoseProcessor = new FiniteFirehoseProcessor(
+      final InputSourceProcessor inputSourceProcessor = new InputSourceProcessor(
           buildSegmentsMeters,
           buildSegmentsSavedParseExceptions,
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions(),
           pushTimeout
       );
-      firehoseProcessor.process(
+      inputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
-          firehoseFactory,
-          firehoseTempDir,
+          inputSource,
+          getInputFormat(ingestionSchema),
+          tmpDir,
           segmentAllocator
       );
 
@@ -922,7 +953,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info("Published segments: %s", Lists.transform(published.getSegments(), DataSegment::getId));
+        log.info("Published segments: %s", SegmentUtils.commaSeparatedIdentifiers(published.getSegments()));
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
@@ -1001,6 +1032,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  private static InputFormat getInputFormat(IndexIngestionSpec ingestionSchema)
+  {
+    final InputRowParser parser = ingestionSchema.getDataSchema().getParser();
+    return ingestionSchema.getIOConfig().getNonNullInputFormat(
+        parser == null ? null : parser.getParseSpec()
+    );
+  }
+
   public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>
   {
     private final DataSchema dataSchema;
@@ -1015,6 +1054,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     )
     {
       super(dataSchema, ioConfig, tuningConfig);
+
+      Checks.checkOneNotNullOrEmpty(
+          ImmutableList.of(
+              new Property<>("parser", dataSchema.getParserMap()),
+              new Property<>("inputFormat", ioConfig.getInputFormat())
+          )
+      );
+      if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
+        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
+      }
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
@@ -1044,30 +1093,90 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   }
 
   @JsonTypeName("index")
-  public static class IndexIOConfig implements IOConfig
+  public static class IndexIOConfig implements BatchIOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
+    private final InputSource inputSource;
+    private final InputFormat inputFormat;
     private final boolean appendToExisting;
 
     @JsonCreator
     public IndexIOConfig(
-        @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+        @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
+        @JsonProperty("inputSource") @Nullable InputSource inputSource,
+        @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
         @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
     )
     {
+      Checks.checkOneNotNullOrEmpty(
+          ImmutableList.of(new Property<>("firehose", firehoseFactory), new Property<>("inputSource", inputSource))
+      );
+      if (firehoseFactory != null && inputFormat != null) {
+        throw new IAE("Cannot use firehose and inputFormat together. Try using inputSource instead of firehose.");
+      }
       this.firehoseFactory = firehoseFactory;
+      this.inputSource = inputSource;
+      this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
     }
 
+    // old constructor for backward compatibility
+    @Deprecated
+    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
+    {
+      this(firehoseFactory, null, null, appendToExisting);
+    }
+
+    @Nullable
     @JsonProperty("firehose")
+    @JsonInclude(Include.NON_NULL)
+    @Deprecated
     public FirehoseFactory getFirehoseFactory()
     {
       return firehoseFactory;
     }
 
-    @JsonProperty("appendToExisting")
+    @Nullable
+    @Override
+    @JsonProperty
+    public InputSource getInputSource()
+    {
+      return inputSource;
+    }
+
+    @Nullable
+    @Override
+    @JsonProperty
+    public InputFormat getInputFormat()
+    {
+      return inputFormat;
+    }
+
+    public InputSource getNonNullInputSource(@Nullable InputRowParser inputRowParser)
+    {
+      if (inputSource == null) {
+        return new FirehoseFactoryToInputSourceAdaptor(
+            (FiniteFirehoseFactory) firehoseFactory,
+            inputRowParser
+        );
+      } else {
+        return inputSource;
+      }
+    }
+
+    public InputFormat getNonNullInputFormat(@Nullable ParseSpec parseSpec)
+    {
+      if (inputFormat == null) {
+        return Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat();
+      } else {
+        return inputFormat;
+      }
+    }
+
+    @Override
+    @JsonProperty
     public boolean isAppendToExisting()
     {
       return appendToExisting;

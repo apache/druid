@@ -41,6 +41,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -115,8 +116,6 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         appenderator.startJob(),
         AppenderatorDriverMetadata.class
     );
-
-    log.info("Restored metadata[%s].", metadata);
 
     if (metadata != null) {
       synchronized (segments) {
@@ -227,10 +226,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   public Object persist(final Committer committer) throws InterruptedException
   {
     try {
-      log.info("Persisting data.");
+      log.debug("Persisting pending data.");
       final long start = System.currentTimeMillis();
       final Object commitMetadata = appenderator.persistAll(wrapCommitter(committer)).get();
-      log.info("Persisted pending data in %,dms.", System.currentTimeMillis() - start);
+      log.debug("Persisted pending data in %,dms.", System.currentTimeMillis() - start);
       return commitMetadata;
     }
     catch (InterruptedException e) {
@@ -329,7 +328,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         );
       }
 
-      log.info("Register handoff of segments: [%s]", waitingSegmentIdList);
+      log.debug("Register handoff of segments: [%s]", waitingSegmentIdList);
 
       final SettableFuture<SegmentsAndCommitMetadata> resultFuture = SettableFuture.create();
       final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
@@ -343,7 +342,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             ),
             Execs.directExecutor(),
             () -> {
-              log.info("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
+              log.debug("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
               metrics.incrementHandOffCount();
 
               final ListenableFuture<?> dropFuture = appenderator.drop(segmentIdentifier);
@@ -355,10 +354,11 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     public void onSuccess(Object result)
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
-                        log.info("Successfully handed off [%d] segments.", segmentsAndCommitMetadata.getSegments().size());
+                        List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
+                        log.debug("Successfully handed off [%d] segments.", segments.size());
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
-                                segmentsAndCommitMetadata.getSegments(),
+                                segments,
                                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
                             )
                         );

@@ -21,8 +21,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 
 import java.io.IOException;
@@ -38,7 +40,7 @@ class PartialSegmentGenerateParallelIndexTaskRunner
     extends ParallelIndexPhaseRunner<PartialSegmentGenerateTask, GeneratedPartitionsReport>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
+  private final SplittableInputSource<?> baseInputSource;
 
   PartialSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -58,7 +60,9 @@ class PartialSegmentGenerateParallelIndexTaskRunner
         indexingServiceClient
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseFirehoseFactory = (FiniteFirehoseFactory) ingestionSchema.getIOConfig().getFirehoseFactory();
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(
+        ingestionSchema.getDataSchema().getParser()
+    );
   }
 
   @Override
@@ -70,13 +74,19 @@ class PartialSegmentGenerateParallelIndexTaskRunner
   @Override
   Iterator<SubTaskSpec<PartialSegmentGenerateTask>> subTaskSpecIterator() throws IOException
   {
-    return baseFirehoseFactory.getSplits(getTuningConfig().getSplitHintSpec()).map(this::newTaskSpec).iterator();
+    return baseInputSource.createSplits(
+        ingestionSchema.getIOConfig().getInputFormat(),
+        getTuningConfig().getSplitHintSpec()
+    ).map(this::newTaskSpec).iterator();
   }
 
   @Override
   int getTotalNumSubTasks() throws IOException
   {
-    return baseFirehoseFactory.getNumSplits(getTuningConfig().getSplitHintSpec());
+    return baseInputSource.getNumSplits(
+        ingestionSchema.getIOConfig().getInputFormat(),
+        getTuningConfig().getSplitHintSpec()
+    );
   }
 
   @VisibleForTesting
@@ -86,17 +96,28 @@ class PartialSegmentGenerateParallelIndexTaskRunner
   }
 
   @VisibleForTesting
-  FiniteFirehoseFactory<?, ?> getBaseFirehoseFactory()
+  SplittableInputSource<?> getBaseInputSource()
   {
-    return baseFirehoseFactory;
+    return baseInputSource;
   }
 
   SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
   {
+    final FirehoseFactory firehoseFactory;
+    final SplittableInputSource inputSource;
+    if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
+      firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
+      inputSource = null;
+    } else {
+      firehoseFactory = null;
+      inputSource = baseInputSource.withSplit(split);
+    }
     final ParallelIndexIngestionSpec subTaskIngestionSpec = new ParallelIndexIngestionSpec(
         ingestionSchema.getDataSchema(),
         new ParallelIndexIOConfig(
-            baseFirehoseFactory.withSplit(split),
+            firehoseFactory,
+            inputSource,
+            ingestionSchema.getIOConfig().getInputFormat(),
             ingestionSchema.getIOConfig().isAppendToExisting()
         ),
         ingestionSchema.getTuningConfig()

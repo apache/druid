@@ -361,7 +361,7 @@ public class DruidCoordinator
 
   public void markSegmentAsUnused(DataSegment segment)
   {
-    log.info("Marking segment[%s] as unused", segment.getId());
+    log.debug("Marking segment[%s] as unused", segment.getId());
     segmentsMetadata.markSegmentAsUnused(segment.getId().toString());
   }
 
@@ -520,8 +520,10 @@ public class DruidCoordinator
         return;
       }
 
-      log.info("I am the leader of the coordinators, all must bow!");
-      log.info("Starting coordination in [%s]", config.getCoordinatorStartDelay());
+      log.info(
+          "I am the leader of the coordinators, all must bow! Starting coordination in [%s].",
+          config.getCoordinatorStartDelay()
+      );
 
       segmentsMetadata.startPollingDatabasePeriodically();
       metadataRuleManager.start();
@@ -612,8 +614,8 @@ public class DruidCoordinator
     duties.add(compactSegments);
     duties.addAll(indexingServiceDuties);
 
-    log.info(
-        "Done making indexing service duties [%s]",
+    log.debug(
+        "Done making indexing service duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(duties);
@@ -757,7 +759,7 @@ public class DruidCoordinator
         loadManagementPeons.computeIfAbsent(server.getName(), serverName -> {
           LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(server);
           loadQueuePeon.start();
-          log.info("Created LoadQueuePeon for server[%s].", server.getName());
+          log.debug("Created LoadQueuePeon for server[%s].", server.getName());
           return loadQueuePeon;
         });
       }
@@ -786,7 +788,7 @@ public class DruidCoordinator
         disappeared.remove(server.getName());
       }
       for (String name : disappeared) {
-        log.info("Removing listener for server[%s] which is no longer there.", name);
+        log.debug("Removing listener for server[%s] which is no longer there.", name);
         LoadQueuePeon peon = loadManagementPeons.remove(name);
         peon.stop();
       }
