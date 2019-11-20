@@ -78,25 +78,20 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
        */
       volatile boolean closed;
       /**
-       * Indicates {@link #next} is valid or not.
+       * Caching the next item. The item returned from the underling iterator is either a non-null {@link InputRow}
+       * or {@link InputRowListPlusRawValues}.
        * Not volatile since {@link #hasNext()} and {@link #next()} are supposed to be called by the same thread.
        */
-      boolean validNext;
-      /**
-       * Caching the next item.
-       * Not volatile since {@link #hasNext()} and {@link #next()} are supposed to be called by the same thread.
-       */
-      T next;
+      T next = null;
 
       @Override
       public boolean hasNext()
       {
-        if (validNext) {
+        if (next != null) {
           return true;
         }
         if (!closed && delegateIterator.hasNext()) {
           next = delegateIterator.next();
-          validNext = true;
           return true;
         } else {
           return false;
@@ -106,9 +101,10 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
       @Override
       public T next()
       {
-        if (validNext) {
-          validNext = false;
-          return next;
+        if (next != null) {
+          final T returnValue = next;
+          next = null;
+          return returnValue;
         } else {
           throw new NoSuchElementException();
         }
