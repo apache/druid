@@ -59,7 +59,7 @@ public class S3Utils
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    final boolean badStatusCode = ex.getStatusCode() == 400 ||  ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
+    final boolean badStatusCode = ex.getStatusCode() == 400 || ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
     return !badStatusCode && (isIOException || isTimeout);
   }
 
@@ -118,9 +118,19 @@ public class S3Utils
     return lazyFetchingObjectSummariesIterator(s3Client, Iterators.singletonIterator(prefix), numMaxKeys);
   }
 
+  /**
+   * Create an iterator over a set of s3 objects specified by a set of 'prefixes' which may be paths or individual
+   * objects, in order to get {@link S3ObjectSummary} for each discovered object. This iterator is computed lazily as it
+   * is iterated, calling {@link ServerSideEncryptingAmazonS3#listObjectsV2} for each prefix in batches of
+   * {@param maxListLength}, falling back to {@link ServerSideEncryptingAmazonS3#getObjectMetadata} if the list API
+   * returns a 403 status code as a fallback to check if the URI is a single object instead of a directory. These
+   * summaries are supplied to the outer iterator until drained, then if additional results for the current prefix are
+   * still available, it will continue fetching and repeat the process, else it will move on to the next prefix,
+   * continuing until all objects have been evaluated.
+   */
   public static Iterator<S3ObjectSummary> lazyFetchingObjectSummariesIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
-      final Iterator<URI> prefixes,
+      final Iterator<URI> uris,
       final int maxListingLength
   )
   {
@@ -140,7 +150,7 @@ public class S3Utils
 
       private void prepareNextRequest()
       {
-        currentUri = prefixes.next();
+        currentUri = uris.next();
         currentBucket = currentUri.getAuthority();
         currentPrefix = S3Utils.extractS3Key(currentUri);
 
@@ -199,7 +209,7 @@ public class S3Utils
       @Override
       public boolean hasNext()
       {
-        return objectSummaryIterator.hasNext() || result.isTruncated() || prefixes.hasNext();
+        return objectSummaryIterator.hasNext() || result.isTruncated() || uris.hasNext();
       }
 
       @Override
@@ -215,7 +225,7 @@ public class S3Utils
 
         if (result.isTruncated()) {
           fetchNextBatch();
-        } else if (prefixes.hasNext()) {
+        } else if (uris.hasNext()) {
           prepareNextRequest();
           fetchNextBatch();
         }
