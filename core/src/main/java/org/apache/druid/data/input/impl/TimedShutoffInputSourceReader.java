@@ -91,12 +91,14 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
       @Override
       public boolean hasNext()
       {
+        if (validNext) {
+          return true;
+        }
         if (!closed && delegateIterator.hasNext()) {
           next = delegateIterator.next();
           validNext = true;
           return true;
         } else {
-          validNext = false;
           return false;
         }
       }
@@ -105,6 +107,7 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
       public T next()
       {
         if (validNext) {
+          validNext = false;
           return next;
         } else {
           throw new NoSuchElementException();
