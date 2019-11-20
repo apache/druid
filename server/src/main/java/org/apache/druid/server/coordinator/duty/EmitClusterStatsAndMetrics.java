@@ -469,4 +469,17 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
     return params;
   }
+
+  public static String getNamespace(Object identifier)
+  {
+    if (identifier == null) {
+      return "";
+    }
+    String identifierStr = identifier.toString();
+    int index = identifierStr.indexOf('_');
+    if (index <= 0) {
+      return "";
+    }
+    return identifierStr.substring(0, index);
+  }
 }
