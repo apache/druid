@@ -26,9 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -81,7 +80,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -561,21 +559,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     return new DataSchema(
         DATASOURCE,
-        OBJECT_MAPPER.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        dimensions,
-                        null,
-                        null
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of()
-                ),
-                StandardCharsets.UTF_8.name()
-            ),
-            Map.class
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(
+            dimensions,
+            null,
+            null
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
@@ -583,8 +571,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             Granularities.NONE,
             ImmutableList.of()
         ),
-        null,
-        OBJECT_MAPPER
+        null
     );
   }
 
@@ -592,6 +579,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of()),
         1,
         1,
         new Period("PT1H"),
@@ -786,7 +774,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           new SeekableStreamEndSequenceNumbers<>(STREAM, endPartitions),
           true,
           minimumMessageTime,
-          maximumMessageTime
+          maximumMessageTime,
+          ioConfig.getInputFormat(
+              getDataSchema().getParser() == null ? null : getDataSchema().getParser().getParseSpec()
+          )
       )
       {
       };

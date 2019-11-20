@@ -19,8 +19,11 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -30,9 +33,11 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -82,6 +87,7 @@ import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -98,38 +104,32 @@ import java.util.stream.Collectors;
 
 public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
 {
-  protected static final ObjectMapper OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
-  protected static final DataSchema DATA_SCHEMA = new DataSchema(
+  protected static final ObjectMapper OBJECT_MAPPER;
+  protected static final DataSchema OLD_DATA_SCHEMA;
+  protected static final DataSchema NEW_DATA_SCHEMA = new DataSchema(
       "test_ds",
-      OBJECT_MAPPER.convertValue(
-          new StringInputRowParser(
-              new JSONParseSpec(
-                  new TimestampSpec("timestamp", "iso", null),
-                  new DimensionsSpec(
-                      Arrays.asList(
-                          new StringDimensionSchema("dim1"),
-                          new StringDimensionSchema("dim1t"),
-                          new StringDimensionSchema("dim2"),
-                          new LongDimensionSchema("dimLong"),
-                          new FloatDimensionSchema("dimFloat")
-                      ),
-                      null,
-                      null
-                  ),
-                  new JSONPathSpec(true, ImmutableList.of()),
-                  ImmutableMap.of()
-              ),
-              StandardCharsets.UTF_8.name()
+      new TimestampSpec("timestamp", "iso", null),
+      new DimensionsSpec(
+          Arrays.asList(
+              new StringDimensionSchema("dim1"),
+              new StringDimensionSchema("dim1t"),
+              new StringDimensionSchema("dim2"),
+              new LongDimensionSchema("dimLong"),
+              new FloatDimensionSchema("dimFloat")
           ),
-          Map.class
+          null,
+          null
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
           new CountAggregatorFactory("rows")
       },
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null,
-      OBJECT_MAPPER
+      null
+  );
+  protected static final InputFormat INPUT_FORMAT = new JsonInputFormat(
+      new JSONPathSpec(true, ImmutableList.of()),
+      ImmutableMap.of()
   );
   protected static final Logger LOG = new Logger(SeekableStreamIndexTaskTestBase.class);
   protected static ListeningExecutorService taskExec;
@@ -146,6 +146,43 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected TaskStorage taskStorage;
   protected TaskLockbox taskLockbox;
   protected IndexerMetadataStorageCoordinator metadataStorageCoordinator;
+
+  static {
+    OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
+    OBJECT_MAPPER.registerSubtypes(new NamedType(UnimplementedInputFormatJsonParseSpec.class, "json"));
+    OLD_DATA_SCHEMA = new DataSchema(
+        "test_ds",
+        OBJECT_MAPPER.convertValue(
+            new StringInputRowParser(
+                new UnimplementedInputFormatJsonParseSpec(
+                    new TimestampSpec("timestamp", "iso", null),
+                    new DimensionsSpec(
+                        Arrays.asList(
+                            new StringDimensionSchema("dim1"),
+                            new StringDimensionSchema("dim1t"),
+                            new StringDimensionSchema("dim2"),
+                            new LongDimensionSchema("dimLong"),
+                            new FloatDimensionSchema("dimFloat")
+                        ),
+                        null,
+                        null
+                    ),
+                    new JSONPathSpec(true, ImmutableList.of()),
+                    ImmutableMap.of()
+                ),
+                StandardCharsets.UTF_8.name()
+            ),
+            Map.class
+        ),
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("met1sum", "met1"),
+            new CountAggregatorFactory("rows")
+        },
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        null,
+        OBJECT_MAPPER
+    );
+  }
 
   public SeekableStreamIndexTaskTestBase(
       LockGranularity lockGranularity
@@ -203,7 +240,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         StringUtils.format(
             "%s/%s/%s_%s/%s/%d",
             getSegmentDirectory(),
-            DATA_SCHEMA.getDataSource(),
+            OLD_DATA_SCHEMA.getDataSource(),
             descriptor.getInterval().getStart(),
             descriptor.getInterval().getEnd(),
             descriptor.getVersion(),
@@ -345,7 +382,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(DATA_SCHEMA.getDataSource())
+                                  .dataSource(OLD_DATA_SCHEMA.getDataSource())
                                   .aggregators(
                                       ImmutableList.of(
                                           new LongSumAggregatorFactory("rows", "rows")
@@ -372,7 +409,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected List<SegmentDescriptor> publishedDescriptors()
   {
     return metadataStorageCoordinator
-        .getUsedSegmentsForInterval(DATA_SCHEMA.getDataSource(), Intervals.of("0000/3000"), Segments.ONLY_VISIBLE)
+        .getUsedSegmentsForInterval(OLD_DATA_SCHEMA.getDataSource(), Intervals.of("0000/3000"), Segments.ONLY_VISIBLE)
         .stream()
         .map(DataSegment::toDescriptor)
         .collect(Collectors.toList());
@@ -404,6 +441,27 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     public SegmentDescriptor getSegmentDescriptor()
     {
       return segmentDescriptor;
+    }
+  }
+
+  private static class UnimplementedInputFormatJsonParseSpec extends JSONParseSpec
+  {
+    @JsonCreator
+    private UnimplementedInputFormatJsonParseSpec(
+        @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
+        @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
+        @JsonProperty("flattenSpec") JSONPathSpec flattenSpec,
+        @JsonProperty("featureSpec") Map<String, Boolean> featureSpec
+    )
+    {
+      super(timestampSpec, dimensionsSpec, flattenSpec, featureSpec);
+    }
+
+    @Nullable
+    @Override
+    public InputFormat toInputFormat()
+    {
+      return null;
     }
   }
 }

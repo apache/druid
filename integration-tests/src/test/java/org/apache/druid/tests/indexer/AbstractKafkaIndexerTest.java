@@ -55,7 +55,8 @@ import java.util.Properties;
 abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
-  private static final String INDEXER_FILE = "/indexer/kafka_supervisor_spec.json";
+  protected static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/kafka_supervisor_spec_legacy_parser.json";
+  protected static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/kafka_supervisor_spec_input_format.json";
   private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
 
@@ -98,7 +99,7 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
   private String fullDatasourceName;
 
-  void doKafkaIndexTest(String dataSourceName, boolean txnEnabled)
+  void doKafkaIndexTest(String dataSourceName, String supervisorSpecPath, boolean txnEnabled)
   {
     fullDatasourceName = dataSourceName + config.getExtraDatasourceNameSuffix();
     // create topic
@@ -128,21 +129,21 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
     String spec;
     try {
-      LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
+      LOG.info("supervisorSpec name: [%s]", supervisorSpecPath);
       final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       final Properties consumerProperties = new Properties();
       consumerProperties.putAll(consumerConfigs);
       consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
 
-      spec = getResourceAsString(INDEXER_FILE);
+      spec = getResourceAsString(supervisorSpecPath);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
       spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
       spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {
-      LOG.error("could not read file [%s]", INDEXER_FILE);
-      throw new ISE(e, "could not read file [%s]", INDEXER_FILE);
+      LOG.error("could not read file [%s]", supervisorSpecPath);
+      throw new ISE(e, "could not read file [%s]", supervisorSpecPath);
     }
 
     // start supervisor

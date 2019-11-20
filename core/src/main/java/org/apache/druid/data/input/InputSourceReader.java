@@ -39,5 +39,5 @@ public interface InputSourceReader
 {
   CloseableIterator<InputRow> read() throws IOException;
 
-  CloseableIterator<InputRowListPlusJson> sample() throws IOException;
+  CloseableIterator<InputRowListPlusRawValues> sample() throws IOException;
 }

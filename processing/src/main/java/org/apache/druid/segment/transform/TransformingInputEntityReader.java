@@ -19,19 +19,19 @@
 
 package org.apache.druid.segment.transform;
 
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
-import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
 
-public class TransformingReader implements InputSourceReader
+public class TransformingInputEntityReader implements InputEntityReader
 {
-  private final InputSourceReader delegate;
+  private final InputEntityReader delegate;
   private final Transformer transformer;
 
-  TransformingReader(InputSourceReader delegate, Transformer transformer)
+  public TransformingInputEntityReader(InputEntityReader delegate, Transformer transformer)
   {
     this.delegate = delegate;
     this.transformer = transformer;
@@ -44,7 +44,7 @@ public class TransformingReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample() throws IOException
+  public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
     return delegate.sample().map(transformer::transform);
   }

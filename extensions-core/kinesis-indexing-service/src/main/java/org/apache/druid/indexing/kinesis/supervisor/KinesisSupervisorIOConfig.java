@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -52,6 +53,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   @JsonCreator
   public KinesisSupervisorIOConfig(
       @JsonProperty("stream") String stream,
+      @JsonProperty("inputFormat") InputFormat inputFormat,
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("region") KinesisRegion region,
       @JsonProperty("replicas") Integer replicas,
@@ -73,6 +75,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   {
     super(
         Preconditions.checkNotNull(stream, "stream"),
+        inputFormat,
         replicas,
         taskCount,
         taskDuration,

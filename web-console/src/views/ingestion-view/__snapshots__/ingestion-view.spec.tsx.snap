@@ -3,7 +3,7 @@
 exports[`tasks view matches snapshot 1`] = `
 <Fragment>
   <t
-    customClassName="tasks-view app-view"
+    customClassName="ingestion-view app-view"
     onDragEnd={null}
     onDragStart={null}
     onSecondaryPaneSizeChange={[Function]}

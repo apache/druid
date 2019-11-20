@@ -429,7 +429,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
-    public IncrementalIndex buildOnheap()
+    public OnheapIncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
