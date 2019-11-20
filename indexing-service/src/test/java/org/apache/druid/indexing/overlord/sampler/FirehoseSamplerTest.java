@@ -1187,9 +1187,7 @@ public class FirehoseSamplerTest extends InitializedNullHandlingTest
   private String getUnparseableTimestampString()
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? (NullHandling.replaceWithDefault()
-              ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-              : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=, met1=6}")
+           ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
            : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, met1=6}";
   }
 
