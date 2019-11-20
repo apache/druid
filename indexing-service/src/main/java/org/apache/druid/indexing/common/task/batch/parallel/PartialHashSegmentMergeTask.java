@@ -108,7 +108,7 @@ public class PartialHashSegmentMergeTask
         partitionNum,
         Preconditions.checkNotNull(partitionsSpec.getNumShards(), "numShards"),
         partitionsSpec.getPartitionDimensions(),
-        toolbox.getObjectMapper()
+        toolbox.getJsonMapper()
     );
   }
 }

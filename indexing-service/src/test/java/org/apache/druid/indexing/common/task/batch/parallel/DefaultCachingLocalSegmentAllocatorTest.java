@@ -103,7 +103,7 @@ public class DefaultCachingLocalSegmentAllocatorTest
   {
     TaskToolbox toolbox = EasyMock.mock(TaskToolbox.class);
     EasyMock.expect(toolbox.getTaskActionClient()).andStubReturn(createTaskActionClient());
-    EasyMock.expect(toolbox.getObjectMapper()).andStubReturn(OBJECT_MAPPER);
+    EasyMock.expect(toolbox.getJsonMapper()).andStubReturn(OBJECT_MAPPER);
     EasyMock.replay(toolbox);
     return toolbox;
   }

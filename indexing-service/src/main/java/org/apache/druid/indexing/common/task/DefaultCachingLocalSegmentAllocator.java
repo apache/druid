@@ -87,7 +87,7 @@ public class DefaultCachingLocalSegmentAllocator implements IndexTaskSegmentAllo
                        dataSource,
                        interval,
                        versionFinder.apply(interval),
-                       shardSpecFactory.create(toolbox.getObjectMapper(), i)
+                       shardSpecFactory.create(toolbox.getJsonMapper(), i)
                    ))
                    .collect(Collectors.toList())
       );

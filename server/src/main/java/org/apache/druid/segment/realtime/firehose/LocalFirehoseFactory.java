@@ -85,13 +85,11 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   @Override
   protected Collection<File> initObjects()
   {
-    final Collection<File> files = FileUtils.listFiles(
+    return FileUtils.listFiles(
         Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
         new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
-    log.info("Initialized with " + files + " files");
-    return files;
   }
 
   @Override

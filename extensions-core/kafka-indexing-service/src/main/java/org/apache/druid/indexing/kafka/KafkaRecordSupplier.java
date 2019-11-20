@@ -53,8 +53,6 @@ import java.util.stream.Collectors;
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
-  private final Map<String, Object> consumerProperties;
-  private final ObjectMapper sortingMapper;
   private boolean closed;
 
   public KafkaRecordSupplier(
@@ -62,18 +60,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       ObjectMapper sortingMapper
   )
   {
-    this(consumerProperties, sortingMapper, getKafkaConsumer(sortingMapper, consumerProperties));
+    this(getKafkaConsumer(sortingMapper, consumerProperties));
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
-      Map<String, Object> consumerProperties,
-      ObjectMapper sortingMapper,
       KafkaConsumer<byte[], byte[]> consumer
   )
   {
-    this.consumerProperties = consumerProperties;
-    this.sortingMapper = sortingMapper;
     this.consumer = consumer;
   }
 

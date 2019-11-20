@@ -179,7 +179,7 @@ name: ClassMate
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.0.0
+version: 1.1.0
 libraries:
   - com.fasterxml: classmate
 notices:
@@ -200,7 +200,6 @@ version: 2.6.7
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
-  - com.fasterxml.jackson.core: jackson-databind
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
   - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
   - com.fasterxml.jackson.datatype: jackson-datatype-guava
@@ -233,11 +232,42 @@ notice: |
 
 ---
 
+name: Jackson
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6.7.3
+libraries:
+  - com.fasterxml.jackson.core: jackson-databind
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers, as well as supported
+  commercially by FasterXML.com.
+
+  ## Licensing
+
+  Jackson core and extension components may licensed under different licenses.
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+  For more information, including possible other licensing options, contact
+  FasterXML.com (http://fasterxml.com).
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+---
+
 name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.5.5
+version: 2.8.0
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -375,7 +405,7 @@ name: Apache Commons BeanUtils
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.9.3
+version: 1.9.4
 libraries:
   - commons-beanutils: commons-beanutils
 notices:
@@ -389,7 +419,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12
+version: 1.13
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -758,7 +788,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.30.Final
+version: 4.1.42.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1317,7 +1347,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.8.2
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -1479,7 +1509,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.15
+version: 3.0.24
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -1501,7 +1531,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.10.v20180503
+version: 9.4.12.v20180830
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -1650,7 +1680,7 @@ name: Hibernate Validator Engine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.1.3.Final
+version: 5.2.5.Final
 libraries:
   - org.hibernate: hibernate-validator
 
@@ -1789,7 +1819,7 @@ name: JBoss Logging 3
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.1.3.GA
+version: 3.2.1.Final
 libraries:
   - org.jboss.logging: jboss-logging
 
@@ -1880,7 +1910,7 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 2.8.3
+version: 2.8.5
 libraries:
   - org.apache.hadoop: hadoop-annotations
   - org.apache.hadoop: hadoop-auth
@@ -2355,7 +2385,7 @@ name: Nimbus JOSE+JWT
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.9
+version: 4.41.1
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -2503,7 +2533,7 @@ name: Apache Commons Compress
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.4.1
+version: 1.19
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -2917,7 +2947,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.9.0
+version: 1.9.1
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3431,10 +3461,10 @@ libraries:
 name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
-license_name: BSD-3-Clause License
-version: 9.4.1208.jre7
+license_name: BSD-2-Clause License
+version: 42.2.8
 copyright: PostgreSQL Global Development Group
-license_file_path: licenses/bin/postgresql.BSD3
+license_file_path: licenses/bin/postgresql.BSD2
 libraries:
   - org.postgresql: postgresql
 
@@ -3457,7 +3487,7 @@ name: ICU4J
 license_category: binary
 module: java-core
 license_name: ICU License
-version: 54.1.1
+version: 55.1
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -3747,15 +3777,13 @@ libraries:
 
 ---
 
-name: \"Java Concurrency In Practice\" Book Annotations
+name: JCIP Annotations Under Apache License
 license_category: binary
-module: hadoop-client
-license_name: Creative Commons Attribution 2.5
-version: 1.0
-copyright: Brian Goetz and Tim Peierls
-license_file_path: licenses/bin/creative-commons-2.5.LICENSE
+module: extensions/druid-hdfs-storage
+license_name: Apache License version 2.0
+version: 1.0-1
 libraries:
-  - net.jcip: jcip-annotations
+  - com.github.stephenc.jcip: jcip-annotations
 
 ---
 
