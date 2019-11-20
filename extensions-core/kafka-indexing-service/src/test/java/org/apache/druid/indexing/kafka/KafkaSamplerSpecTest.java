@@ -53,7 +53,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -125,7 +124,7 @@ public class KafkaSamplerSpecTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of()),
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null),
             null,
             null,
             null,

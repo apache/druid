@@ -72,21 +72,43 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
     closer.register(exec::shutdownNow);
     final CloseableIterator<T> wrappingIterator = new CloseableIterator<T>()
     {
+      /**
+       * Indicates this iterator has been closed or not.
+       * Volatile since there is a happens-before relationship between {@link #hasNext()} and {@link #close()}.
+       */
       volatile boolean closed;
+      /**
+       * Indicates {@link #next} is valid or not.
+       * Not volatile since {@link #hasNext()} and {@link #next()} are supposed to be called by the same thread.
+       */
+      boolean validNext;
+      /**
+       * Caching the next item.
+       * Not volatile since {@link #hasNext()} and {@link #next()} are supposed to be called by the same thread.
+       */
+      T next;
 
       @Override
       public boolean hasNext()
       {
-        return !closed && delegateIterator.hasNext();
+        if (!closed && delegateIterator.hasNext()) {
+          next = delegateIterator.next();
+          validNext = true;
+          return true;
+        } else {
+          validNext = false;
+          return false;
+        }
       }
 
       @Override
       public T next()
       {
-        if (!hasNext()) {
+        if (validNext) {
+          return next;
+        } else {
           throw new NoSuchElementException();
         }
-        return delegateIterator.next();
       }
 
       @Override
