@@ -17,39 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.emitter.core;
+package org.apache.druid.indexing.common.task;
 
-/**
- */
-public class NoopEmitter implements Emitter
+import org.apache.druid.indexing.common.IndexTaskClient;
+import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.joda.time.Duration;
+
+public class NoopIndexTaskClientFactory implements IndexTaskClientFactory
 {
   @Override
-  public void start()
+  public IndexTaskClient build(
+      TaskInfoProvider taskInfoProvider,
+      String callerId,
+      int numThreads,
+      Duration httpTimeout,
+      long numRetries
+  )
   {
-    // Do nothing
-  }
-
-  @Override
-  public void emit(Event event)
-  {
-    // Do nothing
-  }
-
-  @Override
-  public void flush()
-  {
-    // Do nothing
-  }
-
-  @Override
-  public void close()
-  {
-    // Do nothing
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NoopEmitter{}";
+    throw new UnsupportedOperationException();
   }
 }

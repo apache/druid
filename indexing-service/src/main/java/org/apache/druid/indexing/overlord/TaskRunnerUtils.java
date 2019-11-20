@@ -44,19 +44,10 @@ public class TaskRunnerUtils
       final TaskLocation location
   )
   {
-    log.info("Task [%s] location changed to [%s].", taskId, location);
+    log.debug("Task [%s] location changed to [%s].", taskId, location);
     for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
       try {
-        listener.rhs.execute(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                listener.lhs.locationChanged(taskId, location);
-              }
-            }
-        );
+        listener.rhs.execute(() -> listener.lhs.locationChanged(taskId, location));
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to notify task listener")
@@ -74,19 +65,10 @@ public class TaskRunnerUtils
       final TaskStatus status
   )
   {
-    log.info("Task [%s] status changed to [%s].", taskId, status.getStatusCode());
+    log.debug("Task [%s] status changed to [%s].", taskId, status.getStatusCode());
     for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
       try {
-        listener.rhs.execute(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                listener.lhs.statusChanged(taskId, status);
-              }
-            }
-        );
+        listener.rhs.execute(() -> listener.lhs.statusChanged(taskId, status));
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to notify task listener")

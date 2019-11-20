@@ -111,7 +111,7 @@ public class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
                        getDataSource(),
                        interval,
                        findVersion(intervalToVersion, interval),
-                       shardSpecFactory.create(getToolbox().getObjectMapper(), i)
+                       shardSpecFactory.create(getToolbox().getJsonMapper(), i)
                    ))
                    .collect(Collectors.toList())
       );

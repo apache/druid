@@ -240,8 +240,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   ) throws IOException
   {
     if (checkpointsString != null) {
-      log.info("Checkpoints [%s]", checkpointsString);
-      return toolbox.getObjectMapper().readValue(
+      log.debug("Got checkpoints from task context[%s].", checkpointsString);
+      return toolbox.getJsonMapper().readValue(
           checkpointsString,
           new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
           {

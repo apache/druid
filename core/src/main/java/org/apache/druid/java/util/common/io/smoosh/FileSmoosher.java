@@ -369,7 +369,8 @@ public class FileSmoosher implements Closeable
 
     File metaFile = metaFile(baseDir);
 
-    try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
+    try (Writer out =
+             new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
       out.write(StringUtils.format("v1,%d,%d", maxChunkSize, outFiles.size()));
       out.write("\n");
 
@@ -469,7 +470,11 @@ public class FileSmoosher implements Closeable
     public void close() throws IOException
     {
       closer.close();
-      FileSmoosher.LOG.info("Created smoosh file [%s] of size [%s] bytes.", outFile.getAbsolutePath(), outFile.length());
+      FileSmoosher.LOG.debug(
+          "Created smoosh file [%s] of size [%s] bytes.",
+          outFile.getAbsolutePath(),
+          outFile.length()
+      );
     }
   }
 }
