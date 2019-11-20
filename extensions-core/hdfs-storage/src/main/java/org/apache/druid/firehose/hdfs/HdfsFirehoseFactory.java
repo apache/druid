@@ -27,23 +27,17 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Path>
 {
@@ -62,16 +56,8 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
   )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
+    this.inputPaths = HdfsInputSource.coerceInputPathsToList(inputPaths, "inputPaths");
     this.conf = conf;
-
-    // Coerce 'inputPaths' to List<String>
-    if (inputPaths instanceof String) {
-      this.inputPaths = Collections.singletonList((String) inputPaths);
-    } else if (inputPaths instanceof List && ((List<?>) inputPaths).stream().allMatch(x -> x instanceof String)) {
-      this.inputPaths = ((List<?>) inputPaths).stream().map(x -> (String) x).collect(Collectors.toList());
-    } else {
-      throw new IAE("'inputPaths' must be a string or an array of strings");
-    }
   }
 
   @JsonProperty("paths")
@@ -83,23 +69,7 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
   @Override
   protected Collection<Path> initObjects() throws IOException
   {
-    // Use TextInputFormat to read splits. To do this, we need to make a fake Job.
-    final Job job = Job.getInstance(conf);
-
-    // Add paths to the fake JobContext.
-    inputPaths.forEach(input -> {
-      try {
-        FileInputFormat.addInputPaths(job, input);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
-
-    return new TextInputFormat().getSplits(job)
-                                .stream()
-                                .map(split -> ((FileSplit) split).getPath())
-                                .collect(Collectors.toSet());
+    return HdfsInputSource.getPaths(inputPaths, conf);
   }
 
   @Override
