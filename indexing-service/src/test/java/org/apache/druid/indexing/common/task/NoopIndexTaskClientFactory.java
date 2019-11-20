@@ -17,28 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel;
+package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import org.apache.druid.indexing.common.IndexTaskClient;
+import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
-
-/**
- * Same with {@link IndexIOConfig} except its JSON type name.
- */
-@JsonTypeName("index_parallel")
-public class ParallelIndexIOConfig extends IndexIOConfig
+public class NoopIndexTaskClientFactory implements IndexTaskClientFactory
 {
-  @JsonCreator
-  public ParallelIndexIOConfig(
-      @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+  @Override
+  public IndexTaskClient build(
+      TaskInfoProvider taskInfoProvider,
+      String callerId,
+      int numThreads,
+      Duration httpTimeout,
+      long numRetries
   )
   {
-    super(firehoseFactory, appendToExisting);
+    throw new UnsupportedOperationException();
   }
 }
