@@ -32,9 +32,12 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -56,7 +59,8 @@ public class S3Utils
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    return isIOException || isTimeout;
+    final boolean badStatusCode = ex.getStatusCode() == 400 ||  ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
+    return !badStatusCode && (isIOException || isTimeout);
   }
 
   public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
@@ -107,36 +111,95 @@ public class S3Utils
 
   public static Iterator<S3ObjectSummary> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
-      final String bucket,
-      final String prefix,
+      final URI prefix,
       final int numMaxKeys
   )
   {
-    final ListObjectsV2Request request = new ListObjectsV2Request()
-        .withBucketName(bucket)
-        .withPrefix(prefix)
-        .withMaxKeys(numMaxKeys);
+    return lazyFetchingObjectSummariesIterator(s3Client, Iterators.singletonIterator(prefix), numMaxKeys);
+  }
 
+  public static Iterator<S3ObjectSummary> lazyFetchingObjectSummariesIterator(
+      final ServerSideEncryptingAmazonS3 s3Client,
+      final Iterator<URI> prefixes,
+      final int maxListingLength
+  )
+  {
     return new Iterator<S3ObjectSummary>()
     {
+      private ListObjectsV2Request request;
       private ListObjectsV2Result result;
+      private URI currentUri;
+      private String currentBucket;
+      private String currentPrefix;
       private Iterator<S3ObjectSummary> objectSummaryIterator;
 
       {
+        prepareNextRequest();
         fetchNextBatch();
+      }
+
+      private void prepareNextRequest()
+      {
+        currentUri = prefixes.next();
+        currentBucket = currentUri.getAuthority();
+        currentPrefix = S3Utils.extractS3Key(currentUri);
+
+        request = new ListObjectsV2Request()
+            .withBucketName(currentBucket)
+            .withPrefix(currentPrefix)
+            .withMaxKeys(maxListingLength);
       }
 
       private void fetchNextBatch()
       {
-        result = s3Client.listObjectsV2(request);
-        objectSummaryIterator = result.getObjectSummaries().iterator();
-        request.setContinuationToken(result.getContinuationToken());
+        try {
+          result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request));
+          objectSummaryIterator = result.getObjectSummaries().iterator();
+          request.setContinuationToken(result.getContinuationToken());
+        }
+        catch (AmazonS3Exception outerException) {
+          log.error(outerException, "Exception while listing on %s", currentUri);
+
+          if (outerException.getStatusCode() == 403) {
+            // The "Access Denied" means users might not have a proper permission for listing on the given uri.
+            // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
+            // In this case, users should be able to get objects if they have a proper permission for GetObject.
+
+            log.warn("Access denied for %s. Try to get the object from the uri without listing", currentUri);
+            try {
+              final ObjectMetadata objectMetadata =
+                  S3Utils.retryS3Operation(() -> s3Client.getObjectMetadata(currentBucket, currentPrefix));
+
+              if (!S3Utils.isDirectoryPlaceholder(currentPrefix, objectMetadata)) {
+                // it's not a directory, so just generate an object summary
+                S3ObjectSummary fabricated = new S3ObjectSummary();
+                fabricated.setBucketName(currentBucket);
+                fabricated.setKey(currentPrefix);
+                objectSummaryIterator = Iterators.singletonIterator(fabricated);
+              } else {
+                throw new RE(
+                    "[%s] is a directory placeholder, "
+                    + "but failed to get the object list under the directory due to permission",
+                    currentUri
+                );
+              }
+            }
+            catch (Exception innerException) {
+              throw new RuntimeException(innerException);
+            }
+          } else {
+            throw new RuntimeException(outerException);
+          }
+        }
+        catch (Exception ex) {
+          throw new RuntimeException(ex);
+        }
       }
 
       @Override
       public boolean hasNext()
       {
-        return objectSummaryIterator.hasNext() || result.isTruncated();
+        return objectSummaryIterator.hasNext() || result.isTruncated() || prefixes.hasNext();
       }
 
       @Override
@@ -152,13 +215,16 @@ public class S3Utils
 
         if (result.isTruncated()) {
           fetchNextBatch();
+        } else if (prefixes.hasNext()) {
+          prepareNextRequest();
+          fetchNextBatch();
         }
 
         if (!objectSummaryIterator.hasNext()) {
           throw new ISE(
               "Failed to further iterate on bucket[%s] and prefix[%s]. The last continuationToken was [%s]",
-              bucket,
-              prefix,
+              currentBucket,
+              currentPrefix,
               result.getContinuationToken()
           );
         }
@@ -166,6 +232,26 @@ public class S3Utils
         return objectSummaryIterator.next();
       }
     };
+  }
+
+
+  /**
+   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
+   *
+   * <pre>
+   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
+   * </pre>
+   */
+  public static URI summaryToUri(S3ObjectSummary object)
+  {
+    final String originalAuthority = object.getBucketName();
+    final String originalPath = object.getKey();
+    final String authority = originalAuthority.endsWith("/") ?
+                             originalAuthority.substring(0, originalAuthority.length() - 1) :
+                             originalAuthority;
+    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
+
+    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 
   public static String constructSegmentPath(String baseKey, String storageDir)

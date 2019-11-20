@@ -19,17 +19,12 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -39,10 +34,6 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -50,16 +41,13 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class S3InputSource extends AbstractInputSource implements SplittableInputSource<URI>
 {
-  private static final Logger log = new Logger(S3InputSource.class);
   private static final int MAX_LISTING_LENGTH = 1024;
 
   private final ServerSideEncryptingAmazonS3 s3Client;
@@ -113,7 +101,9 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
       return uris.stream().map(InputSplit::new);
     }
 
-    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false);
+    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
+                        .map(S3Utils::summaryToUri)
+                        .map(InputSplit::new);
   }
 
   @Override
@@ -156,26 +146,6 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     );
   }
 
-
-  /**
-   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
-   *
-   * <pre>
-   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
-   * </pre>
-   */
-  public static URI toUri(S3ObjectSummary object)
-  {
-    final String originalAuthority = object.getBucketName();
-    final String originalPath = object.getKey();
-    final String authority = originalAuthority.endsWith("/") ?
-                             originalAuthority.substring(0, originalAuthority.length() - 1) :
-                             originalAuthority;
-    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
-
-    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -205,129 +175,8 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
            '}';
   }
 
-  private Iterable<InputSplit<URI>> getIterableObjectsFromPrefixes()
+  private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> objectFetchingIterator(s3Client, prefixes.iterator());
-  }
-
-  /**
-   * iterator which fetches batches of {@link #MAX_LISTING_LENGTH} objects given a set of prefixes, using
-   * {@link ServerSideEncryptingAmazonS3#listObjectsV2}, with a fallback to
-   * {@link ServerSideEncryptingAmazonS3#getObjectMetadata} to check if the 'prefix' is an object in the event the
-   * list objects call responds with a 403 http status code
-   */
-  private static Iterator<InputSplit<URI>> objectFetchingIterator(
-      final ServerSideEncryptingAmazonS3 s3Client,
-      final Iterator<URI> prefixes
-  )
-  {
-    return new Iterator<InputSplit<URI>>()
-    {
-      private ListObjectsV2Request request;
-      private ListObjectsV2Result result;
-      private URI currentUri;
-      private String currentBucket;
-      private String currentPrefix;
-      private Iterator<S3ObjectSummary> objectSummaryIterator;
-
-      {
-        prepareNextRequest();
-        fetchNextBatch();
-      }
-
-      private void prepareNextRequest()
-      {
-        currentUri = prefixes.next();
-        currentBucket = currentUri.getAuthority();
-        currentPrefix = S3Utils.extractS3Key(currentUri);
-
-        request = new ListObjectsV2Request()
-            .withBucketName(currentBucket)
-            .withPrefix(currentPrefix)
-            .withMaxKeys(S3InputSource.MAX_LISTING_LENGTH);
-      }
-
-      private void fetchNextBatch()
-      {
-        try {
-          result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request));
-          objectSummaryIterator = result.getObjectSummaries().iterator();
-          request.setContinuationToken(result.getContinuationToken());
-        }
-        catch (AmazonS3Exception outerException) {
-          log.error(outerException, "Exception while listing on %s", currentUri);
-
-          if (outerException.getStatusCode() == 403) {
-            // The "Access Denied" means users might not have a proper permission for listing on the given uri.
-            // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
-            // In this case, users should be able to get objects if they have a proper permission for GetObject.
-
-            log.warn("Access denied for %s. Try to get the object from the uri without listing", currentUri);
-            try {
-              final ObjectMetadata objectMetadata =
-                  S3Utils.retryS3Operation(() -> s3Client.getObjectMetadata(currentBucket, currentPrefix));
-
-              if (!S3Utils.isDirectoryPlaceholder(currentPrefix, objectMetadata)) {
-                // it's not a directory, so just generate an object summary
-                S3ObjectSummary fabricated = new S3ObjectSummary();
-                fabricated.setBucketName(currentBucket);
-                fabricated.setKey(currentPrefix);
-                objectSummaryIterator = Iterators.singletonIterator(fabricated);
-              } else {
-                throw new RE(
-                    "[%s] is a directory placeholder, "
-                    + "but failed to get the object list under the directory due to permission",
-                    currentUri
-                );
-              }
-            }
-            catch (Exception innerException) {
-              throw new RuntimeException(innerException);
-            }
-          } else {
-            throw new RuntimeException(outerException);
-          }
-        }
-        catch (Exception ex) {
-          throw new RuntimeException(ex);
-        }
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return objectSummaryIterator.hasNext() || result.isTruncated() || prefixes.hasNext();
-      }
-
-      @Override
-      public InputSplit<URI> next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-
-        if (objectSummaryIterator.hasNext()) {
-          return new InputSplit<>(toUri(objectSummaryIterator.next()));
-        }
-
-        if (result.isTruncated()) {
-          fetchNextBatch();
-        } else if (prefixes.hasNext()) {
-          prepareNextRequest();
-          fetchNextBatch();
-        }
-
-        if (!objectSummaryIterator.hasNext()) {
-          throw new ISE(
-              "Failed to further iterate on bucket[%s] and prefix[%s]. The last continuationToken was [%s]",
-              currentBucket,
-              currentPrefix,
-              result.getContinuationToken()
-          );
-        }
-
-        return new InputSplit<>(toUri(objectSummaryIterator.next()));
-      }
-    };
+    return () -> S3Utils.lazyFetchingObjectSummariesIterator(s3Client, prefixes.iterator(), MAX_LISTING_LENGTH);
   }
 }

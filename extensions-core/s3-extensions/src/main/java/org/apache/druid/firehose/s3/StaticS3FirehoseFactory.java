@@ -34,7 +34,6 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
-import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -126,8 +125,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         try {
           final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
               s3Client,
-              bucket,
-              prefix,
+              uri,
               MAX_LISTING_LENGTH
           );
           objects.addAll(Lists.newArrayList(objectSummaryIterator));
@@ -162,7 +160,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
           }
         }
       }
-      return objects.stream().map(S3InputSource::toUri).collect(Collectors.toList());
+      return objects.stream().map(S3Utils::summaryToUri).collect(Collectors.toList());
     }
   }
 
