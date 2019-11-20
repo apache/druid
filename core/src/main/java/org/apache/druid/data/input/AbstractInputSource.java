@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 
 /**
  * Abstract class for {@link InputSource}. This class provides a default implementation of {@link #reader} with
@@ -37,7 +36,7 @@ public abstract class AbstractInputSource implements InputSource
       InputRowSchema inputRowSchema,
       @Nullable InputFormat inputFormat,
       @Nullable File temporaryDirectory
-  ) throws IOException
+  )
   {
     if (needsFormat()) {
       return formattableReader(
@@ -54,7 +53,7 @@ public abstract class AbstractInputSource implements InputSource
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
       @Nullable File temporaryDirectory
-  ) throws IOException
+  )
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = true");
   }

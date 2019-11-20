@@ -210,6 +210,12 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     return () -> objectFetchingIterator(s3Client, prefixes.iterator());
   }
 
+  /**
+   * iterator which fetches batches of {@link #MAX_LISTING_LENGTH} objects given a set of prefixes, using
+   * {@link ServerSideEncryptingAmazonS3#listObjectsV2}, with a fallback to
+   * {@link ServerSideEncryptingAmazonS3#getObjectMetadata} to check if the 'prefix' is an object in the event the
+   * list objects call responds with a 403 http status code
+   */
   private static Iterator<InputSplit<URI>> objectFetchingIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterator<URI> prefixes
@@ -262,10 +268,11 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
                   S3Utils.retryS3Operation(() -> s3Client.getObjectMetadata(currentBucket, currentPrefix));
 
               if (!S3Utils.isDirectoryPlaceholder(currentPrefix, objectMetadata)) {
-
-                objectSummaryIterator = Iterators.singletonIterator(
-                    S3Utils.getSingleObjectSummary(s3Client, currentBucket, currentPrefix)
-                );
+                // it's not a directory, so just generate an object summary
+                S3ObjectSummary fabricated = new S3ObjectSummary();
+                fabricated.setBucketName(currentBucket);
+                fabricated.setKey(currentPrefix);
+                objectSummaryIterator = Iterators.singletonIterator(fabricated);
               } else {
                 throw new RE(
                     "[%s] is a directory placeholder, "
