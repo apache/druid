@@ -61,7 +61,7 @@ public class S3Entity implements InputEntity
       if (s3Object == null) {
         throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, key);
       }
-      return CompressionUtils.decompress(s3Object.getObjectContent(), uri.toString());
+      return CompressionUtils.decompress(s3Object.getObjectContent(), key);
     }
     catch (AmazonS3Exception e) {
       throw new IOException(e);
