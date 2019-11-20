@@ -600,7 +600,7 @@ public class InputSourceSamplerTest
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
@@ -711,7 +711,7 @@ public class InputSourceSamplerTest
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
@@ -865,7 +865,7 @@ public class InputSourceSamplerTest
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
@@ -1022,7 +1022,7 @@ public class InputSourceSamplerTest
     Assert.assertEquals(4, response.getNumRowsIndexed());
     Assert.assertEquals(3, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
@@ -1178,9 +1178,7 @@ public class InputSourceSamplerTest
   private String getUnparseableTimestampString()
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? (USE_DEFAULT_VALUE_FOR_NULL
-              ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-              : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=, met1=6}")
+           ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
            : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, met1=6}";
   }
 

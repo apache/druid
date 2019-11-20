@@ -21,6 +21,10 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.CsvReader;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -29,7 +33,7 @@ import java.util.List;
 
 public class CSVParser extends AbstractFlatTextFormatParser
 {
-  private final RFC4180Parser parser = new RFC4180Parser();
+  private final RFC4180Parser parser = CsvReader.createOpenCsvParser();
 
   public CSVParser(
       @Nullable final String listDelimiter,
