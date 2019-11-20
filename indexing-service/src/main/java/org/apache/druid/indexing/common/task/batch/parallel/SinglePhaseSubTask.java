@@ -100,6 +100,7 @@ import java.util.stream.Collectors;
 public class SinglePhaseSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "single_phase_sub_task";
+  public static final String OLD_TYPE_NAME = "index_sub";
 
   private static final Logger LOG = new Logger(SinglePhaseSubTask.class);
 

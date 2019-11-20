@@ -46,7 +46,7 @@ public class InputEntityIteratingReader implements InputSourceReader
   private final Iterator<InputEntity> sourceIterator;
   private final File temporaryDirectory;
 
-  InputEntityIteratingReader(
+  public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
       Stream<InputEntity> sourceStream,
