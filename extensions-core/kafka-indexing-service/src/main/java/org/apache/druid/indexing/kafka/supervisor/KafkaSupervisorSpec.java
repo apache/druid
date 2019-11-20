@@ -43,20 +43,6 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
   private static final String TASK_TYPE = "kafka";
 
-  private static KafkaSupervisorTuningConfig getTuningConfig(
-      @Nullable KafkaSupervisorIngestionSpec ingestionSchema,
-      @Nullable KafkaSupervisorTuningConfig tuningConfig
-  )
-  {
-    if (ingestionSchema != null) {
-      return ingestionSchema.getTuningConfig() != null
-             ? ingestionSchema.getTuningConfig()
-             : KafkaSupervisorTuningConfig.defaultConfig();
-    } else {
-      return tuningConfig != null ? tuningConfig : KafkaSupervisorTuningConfig.defaultConfig();
-    }
-  }
-
   @JsonCreator
   public KafkaSupervisorSpec(
       @JsonProperty("spec") @Nullable KafkaSupervisorIngestionSpec ingestionSchema,
@@ -77,10 +63,15 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
-        ingestionSchema,
-        ingestionSchema != null ? ingestionSchema.getDataSchema() : dataSchema,
-        getTuningConfig(ingestionSchema, tuningConfig),
-        ingestionSchema != null ? ingestionSchema.getIOConfig() : ioConfig,
+        ingestionSchema != null
+        ? ingestionSchema
+        : new KafkaSupervisorIngestionSpec(
+            dataSchema,
+            ioConfig,
+            tuningConfig != null
+            ? tuningConfig
+            : KafkaSupervisorTuningConfig.defaultConfig()
+        ),
         context,
         suspended,
         taskStorage,

@@ -46,20 +46,6 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   private static final String SUPERVISOR_TYPE = "kinesis";
   private final AWSCredentialsConfig awsCredentialsConfig;
 
-  private static KinesisSupervisorTuningConfig getTuningConfig(
-      KinesisSupervisorIngestionSpec ingestionSchema,
-      KinesisSupervisorTuningConfig tuningConfig
-  )
-  {
-    if (ingestionSchema != null) {
-      return ingestionSchema.getTuningConfig() != null
-             ? ingestionSchema.getTuningConfig()
-             : KinesisSupervisorTuningConfig.defaultConfig();
-    } else {
-      return tuningConfig != null ? tuningConfig : KinesisSupervisorTuningConfig.defaultConfig();
-    }
-  }
-
   @JsonCreator
   public KinesisSupervisorSpec(
       @JsonProperty("spec") @Nullable KinesisSupervisorIngestionSpec ingestionSchema,
@@ -81,10 +67,15 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
-        ingestionSchema,
-        ingestionSchema != null ? ingestionSchema.getDataSchema() : dataSchema,
-        getTuningConfig(ingestionSchema, tuningConfig),
-        ingestionSchema != null ? ingestionSchema.getIOConfig() : ioConfig,
+        ingestionSchema != null
+        ? ingestionSchema
+        : new KinesisSupervisorIngestionSpec(
+            dataSchema,
+            ioConfig,
+            tuningConfig != null
+            ? tuningConfig
+            : KinesisSupervisorTuningConfig.defaultConfig()
+        ),
         context,
         suspended,
         taskStorage,
