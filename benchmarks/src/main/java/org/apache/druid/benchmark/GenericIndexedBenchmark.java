@@ -21,6 +21,7 @@ package org.apache.druid.benchmark;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -60,6 +61,10 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class GenericIndexedBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   public static final int ITERATIONS = 10000;
 
   static final ObjectStrategy<byte[]> BYTE_ARRAY_STRATEGY = new ObjectStrategy<byte[]>()

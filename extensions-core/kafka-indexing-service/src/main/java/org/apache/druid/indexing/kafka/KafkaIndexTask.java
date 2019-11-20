@@ -138,7 +138,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     //noinspection unchecked
     return new IncrementalPublishingKafkaIndexTaskRunner(
         this,
-        Preconditions.checkNotNull(dataSchema.getParser(), "inputRowParser"),
+        dataSchema.getParser(),
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,

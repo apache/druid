@@ -115,13 +115,17 @@ milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore
 timezone information, but only carry information about the exact moment in time they represent. See the
 [Time functions](#time-functions) section for more information about timestamp handling.
 
-Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
-Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
+### Null handling modes
+By default Druid treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
+in this mode Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
 and both will evaluate to true if `col` contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will
 return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)`
 aggregator will count the number of rows where expr is neither null nor the empty string. String columns in Druid are
 NULLable. Numeric columns are NOT NULL; if you query a numeric column that is not present in all segments of your Druid
 datasource, then it will be treated as zero for rows from those segments.
+
+If `druid.generic.useDefaultValueForNull` is set to `false` _system-wide, at indexing time_, data
+will be stored in a manner that allows distinguishing empty strings from NULL values for string columns, and will allow NULL values to be stored for numeric columns. Druid SQL will generally operate more properly and the SQL optimizer will work best in this mode, however this does come at a cost. See the [segment documentation on SQL compatible null-handling](../design/segments.md#sql-compatible-null-handling) for more details.
 
 For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
 Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
@@ -355,7 +359,7 @@ All 'array' references in the multi-value string function documentation can refe
 
 |Function|Notes|
 |--------|-----|
-| `ARRAY(expr1,expr ...)` | constructs an SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `ARRAY(expr1,expr ...)` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
 | `MV_LENGTH(arr)` | returns length of array expression |
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |

@@ -47,7 +47,7 @@ public class CsvInputFormat implements InputFormat
   @JsonCreator
   public CsvInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
-      @JsonProperty("listDelimiter") String listDelimiter,
+      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
       @JsonProperty("skipHeaderRows") int skipHeaderRows

@@ -43,6 +43,10 @@ import java.util.function.Supplier;
 
 public class JdbcDataFetcher implements DataFetcher<String, String>
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final Logger LOGGER = new Logger(JdbcDataFetcher.class);
   private static final int DEFAULT_STREAMING_FETCH_SIZE = 1000;
 

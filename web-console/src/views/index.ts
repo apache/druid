@@ -23,4 +23,4 @@ export * from './lookups-view/lookups-view';
 export * from './segments-view/segments-view';
 export * from './services-view/services-view';
 export * from './query-view/query-view';
-export * from './task-view/tasks-view';
+export * from './ingestion-view/ingestion-view';

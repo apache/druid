@@ -62,7 +62,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   KinesisIndexTaskRunner(
       KinesisIndexTask task,
-      InputRowParser<ByteBuffer> parser,
+      @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,

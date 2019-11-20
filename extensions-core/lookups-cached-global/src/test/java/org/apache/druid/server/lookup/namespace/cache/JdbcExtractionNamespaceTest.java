@@ -67,6 +67,10 @@ import java.util.concurrent.locks.ReentrantLock;
 @RunWith(Parameterized.class)
 public class JdbcExtractionNamespaceTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private static final Logger log = new Logger(JdbcExtractionNamespaceTest.class);
