@@ -151,6 +151,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     replayAll();
 
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
         DATA_SCHEMA,
         null,
         new KinesisSupervisorIOConfig(

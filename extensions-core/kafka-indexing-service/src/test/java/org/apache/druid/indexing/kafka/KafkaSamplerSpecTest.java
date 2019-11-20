@@ -137,6 +137,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     insertData(generateRecords(TOPIC));
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
