@@ -1215,7 +1215,7 @@ public class FirehoseSamplerTest extends InitializedNullHandlingTest
   private Map<String, Object> replaceNullValues(Map<String, Object> data)
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? USE_DEFAULT_VALUE_FOR_NULL
+           ? NullHandling.replaceWithDefault()
              ? data
              : data.entrySet()
                    .stream()

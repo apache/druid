@@ -122,5 +122,4 @@ public class NullHandling
   {
     return replaceWithDefault() ? Strings.isNullOrEmpty(value) : value == null;
   }
-
 }
