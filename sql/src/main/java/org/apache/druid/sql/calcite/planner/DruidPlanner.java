@@ -55,8 +55,8 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -256,9 +256,6 @@ public class DruidPlanner implements Closeable
   )
   {
     Object outerLimitObj = plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
-    if (outerLimitObj == null) {
-      return root.rel;
-    }
     Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
     if (outerLimit == null) {
       return root.rel;

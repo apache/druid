@@ -765,6 +765,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarFromSelectSingleColumnWithLimitDescending() throws Exception
   {
+    // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
+    // in the inner query. This is valid, as the SQL standard considers the subquery results to be an unordered
+    // set of rows.
     testQuery(
         "SELECT * FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC) LIMIT 2",
         ImmutableList.of(
@@ -781,6 +784,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{""},
             new Object[]{"10.1"}
+        )
+    );
+
+    // The outer limit wrapping behavior that was used in the query above can be applied with a context flag instead
+    Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
+    testQuery(
+        "SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC",
+        outerLimitContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("__time", "dim1"))
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(outerLimitContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2001-01-03"), "abc"},
+            new Object[]{timestamp("2001-01-02"), "def"}
         )
     );
   }
@@ -816,7 +842,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
     // in the inner query. This is valid, as the SQL standard considers the subquery results to be an unordered
-    // set of rows.
+    // set of rows. This test now validates that the inner ordering is not applied.
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC)",
         ImmutableList.of(
@@ -1927,6 +1953,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  // Ideally the following filter should be simplified to (dim2 == 'a' || dim2 IS NULL), the
+                  // (dim2 != 'a') component is unnecessary.
                   .filters(
                       or(
                           selector("dim2", "a", null),
@@ -1999,45 +2027,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullStringEquality() throws Exception
   {
+    // In Calcite 1.21, this query is optimized to return 0 without generating a native Druid query, since
+    // null is not equal to null or any other value.
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.foo\n"
         + "WHERE NULLIF(dim2, 'a') = null",
         ImmutableList.of(),
-        NullHandling.replaceWithDefault() ?
-        // Matches everything but "abc"
-        ImmutableList.of(new Object[]{0L}) :
-        // null is not eqaual to null or any other value
         ImmutableList.of(new Object[]{0L})
     );
-    /*
-    The SQL query in this test planned to the following Druid query in Calcite 1.17.
-    After upgrading to Calcite 1.21, Calcite applies an optimization based on the NULLIF() == null,
-    which is valid assuming standard SQL null handling, and no query is generated.
-
-    testQuery(
-        "SELECT COUNT(*)\n"
-        + "FROM druid.foo\n"
-        + "WHERE NULLIF(dim2, 'a') = null",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(expressionFilter("case_searched((\"dim2\" == 'a'),"
-                                            + (NullHandling.replaceWithDefault() ? "1" : "0")
-                                            + ",(\"dim2\" == null))"))
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        NullHandling.replaceWithDefault() ?
-        // Matches everything but "abc"
-        ImmutableList.of(new Object[]{5L}) :
-        // null is not eqaual to null or any other value
-        ImmutableList.of()
-    );
-    */
   }
 
   @Test
@@ -2332,7 +2330,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns()
                   .aggregators(aggregators(
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a0"),
@@ -3981,6 +3978,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             expressionVirtualColumn("v0", "strlen(\"dim1\")", ValueType.LONG),
+                            // The two layers of CASTs here are unusual, they should really be collapsed into one
                             expressionVirtualColumn("v1", "CAST(CAST(strlen(\"dim1\"), 'STRING'), 'LONG')", ValueType.LONG)
                         )
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
@@ -7638,6 +7636,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @Test
+  public void testProjectAfterSort3WithoutAmbiguity() throws Exception
+  {
+    // This query is equivalent to the one in testProjectAfterSort3 but renames the second grouping column
+    // to avoid the ambiguous name exception. The inner sort is also optimized out in Calcite 1.21.
+    testQuery(
+        "select copydim1 from (select dim1, dim1 AS copydim1, count(*) cnt from druid.foo group by dim1, dim1 order by cnt)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim1", "d0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"1"},
+            new Object[]{"10.1"},
+            new Object[]{"2"},
+            new Object[]{"abc"},
+            new Object[]{"def"}
+        )
+    );
+  }
+
   @Test
   public void testSortProjectAfterNestedGroupBy() throws Exception
   {
@@ -9254,6 +9284,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+  
+  
 
   @Test
   public void testQueryContextOuterLimit() throws Exception

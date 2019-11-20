@@ -115,8 +115,6 @@ import java.util.stream.Collectors;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
-  private static final EmittingLogger log = new EmittingLogger(DruidOperatorTable.class);
-
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
           .add(new ApproxCountDistinctSqlAggregator())
