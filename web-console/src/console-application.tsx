@@ -29,12 +29,12 @@ import { Capabilities } from './utils/capabilities';
 import {
   DatasourcesView,
   HomeView,
+  IngestionView,
   LoadDataView,
   LookupsView,
   QueryView,
   SegmentsView,
   ServicesView,
-  TasksView,
 } from './views';
 
 import './console-application.scss';
@@ -138,17 +138,17 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToTaskWithTaskId = (taskId?: string, openDialog?: string) => {
+  private goToIngestionWithTaskId = (taskId?: string, openDialog?: string) => {
     this.taskId = taskId;
     if (openDialog) this.openDialog = openDialog;
-    window.location.hash = 'tasks';
+    window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
-  private goToTaskWithDatasource = (datasource?: string, openDialog?: string) => {
+  private goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
     this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
-    window.location.hash = 'tasks';
+    window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
@@ -193,7 +193,7 @@ export class ConsoleApplication extends React.PureComponent<
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
         exampleManifestsUrl={exampleManifestsUrl}
-        goToTask={this.goToTaskWithTaskId}
+        goToTask={this.goToIngestionWithTaskId}
       />,
       'narrow-pad',
     );
@@ -210,7 +210,7 @@ export class ConsoleApplication extends React.PureComponent<
       <DatasourcesView
         initDatasource={this.datasource}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTaskWithDatasource}
+        goToTask={this.goToIngestionWithDatasource}
         goToSegments={this.goToSegments}
         capabilities={capabilities}
       />,
@@ -230,11 +230,11 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedTasksView = () => {
+  private wrappedIngestionView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
-      'tasks',
-      <TasksView
+      'ingestion',
+      <IngestionView
         taskId={this.taskId}
         datasourceId={this.datasource}
         openDialog={this.openDialog}
@@ -254,7 +254,7 @@ export class ConsoleApplication extends React.PureComponent<
       <ServicesView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTaskWithTaskId}
+        goToTask={this.goToIngestionWithTaskId}
         capabilities={capabilities}
       />,
     );
@@ -281,9 +281,9 @@ export class ConsoleApplication extends React.PureComponent<
           <Switch>
             <Route path="/load-data" component={this.wrappedLoadDataView} />
 
+            <Route path="/ingestion" component={this.wrappedIngestionView} />
             <Route path="/datasources" component={this.wrappedDatasourcesView} />
             <Route path="/segments" component={this.wrappedSegmentsView} />
-            <Route path="/tasks" component={this.wrappedTasksView} />
             <Route path="/services" component={this.wrappedServicesView} />
 
             <Route path="/query" component={this.wrappedQueryView} />

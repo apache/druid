@@ -16,39 +16,27 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { shallow } from 'enzyme';
+import React from 'react';
 
-.tasks-view {
-  height: 100%;
-  width: 100%;
+import { Capabilities } from '../../utils/capabilities';
 
-  .top-pane {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 0;
+import { IngestionView } from './ingestion-view';
 
-    .view-control-bar {
-      margin-bottom: $standard-padding;
-    }
-  }
-
-  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
-    height: 3px;
-    background-color: #6d8ea9;
-  }
-
-  .bottom-pane {
-    position: absolute;
-    width: 100%;
-    top: 12px;
-    bottom: 0;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: $view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
-  }
-}
+describe('tasks view', () => {
+  it('matches snapshot', () => {
+    const taskView = shallow(
+      <IngestionView
+        openDialog={'test'}
+        taskId={'test'}
+        datasourceId={'datasource'}
+        goToDatasource={() => {}}
+        goToQuery={() => {}}
+        goToMiddleManager={() => {}}
+        goToLoadData={() => {}}
+        capabilities={Capabilities.FULL}
+      />,
+    );
+    expect(taskView).toMatchSnapshot();
+  });
+});
