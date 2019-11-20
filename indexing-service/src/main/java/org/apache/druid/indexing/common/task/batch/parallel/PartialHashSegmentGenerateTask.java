@@ -26,7 +26,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.DefaultCachingLocalSegmentAllocator;
+import org.apache.druid.indexing.common.task.HashPartitionCachingLocalSegmentAllocator;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -127,7 +127,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   @Override
   IndexTaskSegmentAllocator createSegmentAllocator(TaskToolbox toolbox) throws IOException
   {
-    return new DefaultCachingLocalSegmentAllocator(
+    return new HashPartitionCachingLocalSegmentAllocator(
         toolbox,
         getId(),
         getDataSource(),

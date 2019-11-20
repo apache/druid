@@ -20,20 +20,24 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+
 public class PartialHashSegmentGenerateTaskTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
-  private static final ParallelIndexIngestionSpec INGESTION_SPEC = Factory.createIngestionSpec(
-      new InlineFirehoseFactory("data"),
-      new Factory.TuningConfigBuilder().build(),
-      Factory.createDataSchema(Factory.INPUT_INTERVALS)
+  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
+  private static final ParallelIndexIngestionSpec INGESTION_SPEC = ParallelIndexTestingFactory.createIngestionSpec(
+      new LocalInputSource(new File("baseDir"), "filer"),
+      new JsonInputFormat(null, null),
+      new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
+      ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
   );
 
   private PartialHashSegmentGenerateTask target;
@@ -42,16 +46,16 @@ public class PartialHashSegmentGenerateTaskTest
   public void setup()
   {
     target = new PartialHashSegmentGenerateTask(
-        Factory.AUTOMATIC_ID,
-        Factory.GROUP_ID,
-        Factory.TASK_RESOURCE,
-        Factory.SUPERVISOR_TASK_ID,
-        Factory.NUM_ATTEMPTS,
+        ParallelIndexTestingFactory.AUTOMATIC_ID,
+        ParallelIndexTestingFactory.GROUP_ID,
+        ParallelIndexTestingFactory.TASK_RESOURCE,
+        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.NUM_ATTEMPTS,
         INGESTION_SPEC,
-        Factory.CONTEXT,
-        Factory.INDEXING_SERVICE_CLIENT,
-        Factory.TASK_CLIENT_FACTORY,
-        Factory.APPENDERATORS_MANAGER
+        ParallelIndexTestingFactory.CONTEXT,
+        ParallelIndexTestingFactory.INDEXING_SERVICE_CLIENT,
+        ParallelIndexTestingFactory.TASK_CLIENT_FACTORY,
+        ParallelIndexTestingFactory.APPENDERATORS_MANAGER
     );
   }
 

@@ -118,8 +118,10 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
 
   public static class HandlerTest
   {
-    private static final Factory.HandlerTester HANDLER_TESTER =
-        Factory.createHandlerTester(DefaultIndexTaskInputRowIteratorBuilder::new);
+    private static final IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester HANDLER_TESTER =
+        IndexTaskInputRowIteratorBuilderTestingFactory.createHandlerTester(
+            DefaultIndexTaskInputRowIteratorBuilder::new
+        );
     private static final InputRow NO_NEXT_INPUT_ROW = null;
 
     @Rule
@@ -129,27 +131,33 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     public void invokesNullRowHandlerFirst()
     {
       DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
-      CloseableIterator<InputRow> nullInputRowIterator = Factory.createInputRowIterator(null);
+      CloseableIterator<InputRow> nullInputRowIterator =
+          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(null);
       GranularitySpec absentBucketIntervalGranularitySpec =
-          Factory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
+          IndexTaskInputRowIteratorBuilderTestingFactory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
 
-      List<Factory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-          nullInputRowIterator,
-          absentBucketIntervalGranularitySpec,
-          NO_NEXT_INPUT_ROW
+      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+          HANDLER_TESTER.invokeHandlers(
+              nullInputRowIterator,
+              absentBucketIntervalGranularitySpec,
+              NO_NEXT_INPUT_ROW
+          );
+
+      Assert.assertEquals(
+          Collections.singletonList(IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.NULL_ROW),
+          handlerInvocationHistory
       );
-
-      Assert.assertEquals(Collections.singletonList(Factory.HandlerTester.Handler.NULL_ROW), handlerInvocationHistory);
     }
 
     @Test
     public void invokesInvalidTimestampHandlerBeforeAbsentBucketIntervalHandler()
     {
       DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
-      InputRow inputRow = Factory.createInputRow(invalidTimestamp);
-      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
+      InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(invalidTimestamp);
+      CloseableIterator<InputRow> inputRowIterator =
+          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
       GranularitySpec absentBucketIntervalGranularitySpec =
-          Factory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
+          IndexTaskInputRowIteratorBuilderTestingFactory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
 
       exception.expect(ParseException.class);
       exception.expectMessage("Encountered row with timestamp that cannot be represented as a long");
@@ -160,19 +168,24 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     @Test
     public void invokesAbsentBucketIntervalHandlerLast()
     {
-      DateTime timestamp = Factory.TIMESTAMP;
-      InputRow inputRow = Factory.createInputRow(timestamp);
-      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
-      GranularitySpec absentBucketIntervalGranularitySpec = Factory.createAbsentBucketIntervalGranularitySpec(timestamp);
+      DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
+      InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp);
+      CloseableIterator<InputRow> inputRowIterator =
+          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
+      GranularitySpec absentBucketIntervalGranularitySpec =
+          IndexTaskInputRowIteratorBuilderTestingFactory.createAbsentBucketIntervalGranularitySpec(timestamp);
 
-      List<Factory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-          inputRowIterator,
-          absentBucketIntervalGranularitySpec,
-          NO_NEXT_INPUT_ROW
-      );
+      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+          HANDLER_TESTER.invokeHandlers(
+              inputRowIterator,
+              absentBucketIntervalGranularitySpec,
+              NO_NEXT_INPUT_ROW
+          );
 
       Assert.assertEquals(
-          Collections.singletonList(Factory.HandlerTester.Handler.ABSENT_BUCKET_INTERVAL),
+          Collections.singletonList(
+              IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.ABSENT_BUCKET_INTERVAL
+          ),
           handlerInvocationHistory
       );
     }
@@ -180,22 +193,27 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     @Test
     public void invokesAppendedHandlersLast()
     {
-      DateTime timestamp = Factory.TIMESTAMP;
-      InputRow inputRow = Factory.createInputRow(timestamp);
-      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
-      GranularitySpec granularitySpec = Factory.createGranularitySpec(timestamp, Factory.PRESENT_BUCKET_INTERVAL_OPT);
+      DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
+      InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp);
+      CloseableIterator<InputRow> inputRowIterator =
+          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
+      GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+          timestamp,
+          IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+      );
 
       List<HandlingInputRowIterator.InputRowHandler> appendedHandlers = Collections.singletonList(row -> true);
 
-      List<Factory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-          inputRowIterator,
-          granularitySpec,
-          appendedHandlers,
-          NO_NEXT_INPUT_ROW
-      );
+      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+          HANDLER_TESTER.invokeHandlers(
+              inputRowIterator,
+              granularitySpec,
+              appendedHandlers,
+              NO_NEXT_INPUT_ROW
+          );
 
       Assert.assertEquals(
-          Collections.singletonList(Factory.HandlerTester.Handler.APPENDED),
+          Collections.singletonList(IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.APPENDED),
           handlerInvocationHistory
       );
     }
@@ -204,11 +222,15 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     public void doesNotInvokeHandlersIfRowValid()
     {
       DateTime timestamp = DateTimes.utc(0);
-      InputRow inputRow = Factory.createInputRow(timestamp);
-      CloseableIterator<InputRow> inputRowIterator = Factory.createInputRowIterator(inputRow);
-      GranularitySpec granularitySpec = Factory.createGranularitySpec(timestamp, Factory.PRESENT_BUCKET_INTERVAL_OPT);
+      InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp);
+      CloseableIterator<InputRow> inputRowIterator =
+          IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
+      GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+          timestamp,
+          IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+      );
 
-      List<Factory.HandlerTester.Handler> handlerInvocationHistory =
+      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
           HANDLER_TESTER.invokeHandlers(inputRowIterator, granularitySpec, inputRow);
 
       Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);

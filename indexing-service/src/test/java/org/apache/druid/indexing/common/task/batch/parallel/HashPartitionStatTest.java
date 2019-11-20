@@ -27,7 +27,7 @@ import org.junit.Test;
 
 public class HashPartitionStatTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
   private HashPartitionStat target;
 
@@ -35,13 +35,13 @@ public class HashPartitionStatTest
   public void setup()
   {
     target = new HashPartitionStat(
-        Factory.TASK_EXECUTOR_HOST,
-        Factory.TASK_EXECUTOR_PORT,
-        Factory.USE_HTTPS,
-        Factory.INTERVAL,
-        Factory.PARTITION_ID,
-        Factory.NUM_ROWS,
-        Factory.SIZE_BYTES
+        ParallelIndexTestingFactory.TASK_EXECUTOR_HOST,
+        ParallelIndexTestingFactory.TASK_EXECUTOR_PORT,
+        ParallelIndexTestingFactory.USE_HTTPS,
+        ParallelIndexTestingFactory.INTERVAL,
+        ParallelIndexTestingFactory.PARTITION_ID,
+        ParallelIndexTestingFactory.NUM_ROWS,
+        ParallelIndexTestingFactory.SIZE_BYTES
     );
   }
 

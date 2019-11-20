@@ -37,18 +37,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Allocates all necessary segments locally at the beginning and reuses them.
+ * Allocates all necessary hash-partitioned segments locally at the beginning and reuses them.
  *
  * @see CachingLocalSegmentAllocator
  */
-public class DefaultCachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
+public class HashPartitionCachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final TaskToolbox toolbox;
   private final String dataSource;
   private final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec;
   private final IndexTaskSegmentAllocator delegate;
 
-  public DefaultCachingLocalSegmentAllocator(
+  public HashPartitionCachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
       String dataSource,

@@ -36,7 +36,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
-class Factory
+/**
+ * Helper for creating objects for testing {@link IndexTaskInputRowIteratorBuilder}s.
+ */
+class IndexTaskInputRowIteratorBuilderTestingFactory
 {
   static final DateTime TIMESTAMP = DateTimes.utc(0);
   static final String DIMENSION = "dimension";

@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.DefaultCachingLocalSegmentAllocator;
+import org.apache.druid.indexing.common.task.HashPartitionCachingLocalSegmentAllocator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -48,7 +48,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class DefaultCachingLocalSegmentAllocatorTest
+public class HashPartitionCachingLocalSegmentAllocatorTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final String DATASOURCE = "datasource";
@@ -67,13 +67,13 @@ public class DefaultCachingLocalSegmentAllocatorTest
       INTERVAL, Pair.of(SHARD_SPEC_FACTORY, NUM_PARTITONS)
   );
 
-  private DefaultCachingLocalSegmentAllocator target;
+  private HashPartitionCachingLocalSegmentAllocator target;
 
   @Before
   public void setup() throws IOException
   {
     TaskToolbox toolbox = createToolbox();
-    target = new DefaultCachingLocalSegmentAllocator(
+    target = new HashPartitionCachingLocalSegmentAllocator(
         toolbox,
         TASKID,
         DATASOURCE,

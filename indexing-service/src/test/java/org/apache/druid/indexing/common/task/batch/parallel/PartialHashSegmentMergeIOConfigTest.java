@@ -28,14 +28,14 @@ import java.util.Collections;
 
 public class PartialHashSegmentMergeIOConfigTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final HashPartitionLocation HASH_PARTITION_LOCATION = new HashPartitionLocation(
-      Factory.HOST,
-      Factory.PORT,
-      Factory.USE_HTTPS,
-      Factory.SUBTASK_ID,
-      Factory.INTERVAL,
-      Factory.PARTITION_ID
+      ParallelIndexTestingFactory.HOST,
+      ParallelIndexTestingFactory.PORT,
+      ParallelIndexTestingFactory.USE_HTTPS,
+      ParallelIndexTestingFactory.SUBTASK_ID,
+      ParallelIndexTestingFactory.INTERVAL,
+      ParallelIndexTestingFactory.PARTITION_ID
   );
 
   private PartialHashSegmentMergeIOConfig target;

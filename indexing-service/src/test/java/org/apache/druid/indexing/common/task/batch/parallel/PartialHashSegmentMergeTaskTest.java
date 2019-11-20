@@ -31,14 +31,14 @@ import java.util.Collections;
 
 public class PartialHashSegmentMergeTaskTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final HashPartitionLocation HASH_PARTITION_LOCATION = new HashPartitionLocation(
-      Factory.HOST,
-      Factory.PORT,
-      Factory.USE_HTTPS,
-      Factory.SUBTASK_ID,
-      Factory.INTERVAL,
-      Factory.PARTITION_ID
+      ParallelIndexTestingFactory.HOST,
+      ParallelIndexTestingFactory.PORT,
+      ParallelIndexTestingFactory.USE_HTTPS,
+      ParallelIndexTestingFactory.SUBTASK_ID,
+      ParallelIndexTestingFactory.INTERVAL,
+      ParallelIndexTestingFactory.PARTITION_ID
   );
   private static final PartialHashSegmentMergeIOConfig IO_CONFIG =
       new PartialHashSegmentMergeIOConfig(Collections.singletonList(HASH_PARTITION_LOCATION));
@@ -49,9 +49,9 @@ public class PartialHashSegmentMergeTaskTest
   );
   private static final PartialHashSegmentMergeIngestionSpec INGESTION_SPEC =
       new PartialHashSegmentMergeIngestionSpec(
-          Factory.createDataSchema(Factory.INPUT_INTERVALS),
+          ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
           IO_CONFIG,
-          new Factory.TuningConfigBuilder()
+          new ParallelIndexTestingFactory.TuningConfigBuilder()
               .partitionsSpec(PARTITIONS_SPEC)
               .build()
       );
@@ -62,16 +62,16 @@ public class PartialHashSegmentMergeTaskTest
   public void setup()
   {
     target = new PartialHashSegmentMergeTask(
-        Factory.AUTOMATIC_ID,
-        Factory.GROUP_ID,
-        Factory.TASK_RESOURCE,
-        Factory.SUPERVISOR_TASK_ID,
-        Factory.NUM_ATTEMPTS,
+        ParallelIndexTestingFactory.AUTOMATIC_ID,
+        ParallelIndexTestingFactory.GROUP_ID,
+        ParallelIndexTestingFactory.TASK_RESOURCE,
+        ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+        ParallelIndexTestingFactory.NUM_ATTEMPTS,
         INGESTION_SPEC,
-        Factory.CONTEXT,
-        Factory.INDEXING_SERVICE_CLIENT,
-        Factory.TASK_CLIENT_FACTORY,
-        Factory.SHUFFLE_CLIENT
+        ParallelIndexTestingFactory.CONTEXT,
+        ParallelIndexTestingFactory.INDEXING_SERVICE_CLIENT,
+        ParallelIndexTestingFactory.TASK_CLIENT_FACTORY,
+        ParallelIndexTestingFactory.SHUFFLE_CLIENT
     );
   }
 

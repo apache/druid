@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -39,21 +40,23 @@ public class HandlingInputRowIteratorTest
 {
   public static class AbsentRowTest
   {
-    private static final CloseableIterator<InputRow> EMPTY_ITERATOR = new TestCloseableIterator()
-    {
-      @Override
-      public boolean hasNext()
-      {
-        return false;
-      }
+    private static final CloseableIterator<InputRow> EMPTY_ITERATOR = CloseableIterators.withEmptyBaggage(
+        new Iterator<InputRow>()
+        {
+          @Override
+          public boolean hasNext()
+          {
+            return false;
+          }
 
-      @Nullable
-      @Override
-      public InputRow next()
-      {
-        throw new NoSuchElementException();
-      }
-    };
+          @Nullable
+          @Override
+          public InputRow next()
+          {
+            throw new NoSuchElementException();
+          }
+        }
+    );
 
     private HandlingInputRowIterator target;
 
@@ -131,23 +134,25 @@ public class HandlingInputRowIteratorTest
         HandlingInputRowIterator.InputRowHandler secondHandler
     )
     {
-      CloseableIterator<InputRow> iterator = new TestCloseableIterator()
-      {
-        private final Iterator<InputRow> delegate = INPUT_ROWS.iterator();
+      CloseableIterator<InputRow> iterator = CloseableIterators.withEmptyBaggage(
+          new Iterator<InputRow>()
+          {
+            private final Iterator<InputRow> delegate = INPUT_ROWS.iterator();
 
-        @Override
-        public boolean hasNext()
-        {
-          return delegate.hasNext();
-        }
+            @Override
+            public boolean hasNext()
+            {
+              return delegate.hasNext();
+            }
 
-        @Nullable
-        @Override
-        public InputRow next()
-        {
-          return delegate.next();
-        }
-      };
+            @Nullable
+            @Override
+            public InputRow next()
+            {
+              return delegate.next();
+            }
+          }
+      );
 
       return new HandlingInputRowIterator(iterator, Arrays.asList(firstHandler, secondHandler));
     }
@@ -169,15 +174,6 @@ public class HandlingInputRowIteratorTest
         invoked = true;
         return successful;
       }
-    }
-  }
-
-  private abstract static class TestCloseableIterator implements CloseableIterator<InputRow>
-  {
-    @Override
-    public void close()
-    {
-      throw new UnsupportedOperationException();
     }
   }
 }

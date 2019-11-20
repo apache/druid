@@ -20,35 +20,30 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -57,7 +52,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-class Factory
+/**
+ * Helper for creating objects for testing parallel indexing.
+ */
+class ParallelIndexTestingFactory
 {
   static final String AUTOMATIC_ID = null;
   static final String ID = "id";
@@ -66,10 +64,11 @@ class Factory
   static final String SUPERVISOR_TASK_ID = "supervisor-task-id";
   static final int NUM_ATTEMPTS = 1;
   static final Map<String, Object> CONTEXT = Collections.emptyMap();
-  static final IndexingServiceClient INDEXING_SERVICE_CLIENT = null;
-  static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY = null;
-  static final AppenderatorsManager APPENDERATORS_MANAGER = null;
-  static final HttpClient SHUFFLE_CLIENT = null;
+  static final IndexingServiceClient INDEXING_SERVICE_CLIENT = TestUtils.INDEXING_SERVICE_CLIENT;
+  static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY =
+      TestUtils.TASK_CLIENT_FACTORY;
+  static final AppenderatorsManager APPENDERATORS_MANAGER = TestUtils.APPENDERATORS_MANAGER;
+  static final HttpClient SHUFFLE_CLIENT = TestUtils.SHUFFLE_CLIENT;
   static final List<Interval> INPUT_INTERVALS = Collections.singletonList(Intervals.ETERNITY);
   static final String TASK_EXECUTOR_HOST = "task-executor-host";
   static final int TASK_EXECUTOR_PORT = 1;
@@ -81,7 +80,8 @@ class Factory
   static final String HOST = "host";
   static final int PORT = 1;
   static final String SUBTASK_ID = "subtask-id";
-  private static final ObjectMapper NESTED_OBJECT_MAPPER = TestHelper.makeJsonMapper();
+  private static final TestUtils TEST_UTILS = new TestUtils();
+  private static final ObjectMapper NESTED_OBJECT_MAPPER = TEST_UTILS.getTestObjectMapper();
   private static final String SCHEMA_TIME = "time";
   private static final String SCHEMA_DIMENSION = "dim";
   private static final String DATASOURCE = "datasource";
@@ -90,24 +90,12 @@ class Factory
       PARTITION_ID,
       PARTITION_ID + 1,
       Collections.singletonList("dim"),
-      Factory.NESTED_OBJECT_MAPPER
+      ParallelIndexTestingFactory.NESTED_OBJECT_MAPPER
   );
 
   static ObjectMapper createObjectMapper()
   {
-    InjectableValues injectableValues = new InjectableValues.Std()
-        .addValue(IndexingServiceClient.class, INDEXING_SERVICE_CLIENT)
-        .addValue(IndexTaskClientFactory.class, TASK_CLIENT_FACTORY)
-        .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
-        .addValue(ObjectMapper.class, NESTED_OBJECT_MAPPER)
-        .addValue(HttpClient.class, SHUFFLE_CLIENT);
-
-    ObjectMapper objectMapper = new JacksonModule().jsonMapper().setInjectableValues(injectableValues);
-
-    List<? extends Module> firehoseModule = new FirehoseModule().getJacksonModules();
-    firehoseModule.forEach(objectMapper::registerModule);
-
-    return objectMapper;
+    return TEST_UTILS.getTestObjectMapper();
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -179,40 +167,33 @@ class Factory
   static DataSchema createDataSchema(List<Interval> granularitySpecInputIntervals)
   {
     GranularitySpec granularitySpec = new ArbitraryGranularitySpec(Granularities.DAY, granularitySpecInputIntervals);
-
-    Map<String, Object> parser = NESTED_OBJECT_MAPPER.convertValue(
-        new StringInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec(SCHEMA_TIME, "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION)),
-                    null,
-                    null
-                ),
-                null,
-                null
-            ),
-            null
-        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    TimestampSpec timestampSpec = new TimestampSpec(SCHEMA_TIME, "auto", null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION)),
+        null,
+        null
     );
 
     return new DataSchema(
         DATASOURCE,
-        parser,
-        null,
+        timestampSpec,
+        dimensionsSpec,
+        new AggregatorFactory[]{},
         granularitySpec,
+        TransformSpec.NONE,
         null,
         NESTED_OBJECT_MAPPER
     );
   }
 
   static ParallelIndexIngestionSpec createIngestionSpec(
-      InlineFirehoseFactory inlineFirehoseFactory,
+      InputSource inputSource,
+      InputFormat inputFormat,
       ParallelIndexTuningConfig tuningConfig,
       DataSchema dataSchema
   )
   {
-    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(inlineFirehoseFactory, false);
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(null, inputSource, inputFormat, false);
 
     return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
   }
@@ -248,14 +229,7 @@ class Factory
 
   static IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> createTaskClientFactory()
   {
-    return (taskInfoProvider, callerId, numThreads, httpTimeout, numRetries) -> createTaskClient();
-  }
-
-  private static ParallelIndexSupervisorTaskClient createTaskClient()
-  {
-    ParallelIndexSupervisorTaskClient taskClient = EasyMock.niceMock(ParallelIndexSupervisorTaskClient.class);
-    EasyMock.replay(taskClient);
-    return taskClient;
+    return TASK_CLIENT_FACTORY;
   }
 
   static String createRow(long timestamp, Object dimensionValue)

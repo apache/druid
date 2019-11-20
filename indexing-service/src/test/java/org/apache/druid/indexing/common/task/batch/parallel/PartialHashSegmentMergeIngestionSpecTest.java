@@ -29,14 +29,14 @@ import java.util.Collections;
 
 public class PartialHashSegmentMergeIngestionSpecTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final HashPartitionLocation HASH_PARTITION_LOCATION = new HashPartitionLocation(
-      Factory.HOST,
-      Factory.PORT,
-      Factory.USE_HTTPS,
-      Factory.SUBTASK_ID,
-      Factory.INTERVAL,
-      Factory.PARTITION_ID
+      ParallelIndexTestingFactory.HOST,
+      ParallelIndexTestingFactory.PORT,
+      ParallelIndexTestingFactory.USE_HTTPS,
+      ParallelIndexTestingFactory.SUBTASK_ID,
+      ParallelIndexTestingFactory.INTERVAL,
+      ParallelIndexTestingFactory.PARTITION_ID
   );
   private static final PartialHashSegmentMergeIOConfig IO_CONFIG =
       new PartialHashSegmentMergeIOConfig(Collections.singletonList(HASH_PARTITION_LOCATION));
@@ -52,9 +52,9 @@ public class PartialHashSegmentMergeIngestionSpecTest
   public void setup()
   {
     target = new PartialHashSegmentMergeIngestionSpec(
-        Factory.createDataSchema(Factory.INPUT_INTERVALS),
+        ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
         IO_CONFIG,
-        new Factory.TuningConfigBuilder()
+        new ParallelIndexTestingFactory.TuningConfigBuilder()
             .partitionsSpec(PARTITIONS_SPEC)
             .build()
     );

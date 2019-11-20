@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 /**
  * Allocates all necessary segments locally at the beginning and reuses them.
  *
- * @see DefaultCachingLocalSegmentAllocator
+ * @see HashPartitionCachingLocalSegmentAllocator
  */
 class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
