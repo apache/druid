@@ -164,10 +164,10 @@ public class BrokerServerView implements TimelineServerView
   public void start() throws InterruptedException
   {
     if (segmentWatcherConfig.isAwaitInitializationOnStart()) {
-      final long startMillis = System.currentTimeMillis();
-      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      final long startNanos = System.nanoTime();
+      log.debug("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
     }
   }
 

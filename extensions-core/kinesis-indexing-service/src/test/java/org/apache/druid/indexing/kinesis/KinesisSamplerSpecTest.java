@@ -35,6 +35,7 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
+import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.StringUtils;
@@ -187,9 +188,10 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             .put("dimFloat", "20.0")
             .put("met1", "1.0")
             .build(),
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("__time", 1199145600000L)
             .put("dim1", "a")
+            .put("dim1t", null)
             .put("dim2", "y")
             .put("dimLong", 10L)
             .put("dimFloat", 20.0F)
@@ -208,9 +210,10 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             .put("dimFloat", "20.0")
             .put("met1", "1.0")
             .build(),
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("__time", 1230768000000L)
             .put("dim1", "b")
+            .put("dim1t", null)
             .put("dim2", "y")
             .put("dimLong", 10L)
             .put("dimFloat", 20.0F)
@@ -229,9 +232,10 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             .put("dimFloat", "20.0")
             .put("met1", "1.0")
             .build(),
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("__time", 1262304000000L)
             .put("dim1", "c")
+            .put("dim1t", null)
             .put("dim2", "y")
             .put("dimLong", 10L)
             .put("dimFloat", 20.0F)

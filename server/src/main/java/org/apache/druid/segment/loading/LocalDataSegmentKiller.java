@@ -48,7 +48,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
     final File path = getPath(segment);
-    log.info("killing segment[%s] mapped to path[%s]", segment.getId(), path);
+    log.info("Deleting segment[%s] from directory[%s].", segment.getId(), path);
 
     try {
       if (path.getName().endsWith(".zip")) {
@@ -80,7 +80,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
-    log.info("Deleting all segment files from local dir [%s].", storageDirectory.getAbsolutePath());
+    log.info("Deleting all segments from directory[%s].", storageDirectory.getAbsolutePath());
     FileUtils.deleteDirectory(storageDirectory);
   }
 

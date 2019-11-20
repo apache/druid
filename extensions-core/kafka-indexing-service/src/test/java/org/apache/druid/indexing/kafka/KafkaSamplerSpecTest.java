@@ -35,6 +35,7 @@ import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
+import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -52,6 +53,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -166,7 +168,7 @@ public class KafkaSamplerSpecTest
     Iterator<SamplerResponse.SamplerResponseRow> it = response.getData().iterator();
 
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("timestamp", "2008")
             .put("dim1", "a")
             .put("dim2", "y")
@@ -174,9 +176,10 @@ public class KafkaSamplerSpecTest
             .put("dimFloat", "20.0")
             .put("met1", "1.0")
             .build(),
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("__time", 1199145600000L)
             .put("dim1", "a")
+            .put("dim1t", null)
             .put("dim2", "y")
             .put("dimLong", 10L)
             .put("dimFloat", 20.0F)
@@ -187,7 +190,7 @@ public class KafkaSamplerSpecTest
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("timestamp", "2009")
             .put("dim1", "b")
             .put("dim2", "y")
@@ -195,9 +198,10 @@ public class KafkaSamplerSpecTest
             .put("dimFloat", "20.0")
             .put("met1", "1.0")
             .build(),
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("__time", 1230768000000L)
             .put("dim1", "b")
+            .put("dim1t", null)
             .put("dim2", "y")
             .put("dimLong", 10L)
             .put("dimFloat", 20.0F)
@@ -208,7 +212,7 @@ public class KafkaSamplerSpecTest
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("timestamp", "2010")
             .put("dim1", "c")
             .put("dim2", "y")
@@ -216,9 +220,10 @@ public class KafkaSamplerSpecTest
             .put("dimFloat", "20.0")
             .put("met1", "1.0")
             .build(),
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("__time", 1262304000000L)
             .put("dim1", "c")
+            .put("dim1t", null)
             .put("dim2", "y")
             .put("dimLong", 10L)
             .put("dimFloat", 20.0F)
@@ -229,7 +234,7 @@ public class KafkaSamplerSpecTest
         null
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
-        ImmutableMap.<String, Object>builder()
+        new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
             .put("timestamp", "246140482-04-24T15:36:27.903Z")
             .put("dim1", "x")
             .put("dim2", "z")

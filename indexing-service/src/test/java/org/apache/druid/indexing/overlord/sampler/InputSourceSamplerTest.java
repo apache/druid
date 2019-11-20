@@ -286,12 +286,18 @@ public class InputSourceSamplerTest
     Assert.assertEquals(6, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo", "met1", "1"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 0L)
+                .put("t", "2019-04-22T12:00")
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "1")
+                .build(),
             null,
             null
         ),
@@ -300,7 +306,13 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(1),
-            ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo", "met1", "2"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 0L)
+                .put("t", "2019-04-22T12:00")
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "2")
+                .build(),
             null,
             null
         ),
@@ -309,7 +321,13 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(2),
-            ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:01", "dim1", "foo", "met1", "3"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 0L)
+                .put("t", "2019-04-22T12:01")
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "3")
+                .build(),
             null,
             null
         ),
@@ -318,7 +336,13 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo2", "met1", "4"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 0L)
+                .put("t", "2019-04-22T12:00")
+                .put("dim2", null)
+                .put("dim1", "foo2")
+                .put("met1", "4")
+                .build(),
             null,
             null
         ),
@@ -327,7 +351,13 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 0L, "t", "2019-04-22T12:00", "dim1", "foo", "dim2", "bar", "met1", "5"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 0L)
+                .put("t", "2019-04-22T12:00")
+                .put("dim2", "bar")
+                .put("dim1", "foo")
+                .put("met1", "5")
+                .build(),
             null,
             null
         ),
@@ -336,7 +366,13 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(5),
-            ImmutableMap.of("__time", 0L, "t", "bad_timestamp", "dim1", "foo", "met1", "6"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 0L)
+                .put("t", "bad_timestamp")
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "6")
+                .build(),
             null,
             null
         ),
@@ -359,12 +395,17 @@ public class InputSourceSamplerTest
     Assert.assertEquals(5, response.getNumRowsIndexed());
     Assert.assertEquals(6, response.getData().size());
 
-    List<SamplerResponseRow> data = removeEmptyColumns(response.getData());
+    List<SamplerResponseRow> data = response.getData();
 
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "1"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "1")
+                .build(),
             null,
             null
         ),
@@ -373,7 +414,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(1),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "2"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "2")
+                .build(),
             null,
             null
         ),
@@ -382,7 +428,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(2),
-            ImmutableMap.of("__time", 1555934460000L, "dim1", "foo", "met1", "3"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934460000L)
+                .put("dim2", null)
+                .put("dim1", "foo")
+                .put("met1", "3")
+                .build(),
             null,
             null
         ),
@@ -391,7 +442,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", "4"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim2", null)
+                .put("dim1", "foo2")
+                .put("met1", "4")
+                .build(),
             null,
             null
         ),
@@ -400,7 +456,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "dim2", "bar", "met1", "5"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim2", "bar")
+                .put("dim1", "foo")
+                .put("met1", "5")
+                .build(),
             null,
             null
         ),
@@ -439,7 +500,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "1"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("met1", "1")
+                .build(),
             null,
             null
         ),
@@ -448,7 +513,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(1),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "2"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("met1", "2")
+                .build(),
             null,
             null
         ),
@@ -457,7 +526,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(2),
-            ImmutableMap.of("__time", 1555934460000L, "dim1", "foo", "met1", "3"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934460000L)
+                .put("dim1", "foo")
+                .put("met1", "3")
+                .build(),
             null,
             null
         ),
@@ -466,7 +539,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", "4"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo2")
+                .put("met1", "4")
+                .build(),
             null,
             null
         ),
@@ -475,7 +552,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", "5"),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("met1", "5")
+                .build(),
             null,
             null
         ),
@@ -525,7 +606,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 1L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", null)
+                .put("met1", 1L)
+                .build(),
             null,
             null
         ),
@@ -534,7 +620,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(1),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 2L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", null)
+                .put("met1", 2L)
+                .build(),
             null,
             null
         ),
@@ -543,7 +634,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(2),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 3L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", null)
+                .put("met1", 3L)
+                .build(),
             null,
             null
         ),
@@ -552,7 +648,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo2")
+                .put("dim2", null)
+                .put("met1", 4L)
+                .build(),
             null,
             null
         ),
@@ -561,7 +662,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "dim2", "bar", "met1", 5L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", "bar")
+                .put("met1", 5L)
+                .build(),
             null,
             null
         ),
@@ -611,7 +717,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 6L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", null)
+                .put("met1", 6L)
+                .build(),
             null,
             null
         ),
@@ -620,7 +731,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo2")
+                .put("dim2", null)
+                .put("met1", 4L)
+                .build(),
             null,
             null
         ),
@@ -629,7 +745,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "dim2", "bar", "met1", 5L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", "bar")
+                .put("met1", 5L)
+                .build(),
             null,
             null
         ),
@@ -679,7 +800,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 11L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("met1", 11L)
+                .build(),
             null,
             null
         ),
@@ -688,7 +813,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo2")
+                .put("met1", 4L)
+                .build(),
             null,
             null
         ),
@@ -742,7 +871,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 6L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", null)
+                .put("met1", 6L)
+                .build(),
             null,
             null
         ),
@@ -751,7 +885,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo2", "met1", 4L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo2")
+                .put("dim2", null)
+                .put("met1", 4L)
+                .build(),
             null,
             null
         ),
@@ -760,7 +899,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "dim2", "bar", "met1", 5L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", "bar")
+                .put("met1", 5L)
+                .build(),
             null,
             null
         ),
@@ -816,7 +960,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1PlusBar", "foobar", "met1", 11L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foobar")
+                .put("met1", 11L)
+                .build(),
             null,
             null
         ),
@@ -825,7 +973,11 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(3),
-            ImmutableMap.of("__time", 1555934400000L, "dim1PlusBar", "foo2bar", "met1", 4L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1PlusBar", "foo2bar")
+                .put("met1", 4L)
+                .build(),
             null,
             null
         ),
@@ -876,7 +1028,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(0),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "met1", 6L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", null)
+                .put("met1", 6L)
+                .build(),
             null,
             null
         ),
@@ -885,7 +1042,12 @@ public class InputSourceSamplerTest
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             getRawColumns().get(4),
-            ImmutableMap.of("__time", 1555934400000L, "dim1", "foo", "dim2", "bar", "met1", 5L),
+            new SamplerTestUtils.MapAllowingNullValuesBuilder<String, Object>()
+                .put("__time", 1555934400000L)
+                .put("dim1", "foo")
+                .put("dim2", "bar")
+                .put("met1", 5L)
+                .build(),
             null,
             null
         ),

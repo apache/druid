@@ -161,11 +161,7 @@ public class InputSourceSampler
       for (Row row : index) {
         Map<String, Object> parsed = new HashMap<>();
 
-        columnNames.forEach(k -> {
-          if (row.getRaw(k) != null) {
-            parsed.put(k, row.getRaw(k));
-          }
-        });
+        columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
         parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
 
         Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);

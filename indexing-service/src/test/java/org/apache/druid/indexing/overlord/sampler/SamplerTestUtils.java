@@ -17,39 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.emitter.core;
+package org.apache.druid.indexing.overlord.sampler;
 
-/**
- */
-public class NoopEmitter implements Emitter
+import org.apache.druid.java.util.common.ISE;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+public final class SamplerTestUtils
 {
-  @Override
-  public void start()
+  public static class MapAllowingNullValuesBuilder<K, V>
   {
-    // Do nothing
+    private final Map<K, V> map = new HashMap<>();
+
+    public MapAllowingNullValuesBuilder<K, V> put(K key, V val)
+    {
+      if (map.put(key, val) != null) {
+        throw new ISE("Duplicate key[%s]", key);
+      }
+      return this;
+    }
+
+    public Map<K, V> build()
+    {
+      return Collections.unmodifiableMap(map);
+    }
   }
 
-  @Override
-  public void emit(Event event)
+  private SamplerTestUtils()
   {
-    // Do nothing
-  }
-
-  @Override
-  public void flush()
-  {
-    // Do nothing
-  }
-
-  @Override
-  public void close()
-  {
-    // Do nothing
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NoopEmitter{}";
   }
 }

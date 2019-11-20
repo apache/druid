@@ -227,5 +227,13 @@ public class Transformer
     {
       return row.compareTo(o);
     }
+
+    @Override
+    public String toString()
+    {
+      return "TransformedInputRow{" +
+             "row=" + row +
+             '}';
+    }
   }
 }

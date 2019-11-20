@@ -193,7 +193,7 @@ public class ThreadingTaskRunner
                             // This will block for a while. So we append the thread information with more details
                             final String priorThreadName = Thread.currentThread().getName();
                             Thread.currentThread()
-                                  .setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+                                  .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus = null;
                             final TaskToolbox toolbox = toolboxFactory.build(task);
@@ -243,8 +243,8 @@ public class ThreadingTaskRunner
 
                               try {
                                 if (!stopping && taskDir.exists()) {
-                                  LOGGER.info("Removing task directory: %s", taskDir);
                                   FileUtils.deleteDirectory(taskDir);
+                                  LOGGER.info("Removed task directory: %s", taskDir);
                                 }
                               }
                               catch (Exception e) {

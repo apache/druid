@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Sets up the {@link MonitorScheduler} to monitor things on a regular schedule.  {@link Monitor}s must be explicitly
@@ -92,11 +93,15 @@ public class MetricsModule implements Module
     List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      final Monitor monitor = injector.getInstance(monitorClass);
+      monitors.add(injector.getInstance(monitorClass));
+    }
 
-      log.info("Adding monitor[%s]", monitor);
-
-      monitors.add(monitor);
+    if (!monitors.isEmpty()) {
+      log.info(
+          "Loaded %d monitors: %s",
+          monitors.size(),
+          monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", "))
+      );
     }
 
     return new MonitorScheduler(

@@ -349,12 +349,12 @@ public enum CompressionStrategy
    */
   private static void logLZ4State()
   {
-    LOG.info("java.library.path: " + System.getProperty("java.library.path"));
+    LOG.debug("java.library.path: " + System.getProperty("java.library.path"));
     LZ4Factory fastestInstance = LZ4Factory.fastestInstance();
     try {
       //noinspection ObjectEquality
       if (fastestInstance == LZ4Factory.nativeInstance()) {
-        LOG.info("LZ4 compression is using native instance.");
+        LOG.debug("LZ4 compression is using native instance.");
       }
     }
     catch (Throwable t) {
@@ -363,7 +363,7 @@ public enum CompressionStrategy
     try {
       //noinspection ObjectEquality
       if (fastestInstance == LZ4Factory.unsafeInstance()) {
-        LOG.info("LZ4 compression is using unsafe instance.");
+        LOG.debug("LZ4 compression is using unsafe instance.");
       }
     }
     catch (Throwable t) {
@@ -372,7 +372,7 @@ public enum CompressionStrategy
 
     //noinspection ObjectEquality
     if (fastestInstance == LZ4Factory.safeInstance()) {
-      LOG.info("LZ4 compression is using safe instance.");
+      LOG.debug("LZ4 compression is using safe instance.");
     }
   }
 }
