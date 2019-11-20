@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -71,7 +72,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class S3InputSourceTest
+public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
