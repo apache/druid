@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
@@ -73,7 +74,7 @@ public class TaskToolboxFactory
   private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -103,7 +104,7 @@ public class TaskToolboxFactory
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
-      ObjectMapper objectMapper,
+      @Json ObjectMapper jsonMapper,
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
@@ -132,7 +133,7 @@ public class TaskToolboxFactory
     this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -165,7 +166,7 @@ public class TaskToolboxFactory
         queryExecutorService,
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
-        objectMapper,
+        jsonMapper,
         taskWorkDir,
         indexIO,
         cache,

@@ -687,7 +687,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     try {
       final SegmentIdWithShardSpec segmentIdentifier = allocateNewSegment(timestamp);
-      return Response.ok(toolbox.getObjectMapper().writeValueAsBytes(segmentIdentifier)).build();
+      return Response.ok(toolbox.getJsonMapper().writeValueAsBytes(segmentIdentifier)).build();
     }
     catch (IOException | IllegalStateException e) {
       return Response.serverError().entity(Throwables.getStackTraceAsString(e)).build();

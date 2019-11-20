@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -155,7 +156,7 @@ public class InputSourceProcessor
                 // If those segments are not pushed here, the remaining available space in appenderator will be kept
                 // small which could lead to smaller segments.
                 final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
-                LOG.info("Pushed segments[%s]", pushed.getSegments());
+                LOG.debug("Pushed segments: %s", SegmentUtils.commaSeparateIdentifiers(pushed.getSegments()));
               }
             }
           } else {
@@ -174,7 +175,9 @@ public class InputSourceProcessor
       }
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
-      LOG.info("Pushed segments[%s]", pushed.getSegments());
+
+      LOG.debug("Pushed segments: %s", SegmentUtils.commaSeparateIdentifiers(pushed.getSegments()));
+
       return pushed;
     }
   }

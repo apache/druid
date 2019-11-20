@@ -104,7 +104,7 @@ public class Announcer
   @LifecycleStart
   public void start()
   {
-    log.info("Starting announcer");
+    log.debug("Starting Announcer.");
     synchronized (toAnnounce) {
       if (started) {
         return;
@@ -127,7 +127,7 @@ public class Announcer
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping announcer");
+    log.debug("Stopping Announcer.");
     synchronized (toAnnounce) {
       if (!started) {
         return;
@@ -395,13 +395,13 @@ public class Announcer
       log.debug("Path[%s] not announced, cannot unannounce.", path);
       return;
     }
-    log.info("unannouncing [%s]", path);
+    log.info("Unannouncing [%s]", path);
 
     try {
       curator.inTransaction().delete().forPath(path).and().commit();
     }
     catch (KeeperException.NoNodeException e) {
-      log.info("node[%s] didn't exist anyway...", path);
+      log.info("Node[%s] didn't exist anyway...", path);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
