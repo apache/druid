@@ -21,9 +21,6 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
-import com.opencsv.RFC4180ParserBuilder;
-import com.opencsv.enums.CSVReaderNullFieldIndicator;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvReader;
 
 import javax.annotation.Nullable;
