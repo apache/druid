@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,7 +32,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class VarianceAggregatorTest
+public class VarianceAggregatorTest extends InitializedNullHandlingTest
 {
   private VarianceAggregatorFactory aggFactory;
   private ColumnSelectorFactory colSelectorFactory;

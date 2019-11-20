@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -81,6 +82,10 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
       null
   );
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private final KinesisRecordSupplier recordSupplier = mock(KinesisRecordSupplier.class);
 

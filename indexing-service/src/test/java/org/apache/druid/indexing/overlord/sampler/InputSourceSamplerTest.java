@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
@@ -52,6 +51,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.firehose.InlineFirehoseFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -70,7 +70,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class InputSourceSamplerTest
+public class InputSourceSamplerTest extends InitializedNullHandlingTest
 {
   private enum ParserType
   {
@@ -78,9 +78,6 @@ public class InputSourceSamplerTest
   }
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final boolean USE_DEFAULT_VALUE_FOR_NULL = Boolean.parseBoolean(
-      System.getProperty(NullHandling.NULL_HANDLING_CONFIG_STRING, "true")
-  );
 
   private static final List<String> STR_JSON_ROWS = ImmutableList.of(
       "{ \"t\": \"2019-04-22T12:00\", \"dim1\": \"foo\", \"met1\": 1 }",
@@ -1185,13 +1182,6 @@ public class InputSourceSamplerTest
   private String unparseableTimestampErrorString(Map<String, Object> rawColumns)
   {
     return StringUtils.format("Unparseable timestamp found! Event: %s", rawColumns);
-  }
-
-  private List<SamplerResponseRow> removeEmptyColumns(List<SamplerResponseRow> rows)
-  {
-    return USE_DEFAULT_VALUE_FOR_NULL
-           ? rows
-           : rows.stream().map(x -> x.withParsed(removeEmptyValues(x.getParsed()))).collect(Collectors.toList());
   }
 
   @Nullable

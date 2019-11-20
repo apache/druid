@@ -45,6 +45,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.AfterClass;
@@ -56,7 +57,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-public class KafkaSamplerSpecTest
+public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC = "sampling";

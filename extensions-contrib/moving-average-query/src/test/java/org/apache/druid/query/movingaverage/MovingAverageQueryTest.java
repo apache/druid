@@ -67,6 +67,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
@@ -91,7 +92,7 @@ import java.util.concurrent.ForkJoinPool;
  * Base class for implementing MovingAverageQuery tests
  */
 @RunWith(Parameterized.class)
-public class MovingAverageQueryTest
+public class MovingAverageQueryTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper jsonMapper;
   private final QueryToolChestWarehouse warehouse;

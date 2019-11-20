@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.lookup.DataFetcher;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,7 +44,7 @@ import java.util.Collections;
 import java.util.Map;
 
 @RunWith(Enclosed.class)
-public class JdbcDataFetcherTest
+public class JdbcDataFetcherTest extends InitializedNullHandlingTest
 {
   private static final String TABLE_NAME = "tableName";
   private static final String KEY_COLUMN = "keyColumn";
