@@ -59,6 +59,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -81,9 +82,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class IndexMergerTestBase
+public class IndexMergerTestBase extends InitializedNullHandlingTest
 {
-
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 

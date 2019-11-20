@@ -22,6 +22,7 @@ package org.apache.druid.benchmark.query;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -79,6 +80,10 @@ public class SqlVsNativeBenchmark
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlVsNativeBenchmark.class);
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;

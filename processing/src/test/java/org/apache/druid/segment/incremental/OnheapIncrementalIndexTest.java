@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,9 +40,8 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class OnheapIncrementalIndexTest
+public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
-
   private static final int MAX_ROWS = 100000;
 
   @Test
