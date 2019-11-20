@@ -175,5 +175,5 @@ Bloom filters can be computed in SQL expressions with the `bloom_filter` aggrega
 SELECT BLOOM_FILTER(<expression>, <max number of entries>) FROM druid.foo WHERE dim2 = 'abc'
 ```
 
-but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in an SQL
+but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in a SQL
  response are serialized into a base64 string, which can then be used in subsequent queries as a filter.
