@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -132,6 +133,10 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   );
   protected static final Logger LOG = new Logger(SeekableStreamIndexTaskTestBase.class);
   protected static ListeningExecutorService taskExec;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   protected final List<Task> runningTasks = new ArrayList<>();
   protected final LockGranularity lockGranularity;

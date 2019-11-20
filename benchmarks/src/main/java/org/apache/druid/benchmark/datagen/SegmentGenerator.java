@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -68,6 +69,10 @@ public class SegmentGenerator implements Closeable
   private static final String CACHE_DIR_PROPERTY = "druid.benchmark.cacheDir";
   private static final String CACHE_DIR_ENV_VAR = "DRUID_BENCHMARK_CACHE_DIR";
 
+  static {
+    NullHandling.initializeForTests();
+  }
+  
   private final File cacheDir;
   private final boolean cleanupCacheDir;
 

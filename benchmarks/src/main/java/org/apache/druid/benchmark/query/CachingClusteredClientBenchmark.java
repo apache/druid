@@ -47,6 +47,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -149,9 +150,13 @@ public class CachingClusteredClientBenchmark
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Param({"8", "24"})
   private int numServers;
-
 
   @Param({"0", "1", "4"})
   private int parallelism;

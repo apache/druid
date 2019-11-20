@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
@@ -102,6 +103,10 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
       null,
       OBJECT_MAPPER
   );
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private final KinesisRecordSupplier recordSupplier = mock(KinesisRecordSupplier.class);
 
