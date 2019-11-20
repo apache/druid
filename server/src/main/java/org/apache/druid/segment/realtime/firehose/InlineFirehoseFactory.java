@@ -42,7 +42,7 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
   private final String data;
 
   @JsonCreator
-  InlineFirehoseFactory(@JsonProperty("data") String data)
+  public InlineFirehoseFactory(@JsonProperty("data") String data)
   {
     this.data = Preconditions.checkNotNull(data, "data");
   }

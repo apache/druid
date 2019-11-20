@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -99,7 +99,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -111,6 +110,10 @@ import java.util.concurrent.Executor;
 public class KinesisSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
+  private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
+      new JSONPathSpec(true, ImmutableList.of()),
+      ImmutableMap.of()
+  );
   private static final String DATASOURCE = "testDS";
   private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
@@ -4596,6 +4599,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4734,6 +4738,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4820,6 +4825,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4908,6 +4914,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4985,21 +4992,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     return new DataSchema(
         dataSource,
-        OBJECT_MAPPER.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        dimensions,
-                        null,
-                        null
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of()
-                ),
-                StandardCharsets.UTF_8.name()
-            ),
-            Map.class
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(
+            dimensions,
+            null,
+            null
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
@@ -5007,8 +5004,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             Granularities.NONE,
             ImmutableList.of()
         ),
-        null,
-        OBJECT_MAPPER
+        null
     );
   }
 
@@ -5080,6 +5076,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
+            INPUT_FORMAT,
             "awsEndpoint",
             null,
             null,

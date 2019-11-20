@@ -23,7 +23,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -43,7 +42,7 @@ public class InputEntityIteratingReader implements InputSourceReader
 {
   private final InputRowSchema inputRowSchema;
   private final InputFormat inputFormat;
-  private final Iterator<InputEntity> sourceIterator;
+  private final CloseableIterator<InputEntity> sourceIterator;
   private final File temporaryDirectory;
 
   public InputEntityIteratingReader(
@@ -53,9 +52,19 @@ public class InputEntityIteratingReader implements InputSourceReader
       File temporaryDirectory
   )
   {
+    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceStream.iterator()), temporaryDirectory);
+  }
+
+  public InputEntityIteratingReader(
+      InputRowSchema inputRowSchema,
+      InputFormat inputFormat,
+      CloseableIterator<InputEntity> sourceIterator,
+      File temporaryDirectory
+  )
+  {
     this.inputRowSchema = inputRowSchema;
     this.inputFormat = inputFormat;
-    this.sourceIterator = sourceStream.iterator();
+    this.sourceIterator = sourceIterator;
     this.temporaryDirectory = temporaryDirectory;
   }
 
@@ -75,7 +84,7 @@ public class InputEntityIteratingReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusJson> sample()
+  public CloseableIterator<InputRowListPlusRawValues> sample()
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
@@ -91,6 +100,6 @@ public class InputEntityIteratingReader implements InputSourceReader
 
   private <R> CloseableIterator<R> createIterator(Function<InputEntity, CloseableIterator<R>> rowPopulator)
   {
-    return CloseableIterators.withEmptyBaggage(sourceIterator).flatMap(rowPopulator);
+    return sourceIterator.flatMap(rowPopulator);
   }
 }
