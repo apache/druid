@@ -250,7 +250,7 @@ public class TaskMonitorTest
       final TestTask task = (TestTask) taskObject;
       tasks.put(task.getId(), TaskState.RUNNING);
       if (task.throwUnknownTypeIdError) {
-        throw new ISE("Could not resolve type id 'test_task_id'");
+        throw new RuntimeException(new ISE("Could not resolve type id 'test_task_id'"));
       }
       taskRunner.submit(() -> tasks.put(task.getId(), task.run(null).getStatusCode()));
       return task.getId();

@@ -26,6 +26,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.LegacySinglePhaseSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
@@ -56,7 +57,7 @@ import java.util.Map;
     @Type(name = "index", value = IndexTask.class),
     @Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
     @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
-    @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = SinglePhaseSubTask.class), // for backward compatibility
+    @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class), // for backward compatibility
     @Type(name = PartialSegmentGenerateTask.TYPE, value = PartialSegmentGenerateTask.class),
     @Type(name = PartialSegmentMergeTask.TYPE, value = PartialSegmentMergeTask.class),
     @Type(name = "index_hadoop", value = HadoopIndexTask.class),

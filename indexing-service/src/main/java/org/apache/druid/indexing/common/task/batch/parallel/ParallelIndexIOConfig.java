@@ -37,7 +37,7 @@ public class ParallelIndexIOConfig extends IndexIOConfig
 {
   @JsonCreator
   public ParallelIndexIOConfig(
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
       @JsonProperty("inputSource") @Nullable InputSource inputSource,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting

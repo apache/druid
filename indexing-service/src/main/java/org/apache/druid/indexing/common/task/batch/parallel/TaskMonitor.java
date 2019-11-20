@@ -269,14 +269,30 @@ public class TaskMonitor<T extends Task>
     try {
       indexingServiceClient.runTask(task);
     }
-    catch (IllegalStateException e) {
-      if (e.getMessage().contains("Could not resolve type id")) {
+    catch (Exception e) {
+      if (isUnknownTypeIdException(e)) {
         log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
         task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
         indexingServiceClient.runTask(task);
+      } else {
+        throw e;
       }
     }
     return task;
+  }
+
+  private boolean isUnknownTypeIdException(Throwable e)
+  {
+    if (e instanceof IllegalStateException) {
+      if (e.getMessage() != null && e.getMessage().contains("Could not resolve type id")) {
+        return true;
+      }
+    }
+    if (e.getCause() != null) {
+      return isUnknownTypeIdException(e.getCause());
+    } else {
+      return false;
+    }
   }
 
   private void incrementNumRunningTasks()
