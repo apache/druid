@@ -38,6 +38,34 @@ Deep storage can be written to Google Cloud Storage either via this extension or
 |`druid.google.prefix`||GCS prefix.|No-prefix|
 
 
+<a name="input-source"></a>
+
+## Google cloud storage batch ingestion input source
+
+This extension also provides an input source for Druid native batch ingestion to support reading objects directly from Google Cloud Storage. Objects can be specified as list of Google Cloud Storage URI strings. The Google Cloud Storage input source is splittable and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task), where each worker task of `index_parallel` will read a single object.
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `google`.|N/A|yes|
+|uris|JSON array of URIs where Google Cloud Storage files to be ingested are located.|N/A|yes|
+
+
 ## Firehose
 
 <a name="firehose"></a>
