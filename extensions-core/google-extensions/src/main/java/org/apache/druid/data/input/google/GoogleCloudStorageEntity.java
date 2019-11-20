@@ -56,7 +56,7 @@ public class GoogleCloudStorageEntity implements InputEntity
     final String bucket = uri.getAuthority();
     final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
     final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
-    return CompressionUtils.decompress(byteSource.openStream(), uri.toString());
+    return CompressionUtils.decompress(byteSource.openStream(), uri.getPath());
   }
 
   @Override

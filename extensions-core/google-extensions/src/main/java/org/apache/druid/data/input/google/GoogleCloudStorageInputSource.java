@@ -47,7 +47,7 @@ public class GoogleCloudStorageInputSource extends AbstractInputSource implement
 
   @JsonCreator
   public GoogleCloudStorageInputSource(
-      @JacksonInject("googleStorage") GoogleStorage storage,
+      @JacksonInject GoogleStorage storage,
       @JsonProperty("uris") List<URI> uris
   )
   {
