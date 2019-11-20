@@ -17,29 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google;
+package org.apache.druid.indexing.common.task;
 
-import com.google.api.client.http.HttpResponseException;
-import com.google.common.base.Predicate;
+import org.apache.druid.indexing.common.IndexTaskClient;
+import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.joda.time.Duration;
 
-import java.io.IOException;
-import java.net.URI;
-
-public class GoogleUtils
+public class NoopIndexTaskClientFactory implements IndexTaskClientFactory
 {
-  public static boolean isRetryable(Throwable t)
+  @Override
+  public IndexTaskClient build(
+      TaskInfoProvider taskInfoProvider,
+      String callerId,
+      int numThreads,
+      Duration httpTimeout,
+      long numRetries
+  )
   {
-    if (t instanceof HttpResponseException) {
-      final HttpResponseException e = (HttpResponseException) t;
-      return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
-    }
-    return t instanceof IOException;
+    throw new UnsupportedOperationException();
   }
-
-  public static String extractGoogleCloudStorageObjectKey(URI uri)
-  {
-    return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
-  }
-
-  public static final Predicate<Throwable> GOOGLE_RETRY = e -> isRetryable(e);
 }
