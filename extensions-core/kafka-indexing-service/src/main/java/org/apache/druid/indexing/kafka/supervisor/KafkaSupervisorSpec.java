@@ -129,7 +129,6 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
-  @Nullable
   @JsonProperty
   public KafkaSupervisorIngestionSpec getSpec()
   {

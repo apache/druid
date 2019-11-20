@@ -148,7 +148,6 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
-  @Nullable
   @JsonProperty
   public KinesisSupervisorIngestionSpec getSpec()
   {
