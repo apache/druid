@@ -161,7 +161,7 @@ public class MultiValuedDimensionTest
         "2011-01-12T00:00:00.000Z,product_1,t1\tt2\tt3,u1\tu2",
         "2011-01-13T00:00:00.000Z,product_2,t3\tt4\tt5,u3\tu4",
         "2011-01-14T00:00:00.000Z,product_3,t5\tt6\tt7,u1\tu5",
-        "2011-01-14T00:00:00.000Z,product_4,,u2"
+        "2011-01-14T00:00:00.000Z,product_4,\"\",u2"
     };
 
     for (String row : rows) {

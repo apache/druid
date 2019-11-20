@@ -215,6 +215,20 @@ public class FlatTextFormatParserTest
     parser.parseToMap(body[0]);
   }
 
+  @Test
+  public void testWithNullValues()
+  {
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0);
+    parser.startFileFromBeginning();
+    final String[] body = new String[]{
+        concat(format, "time", "value1", "value2"),
+        concat(format, "hello", "world", "")
+    };
+    Assert.assertNull(parser.parseToMap(body[0]));
+    final Map<String, Object> jsonMap = parser.parseToMap(body[1]);
+    Assert.assertNull(jsonMap.get("value2"));
+  }
+
   private static class FlatTextFormatParserFactory
   {
     public Parser<String, Object> get(FlatTextFormat format)

@@ -17,29 +17,47 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google;
+package org.apache.druid.inputsource.hdfs;
 
-import com.google.api.client.http.HttpResponseException;
 import com.google.common.base.Predicate;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
+import org.apache.druid.utils.CompressionUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 
-public class GoogleUtils
+public class HdfsInputEntity implements InputEntity
 {
-  public static boolean isRetryable(Throwable t)
+  private final Configuration conf;
+  private final Path path;
+
+  HdfsInputEntity(Configuration conf, Path path)
   {
-    if (t instanceof HttpResponseException) {
-      final HttpResponseException e = (HttpResponseException) t;
-      return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
-    }
-    return t instanceof IOException;
+    this.conf = conf;
+    this.path = path;
   }
 
-  public static String extractGoogleCloudStorageObjectKey(URI uri)
+  @Override
+  public URI getUri()
   {
-    return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
+    return path.toUri();
   }
 
-  public static final Predicate<Throwable> GOOGLE_RETRY = e -> isRetryable(e);
+  @Override
+  public InputStream open() throws IOException
+  {
+    FileSystem fs = path.getFileSystem(conf);
+    return CompressionUtils.decompress(fs.open(path), path.getName());
+  }
+
+  @Override
+  public Predicate<Throwable> getFetchRetryCondition()
+  {
+    return HdfsDataSegmentPuller.RETRY_PREDICATE;
+  }
 }
