@@ -20,6 +20,8 @@
 package org.apache.druid.data.input.s3;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
@@ -27,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -37,7 +39,8 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
@@ -45,15 +48,14 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class S3InputSource extends AbstractInputSource implements SplittableInputSource<URI>
 {
@@ -63,11 +65,10 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
-  private Collection<URI> cacheSplitUris = null;
 
   @JsonCreator
   public S3InputSource(
-      @JacksonInject("s3Client") ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes
   )
@@ -107,21 +108,22 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
 
   @Override
   public Stream<InputSplit<URI>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
-      throws IOException
   {
-    if (cacheSplitUris == null) {
-      initalizeSplitUris();
+    if (!uris.isEmpty()) {
+      return uris.stream().map(InputSplit::new);
     }
-    return cacheSplitUris.stream().map(InputSplit::new);
+
+    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false);
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    if (cacheSplitUris == null) {
-      initalizeSplitUris();
+    if (!uris.isEmpty()) {
+      return uris.size();
     }
-    return cacheSplitUris.size();
+
+    return (int) StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false).count();
   }
 
   @Override
@@ -141,7 +143,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
       @Nullable File temporaryDirectory
-  ) throws IOException
+  )
   {
     return new InputEntityIteratingReader(
         inputRowSchema,
@@ -154,60 +156,6 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     );
   }
 
-  private void initalizeSplitUris() throws IOException
-  {
-    cacheSplitUris = !uris.isEmpty() ? uris : getUrisFromPrefix(s3Client, prefixes);
-  }
-
-  public static Collection<URI> getUrisFromPrefix(ServerSideEncryptingAmazonS3 s3Client, List<URI> prefixes)
-      throws IOException
-  {
-    final List<S3ObjectSummary> objects = new ArrayList<>();
-    for (URI uri : prefixes) {
-      final String bucket = uri.getAuthority();
-      final String prefix = S3Utils.extractS3Key(uri);
-
-      try {
-        final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
-            s3Client,
-            bucket,
-            prefix,
-            MAX_LISTING_LENGTH
-        );
-        objects.addAll(Lists.newArrayList(objectSummaryIterator));
-      }
-      catch (AmazonS3Exception outerException) {
-        log.error(outerException, "Exception while listing on %s", uri);
-
-        if (outerException.getStatusCode() == 403) {
-          // The "Access Denied" means users might not have a proper permission for listing on the given uri.
-          // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
-          // In this case, users should be able to get objects if they have a proper permission for GetObject.
-
-          log.warn("Access denied for %s. Try to get the object from the uri without listing", uri);
-          try {
-            final ObjectMetadata objectMetadata = s3Client.getObjectMetadata(bucket, prefix);
-
-            if (!S3Utils.isDirectoryPlaceholder(prefix, objectMetadata)) {
-              objects.add(S3Utils.getSingleObjectSummary(s3Client, bucket, prefix));
-            } else {
-              throw new IOE(
-                  "[%s] is a directory placeholder, "
-                  + "but failed to get the object list under the directory due to permission",
-                  uri
-              );
-            }
-          }
-          catch (AmazonS3Exception innerException) {
-            throw new IOException(innerException);
-          }
-        } else {
-          throw new IOException(outerException);
-        }
-      }
-    }
-    return objects.stream().map(S3InputSource::toUri).collect(Collectors.toList());
-  }
 
   /**
    * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
@@ -216,7 +164,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
    * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
    * </pre>
    */
-  private static URI toUri(S3ObjectSummary object)
+  public static URI toUri(S3ObjectSummary object)
   {
     final String originalAuthority = object.getBucketName();
     final String originalPath = object.getKey();
@@ -255,5 +203,124 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
            "uris=" + uris +
            ", prefixes=" + prefixes +
            '}';
+  }
+
+  private Iterable<InputSplit<URI>> getIterableObjectsFromPrefixes()
+  {
+    return () -> objectFetchingIterator(s3Client, prefixes.iterator());
+  }
+
+  private static Iterator<InputSplit<URI>> objectFetchingIterator(
+      final ServerSideEncryptingAmazonS3 s3Client,
+      final Iterator<URI> prefixes
+  )
+  {
+    return new Iterator<InputSplit<URI>>()
+    {
+      private ListObjectsV2Request request;
+      private ListObjectsV2Result result;
+      private URI currentUri;
+      private String currentBucket;
+      private String currentPrefix;
+      private Iterator<S3ObjectSummary> objectSummaryIterator;
+
+      {
+        prepareNextRequest();
+        fetchNextBatch();
+      }
+
+      private void prepareNextRequest()
+      {
+        currentUri = prefixes.next();
+        currentBucket = currentUri.getAuthority();
+        currentPrefix = S3Utils.extractS3Key(currentUri);
+
+        request = new ListObjectsV2Request()
+            .withBucketName(currentBucket)
+            .withPrefix(currentPrefix)
+            .withMaxKeys(S3InputSource.MAX_LISTING_LENGTH);
+      }
+
+      private void fetchNextBatch()
+      {
+        try {
+          result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request));
+          objectSummaryIterator = result.getObjectSummaries().iterator();
+          request.setContinuationToken(result.getContinuationToken());
+        }
+        catch (AmazonS3Exception outerException) {
+          log.error(outerException, "Exception while listing on %s", currentUri);
+
+          if (outerException.getStatusCode() == 403) {
+            // The "Access Denied" means users might not have a proper permission for listing on the given uri.
+            // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
+            // In this case, users should be able to get objects if they have a proper permission for GetObject.
+
+            log.warn("Access denied for %s. Try to get the object from the uri without listing", currentUri);
+            try {
+              final ObjectMetadata objectMetadata =
+                  S3Utils.retryS3Operation(() -> s3Client.getObjectMetadata(currentBucket, currentPrefix));
+
+              if (!S3Utils.isDirectoryPlaceholder(currentPrefix, objectMetadata)) {
+
+                objectSummaryIterator = Iterators.singletonIterator(
+                    S3Utils.getSingleObjectSummary(s3Client, currentBucket, currentPrefix)
+                );
+              } else {
+                throw new RE(
+                    "[%s] is a directory placeholder, "
+                    + "but failed to get the object list under the directory due to permission",
+                    currentUri
+                );
+              }
+            }
+            catch (Exception innerException) {
+              throw new RuntimeException(innerException);
+            }
+          } else {
+            throw new RuntimeException(outerException);
+          }
+        }
+        catch (Exception ex) {
+          throw new RuntimeException(ex);
+        }
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        return objectSummaryIterator.hasNext() || result.isTruncated() || prefixes.hasNext();
+      }
+
+      @Override
+      public InputSplit<URI> next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+
+        if (objectSummaryIterator.hasNext()) {
+          return new InputSplit<>(toUri(objectSummaryIterator.next()));
+        }
+
+        if (result.isTruncated()) {
+          fetchNextBatch();
+        } else if (prefixes.hasNext()) {
+          prepareNextRequest();
+          fetchNextBatch();
+        }
+
+        if (!objectSummaryIterator.hasNext()) {
+          throw new ISE(
+              "Failed to further iterate on bucket[%s] and prefix[%s]. The last continuationToken was [%s]",
+              currentBucket,
+              currentPrefix,
+              result.getContinuationToken()
+          );
+        }
+
+        return new InputSplit<>(toUri(objectSummaryIterator.next()));
+      }
+    };
   }
 }

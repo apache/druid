@@ -50,7 +50,7 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
 
   @JsonCreator
   public StaticAzureBlobStoreFirehoseFactory(
-      @JacksonInject("azureStorage") AzureStorage azureStorage,
+      @JacksonInject AzureStorage azureStorage,
       @JsonProperty("blobs") List<AzureBlob> blobs,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,

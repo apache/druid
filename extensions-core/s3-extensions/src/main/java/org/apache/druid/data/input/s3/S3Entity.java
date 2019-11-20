@@ -28,7 +28,6 @@ import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.CompressionUtils;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -38,13 +37,12 @@ public class S3Entity implements InputEntity
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final URI uri;
 
-  public S3Entity(ServerSideEncryptingAmazonS3 s3Client, URI uri)
+  S3Entity(ServerSideEncryptingAmazonS3 s3Client, URI uri)
   {
     this.s3Client = s3Client;
     this.uri = uri;
   }
 
-  @Nullable
   @Override
   public URI getUri()
   {
