@@ -274,13 +274,9 @@ public class DruidSchema extends AbstractSchema
                     final DruidTable druidTable = buildDruidTable(dataSource);
                     final DruidTable oldTable = tables.put(dataSource, druidTable);
                     if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-                      log.debug(
-                          "Table for dataSource[%s] has new signature[%s].",
-                          dataSource,
-                          druidTable.getRowSignature()
-                      );
+                      log.info("dataSource [%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
                     } else {
-                      log.debug("Table for dataSource[%s] signature is unchanged.", dataSource);
+                      log.debug("dataSource [%s] signature is unchanged.", dataSource);
                     }
                   }
 
@@ -320,10 +316,10 @@ public class DruidSchema extends AbstractSchema
     );
 
     if (config.isAwaitInitializationOnStart()) {
-      final long startMillis = System.currentTimeMillis();
-      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      final long startNanos = System.nanoTime();
+      log.debug("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
     }
   }
 
@@ -425,7 +421,7 @@ public class DruidSchema extends AbstractSchema
       if (dataSourceSegments.isEmpty()) {
         segmentMetadataInfo.remove(segment.getDataSource());
         tables.remove(segment.getDataSource());
-        log.info("Removed all metadata for dataSource[%s].", segment.getDataSource());
+        log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
       }
 
       lock.notifyAll();
@@ -542,10 +538,7 @@ public class DruidSchema extends AbstractSchema
             } else {
               final AvailableSegmentMetadata segmentMetadata = dataSourceSegments.get(segmentId);
               if (segmentMetadata == null) {
-                log.warn(
-                    "No segment[%s] found, skipping refresh",
-                    segmentId
-                );
+                log.warn("No segment[%s] found, skipping refresh", segmentId);
               } else {
                 final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
                     .from(segmentMetadata)
@@ -567,7 +560,7 @@ public class DruidSchema extends AbstractSchema
       yielder.close();
     }
 
-    log.info(
+    log.debug(
         "Refreshed metadata for dataSource[%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         System.currentTimeMillis() - startTime,

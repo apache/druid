@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.sampler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputRowListPlusJson;
 
 public class SamplerConfig
 {
@@ -73,7 +74,7 @@ public class SamplerConfig
    * better user experience for sources such as streams, where repeated calls to the sampler (which would happen as the
    * user tweaks data schema configurations) would otherwise return a different set of sampled data every time. For the
    * caching system to work, 1) the sampler must have access to the raw data (e.g. for {@link FirehoseSampler},
-   * {@link org.apache.druid.data.input.InputRowPlusRaw#getRaw()} must be non-null) and 2) the parser must be an
+   * {@link InputRowListPlusJson#getRaw()} must be non-null) and 2) the parser must be an
    * implementation of {@link org.apache.druid.data.input.ByteBufferInputRowParser} since the data is cached as a byte
    * array. If these conditions are not satisfied, the cache returns a miss and the sampler would read from source.
    * <p>

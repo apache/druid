@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -273,7 +274,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     this.metrics = fireDepartmentForMetrics.getMetrics();
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
-    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    final File firehoseTempDir = toolbox.getIndexingTmpDir();
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
@@ -350,7 +351,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
+          firehose = firehoseFactory.connect(
+              Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
+              firehoseTempDir
+          );
         }
       }
 
@@ -761,7 +765,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
         toolbox.getIndexMergerV9(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -801,7 +805,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         metrics
     );
   }

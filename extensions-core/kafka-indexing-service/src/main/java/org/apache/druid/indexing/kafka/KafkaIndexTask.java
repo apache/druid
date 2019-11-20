@@ -69,7 +69,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   )
   {
     super(
-        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
+        getOrMakeId(id, dataSchema.getDataSource(), TYPE),
         taskResource,
         dataSchema,
         tuningConfig,
@@ -138,7 +138,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     //noinspection unchecked
     return new IncrementalPublishingKafkaIndexTaskRunner(
         this,
-        dataSchema.getParser(),
+        Preconditions.checkNotNull(dataSchema.getParser(), "inputRowParser"),
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,

@@ -229,6 +229,7 @@ public class AppenderatorTester implements AutoCloseable
       }
     };
     appenderator = Appenderators.createRealtime(
+        schema.getDataSource(),
         schema,
         tuningConfig,
         metrics,

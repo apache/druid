@@ -22,11 +22,10 @@ import classNames from 'classnames';
 import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
+import { HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
 import { QueryManager } from './utils';
 import { Capabilities } from './utils/capabilities';
-import { DRUID_DOCS_API, DRUID_DOCS_SQL, DRUID_DOCS_VERSION } from './variables';
 import {
   DatasourcesView,
   HomeView,
@@ -41,7 +40,6 @@ import {
 import './console-application.scss';
 
 export interface ConsoleApplicationProps {
-  hideLegacy: boolean;
   exampleManifestsUrl?: string;
 }
 
@@ -56,54 +54,17 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
-  static shownNotifications(capabilities: Capabilities | undefined) {
-    let message: JSX.Element;
-    if (!capabilities) {
-      message = (
-        <>
-          It appears that the the service serving this console is not responding. The console will
-          not function at the moment
-        </>
-      );
-    } else {
-      switch (capabilities.getMode()) {
-        case 'no-sql':
-          message = (
-            <>
-              It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-              <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be
-              limited in functionality. Look at{' '}
-              <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to enable the SQL
-              endpoint.
-            </>
-          );
-          break;
-
-        case 'no-proxy':
-          message = (
-            <>
-              It appears that the management proxy is not enabled, the console will operate with
-              limited functionality. Look at{' '}
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-              >
-                the console docs
-              </ExternalLink>{' '}
-              for more info on how to enable the management proxy.
-            </>
-          );
-          break;
-
-        default:
-          return;
-      }
-    }
-
+  static shownNotifications() {
     AppToaster.show({
       icon: IconNames.ERROR,
       intent: Intent.DANGER,
       timeout: 120000,
-      message: message,
+      message: (
+        <>
+          It appears that the the service serving this console is not responding. The console will
+          not function at the moment
+        </>
+      ),
     });
   }
 
@@ -125,7 +86,7 @@ export class ConsoleApplication extends React.PureComponent<
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
         const capabilities = await Capabilities.detectCapabilities();
-        ConsoleApplication.shownNotifications(capabilities);
+        if (!capabilities) ConsoleApplication.shownNotifications();
         return capabilities || Capabilities.FULL;
       },
       onStateChange: ({ result, loading }) => {
@@ -208,12 +169,11 @@ export class ConsoleApplication extends React.PureComponent<
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' = 'normal',
   ) => {
-    const { hideLegacy } = this.props;
     const { capabilities } = this.state;
 
     return (
       <>
-        <HeaderBar active={active} hideLegacy={hideLegacy} capabilities={capabilities} />
+        <HeaderBar active={active} capabilities={capabilities} />
         <div className={classNames('view-container', classType)}>{el}</div>
       </>
     );

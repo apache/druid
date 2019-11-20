@@ -308,7 +308,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       final Map commitMetaMap = (Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata");
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> finalPartitions =
           runner.deserializePartitionsFromMetadata(
-              toolbox.getObjectMapper(),
+              toolbox.getJsonMapper(),
               commitMetaMap.get(SeekableStreamIndexTaskRunner.METADATA_PUBLISH_PARTITIONS)
           );
 

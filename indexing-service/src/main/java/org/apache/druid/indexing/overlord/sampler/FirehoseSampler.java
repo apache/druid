@@ -30,7 +30,7 @@ import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -207,7 +207,7 @@ public class FirehoseSampler
       while (counter < responseRows.length && firehose.hasMore()) {
         String raw = null;
         try {
-          final InputRowPlusRaw row = firehose.nextRowWithRaw();
+          final InputRowListPlusJson row = firehose.nextRowWithRaw();
 
           if (row == null || row.isEmpty()) {
             continue;
@@ -256,9 +256,7 @@ public class FirehoseSampler
         Map<String, Object> parsed = new HashMap<>();
 
         columnNames.forEach(k -> {
-          if (row.getRaw(k) != null) {
-            parsed.put(k, row.getRaw(k));
-          }
+          parsed.put(k, row.getRaw(k));
         });
         parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
 
