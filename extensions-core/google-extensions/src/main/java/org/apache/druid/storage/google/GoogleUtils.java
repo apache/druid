@@ -27,6 +27,9 @@ import java.net.URI;
 
 public class GoogleUtils
 {
+  public static final int MAX_BYTESOURCE_RETRIES = 10;
+  public static final Predicate<Throwable> GOOGLE_RETRY = GoogleUtils::isRetryable;
+
   public static boolean isRetryable(Throwable t)
   {
     if (t instanceof HttpResponseException) {
@@ -40,6 +43,4 @@ public class GoogleUtils
   {
     return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
   }
-
-  public static final Predicate<Throwable> GOOGLE_RETRY = e -> isRetryable(e);
 }

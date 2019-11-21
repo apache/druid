@@ -19,8 +19,11 @@
 
 package org.apache.druid.data.input.google;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.data.input.impl.prefetch.RetryingInputStream;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
@@ -33,13 +36,17 @@ import java.net.URI;
 
 public class GoogleCloudStorageEntity implements InputEntity
 {
-  private final GoogleStorage storage;
+  private final GoogleByteSourceOpenFunction googleByteSourceOpenFunction;
+  private final GoogleByteSource byteSource;
   private final URI uri;
 
   GoogleCloudStorageEntity(GoogleStorage storage, URI uri)
   {
-    this.storage = storage;
-    this.uri = uri;
+    this.googleByteSourceOpenFunction = new GoogleByteSourceOpenFunction();
+    this.uri = Preconditions.checkNotNull(uri);
+    final String bucket = uri.getAuthority();
+    final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
+    this.byteSource = new GoogleByteSource(storage, bucket, key);
   }
 
   @Nullable
@@ -52,16 +59,33 @@ public class GoogleCloudStorageEntity implements InputEntity
   @Override
   public InputStream open() throws IOException
   {
-    // Get data of the given object and open an input stream
-    final String bucket = uri.getAuthority();
-    final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
-    final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
-    return CompressionUtils.decompress(byteSource.openStream(), uri.getPath());
+    RetryingInputStream<GoogleByteSource> retryingStream = new RetryingInputStream<>(
+        byteSource,
+        googleByteSourceOpenFunction,
+        GoogleUtils.GOOGLE_RETRY,
+        GoogleUtils.MAX_BYTESOURCE_RETRIES
+    );
+    return CompressionUtils.decompress(retryingStream, uri.getPath());
   }
 
   @Override
   public Predicate<Throwable> getFetchRetryCondition()
   {
     return GoogleUtils.GOOGLE_RETRY;
+  }
+
+  private static class GoogleByteSourceOpenFunction implements ObjectOpenFunction<GoogleByteSource>
+  {
+    @Override
+    public InputStream open(GoogleByteSource object) throws IOException
+    {
+      return open(object, 0L);
+    }
+
+    @Override
+    public InputStream open(GoogleByteSource object, long start) throws IOException
+    {
+      return object.openStream(start);
+    }
   }
 }

@@ -35,7 +35,7 @@ import java.net.SocketException;
  *
  * @param <T> object type
  */
-class RetryingInputStream<T> extends InputStream
+public class RetryingInputStream<T> extends InputStream
 {
   private static final Logger log = new Logger(RetryingInputStream.class);
 
@@ -47,7 +47,7 @@ class RetryingInputStream<T> extends InputStream
   private CountingInputStream delegate;
   private long startOffset;
 
-  RetryingInputStream(
+  public RetryingInputStream(
       T object,
       ObjectOpenFunction<T> objectOpenFunction,
       Predicate<Throwable> retryCondition,
