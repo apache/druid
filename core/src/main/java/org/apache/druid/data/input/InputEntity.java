@@ -20,6 +20,7 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -63,9 +64,20 @@ public interface InputEntity
    * Opens an {@link InputStream} on the input entity directly.
    * This is the basic way to read the given entity.
    *
-   * @see #fetch as an alternative way to read data.
+   * @see #fetch
    */
-  InputStream open() throws IOException;
+  default InputStream open() throws IOException
+  {
+    return open(0);
+  }
+
+  /**
+   * Directly opens an {@link InputStream} starting at the given offset on the input entity.
+   * This is the basic way to read the given entity.
+   *
+   * @see #fetch
+   */
+  InputStream open(long offset) throws IOException;
 
   /**
    * Fetches the input entity into the local storage.
@@ -89,7 +101,7 @@ public interface InputEntity
           is,
           tempFile,
           fetchBuffer,
-          getFetchRetryCondition(),
+          getRetryCondition(),
           DEFAULT_MAX_NUM_FETCH_TRIES,
           StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
       );
@@ -114,7 +126,8 @@ public interface InputEntity
   }
 
   /**
-   * {@link #fetch} will retry during the fetch if it sees an exception matching to the returned predicate.
+   * Returns a retry condition that the caller should retry on.
+   * The returned condition is used in {@link #fetch} and {@link RetryingInputStream}
    */
-  Predicate<Throwable> getFetchRetryCondition();
+  Predicate<Throwable> getRetryCondition();
 }

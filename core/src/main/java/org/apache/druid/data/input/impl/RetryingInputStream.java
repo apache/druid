@@ -17,11 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl.prefetch;
+package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
+import org.apache.druid.data.input.impl.prefetch.Fetcher;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -35,7 +37,7 @@ import java.net.SocketException;
  *
  * @param <T> object type
  */
-class RetryingInputStream<T> extends InputStream
+public class RetryingInputStream<T> extends InputStream
 {
   private static final Logger log = new Logger(RetryingInputStream.class);
 
@@ -47,7 +49,7 @@ class RetryingInputStream<T> extends InputStream
   private CountingInputStream delegate;
   private long startOffset;
 
-  RetryingInputStream(
+  public RetryingInputStream(
       T object,
       ObjectOpenFunction<T> objectOpenFunction,
       Predicate<Throwable> retryCondition,

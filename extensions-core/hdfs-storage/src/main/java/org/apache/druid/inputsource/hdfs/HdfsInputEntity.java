@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -49,14 +50,16 @@ public class HdfsInputEntity implements InputEntity
   }
 
   @Override
-  public InputStream open() throws IOException
+  public InputStream open(long offset) throws IOException
   {
-    FileSystem fs = path.getFileSystem(conf);
-    return CompressionUtils.decompress(fs.open(path), path.getName());
+    final FileSystem fs = path.getFileSystem(conf);
+    final FSDataInputStream inputStream = fs.open(path);
+    inputStream.seek(offset);
+    return CompressionUtils.decompress(inputStream, path.getName());
   }
 
   @Override
-  public Predicate<Throwable> getFetchRetryCondition()
+  public Predicate<Throwable> getRetryCondition()
   {
     return HdfsDataSegmentPuller.RETRY_PREDICATE;
   }

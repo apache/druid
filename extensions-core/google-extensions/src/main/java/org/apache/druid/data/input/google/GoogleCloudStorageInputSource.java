@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
+import org.apache.druid.data.input.impl.RetryingInputEntity;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.google.GoogleStorage;
 
@@ -96,7 +97,12 @@ public class GoogleCloudStorageInputSource extends AbstractInputSource implement
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(storage, split.get())),
+        createSplits(inputFormat, null).map(split -> new RetryingInputEntity(
+            new GoogleCloudStorageEntity(
+                storage,
+                split.get()
+            )
+        )),
         temporaryDirectory
     );
   }

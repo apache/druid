@@ -17,51 +17,64 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.google;
+package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.storage.google.GoogleByteSource;
-import org.apache.druid.storage.google.GoogleStorage;
-import org.apache.druid.storage.google.GoogleUtils;
-import org.apache.druid.utils.CompressionUtils;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class GoogleCloudStorageEntity implements InputEntity
+public class RetryingInputEntity implements InputEntity
 {
-  private final GoogleStorage storage;
-  private final URI uri;
+  private final InputEntity delegate;
+  private final InputEntityOpenFunction openFunction;
 
-  GoogleCloudStorageEntity(GoogleStorage storage, URI uri)
+  public RetryingInputEntity(InputEntity delegate)
   {
-    this.storage = storage;
-    this.uri = uri;
+    this.delegate = delegate;
+    this.openFunction = new InputEntityOpenFunction();
   }
 
   @Nullable
   @Override
   public URI getUri()
   {
-    return uri;
+    return delegate.getUri();
   }
 
   @Override
   public InputStream open(long offset) throws IOException
   {
-    // Get data of the given object and open an input stream
-    final String bucket = uri.getAuthority();
-    final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
-    final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
-    return CompressionUtils.decompress(byteSource.openStream(offset), uri.getPath());
+    return new RetryingInputStream<>(
+        delegate,
+        openFunction,
+        getRetryCondition(),
+        10
+    );
   }
 
   @Override
   public Predicate<Throwable> getRetryCondition()
   {
-    return GoogleUtils.GOOGLE_RETRY;
+    return delegate.getRetryCondition();
+  }
+
+  private static class InputEntityOpenFunction implements ObjectOpenFunction<InputEntity>
+  {
+    @Override
+    public InputStream open(InputEntity object) throws IOException
+    {
+      return object.open();
+    }
+
+    @Override
+    public InputStream open(InputEntity object, long start) throws IOException
+    {
+      return object.open(start);
+    }
   }
 }

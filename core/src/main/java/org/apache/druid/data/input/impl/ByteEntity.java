@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -56,13 +57,15 @@ public class ByteEntity implements InputEntity
   }
 
   @Override
-  public InputStream open()
+  public InputStream open(long offset) throws IOException
   {
+    final ByteBuffer duplicate = buffer.duplicate();
+    duplicate.position(Math.toIntExact(offset));
     return new ByteBufferInputStream(buffer);
   }
 
   @Override
-  public Predicate<Throwable> getFetchRetryCondition()
+  public Predicate<Throwable> getRetryCondition()
   {
     return Predicates.alwaysFalse();
   }
