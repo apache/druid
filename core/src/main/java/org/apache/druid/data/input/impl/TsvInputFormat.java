@@ -41,13 +41,13 @@ public class TsvInputFormat extends SeparateValueInputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, "tab");
+    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, FlatTextFormat.TSV);
   }
 
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return super.createReader(inputRowSchema, source, temporaryDirectory, "tab");
+    return super.createReader(inputRowSchema, source, temporaryDirectory, FlatTextFormat.TSV);
   }
 
   @VisibleForTesting

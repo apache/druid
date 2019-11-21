@@ -52,18 +52,18 @@ public class SeparateValueReader extends TextReader
   private final Function<String, Object> multiValueFunction;
   @Nullable
   private List<String> columns;
-  private final String seperator;
+  private final SeparateValueInputFormat.FlatTextFormat format;
   private final RFC4180Parser parser;
 
-  public static RFC4180Parser createOpenCsvParser(char seperator)
+  public static RFC4180Parser createOpenCsvParser(char separator)
   {
     return NullHandling.replaceWithDefault()
            ? new RFC4180ParserBuilder()
-               .withSeparator(seperator)
+               .withSeparator(separator)
                .build()
            : new RFC4180ParserBuilder().withFieldAsNull(
                CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
-                                       .withSeparator(seperator)
+                                       .withSeparator(separator)
                                        .build();
   }
 
@@ -75,7 +75,7 @@ public class SeparateValueReader extends TextReader
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows,
-      String seperator
+      SeparateValueInputFormat.FlatTextFormat format
   )
   {
     super(inputRowSchema, source, temporaryDirectory);
@@ -84,14 +84,14 @@ public class SeparateValueReader extends TextReader
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
-    this.seperator = seperator;
-    this.parser = createOpenCsvParser("tab".equals(seperator) ? '\t' : ',');
+    this.format = format;
+    this.parser = createOpenCsvParser(format.getDefaultDelimiter().charAt(0));
 
     if (this.columns != null) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
-            !column.contains("tab".equals(seperator) ? "\t" : ","),
-            "Column[%s] has a " + this.seperator + ", it cannot",
+            !column.contains(format.getDefaultDelimiter()),
+            "Column[%s] has a " + format.getLiteral() + ", it cannot",
             column
         );
       }

@@ -41,13 +41,13 @@ public class CsvInputFormat extends SeparateValueInputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, "comma");
+    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, FlatTextFormat.CSV);
   }
 
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return super.createReader(inputRowSchema, source, temporaryDirectory, "comma");
+    return super.createReader(inputRowSchema, source, temporaryDirectory, FlatTextFormat.CSV);
   }
 
   @VisibleForTesting

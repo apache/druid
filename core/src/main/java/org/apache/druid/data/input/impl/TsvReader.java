@@ -46,7 +46,7 @@ public class TsvReader extends SeparateValueReader
         columns,
         findColumnsFromHeader,
         skipHeaderRows,
-        "tab"
+        SeparateValueInputFormat.FlatTextFormat.TSV
     );
   }
 }

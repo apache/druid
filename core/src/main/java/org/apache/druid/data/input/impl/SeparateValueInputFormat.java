@@ -38,11 +38,36 @@ import java.util.Objects;
 
 public class SeparateValueInputFormat implements InputFormat
 {
+
+  public enum FlatTextFormat
+  {
+    CSV(","),
+    TSV("\t");
+
+    private final String defaultDelimiter;
+
+    FlatTextFormat(String defaultDelimiter)
+    {
+      this.defaultDelimiter = defaultDelimiter;
+    }
+
+    public String getDefaultDelimiter()
+    {
+
+      return defaultDelimiter;
+    }
+
+    public String getLiteral()
+    {
+      return ",".equals(defaultDelimiter) ? "comma" : "tab";
+    }
+  }
+
   private final String listDelimiter;
   private final List<String> columns;
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final String seperator;
+  private final FlatTextFormat format;
 
   @JsonCreator
   public SeparateValueInputFormat(
@@ -51,7 +76,7 @@ public class SeparateValueInputFormat implements InputFormat
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
       @JsonProperty("skipHeaderRows") int skipHeaderRows,
-      String seperator
+      FlatTextFormat format
   )
   {
     this.listDelimiter = listDelimiter;
@@ -64,13 +89,13 @@ public class SeparateValueInputFormat implements InputFormat
         )
     ).getValue();
     this.skipHeaderRows = skipHeaderRows;
-    this.seperator = seperator;
+    this.format = format;
 
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
-            !column.contains("tab".equals(seperator) ? "\t" : ","),
-            "Column[%s] has a " + this.seperator + ", it cannot",
+            !column.contains(format.getDefaultDelimiter()),
+            "Column[%s] has a " + format.getLiteral() + ", it cannot",
             column
         );
       }
@@ -125,7 +150,7 @@ public class SeparateValueInputFormat implements InputFormat
         columns,
         findColumnsFromHeader,
         skipHeaderRows,
-        seperator
+        format
     );
   }
 
@@ -133,10 +158,10 @@ public class SeparateValueInputFormat implements InputFormat
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
-      String seperator
+      FlatTextFormat format
   )
   {
-    return "tab".equals(seperator) ? new TsvReader(
+    return format == FlatTextFormat.TSV ? new TsvReader(
         inputRowSchema,
         source,
         temporaryDirectory,
