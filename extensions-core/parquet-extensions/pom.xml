@@ -137,6 +137,14 @@
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
+    <!--
+    for native batch indexing with Parquet files, we require a small number of classes provided by hadoop-common and
+    hadoop-mapreduce-client-core. However, both of these jars have a very large set of dependencies, the majority of
+    which we do not need (and are provided by Hadoop in that environment). hadoop-common is the biggest offender,
+    with things like zookeeper, jetty, just .. so much stuff. These exclusions remove ~60 jars from being unnecessarily
+    bundled with this extension. There might be some alternative arrangement to get what we need, worth looking into if
+    anyone is feeling adventurous.
+    -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
@@ -202,7 +210,6 @@
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop.compile.version}</version>
       <scope>compile</scope>
-      <!-- heh -->
       <exclusions>
         <exclusion>
           <groupId>org.apache.yetus</groupId>

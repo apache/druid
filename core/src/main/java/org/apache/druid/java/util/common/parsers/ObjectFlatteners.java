@@ -245,24 +245,24 @@ public class ObjectFlatteners
      */
     default Object toMapHelper(Object o)
     {
-      final JsonProvider parquetJsonProvider = getJsonProvider();
-      if (parquetJsonProvider.isMap(o)) {
+      final JsonProvider jsonProvider = getJsonProvider();
+      if (jsonProvider.isMap(o)) {
         Map<String, Object> actualMap = new HashMap<>();
-        for (String key : parquetJsonProvider.getPropertyKeys(o)) {
-          Object field = parquetJsonProvider.getMapValue(o, key);
-          if (parquetJsonProvider.isMap(field) || parquetJsonProvider.isArray(field)) {
+        for (String key : jsonProvider.getPropertyKeys(o)) {
+          Object field = jsonProvider.getMapValue(o, key);
+          if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
             actualMap.put(key, toMapHelper(finalizeConversionForMap(field)));
           } else {
             actualMap.put(key, finalizeConversionForMap(field));
           }
         }
         return actualMap;
-      } else if (parquetJsonProvider.isArray(o)) {
-        final int length = parquetJsonProvider.length(o);
+      } else if (jsonProvider.isArray(o)) {
+        final int length = jsonProvider.length(o);
         List<Object> actualList = new ArrayList<>(length);
         for (int i = 0; i < length; i++) {
-          Object element = parquetJsonProvider.getArrayIndex(o, i);
-          if (parquetJsonProvider.isMap(element) || parquetJsonProvider.isArray(element)) {
+          Object element = jsonProvider.getArrayIndex(o, i);
+          if (jsonProvider.isMap(element) || jsonProvider.isArray(element)) {
             actualList.add(toMapHelper(finalizeConversionForMap(element)));
           } else {
             actualList.add(finalizeConversionForMap(element));
