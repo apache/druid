@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IncrementalIndexTest;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public class IncrementalIndexAdapterTest
+public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),

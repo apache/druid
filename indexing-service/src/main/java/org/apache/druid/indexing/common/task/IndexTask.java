@@ -65,6 +65,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -251,12 +253,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     this.determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     this.buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     this.appenderatorsManager = appenderatorsManager;
-  }
-
-  @Override
-  public int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   @Override
@@ -458,7 +454,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     try {
       if (chatHandlerProvider.isPresent()) {
-        log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
+        log.debug("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
 
         if (chatHandlerProvider.get().get(getId()).isPresent()) {
           // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
@@ -609,7 +605,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final PartitionsSpec nonNullPartitionsSpec
   ) throws IOException
   {
-    final ObjectMapper jsonMapper = toolbox.getObjectMapper();
+    final ObjectMapper jsonMapper = toolbox.getJsonMapper();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
 
@@ -832,7 +828,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // We use the timeChunk lock and don't have to ask the overlord to create segmentIds.
       // Instead, a local allocator is used.
       if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
-        return new CachingLocalSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
+        return new HashPartitionCachingLocalSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
       } else {
         return new LocalSegmentAllocator(toolbox, getId(), getDataSource(), dataSchema.getGranularitySpec());
       }
@@ -915,7 +911,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           buildSegmentsSavedParseExceptions,
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions(),
-          pushTimeout
+          pushTimeout,
+          new DefaultIndexTaskInputRowIteratorBuilder()
       );
       inputSourceProcessor.process(
           dataSchema,
@@ -1000,25 +997,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     /**
-     * Return the underlying map.
-     *
-     * @return a map of intervals to shardSpecs
-     */
-    Map<Interval, List<ShardSpec>> getMap()
-    {
-      return map;
-    }
-
-    Set<Interval> getIntervals()
-    {
-      return map.keySet();
-    }
-
-    /**
      * Return a shardSpec for the given interval and input row.
      *
      * @param interval interval for shardSpec
      * @param row      input row
+     *
      * @return a shardSpec
      */
     ShardSpec getShardSpec(Interval interval, InputRow row)
@@ -1145,6 +1128,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputSource;
     }
 
+    /**
+     * Returns {@link InputFormat}. Can be null if {@link DataSchema#parserMap} is specified.
+     * Also can be null in {@link InputSourceSampler}.
+     */
     @Nullable
     @Override
     @JsonProperty
@@ -1218,7 +1205,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
-    public static IndexTuningConfig createDefault()
+    static IndexTuningConfig createDefault()
     {
       return new IndexTuningConfig();
     }
@@ -1251,8 +1238,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         }
       } else {
         if (forceGuaranteedRollup) {
-          if (!(partitionsSpec instanceof HashedPartitionsSpec)) {
-            throw new ISE("HashedPartitionsSpec must be used for perfect rollup");
+          if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
+            throw new ISE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
           }
         } else {
           if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {

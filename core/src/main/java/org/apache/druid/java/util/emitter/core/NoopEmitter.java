@@ -46,4 +46,10 @@ public class NoopEmitter implements Emitter
   {
     // Do nothing
   }
+
+  @Override
+  public String toString()
+  {
+    return "NoopEmitter{}";
+  }
 }

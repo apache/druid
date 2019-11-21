@@ -152,7 +152,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       throw new ISE("can't start.");
     }
     try {
-      LOG.info("LookupExtractorFactoryContainerProvider is starting.");
+      LOG.debug("LookupExtractorFactoryContainerProvider starting.");
       loadAllLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(
@@ -178,7 +178,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
                 LOG.error(t, "Error while waiting for lifecycle start. lookup updates notices will not be handled");
               }
               finally {
-                LOG.info("Lookup Management loop exited, Lookup notices are not handled anymore.");
+                LOG.info("Lookup Management loop exited. Lookup notices are not handled anymore.");
               }
             },
             true
@@ -187,7 +187,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         mainThread.start();
       }
 
-      LOG.info("LookupExtractorFactoryContainerProvider is started.");
+      LOG.debug("LookupExtractorFactoryContainerProvider started.");
       lifecycleLock.started();
     }
     finally {
@@ -234,7 +234,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       throw new ISE("can't stop.");
     }
 
-    LOG.info("LookupExtractorFactoryContainerProvider is stopping.");
+    LOG.debug("LookupExtractorFactoryContainerProvider is stopping.");
 
     if (!testMode) {
       mainThread.interrupt();
@@ -249,8 +249,9 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 
     for (Map.Entry<String, LookupExtractorFactoryContainer> e : stateRef.get().lookupMap.entrySet()) {
       try {
-        LOG.info("Closing lookup [%s]", e.getKey());
-        if (!e.getValue().getLookupExtractorFactory().close()) {
+        if (e.getValue().getLookupExtractorFactory().close()) {
+          LOG.info("Closed lookup [%s].", e.getKey());
+        } else {
           LOG.error("Failed to close lookup [%s].", e.getKey());
         }
       }
@@ -259,7 +260,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       }
     }
 
-    LOG.info("LookupExtractorFactoryContainerProvider is stopped.");
+    LOG.debug("LookupExtractorFactoryContainerProvider is stopped.");
   }
 
 
@@ -351,7 +352,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     if (lookupBeanList != null) {
       startLookups(lookupBeanList);
     } else {
-      LOG.info("No lookups to be loaded at this point");
+      LOG.debug("No lookups to be loaded at this point.");
       stateRef.set(new LookupUpdateState(ImmutableMap.of(), ImmutableList.of(), ImmutableList.of()));
     }
   }
@@ -481,7 +482,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         new ExecutorCompletionService<>(executorService);
     final List<LookupBean> remainingLookups = new ArrayList<>(lookupBeanList);
     try {
-      LOG.info("Starting lookup loading process");
+      LOG.info("Starting lookup loading process.");
       for (int i = 0; i < lookupConfig.getLookupStartRetries() && !remainingLookups.isEmpty(); i++) {
         LOG.info("Round of attempts #%d, [%d] lookups", i + 1, remainingLookups.size());
         final Map<String, LookupExtractorFactoryContainer> successfulLookups =

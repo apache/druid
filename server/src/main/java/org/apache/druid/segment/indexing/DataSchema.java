@@ -87,15 +87,15 @@ public class DataSchema
     this.dataSource = dataSource;
 
     this.timestampSpec = timestampSpec;
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
     this.dimensionsSpec = dimensionsSpec == null
                           ? null
                           : computeDimensionsSpec(
                               Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
                               dimensionsSpec,
-                              aggregators
+                              this.aggregators
                           );
 
-    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
       this.granularitySpec = new UniformGranularitySpec(null, null, null);

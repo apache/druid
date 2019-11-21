@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark;
 
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -46,6 +47,10 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class FixedHistogramAddBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final int LOWER_LIMIT = 0;
   private static final int UPPER_LIMIT = 100000;
 

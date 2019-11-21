@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.firehose;
 
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -54,7 +53,7 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
   @Before
   public void setUp()
   {
-    chatHandlerProvider = new ServiceAnnouncingChatHandlerProvider(node, serviceAnnouncer, new ServerConfig());
+    chatHandlerProvider = new ServiceAnnouncingChatHandlerProvider(node, serviceAnnouncer);
   }
 
   @Test

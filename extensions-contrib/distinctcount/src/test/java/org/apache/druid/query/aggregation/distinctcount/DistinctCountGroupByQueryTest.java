@@ -41,6 +41,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +51,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class DistinctCountGroupByQueryTest
+public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
 {
   private GroupByQueryRunnerFactory factory;
   private Closer resourceCloser;

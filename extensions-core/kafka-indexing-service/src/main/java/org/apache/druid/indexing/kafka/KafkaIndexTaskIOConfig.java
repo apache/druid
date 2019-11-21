@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -54,7 +55,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
+      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
+      @JsonProperty("inputFormat") @Nullable InputFormat inputFormat
   )
   {
     super(
@@ -66,7 +68,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         endSequenceNumbers == null ? endPartitions : endSequenceNumbers,
         useTransaction,
         minimumMessageTime,
-        maximumMessageTime
+        maximumMessageTime,
+        inputFormat
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -93,7 +96,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       Long pollTimeout,
       Boolean useTransaction,
       DateTime minimumMessageTime,
-      DateTime maximumMessageTime
+      DateTime maximumMessageTime,
+      InputFormat inputFormat
   )
   {
     this(
@@ -107,7 +111,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         pollTimeout,
         useTransaction,
         minimumMessageTime,
-        maximumMessageTime
+        maximumMessageTime,
+        inputFormat
     );
   }
 
