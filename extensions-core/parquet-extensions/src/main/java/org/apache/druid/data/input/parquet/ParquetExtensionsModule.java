@@ -61,7 +61,7 @@ public class ParquetExtensionsModule implements DruidModule
                 new NamedType(ParquetAvroHadoopInputRowParser.class, PARQUET_AVRO_INPUT_PARSER_TYPE),
                 new NamedType(ParquetHadoopInputRowParser.class, PARQUET_SIMPLE_INPUT_PARSER_TYPE),
                 new NamedType(ParquetParseSpec.class, PARQUET_SIMPLE_INPUT_PARSER_TYPE),
-                new NamedType(DruidNativeParquetInputFormat.class, PARQUET_SIMPLE_PARSE_SPEC_TYPE)
+                new NamedType(ParquetInputFormat.class, PARQUET_SIMPLE_PARSE_SPEC_TYPE)
             )
     );
   }
@@ -69,6 +69,9 @@ public class ParquetExtensionsModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    // this block of code is common among extensions that use Hadoop things but are not running in Hadoop, in order
+    // to properly initialize everything
+
     final Configuration conf = new Configuration();
 
     // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.

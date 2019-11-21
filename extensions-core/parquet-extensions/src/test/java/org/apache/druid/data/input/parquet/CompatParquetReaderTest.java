@@ -22,7 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -38,7 +38,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Duplicate of {@link CompatParquetInputTest} but for {@link DruidParquetReader} instead of Hadoop
+ * Duplicate of {@link CompatParquetInputTest} but for {@link ParquetReader} instead of Hadoop
  */
 public class CompatParquetReaderTest extends BaseParquetReaderTest
 {
@@ -88,19 +88,22 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         JSONPathSpec.DEFAULT,
         false
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
-    List<InputRowListPlusJson> sampledAsBinary = sampleAllRows(readerNotAsString);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampledAsBinary = sampleAllRows(readerNotAsString);
     final String expectedJson = "{\n"
                                 + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
 
     final String expectedJsonBinary = "{\n"
                                 + "  \"field\" : \"aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(expectedJsonBinary, sampledAsBinary.get(0).getRawJson());
+    Assert.assertEquals(
+        expectedJsonBinary,
+        DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues())
+    );
   }
 
 
@@ -136,11 +139,11 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"col\" : -1\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -242,7 +245,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"enumColumn\" : \"SPADES\",\n"
                                 + "  \"maybeStringColumn\" : { },\n"
@@ -302,7 +305,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    } ]\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -335,11 +338,11 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"repeatedInt\" : [ 1, 2, 3 ]\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
 
@@ -374,7 +377,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"primitive\" : 2,\n"
                                 + "  \"myComplex\" : [ {\n"
@@ -382,7 +385,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"repeatedMessage\" : [ 3 ]\n"
                                 + "  } ]\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -421,7 +424,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"optionalMessage\" : { },\n"
                                 + "  \"requiredPrimitive\" : 9,\n"
@@ -432,6 +435,6 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"someId\" : 9\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 }

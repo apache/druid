@@ -24,6 +24,7 @@ import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
@@ -43,9 +44,11 @@ import java.util.function.Function;
 
 public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonNode>
 {
+  private static final JsonProvider JSON_PROVIDER = new FastJacksonJsonNodeJsonProvider();
+
   private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
-                   .jsonProvider(new FastJacksonJsonNodeJsonProvider())
+                   .jsonProvider(JSON_PROVIDER)
                    .mappingProvider(new JacksonMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
@@ -95,6 +98,12 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     catch (JsonQueryException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public JsonProvider getJsonProvider()
+  {
+    return null;
   }
 
   @Nullable

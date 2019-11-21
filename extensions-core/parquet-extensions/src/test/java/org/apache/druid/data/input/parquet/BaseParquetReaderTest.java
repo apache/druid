@@ -19,9 +19,11 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -34,6 +36,8 @@ import java.util.List;
 
 public class BaseParquetReaderTest
 {
+  ObjectWriter DEFAULT_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
+
   InputEntityReader createReader(String parquetFile, InputRowSchema schema, JSONPathSpec flattenSpec) throws IOException
   {
     return createReader(parquetFile, schema, flattenSpec, false);
@@ -47,7 +51,7 @@ public class BaseParquetReaderTest
   ) throws IOException
   {
     FileEntity entity = new FileEntity(new File(parquetFile));
-    DruidNativeParquetInputFormat parquet = new DruidNativeParquetInputFormat(flattenSpec, binaryAsString);
+    ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString);
     InputEntityReader reader = parquet.createReader(schema, entity, null);
     return reader;
   }
@@ -63,10 +67,10 @@ public class BaseParquetReaderTest
     return rows;
   }
 
-  List<InputRowListPlusJson> sampleAllRows(InputEntityReader reader) throws IOException
+  List<InputRowListPlusRawValues> sampleAllRows(InputEntityReader reader) throws IOException
   {
-    List<InputRowListPlusJson> rows = new ArrayList<>();
-    try (CloseableIterator<InputRowListPlusJson> iterator = reader.sample()) {
+    List<InputRowListPlusRawValues> rows = new ArrayList<>();
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
       while (iterator.hasNext()) {
         rows.add(iterator.next());
       }

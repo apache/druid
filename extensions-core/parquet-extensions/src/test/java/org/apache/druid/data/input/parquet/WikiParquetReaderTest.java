@@ -22,7 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Duplicate of {@link WikiParquetInputTest} but for {@link DruidParquetReader} instead of Hadoop
+ * Duplicate of {@link WikiParquetInputTest} but for {@link ParquetReader} instead of Hadoop
  */
 public class WikiParquetReaderTest extends BaseParquetReaderTest
 {
@@ -57,7 +57,7 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals("zh", s2);
 
     reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
 
     final String expectedJson = "{\n"
                                 + "  \"continent\" : \"North America\",\n"
@@ -77,6 +77,6 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"user\" : \"nuclear\",\n"
                                 + "  \"timestamp\" : \"2013-08-31T01:02:33Z\"\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 }

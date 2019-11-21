@@ -22,7 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Duplicate of {@link TimestampsParquetInputTest} but for {@link DruidParquetReader} instead of Hadoop
+ * Duplicate of {@link TimestampsParquetInputTest} but for {@link ParquetReader} instead of Hadoop
  */
 public class TimestampsParquetReaderTest extends BaseParquetReaderTest
 {
@@ -82,8 +82,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
         schemaAsDate,
         JSONPathSpec.DEFAULT
     );
-    List<InputRowListPlusJson> sampledAsString = sampleAllRows(readerAsString);
-    List<InputRowListPlusJson> sampledAsDate = sampleAllRows(readerAsDate);
+    List<InputRowListPlusRawValues> sampledAsString = sampleAllRows(readerAsString);
+    List<InputRowListPlusRawValues> sampledAsDate = sampleAllRows(readerAsDate);
     final String expectedJson = "{\n"
                                       + "  \"date_as_string\" : \"2017-06-18\",\n"
                                       + "  \"timestamp_as_timestamp\" : 1497702471815,\n"
@@ -91,8 +91,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    Assert.assertEquals(expectedJson, sampledAsString.get(0).getRawJson());
-    Assert.assertEquals(expectedJson, sampledAsDate.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
   }
 
   @Test
@@ -116,11 +116,11 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
         schema,
         JSONPathSpec.DEFAULT
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"ts\" : 978310861000\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -146,10 +146,10 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
         schema,
         JSONPathSpec.DEFAULT
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"time\" : 10\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(0).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 }

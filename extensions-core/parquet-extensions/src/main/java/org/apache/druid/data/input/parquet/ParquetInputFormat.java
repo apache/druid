@@ -32,15 +32,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
 
-/**
- * heh, DruidParquetInputFormat already exists, so I need another name
- */
-public class DruidNativeParquetInputFormat extends NestedInputFormat
+public class ParquetInputFormat extends NestedInputFormat
 {
   private final boolean binaryAsString;
 
   @JsonCreator
-  public DruidNativeParquetInputFormat(
+  public ParquetInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
   )
@@ -68,7 +65,7 @@ public class DruidNativeParquetInputFormat extends NestedInputFormat
       File temporaryDirectory
   ) throws IOException
   {
-    return new DruidParquetReader(inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+    return new ParquetReader(inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }
 
   @Override
@@ -83,7 +80,7 @@ public class DruidNativeParquetInputFormat extends NestedInputFormat
     if (!super.equals(o)) {
       return false;
     }
-    DruidNativeParquetInputFormat that = (DruidNativeParquetInputFormat) o;
+    ParquetInputFormat that = (ParquetInputFormat) o;
     return binaryAsString == that.binaryAsString;
   }
 

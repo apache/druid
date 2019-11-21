@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet.simple;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.parquet.example.data.Group;
@@ -29,21 +30,24 @@ import org.apache.parquet.schema.Type;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Group>
 {
-
   private final Configuration jsonPathConfiguration;
   private final ParquetGroupConverter converter;
+  private final JsonProvider parquetJsonProvider;
 
   public ParquetGroupFlattenerMaker(boolean binaryAsString)
   {
     this.converter = new ParquetGroupConverter(binaryAsString);
+    this.parquetJsonProvider = new ParquetGroupJsonProvider(converter);
     this.jsonPathConfiguration = Configuration.builder()
-                                              .jsonProvider(new ParquetGroupJsonProvider(converter))
+                                              .jsonProvider(parquetJsonProvider)
                                               .mappingProvider(new NotImplementedMappingProvider())
                                               .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                               .build();
@@ -84,6 +88,18 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
     throw new UnsupportedOperationException("Parquet does not support JQ");
   }
 
+  @Override
+  public JsonProvider getJsonProvider()
+  {
+    return parquetJsonProvider;
+  }
+
+  @Override
+  public Object finalizeConversionForMap(Object o)
+  {
+    return finalizeConversion(o);
+  }
+
   /**
    * After json conversion, wrapped list items can still need unwrapped. See
    * {@link ParquetGroupConverter#isWrappedListPrimitive(Object)} and
@@ -95,6 +111,15 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
    */
   private Object finalizeConversion(Object o)
   {
-    return converter.finalizeConversion(o);
+    // conversion can leave 'wrapped' list primitives
+    if (ParquetGroupConverter.isWrappedListPrimitive(o)) {
+      return converter.unwrapListPrimitive(o);
+    } else if (o instanceof List) {
+      List<Object> asList = ((List<?>) o).stream().filter(Objects::nonNull).collect(Collectors.toList());
+      if (asList.stream().allMatch(ParquetGroupConverter::isWrappedListPrimitive)) {
+        return asList.stream().map(Group.class::cast).map(converter::unwrapListPrimitive).collect(Collectors.toList());
+      }
+    }
+    return o;
   }
 }

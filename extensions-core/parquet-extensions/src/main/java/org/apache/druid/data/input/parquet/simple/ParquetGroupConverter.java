@@ -42,9 +42,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class ParquetGroupConverter
 {
@@ -499,19 +497,5 @@ public class ParquetGroupConverter
     assert isWrappedListPrimitive(o);
     Group g = (Group) o;
     return convertPrimitiveField(g, 0, binaryAsString);
-  }
-
-  public Object finalizeConversion(Object o)
-  {
-    // conversion can leave 'wrapped' list primitives
-    if (isWrappedListPrimitive(o)) {
-      return unwrapListPrimitive(o);
-    } else if (o instanceof List) {
-      List<Object> asList = ((List<?>) o).stream().filter(Objects::nonNull).collect(Collectors.toList());
-      if (asList.stream().allMatch(ParquetGroupConverter::isWrappedListPrimitive)) {
-        return asList.stream().map(Group.class::cast).map(this::unwrapListPrimitive).collect(Collectors.toList());
-      }
-    }
-    return o;
   }
 }

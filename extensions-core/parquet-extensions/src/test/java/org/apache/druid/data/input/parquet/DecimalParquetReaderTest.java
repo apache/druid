@@ -22,7 +22,7 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -38,7 +38,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Duplicate of {@link DecimalParquetInputTest} but for {@link DruidParquetReader} instead of Hadoop
+ * Duplicate of {@link DecimalParquetInputTest} but for {@link ParquetReader} instead of Hadoop
  */
 public class DecimalParquetReaderTest extends BaseParquetReaderTest
 {
@@ -72,11 +72,11 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"fixed_len_dec\" : 1.0\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(1).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
   }
 
   @Test
@@ -109,15 +109,15 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"i32_dec\" : 100\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(1).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
   }
 
   @Test
-  public void testReadParquetDecimali64() throws IOException, InterruptedException
+  public void testReadParquetDecimali64() throws IOException
   {
     final String file = "example/decimals/dec-in-i64.parquet";
     InputRowSchema schema = new InputRowSchema(
@@ -146,10 +146,10 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusJson> sampled = sampleAllRows(reader);
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     final String expectedJson = "{\n"
                                 + "  \"i64_dec\" : 100\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, sampled.get(1).getRawJson());
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
   }
 }
