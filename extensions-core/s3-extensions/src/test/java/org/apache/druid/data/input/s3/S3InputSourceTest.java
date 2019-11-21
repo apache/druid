@@ -155,7 +155,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     EasyMock.reset(S3_CLIENT);
     addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
-    addExpectedNonPrefixObjectsWithNoListPermission(EXPECTED_URIS.get(1));
+    addExpectedNonPrefixObjectsWithNoListPermission();
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(
@@ -177,7 +177,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     EasyMock.reset(S3_CLIENT);
     addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
-    addExpectedNonPrefixObjectsWithNoListPermission(EXPECTED_URIS.get(1));
+    addExpectedNonPrefixObjectsWithNoListPermission();
     addExpectedGetObjectMock(EXPECTED_URIS.get(0));
     addExpectedGetObjectMock(EXPECTED_URIS.get(1));
     EasyMock.replay(S3_CLIENT);
@@ -226,7 +226,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(S3_CLIENT.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class))).andReturn(result).once();
   }
 
-  private static void addExpectedNonPrefixObjectsWithNoListPermission(URI uri)
+  private static void addExpectedNonPrefixObjectsWithNoListPermission()
   {
     AmazonS3Exception boom = new AmazonS3Exception("oh dang, you can't list that bucket friend");
     boom.setStatusCode(403);
