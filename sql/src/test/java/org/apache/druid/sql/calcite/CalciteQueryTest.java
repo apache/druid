@@ -809,6 +809,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"def"}
         )
     );
+
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"", 1L},
+          new Object[]{"def", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"def", 1L},
+          new Object[]{"abc", 1L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC",
+        outerLimitContext,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("dim1", "d0", ValueType.STRING))
+                .threshold(2)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)
+                    )
+                )
+                .context(outerLimitContext)
+                .build()
+        ),
+        expected
+    );
   }
 
   @Test

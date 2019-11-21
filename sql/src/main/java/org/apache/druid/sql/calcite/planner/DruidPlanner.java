@@ -261,6 +261,16 @@ public class DruidPlanner implements Closeable
       return root.rel;
     }
 
+    if (root.rel instanceof LogicalSort) {
+      LogicalSort outerSort = (LogicalSort) root.rel;
+      return LogicalSort.create(
+          outerSort.getInput(),
+          outerSort.collation,
+          makeBigIntLiteral(0),
+          makeBigIntLiteral(outerLimit)
+      );
+    }
+
     return LogicalSort.create(
         root.rel,
         root.collation,

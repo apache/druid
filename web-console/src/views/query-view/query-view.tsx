@@ -131,13 +131,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return /EXPLAIN\sPLAN\sFOR/i.test(query);
   }
 
-  static wrapInLimitIfNeeded(query: string, limit: number | undefined): string {
-    query = QueryView.trimSemicolon(query);
-    if (!limit) return query;
-    if (QueryView.isExplainQuery(query)) return query;
-    return `SELECT * FROM (${query}\n) LIMIT ${limit}`;
-  }
-
   static wrapInExplainIfNeeded(query: string): string {
     query = QueryView.trimSemicolon(query);
     if (QueryView.isExplainQuery(query)) return query;
@@ -251,17 +244,16 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         if (QueryView.isJsonLike(queryString)) {
           jsonQuery = Hjson.parse(queryString);
         } else {
-          const actualQuery = QueryView.wrapInLimitIfNeeded(queryString, wrapQueryLimit);
-
           jsonQuery = {
-            query: actualQuery,
+            query: queryString,
             resultFormat: 'array',
             header: true,
           };
         }
 
-        if (!isEmptyContext(queryContext)) {
+        if (!isEmptyContext(queryContext) || wrapQueryLimit) {
           jsonQuery.context = Object.assign(jsonQuery.context || {}, queryContext);
+          jsonQuery.context.sqlOuterLimit = wrapQueryLimit;
         }
 
         let rawQueryResult: unknown;
@@ -320,14 +312,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       processQuery: async (queryWithContext: QueryWithContext) => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
-        const actualQuery = QueryView.wrapInLimitIfNeeded(queryString, wrapQueryLimit);
-
         const explainPayload: Record<string, any> = {
-          query: QueryView.wrapInExplainIfNeeded(actualQuery),
+          query: QueryView.wrapInExplainIfNeeded(queryString),
           resultFormat: 'object',
         };
 
-        if (!isEmptyContext(queryContext)) explainPayload.context = queryContext;
+        if (!isEmptyContext(queryContext) || wrapQueryLimit) {
+          explainPayload.context = queryContext || {};
+          explainPayload.context.sqlOuterLimit = wrapQueryLimit;
+        }
         const result = await queryDruidSql(explainPayload);
 
         return parseQueryPlan(result[0]['PLAN']);
