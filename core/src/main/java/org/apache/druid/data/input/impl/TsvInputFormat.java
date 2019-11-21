@@ -22,28 +22,16 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.indexer.Checks;
-import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
-public class TsvInputFormat implements InputFormat
+public class TsvInputFormat extends SeperateValueInputFormat
 {
-  private final String listDelimiter;
-  private final List<String> columns;
-  private final boolean findColumnsFromHeader;
-  private final int skipHeaderRows;
-
   @JsonCreator
   public TsvInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
@@ -53,28 +41,13 @@ public class TsvInputFormat implements InputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    this.listDelimiter = listDelimiter;
-    this.columns = columns == null ? Collections.emptyList() : columns;
-    //noinspection ConstantConditions
-    this.findColumnsFromHeader = Checks.checkOneNotNullOrEmpty(
-        ImmutableList.of(
-            new Property<>("hasHeaderRow", hasHeaderRow),
-            new Property<>("findColumnsFromHeader", findColumnsFromHeader)
-        )
-    ).getValue();
-    this.skipHeaderRows = skipHeaderRows;
+    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, "tab");
+  }
 
-    if (!this.columns.isEmpty()) {
-      for (String column : this.columns) {
-        Preconditions.checkArgument(!column.contains("\t"), "Column[%s] has a tab, it cannot", column);
-      }
-    } else {
-      Preconditions.checkArgument(
-          this.findColumnsFromHeader,
-          "If columns field is not set, the first row of your data must have your header"
-          + " and hasHeaderRow must be set to true."
-      );
-    }
+  @Override
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  {
+    return super.createReader(inputRowSchema, source, temporaryDirectory, "tab");
   }
 
   @VisibleForTesting
@@ -86,71 +59,5 @@ public class TsvInputFormat implements InputFormat
   )
   {
     this(columns, listDelimiter, null, findColumnsFromHeader, skipHeaderRows);
-  }
-
-  @JsonProperty
-  public List<String> getColumns()
-  {
-    return columns;
-  }
-
-  @JsonProperty
-  public String getListDelimiter()
-  {
-    return listDelimiter;
-  }
-
-  @JsonProperty
-  public boolean isFindColumnsFromHeader()
-  {
-    return findColumnsFromHeader;
-  }
-
-  @JsonProperty
-  public int getSkipHeaderRows()
-  {
-    return skipHeaderRows;
-  }
-
-  @Override
-  public boolean isSplittable()
-  {
-    return true;
-  }
-
-  @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
-  {
-    return new TsvReader(
-        inputRowSchema,
-        source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows
-    );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    TsvInputFormat format = (TsvInputFormat) o;
-    return findColumnsFromHeader == format.findColumnsFromHeader &&
-           skipHeaderRows == format.skipHeaderRows &&
-           Objects.equals(listDelimiter, format.listDelimiter) &&
-           Objects.equals(columns, format.columns);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(listDelimiter, columns, findColumnsFromHeader, skipHeaderRows);
   }
 }

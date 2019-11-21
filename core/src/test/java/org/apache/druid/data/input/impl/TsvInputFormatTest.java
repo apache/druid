@@ -45,10 +45,10 @@ public class TsvInputFormatTest
   }
 
   @Test
-  public void testComma()
+  public void testTab()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Column[a\t] has a tab, it cannot");
+    expectedException.expectMessage("Column[a,] has a tab, it cannot");
     new TsvInputFormat(Collections.singletonList("a\t"), ",", false, 0);
   }
 }
