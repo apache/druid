@@ -10,7 +10,7 @@ DRUID_USER_CLASSPATH=`ls -1 $DRUID_CLASSPATH | xargs -I{} echo $DRUID_CLASSPATH/
 FS_FQDN=${FS_FQDN:-com.amazon.ws.emr.hadoop.fs.EmrFileSystem}
 DRUID_JAVA_OPTS="-Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/:$HADOOP_CLASSPATH:$DRUID_CLASSPATH/* -Ddruid.hadoop.user.classpath=$DRUID_USER_CLASSPATH -Djava.library.path=$HADOOP_HOME/lib/native/ -Dhadoop.fs.s3n.impl=${FS_FQDN} -Dhadoop.fs.s3.impl=${FS_FQDN}"
 
-$JAVA_HOME/bin/java $DRUID_JAVA_OPTS io.druid.cli.Main index hadoop --no-default-hadoop "$@"
+$JAVA_HOME/bin/java $DRUID_JAVA_OPTS org.apache.druid.cli.Main index hadoop --no-default-hadoop "$@"
 
 # Check the return value of the command
 RETVAL=$?

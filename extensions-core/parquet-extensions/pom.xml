@@ -27,7 +27,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.16.1-incubating-SNAPSHOT</version>
+    <version>0.16.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -35,6 +35,66 @@
   <properties>
     <parquet.version>1.10.1</parquet.version>
   </properties>
+  <repositories>
+    <repository>
+      <id>central</id>
+      <!-- This should be at top, it makes maven try the central repo first and then others and hence faster dep resolution -->
+      <name>Maven Repository</name>
+      <url>https://repo1.maven.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- For bdurl, benjamin, dse-metric, procrustes, and dse_pig -->
+    <repository>
+      <id>libs-candidates-local</id>
+      <name>Netflix Artifactory</name>
+      <url>http://artifacts.netflix.com/libs-candidates-local</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>libs-snapshots-local</id>
+      <name>Netflix Artifactory</name>
+      <url>http://artifacts.netflix.com/libs-snapshots-local</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>libs-candidates-local-pom</id>
+      <name>Netflix Artifactory</name>
+      <url>http://artifacts.netflix.com/libs-candidates-local-pom</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>libs-snapshots-local-pom</id>
+      <name>Netflix Artifactory</name>
+      <url>http://artifacts.netflix.com/libs-snapshots-local-pom</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>

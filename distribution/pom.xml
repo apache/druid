@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.16.1-incubating-SNAPSHOT</version>
+        <version>0.16.0</version>
     </parent>
 
     <dependencies>

@@ -20,70 +20,65 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.druid</groupId>
+    <groupId>org.apache.druid</groupId>
     <artifactId>druid-assembly</artifactId>
     <name>druid-assembly</name>
     <description>druid-assembly</description>
 
     <parent>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid</artifactId>
-      <version>0.10.1</version>
+      <version>0.16.0</version>
     </parent>
 
     <dependencies>
       <dependency>
-        <groupId>io.druid</groupId>
-        <artifactId>druid-common</artifactId>
+        <groupId>org.apache.druid</groupId>
+        <artifactId>druid-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid-indexing-hadoop</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid-indexing-service</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid-processing</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid-server</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid-services</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid-aws-common</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid.extensions.contrib</groupId>
+        <groupId>org.apache.druid.extensions</groupId>
         <artifactId>druid-parquet-extensions</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid.extensions</groupId>
+        <groupId>org.apache.druid.extensions</groupId>
         <artifactId>mysql-metadata-storage</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.druid.extensions</groupId>
-        <artifactId>druid-avro-extensions</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.druid.extensions</groupId>
+        <groupId>org.apache.druid.extensions</groupId>
         <artifactId>druid-datasketches</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -93,6 +88,12 @@
       <plugins>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
+          <configuration>
+            <descriptors>
+              <descriptor>src/main/assembly/runtime.xml</descriptor>
+            </descriptors>
+            <tarLongFileMode>posix</tarLongFileMode>
+          </configuration>
           <executions>
             <execution>
               <id>make-assembly</id>
@@ -100,10 +101,6 @@
               <goals>
                 <goal>single</goal>
               </goals>
-              <configuration>
-                <descriptor>src/main/assembly/runtime.xml</descriptor>
-                <tarLongFileMode>posix</tarLongFileMode>
-              </configuration>
             </execution>
           </executions>
         </plugin>
