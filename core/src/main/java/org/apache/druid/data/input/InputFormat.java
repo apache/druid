@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.TsvInputFormat;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 import java.io.File;
@@ -44,7 +45,8 @@ import java.io.File;
 @JsonSubTypes(value = {
     @Type(name = "csv", value = CsvInputFormat.class),
     @Type(name = "json", value = JsonInputFormat.class),
-    @Type(name = "regex", value = RegexInputFormat.class)
+    @Type(name = "regex", value = RegexInputFormat.class),
+    @Type(name = "tsv", value = TsvInputFormat.class)
 })
 public interface InputFormat
 {
