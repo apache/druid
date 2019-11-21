@@ -29,6 +29,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -224,7 +225,7 @@ interface Function
       return eval(x.asString(), y.asInt());
     }
 
-    protected abstract ExprEval eval(String x, int y);
+    protected abstract ExprEval eval(@Nullable String x, int y);
   }
 
   /**
@@ -1455,13 +1456,16 @@ interface Function
     }
 
     @Override
-    protected ExprEval eval(String x, int y)
+    protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
         throw new IAE(
             "Function[%s] needs a postive integer as second argument",
             name()
         );
+      }
+      if (x == null) {
+        return ExprEval.of(null);
       }
       int len = x.length();
       return ExprEval.of(y < len ? x.substring(len - y) : x);
@@ -1477,13 +1481,16 @@ interface Function
     }
 
     @Override
-    protected ExprEval eval(String x, int y)
+    protected ExprEval eval(@Nullable String x, int y)
     {
       if (y < 0) {
         throw new IAE(
             "Function[%s] needs a postive integer as second argument",
             name()
         );
+      }
+      if (x == null) {
+        return ExprEval.of(null);
       }
       return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
     }

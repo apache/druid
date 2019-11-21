@@ -49,7 +49,8 @@ public class SortCollapseRule extends RelOptRule
     final Sort first = call.rel(1);
     final Sort second = call.rel(0);
 
-    if (second.collation.getFieldCollations().isEmpty()) {
+    if (second.collation.getFieldCollations().isEmpty()
+        || second.collation.getFieldCollations().equals(first.collation.getFieldCollations())) {
       // Add up the offsets.
       final int firstOffset = (first.offset != null ? RexLiteral.intValue(first.offset) : 0);
       final int secondOffset = (second.offset != null ? RexLiteral.intValue(second.offset) : 0);
@@ -81,7 +82,7 @@ public class SortCollapseRule extends RelOptRule
           first.getInput(),
           first.getCollation(),
           offset == 0 ? null : call.builder().literal(offset),
-          call.builder().literal(fetch)
+          fetch < 0 ? null : call.builder().literal(fetch)
       );
 
       call.transformTo(combined);
