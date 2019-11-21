@@ -19,30 +19,29 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.Task;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
 /**
- * {@link ParallelIndexTaskRunner} for the phase to create partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialSegmentMergeParallelIndexTaskRunner
+ * Base class for different implementations of {@link ParallelIndexTaskRunner} that operate on
+ * {@link org.apache.druid.data.input.InputSource} splits.
  */
-class PartialSegmentGenerateParallelIndexTaskRunner
-    extends ParallelIndexPhaseRunner<PartialSegmentGenerateTask, GeneratedPartitionsReport>
+abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends SubTaskReport>
+    extends ParallelIndexPhaseRunner<T, R>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 
-  PartialSegmentGenerateParallelIndexTaskRunner(
+  InputSourceSplitParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
@@ -66,13 +65,7 @@ class PartialSegmentGenerateParallelIndexTaskRunner
   }
 
   @Override
-  public String getName()
-  {
-    return PartialSegmentGenerateTask.TYPE;
-  }
-
-  @Override
-  Iterator<SubTaskSpec<PartialSegmentGenerateTask>> subTaskSpecIterator() throws IOException
+  Iterator<SubTaskSpec<T>> subTaskSpecIterator() throws IOException
   {
     return baseInputSource.createSplits(
         ingestionSchema.getIOConfig().getInputFormat(),
@@ -81,7 +74,7 @@ class PartialSegmentGenerateParallelIndexTaskRunner
   }
 
   @Override
-  int getTotalNumSubTasks() throws IOException
+  final int getTotalNumSubTasks() throws IOException
   {
     return baseInputSource.getNumSplits(
         ingestionSchema.getIOConfig().getInputFormat(),
@@ -89,19 +82,7 @@ class PartialSegmentGenerateParallelIndexTaskRunner
     );
   }
 
-  @VisibleForTesting
-  ParallelIndexIngestionSpec getIngestionSchema()
-  {
-    return ingestionSchema;
-  }
-
-  @VisibleForTesting
-  SplittableInputSource<?> getBaseInputSource()
-  {
-    return baseInputSource;
-  }
-
-  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
+  final SubTaskSpec<T> newTaskSpec(InputSplit split)
   {
     final FirehoseFactory firehoseFactory;
     final SplittableInputSource inputSource;
@@ -122,30 +103,28 @@ class PartialSegmentGenerateParallelIndexTaskRunner
         ),
         ingestionSchema.getTuningConfig()
     );
-    return new SubTaskSpec<PartialSegmentGenerateTask>(
+
+    return createSubTaskSpec(
         getTaskId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getTaskId(),
         getContext(),
-        split
-    )
-    {
-      @Override
-      public PartialSegmentGenerateTask newSubTask(int numAttempts)
-      {
-        return new PartialSegmentGenerateTask(
-            null,
-            getGroupId(),
-            null,
-            getSupervisorTaskId(),
-            numAttempts,
-            subTaskIngestionSpec,
-            getContext(),
-            getIndexingServiceClient(),
-            null,
-            null
-        );
-      }
-    };
+        split,
+        subTaskIngestionSpec,
+        getIndexingServiceClient()
+    );
   }
+
+  /**
+   * @return Ingestion spec split suitable for this parallel worker
+   */
+  abstract SubTaskSpec<T> createSubTaskSpec(
+      String id,
+      String groupId,
+      String supervisorTaskId,
+      Map<String, Object> context,
+      InputSplit split,
+      ParallelIndexIngestionSpec subTaskIngestionSpec,
+      IndexingServiceClient indexingServiceClient
+  );
 }

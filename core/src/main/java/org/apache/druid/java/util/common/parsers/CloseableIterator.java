@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -65,21 +66,12 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
 
     return new CloseableIterator<R>()
     {
-      CloseableIterator<R> iterator = null;
+      CloseableIterator<R> iterator = findNextIeteratorIfNecessary();
 
-      @Override
-      public boolean hasNext()
+      @Nullable
+      private CloseableIterator<R> findNextIeteratorIfNecessary()
       {
-        return (iterator != null && iterator.hasNext()) || delegate.hasNext();
-      }
-
-      @Override
-      public R next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-        if (iterator == null || !iterator.hasNext()) {
+        while ((iterator == null || !iterator.hasNext()) && delegate.hasNext()) {
           if (iterator != null) {
             try {
               iterator.close();
@@ -88,9 +80,38 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
               throw new UncheckedIOException(e);
             }
           }
-          iterator = function.apply(delegate.next());
+          try {
+            iterator = function.apply(delegate.next());
+            if (iterator.hasNext()) {
+              return iterator;
+            }
+          }
+          catch (Exception e) {
+            iterator = new ExceptionThrowingIterator<>(e);
+            return iterator;
+          }
         }
-        return iterator.next();
+        return null;
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        return iterator != null && iterator.hasNext();
+      }
+
+      @Override
+      public R next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        try {
+          return iterator.next();
+        }
+        finally {
+          findNextIeteratorIfNecessary();
+        }
       }
 
       @Override
@@ -99,5 +120,40 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
         delegate.close();
       }
     };
+  }
+
+  class ExceptionThrowingIterator<T> implements CloseableIterator<T>
+  {
+    private final Exception exception;
+
+    private boolean thrown = false;
+
+    private ExceptionThrowingIterator(Exception exception)
+    {
+      this.exception = exception;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return !thrown;
+    }
+
+    @Override
+    public T next()
+    {
+      thrown = true;
+      if (exception instanceof RuntimeException) {
+        throw (RuntimeException) exception;
+      } else {
+        throw new RuntimeException(exception);
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      // do nothing
+    }
   }
 }

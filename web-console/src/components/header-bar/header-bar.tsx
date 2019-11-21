@@ -54,11 +54,11 @@ import './header-bar.scss';
 export type HeaderActiveTab =
   | null
   | 'load-data'
-  | 'query'
+  | 'ingestion'
   | 'datasources'
   | 'segments'
-  | 'tasks'
   | 'services'
+  | 'query'
   | 'lookups';
 
 const DruidLogo = React.memo(function DruidLogo() {
@@ -302,6 +302,14 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <NavbarDivider />
         <AnchorButton
           minimal
+          active={active === 'ingestion'}
+          icon={IconNames.GANTT_CHART}
+          text="Ingestion"
+          href="#ingestion"
+          disabled={!capabilities.hasSqlOrOverlordAccess()}
+        />
+        <AnchorButton
+          minimal
           active={active === 'datasources'}
           icon={IconNames.MULTI_SELECT}
           text="Datasources"
@@ -315,14 +323,6 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           text="Segments"
           href="#segments"
           disabled={!capabilities.hasSqlOrCoordinatorAccess()}
-        />
-        <AnchorButton
-          minimal
-          active={active === 'tasks'}
-          icon={IconNames.GANTT_CHART}
-          text="Tasks"
-          href="#tasks"
-          disabled={!capabilities.hasSqlOrOverlordAccess()}
         />
         <AnchorButton
           minimal

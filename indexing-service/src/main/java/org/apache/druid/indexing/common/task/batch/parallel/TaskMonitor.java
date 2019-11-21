@@ -85,11 +85,13 @@ public class TaskMonitor<T extends Task>
   private int numRunningTasks;
   private int numSucceededTasks;
   private int numFailedTasks;
-  // This metric is used only for unit tests because the current taskStatus system doesn't track the killed task status.
-  // Currently, this metric only represents # of killed tasks by ParallelIndexTaskRunner.
-  // See killAllRunningTasks(), SinglePhaseParallelIndexTaskRunner.run(), and
-  // SinglePhaseParallelIndexTaskRunner.stopGracefully()
-  private int numKilledTasks;
+  /**
+   * This metric is used only for unit tests because the current taskStatus system doesn't track the canceled task
+   * status. Currently, this metric only represents # of canceled tasks by {@link ParallelIndexTaskRunner}.
+   * See killAllRunningTasks(), {@link SinglePhaseParallelIndexTaskRunner#run}, and
+   * {@link SinglePhaseParallelIndexTaskRunner#stopGracefully}
+   */
+  private int numCanceledTasks;
 
   private boolean running = false;
 
@@ -178,7 +180,7 @@ public class TaskMonitor<T extends Task>
   }
 
   /**
-   * Stop task monitoring and kill all running tasks.
+   * Stop task monitoring and cancel all running tasks.
    */
   public void stop()
   {
@@ -193,15 +195,15 @@ public class TaskMonitor<T extends Task>
             final MonitorEntry entry = iterator.next();
             iterator.remove();
             final String taskId = entry.runningTask.getId();
-            log.info("Request to kill subtask[%s]", taskId);
+            log.info("Request to cancel subtask[%s]", taskId);
             indexingServiceClient.cancelTask(taskId);
             numRunningTasks--;
-            numKilledTasks++;
+            numCanceledTasks++;
           }
 
           if (numRunningTasks > 0) {
             log.warn(
-                "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
+                "Inconsistent state: numRunningTasks[%d] is still not zero after trying to cancel all running tasks.",
                 numRunningTasks
             );
           }
@@ -334,9 +336,9 @@ public class TaskMonitor<T extends Task>
   }
 
   @VisibleForTesting
-  int getNumKilledTasks()
+  int getNumCanceledTasks()
   {
-    return numKilledTasks;
+    return numCanceledTasks;
   }
 
   SinglePhaseParallelIndexingProgress getProgress()

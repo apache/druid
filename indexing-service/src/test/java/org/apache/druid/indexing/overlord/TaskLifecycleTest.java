@@ -37,7 +37,7 @@ import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -313,7 +313,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public CloseableIterator<InputRowListPlusJson> sample()
+        public CloseableIterator<InputRowListPlusRawValues> sample()
         {
           throw new UnsupportedOperationException();
         }
@@ -348,7 +348,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public CloseableIterator<InputRowListPlusJson> sample()
+        public CloseableIterator<InputRowListPlusRawValues> sample()
         {
           throw new UnsupportedOperationException();
         }
@@ -860,7 +860,7 @@ public class TaskLifecycleTest
   }
 
   @Test
-  public void testKillTask() throws Exception
+  public void testKillUnusedSegmentsTask() throws Exception
   {
     final File tmpSegmentDir = temporaryFolder.newFolder();
 
@@ -919,9 +919,10 @@ public class TaskLifecycleTest
       segmentFiles.add(file);
     }
 
-    final Task killTask = new KillUnusedSegmentsTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
+    final Task killUnusedSegmentsTask =
+        new KillUnusedSegmentsTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
 
-    final TaskStatus status = runTask(killTask);
+    final TaskStatus status = runTask(killUnusedSegmentsTask);
     Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());

@@ -38,7 +38,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
@@ -70,8 +74,10 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -108,6 +114,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -198,6 +205,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task;
   private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
+  private final InputRowSchema inputRowSchema;
+  private final InputFormat inputFormat;
   private final InputRowParser<ByteBuffer> parser;
   private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
@@ -228,7 +237,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task,
-      final InputRowParser<ByteBuffer> parser,
+      @Nullable final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
       final Optional<ChatHandlerProvider> chatHandlerProvider,
       final CircularBuffer<Throwable> savedParseExceptions,
@@ -241,6 +250,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.task = task;
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
+    this.inputRowSchema = new InputRowSchema(
+        task.getDataSchema().getTimestampSpec(),
+        task.getDataSchema().getDimensionsSpec(),
+        Arrays.stream(task.getDataSchema().getAggregators())
+              .map(AggregatorFactory::getName)
+              .collect(Collectors.toList())
+    );
+    this.inputFormat = ioConfig.getInputFormat(parser == null ? null : parser.getParseSpec());
     this.parser = parser;
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
@@ -346,6 +363,42 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
 
     log.info("Starting with sequences: %s", sequences);
+  }
+
+  private List<InputRow> parseBytes(List<byte[]> valueBytess) throws IOException
+  {
+    if (parser != null) {
+      return parseWithParser(valueBytess);
+    } else {
+      return parseWithInputFormat(valueBytess);
+    }
+  }
+
+  private List<InputRow> parseWithParser(List<byte[]> valueBytess)
+  {
+    final List<InputRow> rows = new ArrayList<>();
+    for (byte[] valueBytes : valueBytess) {
+      rows.addAll(parser.parseBatch(ByteBuffer.wrap(valueBytes)));
+    }
+    return rows;
+  }
+
+  private List<InputRow> parseWithInputFormat(List<byte[]> valueBytess) throws IOException
+  {
+    final List<InputRow> rows = new ArrayList<>();
+    for (byte[] valueBytes : valueBytess) {
+      final InputEntityReader reader = task.getDataSchema().getTransformSpec().decorate(
+          Preconditions.checkNotNull(inputFormat, "inputFormat").createReader(
+              inputRowSchema,
+              new ByteEntity(valueBytes),
+              toolbox.getIndexingTmpDir()
+          )
+      );
+      try (CloseableIterator<InputRow> rowIterator = reader.read()) {
+        rowIterator.forEachRemaining(rows::add);
+      }
+    }
+    return rows;
   }
 
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
@@ -605,10 +658,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 if (valueBytess == null || valueBytess.isEmpty()) {
                   rows = Utils.nullableListOf((InputRow) null);
                 } else {
-                  rows = new ArrayList<>();
-                  for (byte[] valueBytes : valueBytess) {
-                    rows.addAll(parser.parseBatch(ByteBuffer.wrap(valueBytes)));
-                  }
+                  rows = parseBytes(valueBytess);
                 }
                 boolean isPersistRequired = false;
 

@@ -35,7 +35,7 @@ public abstract class AbstractInputSource implements InputSource
   public InputSourceReader reader(
       InputRowSchema inputRowSchema,
       @Nullable InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      File temporaryDirectory
   )
   {
     if (needsFormat()) {
@@ -52,13 +52,13 @@ public abstract class AbstractInputSource implements InputSource
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      File temporaryDirectory
   )
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = true");
   }
 
-  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, File temporaryDirectory)
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = false");
   }

@@ -21,8 +21,8 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -259,8 +259,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                     if (!perfectRollup) {
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
-                      return t.getType().equalsIgnoreCase(PartialSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialSegmentMergeTask.TYPE);
+                      return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE);
                     }
                   })
                   .count();

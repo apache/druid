@@ -64,10 +64,10 @@ public class JsonReader extends TextReader
   }
 
   @Override
-  public String toJson(String intermediateRow) throws IOException
+  public Map<String, Object> toMap(String intermediateRow) throws IOException
   {
-    final JsonNode document = mapper.readValue(intermediateRow, JsonNode.class);
-    return DEFAULT_JSON_WRITER.writeValueAsString(document);
+    //noinspection unchecked
+    return mapper.readValue(intermediateRow, Map.class);
   }
 
   @Override

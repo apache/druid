@@ -129,6 +129,7 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -803,5 +804,20 @@ public class CalciteTests
         getJsonMapper()
     );
     return schema;
+  }
+
+  /**
+   * Some Calcite exceptions (such as that thrown by
+   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
+   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
+   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
+   */
+  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
+  {
+    Throwable curThrowable = t;
+    while (curThrowable.getCause() instanceof InvocationTargetException) {
+      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    }
+    return curThrowable;
   }
 }

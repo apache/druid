@@ -36,7 +36,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.Set;
 
-public class KillTaskTest extends IngestionTestBase
+public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 {
   private static final String DATA_SOURCE = "dataSource";
 
