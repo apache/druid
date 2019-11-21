@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.net.HttpHeaders;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
@@ -103,7 +104,10 @@ public class HttpEntity implements InputEntity
         );
       }
       final InputStream in = urlConnection.getInputStream();
-      in.skip(offset);
+      final long skipped = in.skip(offset);
+      if (skipped != offset) {
+        throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+      }
       return in;
     }
 

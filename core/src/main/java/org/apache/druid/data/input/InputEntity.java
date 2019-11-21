@@ -127,7 +127,8 @@ public interface InputEntity
 
   /**
    * Returns a retry condition that the caller should retry on.
-   * The returned condition is used in {@link #fetch} and {@link RetryingInputStream}
+   * The returned condition should be used when reading data from this InputEntity such as in {@link #fetch}
+   * or {@link RetryingInputStream}.
    */
   Predicate<Throwable> getRetryCondition();
 }
