@@ -486,7 +486,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       return ids.size();
     }
