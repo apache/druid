@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.TypeLiteral;
 import org.apache.druid.data.input.parquet.avro.ParquetAvroHadoopInputRowParser;
 import org.apache.druid.data.input.parquet.simple.ParquetHadoopInputRowParser;
 import org.apache.druid.data.input.parquet.simple.ParquetParseSpec;
@@ -99,6 +98,6 @@ public class ParquetExtensionsModule implements DruidModule
       }
     }
 
-    binder.requestInjection(TypeLiteral.get(Configuration.class), conf);
+    binder.bind(Configuration.class).toInstance(conf);
   }
 }
