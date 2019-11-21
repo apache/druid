@@ -55,6 +55,8 @@ public class S3Utils
   private static final String MIMETYPE_JETS3T_DIRECTORY = "application/x-directory";
   private static final Logger log = new Logger(S3Utils.class);
 
+  public static final int MAX_S3_RETRIES = 10;
+
   static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
@@ -86,8 +88,7 @@ public class S3Utils
    */
   public static <T> T retryS3Operation(Task<T> f) throws Exception
   {
-    final int maxTries = 10;
-    return RetryUtils.retry(f, S3RETRY, maxTries);
+    return RetryUtils.retry(f, S3RETRY, MAX_S3_RETRIES);
   }
 
   static boolean isObjectInBucketIgnoringPermission(

@@ -20,9 +20,12 @@
 package org.apache.druid.data.input.s3;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.data.input.impl.prefetch.RetryingInputStream;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
@@ -35,13 +38,13 @@ import java.net.URI;
 
 public class S3Entity implements InputEntity
 {
-  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3Coords entityLocation;
+  private final ObjectOpenFunction<S3Coords> s3OpenFunction;
 
   S3Entity(ServerSideEncryptingAmazonS3 s3Client, S3Coords coords)
   {
-    this.s3Client = s3Client;
     this.entityLocation = coords;
+    this.s3OpenFunction = new S3OpenFunction(s3Client);
   }
 
   @Override
@@ -53,24 +56,56 @@ public class S3Entity implements InputEntity
   @Override
   public InputStream open() throws IOException
   {
-    try {
-      final String bucket = entityLocation.getBucket();
-      final String path = entityLocation.getPath();
-      // Get data of the given object and open an input stream
-      final S3Object s3Object = s3Client.getObject(bucket, path);
-      if (s3Object == null) {
-        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, path);
-      }
-      return CompressionUtils.decompress(s3Object.getObjectContent(), path);
-    }
-    catch (AmazonS3Exception e) {
-      throw new IOException(e);
-    }
+    RetryingInputStream<S3Coords> retryingStream = new RetryingInputStream<>(
+        entityLocation,
+        s3OpenFunction,
+        S3Utils.S3RETRY,
+        S3Utils.MAX_S3_RETRIES
+    );
+    return CompressionUtils.decompress(retryingStream, entityLocation.getPath());
   }
 
   @Override
   public Predicate<Throwable> getFetchRetryCondition()
   {
     return S3Utils.S3RETRY;
+  }
+
+  private static class S3OpenFunction implements ObjectOpenFunction<S3Coords>
+  {
+    private final ServerSideEncryptingAmazonS3 s3Client;
+
+    S3OpenFunction(ServerSideEncryptingAmazonS3 s3Client)
+    {
+      this.s3Client = s3Client;
+    }
+
+    @Override
+    public InputStream open(S3Coords object) throws IOException
+    {
+      return open(object, 0L);
+    }
+
+    @Override
+    public InputStream open(S3Coords object, long start) throws IOException
+    {
+      final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
+      request.setRange(start);
+      try {
+        final S3Object s3Object = s3Client.getObject(request);
+        if (s3Object == null) {
+          throw new ISE(
+              "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
+              object.getBucket(),
+              object.getPath(),
+              start
+          );
+        }
+        return s3Object.getObjectContent();
+      }
+      catch (AmazonS3Exception e) {
+        throw new IOException(e);
+      }
+    }
   }
 }

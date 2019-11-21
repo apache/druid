@@ -223,16 +223,6 @@ public class StringUtils
   }
 
   @Nullable
-  public static String urlEncodeFormat(@Nullable String message, Object... formatArgs)
-  {
-    return String.format(
-        Locale.ENGLISH,
-        message,
-        Arrays.stream(formatArgs).map(x -> urlEncode(x != null ? x.toString() : null))
-    );
-  }
-
-  @Nullable
   public static String urlDecode(String s)
   {
     if (s == null) {
