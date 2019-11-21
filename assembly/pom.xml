@@ -83,7 +83,7 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.druid.extensions</groupId>
+        <groupId>org.apache.druid.extensions.contrib</groupId>
         <artifactId>druid-tdigestsketch</artifactId>
         <version>${project.version}</version>
       </dependency>

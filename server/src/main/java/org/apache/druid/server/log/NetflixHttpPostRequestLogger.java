@@ -228,16 +228,28 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     }
 
     @JsonProperty
-    public String getDruidStackName() { return druidStackName; }
+    public String getDruidStackName()
+    {
+      return druidStackName;
+    }
 
     @JsonProperty
-    public String getDruidAsg() { return druidAsg; }
+    public String getDruidAsg()
+    {
+      return druidAsg;
+    }
 
     @JsonProperty
-    public String getQueryString() {return queryString; }
+    public String getQueryString()
+    {
+      return queryString;
+    }
 
     @JsonProperty
-    public String getQueryHash() {return queryHash; }
+    public String getQueryHash()
+    {
+      return queryHash;
+    }
 
     @JsonProperty
     public String getDatasource()
