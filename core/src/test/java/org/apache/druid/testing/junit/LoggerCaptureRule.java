@@ -49,7 +49,7 @@ public class LoggerCaptureRule extends ExternalResource
   @Override
   protected void before()
   {
-    inMemoryAppender = new InMemoryAppender();
+    inMemoryAppender = new InMemoryAppender(targetClass);
     LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
     Configuration configuration = loggerContext.getConfiguration();
     targetClassLoggerConfig = configuration.getLoggerConfig(targetClass.getName());
@@ -77,19 +77,24 @@ public class LoggerCaptureRule extends ExternalResource
   {
     static final String NAME = InMemoryAppender.class.getName();
 
+    private final String targetLoggerName;
+
     // logEvents has concurrent iteration and modification in CuratorModuleTest::exitsJvmWhenMaxRetriesExceeded(), needs to be thread safe
     private final CopyOnWriteArrayList<LogEvent> logEvents;
 
-    InMemoryAppender()
+    InMemoryAppender(Class<?> targetClass)
     {
       super(NAME, null, null);
+      targetLoggerName = targetClass.getName();
       logEvents = new CopyOnWriteArrayList<>();
     }
 
     @Override
     public void append(LogEvent logEvent)
     {
-      logEvents.add(logEvent);
+      if (logEvent.getLoggerName().equals(targetLoggerName)) {
+        logEvents.add(logEvent);
+      }
     }
 
     List<LogEvent> getLogEvents()

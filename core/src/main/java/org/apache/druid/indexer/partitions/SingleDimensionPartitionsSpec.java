@@ -39,10 +39,12 @@ import java.util.Objects;
  */
 public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
 {
-  static final String NAME = "single_dim";
+  public static final String NAME = "single_dim";
   static final String OLD_NAME = "dimension";  // for backward compatibility
 
+  private static final String PARITION_DIMENSION = "partitionDimension";
   private static final String MAX_PARTITION_SIZE = "maxPartitionSize";
+  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
 
   private final Integer targetRowsPerSegment;
   private final Integer maxRowsPerSegment;
@@ -56,7 +58,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   public SingleDimensionPartitionsSpec(
       @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
-      @JsonProperty("partitionDimension") @Nullable String partitionDimension,
+      @JsonProperty(PARITION_DIMENSION) @Nullable String partitionDimension,
       @JsonProperty("assumeGrouped") boolean assumeGrouped,  // false by default
 
       // Deprecated properties preserved for backward compatibility:
@@ -168,6 +170,12 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   public List<String> getPartitionDimensions()
   {
     return partitionDimension == null ? Collections.emptyList() : Collections.singletonList(partitionDimension);
+  }
+
+  @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return NAME + " partitions unsupported";
   }
 
   @Override
