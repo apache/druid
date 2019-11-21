@@ -317,35 +317,4 @@ public class S3DataSegmentPuller implements URIDataPuller
       throw new RuntimeException(e);
     }
   }
-
-  protected static class S3Coords
-  {
-    String bucket;
-    String path;
-
-    public S3Coords(URI uri)
-    {
-      if (!"s3".equalsIgnoreCase(uri.getScheme())) {
-        throw new IAE("Unsupported scheme: [%s]", uri.getScheme());
-      }
-      bucket = uri.getHost();
-      String path = uri.getPath();
-      if (path.startsWith("/")) {
-        path = path.substring(1);
-      }
-      this.path = path;
-    }
-
-    public S3Coords(String bucket, String key)
-    {
-      this.bucket = bucket;
-      this.path = key;
-    }
-
-    @Override
-    public String toString()
-    {
-      return StringUtils.format("s3://%s/%s", bucket, path);
-    }
-  }
 }

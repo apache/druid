@@ -22,9 +22,9 @@ package org.apache.druid.data.input.s3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -34,6 +34,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -46,13 +47,15 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class S3InputSource extends AbstractInputSource implements SplittableInputSource<URI>
+public class S3InputSource extends AbstractInputSource implements SplittableInputSource<S3Coords>
 {
   private static final int MAX_LISTING_LENGTH = 1024;
 
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
+  @JsonIgnore
+  private final InputSplit<S3Coords> inputSplit;
 
   @JsonCreator
   public S3InputSource(
@@ -62,6 +65,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   )
   {
     this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
+    this.inputSplit = null;
     this.uris = uris == null ? new ArrayList<>() : uris;
     this.prefixes = prefixes == null ? new ArrayList<>() : prefixes;
 
@@ -82,6 +86,14 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     }
   }
 
+  private S3InputSource(ServerSideEncryptingAmazonS3 s3Client, InputSplit<S3Coords> inputSplit)
+  {
+    this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
+    this.inputSplit = Preconditions.checkNotNull(inputSplit, "inputSplit");
+    this.uris = new ArrayList<>();
+    this.prefixes = new ArrayList<>();
+  }
+
   @JsonProperty
   public List<URI> getUris()
   {
@@ -95,20 +107,28 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   }
 
   @Override
-  public Stream<InputSplit<URI>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public Stream<InputSplit<S3Coords>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
+    if (inputSplit != null) {
+      return Stream.of(inputSplit);
+    }
+
     if (!uris.isEmpty()) {
-      return uris.stream().map(InputSplit::new);
+      return uris.stream().map(S3Coords::new).map(InputSplit::new);
     }
 
     return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
-                        .map(S3Utils::summaryToUri)
+                        .map(S3Utils::summaryToS3Coords)
                         .map(InputSplit::new);
   }
 
   @Override
   public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
+    if (inputSplit != null) {
+      return 1;
+    }
+
     if (!uris.isEmpty()) {
       return uris.size();
     }
@@ -117,9 +137,9 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   }
 
   @Override
-  public SplittableInputSource<URI> withSplit(InputSplit<URI> split)
+  public SplittableInputSource<S3Coords> withSplit(InputSplit<S3Coords> split)
   {
-    return new S3InputSource(s3Client, ImmutableList.of(split.get()), ImmutableList.of());
+    return new S3InputSource(s3Client, split);
   }
 
   @Override
@@ -157,13 +177,14 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     }
     S3InputSource that = (S3InputSource) o;
     return Objects.equals(uris, that.uris) &&
-           Objects.equals(prefixes, that.prefixes);
+           Objects.equals(prefixes, that.prefixes) &&
+           Objects.equals(inputSplit, that.inputSplit);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes);
+    return Objects.hash(uris, prefixes, inputSplit);
   }
 
   @Override
@@ -172,6 +193,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     return "S3InputSource{" +
            "uris=" + uris +
            ", prefixes=" + prefixes +
+           ", inputSplit=" + inputSplit +
            '}';
   }
 

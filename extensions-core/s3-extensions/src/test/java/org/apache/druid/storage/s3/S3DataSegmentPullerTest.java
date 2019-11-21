@@ -124,7 +124,7 @@ public class S3DataSegmentPullerTest
 
     EasyMock.replay(s3Client);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
-        new S3DataSegmentPuller.S3Coords(
+        new S3Coords(
             bucket,
             object0.getKey()
         ), tmpDir
@@ -191,7 +191,7 @@ public class S3DataSegmentPullerTest
 
     EasyMock.replay(s3Client);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
-        new S3DataSegmentPuller.S3Coords(
+        new S3Coords(
             bucket,
             object0.getKey()
         ), tmpDir

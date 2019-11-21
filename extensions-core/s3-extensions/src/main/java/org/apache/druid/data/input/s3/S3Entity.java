@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.CompressionUtils;
@@ -35,33 +36,32 @@ import java.net.URI;
 public class S3Entity implements InputEntity
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
-  private final URI uri;
+  private final S3Coords entityLocation;
 
-  S3Entity(ServerSideEncryptingAmazonS3 s3Client, URI uri)
+  S3Entity(ServerSideEncryptingAmazonS3 s3Client, S3Coords coords)
   {
     this.s3Client = s3Client;
-    this.uri = uri;
+    this.entityLocation = coords;
   }
 
   @Override
   public URI getUri()
   {
-    return uri;
+    return null;
   }
 
   @Override
   public InputStream open() throws IOException
   {
     try {
+      final String bucket = entityLocation.getBucket();
+      final String path = entityLocation.getPath();
       // Get data of the given object and open an input stream
-      final String bucket = uri.getAuthority();
-      final String key = S3Utils.extractS3Key(uri);
-
-      final S3Object s3Object = s3Client.getObject(bucket, key);
+      final S3Object s3Object = s3Client.getObject(bucket, path);
       if (s3Object == null) {
-        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, key);
+        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, path);
       }
-      return CompressionUtils.decompress(s3Object.getObjectContent(), key);
+      return CompressionUtils.decompress(s3Object.getObjectContent(), path);
     }
     catch (AmazonS3Exception e) {
       throw new IOException(e);

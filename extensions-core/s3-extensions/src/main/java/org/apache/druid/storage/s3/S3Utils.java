@@ -264,6 +264,11 @@ public class S3Utils
     return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 
+  public static S3Coords summaryToS3Coords(S3ObjectSummary object)
+  {
+    return new S3Coords(object.getBucketName(), object.getKey());
+  }
+
   public static String constructSegmentPath(String baseKey, String storageDir)
   {
     return JOINER.join(

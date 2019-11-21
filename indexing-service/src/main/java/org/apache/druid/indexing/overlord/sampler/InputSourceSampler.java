@@ -50,7 +50,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -88,7 +87,7 @@ public class InputSourceSampler
       @Nullable final InputFormat inputFormat,
       @Nullable final DataSchema dataSchema,
       @Nullable final SamplerConfig samplerConfig
-  ) throws IOException
+  )
   {
     Preconditions.checkNotNull(inputSource, "inputSource required");
     if (inputSource.needsFormat()) {
@@ -191,7 +190,7 @@ public class InputSourceSampler
       InputSource inputSource,
       InputFormat inputFormat,
       File tempDir
-  ) throws IOException
+  )
   {
     final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
                                             .map(AggregatorFactory::getName)

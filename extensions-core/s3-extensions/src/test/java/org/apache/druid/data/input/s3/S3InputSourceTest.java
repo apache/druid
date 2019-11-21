@@ -56,6 +56,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
+import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -85,13 +86,17 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo/file2.csv")
   );
 
+  private static final List<S3Coords> EXPECTED_COORDS =
+      EXPECTED_URIS.stream().map(S3Coords::new).collect(Collectors.toList());
+
   private static final List<URI> PREFIXES = Arrays.asList(
       URI.create("s3://foo/bar"),
       URI.create("s3://bar/foo")
   );
 
   private static final DateTime NOW = DateTimes.nowUtc();
-  private static final byte[] CONTENT = StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
+  private static final byte[] CONTENT =
+      StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
 
   @Test
   public void testSerdeWithUris() throws Exception
@@ -119,12 +124,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     S3InputSource inputSource = new S3InputSource(SERVICE, EXPECTED_URIS, null);
 
-    Stream<InputSplit<URI>> splits = inputSource.createSplits(
+    Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
 
-    Assert.assertEquals(EXPECTED_URIS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
   }
 
   @Test
@@ -137,12 +142,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES);
 
-    Stream<InputSplit<URI>> splits = inputSource.createSplits(
+    Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
 
-    Assert.assertEquals(EXPECTED_URIS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
   }
 
   @Test
@@ -159,12 +164,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1))
     );
 
-    Stream<InputSplit<URI>> splits = inputSource.createSplits(
+    Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
 
-    Assert.assertEquals(EXPECTED_URIS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
   }
 
   @Test

@@ -29,7 +29,6 @@ import org.apache.druid.guice.annotations.UnstableApi;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 
 /**
  * InputSource abstracts the storage system where input data is stored. It creates an {@link InputSourceReader}
@@ -80,5 +79,5 @@ public interface InputSource
       InputRowSchema inputRowSchema,
       @Nullable InputFormat inputFormat,
       @Nullable File temporaryDirectory
-  ) throws IOException;
+  );
 }
