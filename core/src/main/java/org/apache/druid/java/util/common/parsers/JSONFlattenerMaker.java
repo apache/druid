@@ -103,7 +103,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   @Override
   public JsonProvider getJsonProvider()
   {
-    return null;
+    return JSON_PROVIDER;
   }
 
   @Nullable
