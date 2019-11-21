@@ -28,6 +28,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 
 /**
  * A wrapping InputSource that will close the underlying InputSource at {@link #shutoffTime}.
@@ -76,7 +77,7 @@ public class TimedShutoffInputSource implements InputSource
       InputRowSchema inputRowSchema,
       @Nullable InputFormat inputFormat,
       File temporaryDirectory
-  )
+  ) throws IOException
   {
     return new TimedShutoffInputSourceReader(
         delegate.reader(inputRowSchema, inputFormat, temporaryDirectory),
