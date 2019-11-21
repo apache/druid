@@ -60,6 +60,13 @@ try {
       return match + `<meta name="docsearch:version" content="${druidVersion}" />`;
     },
   });
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /"version:druidVersion"/g,
+    to: (match, fullText) => {
+      return `"version:${druidVersion}"`;
+    },
+  });
 
   console.log('Fixed versions');
 

@@ -46,6 +46,7 @@ import java.net.URI;
 import java.util.Map;
 
 /**
+ *
  */
 public class HdfsDataSegmentPusher implements DataSegmentPusher
 {
@@ -77,8 +78,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           }
         }
     );
-
-    log.info("Configured HDFS as deep storage");
   }
 
   @Deprecated
@@ -101,7 +100,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
     final String storageDir = this.getStorageDir(segment, false);
 
-    log.info(
+    log.debug(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getId(),
         fullyQualifiedStorageDirectory.get(),
@@ -118,7 +117,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
 
     fs.mkdirs(tmpIndexFile.getParent());
-    log.info("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
+    log.debug("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
 
     final long size;
     final DataSegment dataSegment;

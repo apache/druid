@@ -43,6 +43,11 @@ public class ByteEntity implements InputEntity
     this(ByteBuffer.wrap(bytes));
   }
 
+  public ByteBuffer getBuffer()
+  {
+    return buffer;
+  }
+
   @Override
   @Nullable
   public URI getUri()

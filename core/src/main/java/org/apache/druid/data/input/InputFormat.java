@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 
@@ -43,7 +44,8 @@ import java.io.IOException;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "csv", value = CsvInputFormat.class),
-    @Type(name = "json", value = JsonInputFormat.class)
+    @Type(name = "json", value = JsonInputFormat.class),
+    @Type(name = "regex", value = RegexInputFormat.class)
 })
 public interface InputFormat
 {

@@ -44,15 +44,24 @@ import java.util.Map;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
+
+  private static SeekableStreamSupervisorIngestionSpec checkIngestionSchema(
+      SeekableStreamSupervisorIngestionSpec ingestionSchema
+  )
+  {
+    Preconditions.checkNotNull(ingestionSchema, "ingestionSchema");
+    Preconditions.checkNotNull(ingestionSchema.getDataSchema(), "dataSchema");
+    Preconditions.checkNotNull(ingestionSchema.getIOConfig(), "ioConfig");
+    return ingestionSchema;
+  }
+
   protected final TaskStorage taskStorage;
   protected final TaskMaster taskMaster;
   protected final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final SeekableStreamIndexTaskClientFactory indexTaskClientFactory;
   protected final ObjectMapper mapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
-  private final DataSchema dataSchema;
-  private final SeekableStreamSupervisorTuningConfig tuningConfig;
-  private final SeekableStreamSupervisorIOConfig ioConfig;
+  private final SeekableStreamSupervisorIngestionSpec ingestionSchema;
   @Nullable
   private final Map<String, Object> context;
   protected final ServiceEmitter emitter;
@@ -62,9 +71,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") SeekableStreamSupervisorTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") SeekableStreamSupervisorIOConfig ioConfig,
+      @JsonProperty("spec") final SeekableStreamSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("context") @Nullable Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
@@ -78,9 +85,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
-    this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
-    this.tuningConfig = tuningConfig; // null check done in concrete class
-    this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
+    this.ingestionSchema = checkIngestionSchema(ingestionSchema);
     this.context = context;
 
     this.taskStorage = taskStorage;
@@ -96,21 +101,28 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @JsonProperty
+  public SeekableStreamSupervisorIngestionSpec getSpec()
+  {
+    return ingestionSchema;
+  }
+
+  @Deprecated
+  @JsonProperty
   public DataSchema getDataSchema()
   {
-    return dataSchema;
+    return ingestionSchema.getDataSchema();
   }
 
   @JsonProperty
   public SeekableStreamSupervisorTuningConfig getTuningConfig()
   {
-    return tuningConfig;
+    return ingestionSchema.getTuningConfig();
   }
 
   @JsonProperty
   public SeekableStreamSupervisorIOConfig getIoConfig()
   {
-    return ioConfig;
+    return ingestionSchema.getIOConfig();
   }
 
   @Nullable
@@ -128,7 +140,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   @Override
   public String getId()
   {
-    return dataSchema.getDataSource();
+    return ingestionSchema.getDataSchema().getDataSource();
   }
 
   public DruidMonitorSchedulerConfig getMonitorSchedulerConfig()
@@ -170,6 +182,5 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
-
 
 }

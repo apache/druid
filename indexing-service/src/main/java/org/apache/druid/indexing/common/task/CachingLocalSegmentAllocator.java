@@ -19,62 +19,69 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
- * Allocates all necessary segments locally at the beginning and reuse them.
+ * Allocates all necessary segments locally at the beginning and reuses them.
+ *
+ * @see HashPartitionCachingLocalSegmentAllocator
  */
-public class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
+class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
-  private final TaskToolbox toolbox;
   private final String taskId;
-  private final String dataSource;
-  private final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec;
-  @Nullable
+  private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
   private final ShardSpecs shardSpecs;
 
-  // sequenceName -> segmentId
-  private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
+  @FunctionalInterface
+  interface IntervalToSegmentIdsCreator
+  {
+    /**
+     * @param versionFinder Returns the version for the specified interval
+     * @return Information for segment preallocation
+     */
+    Map<Interval, List<SegmentIdWithShardSpec>> create(Function<Interval, String> versionFinder);
+  }
 
-  public CachingLocalSegmentAllocator(
+  CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
-      String dataSource,
-      Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
+      IntervalToSegmentIdsCreator intervalToSegmentIdsCreator
   ) throws IOException
   {
-    this.toolbox = toolbox;
     this.taskId = taskId;
-    this.dataSource = dataSource;
-    this.allocateSpec = allocateSpec;
     this.sequenceNameToSegmentId = new HashMap<>();
 
-    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToIds = getIntervalToSegmentIds();
+    final Map<Interval, String> intervalToVersion = toolbox.getTaskActionClient()
+                                                           .submit(new LockListAction())
+                                                           .stream()
+                                                           .collect(Collectors.toMap(
+                                                               TaskLock::getInterval,
+                                                               TaskLock::getVersion
+                                                           ));
+    Function<Interval, String> versionFinder = interval -> findVersion(intervalToVersion, interval);
+
+    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToIds = intervalToSegmentIdsCreator.create(versionFinder);
     final Map<Interval, List<ShardSpec>> shardSpecMap = new HashMap<>();
 
-    for (Map.Entry<Interval, List<SegmentIdWithShardSpec>> entry : intervalToIds.entrySet()) {
+    for (Entry<Interval, List<SegmentIdWithShardSpec>> entry : intervalToIds.entrySet()) {
       final Interval interval = entry.getKey();
       final List<SegmentIdWithShardSpec> idsPerInterval = intervalToIds.get(interval);
 
@@ -87,38 +94,6 @@ public class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
     shardSpecs = new ShardSpecs(shardSpecMap);
   }
 
-  private Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds() throws IOException
-  {
-    final Map<Interval, String> intervalToVersion = getToolbox().getTaskActionClient()
-                                                                .submit(new LockListAction())
-                                                                .stream()
-                                                                .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
-    final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec = getAllocateSpec();
-    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds = new HashMap<>(allocateSpec.size());
-    for (Entry<Interval, Pair<ShardSpecFactory, Integer>> entry : allocateSpec.entrySet()) {
-      final Interval interval = entry.getKey();
-      final ShardSpecFactory shardSpecFactory = entry.getValue().lhs;
-      final int numSegmentsToAllocate = Preconditions.checkNotNull(
-          entry.getValue().rhs,
-          "numSegmentsToAllocate for interval[%s]",
-          interval
-      );
-
-      intervalToSegmentIds.put(
-          interval,
-          IntStream.range(0, numSegmentsToAllocate)
-                   .mapToObj(i -> new SegmentIdWithShardSpec(
-                       getDataSource(),
-                       interval,
-                       findVersion(intervalToVersion, interval),
-                       shardSpecFactory.create(getToolbox().getObjectMapper(), i)
-                   ))
-                   .collect(Collectors.toList())
-      );
-    }
-    return intervalToSegmentIds;
-  }
-
   private static String findVersion(Map<Interval, String> intervalToVersion, Interval interval)
   {
     return intervalToVersion.entrySet().stream()
@@ -126,27 +101,6 @@ public class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
                             .map(Entry::getValue)
                             .findFirst()
                             .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
-  }
-
-
-  TaskToolbox getToolbox()
-  {
-    return toolbox;
-  }
-
-  String getTaskId()
-  {
-    return taskId;
-  }
-
-  String getDataSource()
-  {
-    return dataSource;
-  }
-
-  Map<Interval, Pair<ShardSpecFactory, Integer>> getAllocateSpec()
-  {
-    return allocateSpec;
   }
 
   @Override
