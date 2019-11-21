@@ -82,6 +82,11 @@
         <artifactId>druid-datasketches</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.druid.extensions</groupId>
+        <artifactId>druid-tdigestsketch</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
 
     <build>
