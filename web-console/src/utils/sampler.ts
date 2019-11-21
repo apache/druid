@@ -170,19 +170,7 @@ export async function postToSampler(
     throw new Error(getDruidErrorMessage(e));
   }
 
-  const sample = sampleResp.data;
-
-  // ToDo: remove this temp converter when Jihoon delivers `input`
-  if (Array.isArray(sample.data)) {
-    sample.data.forEach((d: any) => {
-      if (typeof d.input === 'undefined' && typeof d.raw === 'string') {
-        d.input = JSON.parse(d.raw);
-        delete d.raw;
-      }
-    });
-  }
-
-  return sample;
+  return sampleResp.data;
 }
 
 export type SampleStrategy = 'start' | 'end';
