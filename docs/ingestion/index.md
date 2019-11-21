@@ -88,7 +88,7 @@ This table compares the three available options:
 | **Input locations** | Any [firehose](native-batch.md#firehoses). | Any [firehose](native-batch.md#firehoses). | Any Hadoop FileSystem or Druid datasource. |
 | **File formats** | Text file formats (CSV, TSV, JSON). Support for binary formats is coming in a future release. | Text file formats (CSV, TSV, JSON). Support for binary formats is coming in a future release. | Any Hadoop InputFormat. |
 | **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).| Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Always perfect. |
-| **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Hash-based partitioning (when `forceGuaranteedRollup` = true). | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
+| **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Hash-based or range-based partitioning (when `forceGuaranteedRollup` = true). | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
 
 <a name="data-model"></a>
 

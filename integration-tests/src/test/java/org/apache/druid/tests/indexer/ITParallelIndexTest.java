@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
@@ -50,7 +51,8 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
   {
     return new Object[][]{
         {new DynamicPartitionsSpec(null, null)},
-        {new HashedPartitionsSpec(null, 2, null)}
+        {new HashedPartitionsSpec(null, 2, null)},
+        {new SingleDimensionPartitionsSpec(2, null, "namespace", false)},
     };
   }
 

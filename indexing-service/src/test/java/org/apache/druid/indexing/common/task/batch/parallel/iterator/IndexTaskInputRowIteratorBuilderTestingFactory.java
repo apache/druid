@@ -75,6 +75,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
         return true;
       }
 
+      @SuppressWarnings("IteratorNextCanNotThrowNoSuchElementException")
       @Override
       public InputRow next()
       {

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
@@ -80,6 +81,10 @@ import java.util.concurrent.Executor;
 
 public abstract class IngestionTestBase
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
