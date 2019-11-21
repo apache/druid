@@ -791,7 +791,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
     testQuery(
-        "SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC",
+        "SELECT dim1 FROM druid.foo ORDER BY __time DESC",
         outerLimitContext,
         ImmutableList.of(
             newScanQueryBuilder()
@@ -805,8 +805,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2001-01-03"), "abc"},
-            new Object[]{timestamp("2001-01-02"), "def"}
+            new Object[]{"abc"},
+            new Object[]{"def"}
         )
     );
   }
