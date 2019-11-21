@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
-public class TsvReader extends SeperateValueReader
+public class TsvReader extends SeparateValueReader
 {
   TsvReader(
       InputRowSchema inputRowSchema,

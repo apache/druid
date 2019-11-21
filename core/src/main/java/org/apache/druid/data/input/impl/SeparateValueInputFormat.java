@@ -36,7 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class SeperateValueInputFormat implements InputFormat
+public class SeparateValueInputFormat implements InputFormat
 {
   private final String listDelimiter;
   private final List<String> columns;
@@ -45,7 +45,7 @@ public class SeperateValueInputFormat implements InputFormat
   private final String seperator;
 
   @JsonCreator
-  public SeperateValueInputFormat(
+  public SeparateValueInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
       @JsonProperty("listDelimiter") @Nullable String listDelimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
@@ -117,7 +117,7 @@ public class SeperateValueInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new SeperateValueReader(
+    return new SeparateValueReader(
         inputRowSchema,
         source,
         temporaryDirectory,
@@ -164,7 +164,7 @@ public class SeperateValueInputFormat implements InputFormat
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SeperateValueInputFormat format = (SeperateValueInputFormat) o;
+    SeparateValueInputFormat format = (SeparateValueInputFormat) o;
     return findColumnsFromHeader == format.findColumnsFromHeader &&
            skipHeaderRows == format.skipHeaderRows &&
            Objects.equals(listDelimiter, format.listDelimiter) &&

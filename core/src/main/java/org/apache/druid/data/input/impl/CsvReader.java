@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
-public class CsvReader extends SeperateValueReader
+public class CsvReader extends SeparateValueReader
 {
   CsvReader(
       InputRowSchema inputRowSchema,

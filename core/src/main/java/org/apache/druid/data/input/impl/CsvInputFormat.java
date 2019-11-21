@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
-public class CsvInputFormat extends SeperateValueInputFormat
+public class CsvInputFormat extends SeparateValueInputFormat
 {
   @JsonCreator
   public CsvInputFormat(

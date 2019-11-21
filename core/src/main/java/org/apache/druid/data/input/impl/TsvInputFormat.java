@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
-public class TsvInputFormat extends SeperateValueInputFormat
+public class TsvInputFormat extends SeparateValueInputFormat
 {
   @JsonCreator
   public TsvInputFormat(

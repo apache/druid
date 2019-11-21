@@ -45,7 +45,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class SeperateValueReader extends TextReader
+public class SeparateValueReader extends TextReader
 {
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
@@ -67,7 +67,7 @@ public class SeperateValueReader extends TextReader
                                        .build();
   }
 
-  SeperateValueReader(
+  SeparateValueReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
