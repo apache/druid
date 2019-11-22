@@ -68,6 +68,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     localDeepStorage = temporaryFolder.newFolder("localStorage");
   }
 
+  @Override
   @After
   public void tearDown()
   {
