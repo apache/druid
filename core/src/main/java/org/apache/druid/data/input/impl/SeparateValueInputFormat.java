@@ -40,7 +40,7 @@ import java.util.Objects;
  * It implements the common logic between {@link CsvInputFormat} and {@link TsvInputFormat}
  * Should never be instantiated
  */
-public class SeparateValueInputFormat implements InputFormat
+public abstract class SeparateValueInputFormat implements InputFormat
 {
 
   public enum Format
