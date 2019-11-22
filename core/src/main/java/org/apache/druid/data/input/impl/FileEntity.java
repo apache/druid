@@ -19,10 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
@@ -30,8 +27,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 
 public class FileEntity implements InputEntity
 {
@@ -68,70 +63,8 @@ public class FileEntity implements InputEntity
   }
 
   @Override
-  public InputStream open(long offset) throws IOException
+  public InputStream open() throws IOException
   {
-    final Closer closer = Closer.create();
-    final FileInputStream stream = closer.register(new FileInputStream(file));
-    final FileChannel channel = closer.register(stream.getChannel());
-    channel.position(offset);
-    return CompressionUtils.decompress(
-        new InputStreamWithBaggage(Channels.newInputStream(channel), closer),
-        file.getName()
-    );
-  }
-
-  @Override
-  public Predicate<Throwable> getRetryCondition()
-  {
-    return Predicates.alwaysFalse();
-  }
-
-  private static class InputStreamWithBaggage extends InputStream
-  {
-    private final InputStream delegate;
-    private final Closer closer;
-
-    private InputStreamWithBaggage(InputStream delegate, Closer closer)
-    {
-      this.delegate = delegate;
-      this.closer = closer;
-      closer.register(delegate);
-    }
-
-    @Override
-    public int read() throws IOException
-    {
-      return delegate.read();
-    }
-
-    @Override
-    public int read(byte b[]) throws IOException
-    {
-      return delegate.read(b);
-    }
-
-    @Override
-    public int read(byte b[], int off, int len) throws IOException
-    {
-      return delegate.read(b, off, len);
-    }
-
-    @Override
-    public long skip(long n) throws IOException
-    {
-      return delegate.skip(n);
-    }
-
-    @Override
-    public int available() throws IOException
-    {
-      return delegate.available();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      closer.close();
-    }
+    return CompressionUtils.decompress(new FileInputStream(file), file.getName());
   }
 }

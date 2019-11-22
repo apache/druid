@@ -20,7 +20,7 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.data.input.impl.RetryingInputStream;
+import com.google.common.base.Predicates;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -66,18 +66,7 @@ public interface InputEntity
    *
    * @see #fetch
    */
-  default InputStream open() throws IOException
-  {
-    return open(0);
-  }
-
-  /**
-   * Directly opens an {@link InputStream} starting at the given offset on the input entity.
-   * This is the basic way to read the given entity.
-   *
-   * @see #fetch
-   */
-  InputStream open(long offset) throws IOException;
+  InputStream open() throws IOException;
 
   /**
    * Fetches the input entity into the local storage.
@@ -128,7 +117,10 @@ public interface InputEntity
   /**
    * Returns a retry condition that the caller should retry on.
    * The returned condition should be used when reading data from this InputEntity such as in {@link #fetch}
-   * or {@link RetryingInputStream}.
+   * or {@link RetryingInputEntity}.
    */
-  Predicate<Throwable> getRetryCondition();
+  default Predicate<Throwable> getRetryCondition()
+  {
+    return Predicates.alwaysFalse();
+  }
 }

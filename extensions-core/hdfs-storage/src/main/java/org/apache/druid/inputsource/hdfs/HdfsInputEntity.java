@@ -20,7 +20,7 @@
 package org.apache.druid.inputsource.hdfs;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class HdfsInputEntity implements InputEntity
+public class HdfsInputEntity implements RetryingInputEntity
 {
   private final Configuration conf;
   private final Path path;
@@ -50,7 +50,7 @@ public class HdfsInputEntity implements InputEntity
   }
 
   @Override
-  public InputStream open(long offset) throws IOException
+  public InputStream readFrom(long offset) throws IOException
   {
     final FileSystem fs = path.getFileSystem(conf);
     final FSDataInputStream inputStream = fs.open(path);

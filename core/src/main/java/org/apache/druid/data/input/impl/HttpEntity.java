@@ -22,7 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.net.HttpHeaders;
-import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -36,7 +36,7 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpEntity implements InputEntity
+public class HttpEntity implements RetryingInputEntity
 {
   private static final Logger LOG = new Logger(HttpEntity.class);
 
@@ -64,7 +64,7 @@ public class HttpEntity implements InputEntity
   }
 
   @Override
-  public InputStream open(long offset) throws IOException
+  public InputStream readFrom(long offset) throws IOException
   {
     return CompressionUtils.decompress(
         openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset),

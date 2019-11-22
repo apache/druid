@@ -17,64 +17,58 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.java.util.common.RetryUtils;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 
-public class RetryingInputEntity implements InputEntity
+public interface RetryingInputEntity extends InputEntity
 {
-  private final InputEntity delegate;
-  private final InputEntityOpenFunction openFunction;
-
-  public RetryingInputEntity(InputEntity delegate)
-  {
-    this.delegate = delegate;
-    this.openFunction = new InputEntityOpenFunction();
-  }
-
-  @Nullable
   @Override
-  public URI getUri()
-  {
-    return delegate.getUri();
-  }
-
-  @Override
-  public InputStream open(long offset) throws IOException
+  default InputStream open() throws IOException
   {
     return new RetryingInputStream<>(
-        delegate,
-        openFunction,
+        this,
+        new RetryingInputEntityOpenFunction(),
         getRetryCondition(),
-        10
+        RetryUtils.DEFAULT_MAX_TRIES
     );
   }
 
-  @Override
-  public Predicate<Throwable> getRetryCondition()
+  /**
+   * Directly opens an {@link InputStream} on the input entity.
+   */
+  default InputStream readFromStart() throws IOException
   {
-    return delegate.getRetryCondition();
+    return readFrom(0);
   }
 
-  private static class InputEntityOpenFunction implements ObjectOpenFunction<InputEntity>
+  /**
+   * Directly opens an {@link InputStream} starting at the given offset on the input entity.
+   * This is the basic way to read the given entity.
+   */
+  InputStream readFrom(long offset) throws IOException;
+
+  @Override
+  Predicate<Throwable> getRetryCondition();
+
+  class RetryingInputEntityOpenFunction implements ObjectOpenFunction<RetryingInputEntity>
   {
     @Override
-    public InputStream open(InputEntity object) throws IOException
+    public InputStream open(RetryingInputEntity object) throws IOException
     {
-      return object.open();
+      return object.readFromStart();
     }
 
     @Override
-    public InputStream open(InputEntity object, long start) throws IOException
+    public InputStream open(RetryingInputEntity object, long start) throws IOException
     {
-      return object.open(start);
+      return object.readFrom(start);
     }
   }
 }

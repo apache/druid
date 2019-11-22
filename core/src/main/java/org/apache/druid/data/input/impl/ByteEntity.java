@@ -19,13 +19,10 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -57,16 +54,8 @@ public class ByteEntity implements InputEntity
   }
 
   @Override
-  public InputStream open(long offset) throws IOException
+  public InputStream open()
   {
-    final ByteBuffer duplicate = buffer.duplicate();
-    duplicate.position(Math.toIntExact(offset));
     return new ByteBufferInputStream(buffer);
-  }
-
-  @Override
-  public Predicate<Throwable> getRetryCondition()
-  {
-    return Predicates.alwaysFalse();
   }
 }
