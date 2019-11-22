@@ -25,17 +25,7 @@ import {
   updateSchemaWithSample,
 } from './druid-type';
 import { IngestionSpec } from './ingestion-spec';
-import {
-  getSamplerType,
-  headerFromSampleResponse,
-  sampleForConnect,
-  sampleForExampleManifests,
-  sampleForFilter,
-  sampleForParser,
-  sampleForSchema,
-  sampleForTimestamp,
-  sampleForTransform,
-} from './sampler';
+import { getSamplerType, headerFromSampleResponse } from './sampler';
 
 describe('test-utils', () => {
   const ingestionSpec: IngestionSpec = {
@@ -67,39 +57,48 @@ describe('test-utils', () => {
       dimensionsSpec: {},
     },
   };
+
+  // const cacheRows: CacheRows = [{ make: 'Honda', model: 'Civic' }, { make: 'BMW', model: 'M3' }];
+
   it('spec-utils getSamplerType', () => {
     expect(getSamplerType(ingestionSpec)).toMatchInlineSnapshot(`"index"`);
   });
+
   it('spec-utils headerFromSampleResponse', () => {
-    expect(headerFromSampleResponse({ cacheKey: 'abc123', data: [] })).toMatchInlineSnapshot(
-      `Array []`,
-    );
+    expect(
+      headerFromSampleResponse({ data: [{ input: { a: 1 }, parsed: { a: 1 } }] }),
+    ).toMatchInlineSnapshot();
   });
-  it('spec-utils sampleForParser', () => {
-    expect(sampleForParser(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils SampleSpec', () => {
-    expect(sampleForConnect(ingestionSpec, 'start')).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForTimestamp', () => {
-    expect(sampleForTimestamp(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(
-      `Promise {}`,
-    );
-  });
-  it('spec-utils sampleForTransform', () => {
-    expect(sampleForTransform(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(
-      `Promise {}`,
-    );
-  });
-  it('spec-utils sampleForFilter', () => {
-    expect(sampleForFilter(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForSchema', () => {
-    expect(sampleForSchema(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(`Promise {}`);
-  });
-  it('spec-utils sampleForExampleManifests', () => {
-    expect(sampleForExampleManifests('abc123')).toMatchInlineSnapshot(`Promise {}`);
-  });
+
+  // it('spec-utils sampleForParser', async () => {
+  //   expect(await sampleForParser(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(
+  //     `Promise {}`,
+  //   );
+  // });
+  //
+  // it('spec-utils SampleSpec', async () => {
+  //   expect(await sampleForConnect(ingestionSpec, 'start')).toMatchInlineSnapshot(`Promise {}`);
+  // });
+  //
+  // it('spec-utils sampleForTimestamp', async () => {
+  //   expect(await sampleForTimestamp(ingestionSpec, 'start', cacheRows)).toMatchInlineSnapshot();
+  // });
+  //
+  // it('spec-utils sampleForTransform', async () => {
+  //   expect(await sampleForTransform(ingestionSpec, 'start', cacheRows)).toMatchInlineSnapshot();
+  // });
+  //
+  // it('spec-utils sampleForFilter', async () => {
+  //   expect(await sampleForFilter(ingestionSpec, 'start', cacheRows)).toMatchInlineSnapshot();
+  // });
+  //
+  // it('spec-utils sampleForSchema', async () => {
+  //   expect(await sampleForSchema(ingestionSpec, 'start', cacheRows)).toMatchInlineSnapshot();
+  // });
+  //
+  // it('spec-utils sampleForExampleManifests', async () => {
+  //   expect(await sampleForExampleManifests('some url')).toMatchInlineSnapshot();
+  // });
 });
 
 describe('druid-type.ts', () => {
@@ -132,14 +131,17 @@ describe('druid-type.ts', () => {
       dimensionsSpec: {},
     },
   };
+
   it('spec-utils getSamplerType', () => {
     expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
   });
+
   it('spec-utils getColumnTypeFromHeaderAndRows', () => {
     expect(
       getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
     ).toMatchInlineSnapshot(`"string"`);
   });
+
   it('spec-utils getDimensionSpecs', () => {
     expect(getDimensionSpecs({ header: ['header'], rows: [] }, true)).toMatchInlineSnapshot(`
       Array [
@@ -147,6 +149,7 @@ describe('druid-type.ts', () => {
       ]
     `);
   });
+
   it('spec-utils getMetricSecs', () => {
     expect(getMetricSecs({ header: ['header'], rows: [] })).toMatchInlineSnapshot(`
       Array [
@@ -157,6 +160,7 @@ describe('druid-type.ts', () => {
       ]
     `);
   });
+
   it('spec-utils updateSchemaWithSample', () => {
     expect(
       updateSchemaWithSample(ingestionSpec, { header: ['header'], rows: [] }, 'specific', true),
@@ -210,9 +214,11 @@ describe('druid-query.ts', () => {
   it('spec-utils parseHtmlError', () => {
     expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
   });
+
   it('spec-utils parseHtmlError', () => {
     expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
   });
+
   it('spec-utils parseQueryPlan', () => {
     expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
   });

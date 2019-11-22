@@ -127,7 +127,9 @@ import {
 } from '../../utils/ingestion-spec';
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import {
+  CacheRows,
   ExampleManifest,
+  getCacheRowsFromSampleResponse,
   getProxyOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
@@ -165,6 +167,7 @@ import './load-data-view.scss';
 function showRawLine(line: SampleEntry): string {
   if (!line.parsed) return 'No parse';
   const raw = line.parsed.raw;
+  if (typeof raw !== 'string') return 'Bad raw';
   if (raw.includes('\n')) {
     return `[Multi-line row, length: ${raw.length}]`;
   }
@@ -262,7 +265,7 @@ export interface LoadDataViewState {
   step: Step;
   spec: IngestionSpec;
   specPreview: IngestionSpec;
-  cacheKey?: string;
+  cacheRows?: CacheRows;
   // dialogs / modals
   continueToSpec: boolean;
   showResetConfirm: boolean;
@@ -699,7 +702,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
-          {this.renderIngestionCard('index:static-s3')}
+          {this.renderIngestionCard('index:s3')}
           {this.renderIngestionCard('index:static-google-blobstore')}
           {this.renderIngestionCard('index:hdfs')}
           {this.renderIngestionCard('index:ingestSegment')}
@@ -774,7 +777,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         );
 
-      case 'index:static-s3':
+      case 'index:s3':
         return <p>Load text based data from Amazon S3.</p>;
 
       case 'index:static-google-blobstore':
@@ -826,7 +829,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:local':
       case 'index:ingestSegment':
       case 'index:inline':
-      case 'index:static-s3':
+      case 'index:s3':
       case 'index:static-google-blobstore':
       case 'index:hdfs':
       case 'kafka':
@@ -981,7 +984,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       inputQueryState: new QueryState({ data: sampleResponse }),
     });
   }
@@ -1163,7 +1166,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForParser(initRun = false) {
-    const { spec, sampleStrategy, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheRows } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
@@ -1186,7 +1189,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForParser(spec, sampleStrategy, cacheKey);
+      sampleResponse = await sampleForParser(spec, sampleStrategy, cacheRows);
     } catch (e) {
       this.setState({
         parserQueryState: new QueryState({ error: e.message }),
@@ -1195,7 +1198,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       parserQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse(sampleResponse, '__time', inputFormatColumns),
       }),
@@ -1433,7 +1436,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForTimestamp(initRun = false) {
-    const { spec, sampleStrategy, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheRows } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
@@ -1457,7 +1460,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTimestamp(spec, sampleStrategy, cacheKey);
+      sampleResponse = await sampleForTimestamp(spec, sampleStrategy, cacheRows);
     } catch (e) {
       this.setState({
         timestampQueryState: new QueryState({ error: e.message }),
@@ -1466,7 +1469,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       timestampQueryState: new QueryState({
         data: {
           headerAndRows: headerAndRowsFromSampleResponse(
@@ -1589,7 +1592,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForTransform(initRun = false) {
-    const { spec, sampleStrategy, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheRows } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
@@ -1612,7 +1615,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheKey);
+      sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheRows);
     } catch (e) {
       this.setState({
         transformQueryState: new QueryState({ error: e.message }),
@@ -1621,7 +1624,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       transformQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse(
           sampleResponse,
@@ -1813,7 +1816,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForFilter(initRun = false) {
-    const { spec, sampleStrategy, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheRows } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
@@ -1836,7 +1839,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForFilter(spec, sampleStrategy, cacheKey);
+      sampleResponse = await sampleForFilter(spec, sampleStrategy, cacheRows);
     } catch (e) {
       this.setState({
         filterQueryState: new QueryState({ error: e.message }),
@@ -1846,7 +1849,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     if (sampleResponse.data.length) {
       this.setState({
-        cacheKey: sampleResponse.cacheKey,
+        cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
         filterQueryState: new QueryState({
           data: headerAndRowsFromSampleResponse(
             sampleResponse,
@@ -1863,7 +1866,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let sampleResponseNoFilter: SampleResponse;
     try {
       const specNoFilter = deepSet(spec, 'dataSchema.transformSpec.filter', null);
-      sampleResponseNoFilter = await sampleForFilter(specNoFilter, sampleStrategy, cacheKey);
+      sampleResponseNoFilter = await sampleForFilter(specNoFilter, sampleStrategy, cacheRows);
     } catch (e) {
       this.setState({
         filterQueryState: new QueryState({ error: e.message }),
@@ -1879,7 +1882,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
 
     this.setState({
-      cacheKey: sampleResponseNoFilter.cacheKey,
+      // cacheRows: sampleResponseNoFilter.cacheKey,
       filterQueryState: new QueryState({
         data: deepSet(headerAndRowsNoFilter, 'rows', []),
       }),
@@ -2092,7 +2095,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForSchema(initRun = false) {
-    const { spec, sampleStrategy, cacheKey } = this.state;
+    const { spec, sampleStrategy, cacheRows } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
@@ -2118,7 +2121,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForSchema(spec, sampleStrategy, cacheKey);
+      sampleResponse = await sampleForSchema(spec, sampleStrategy, cacheRows);
     } catch (e) {
       this.setState({
         schemaQueryState: new QueryState({ error: e.message }),
@@ -2127,7 +2130,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheKey: sampleResponse.cacheKey,
+      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       schemaQueryState: new QueryState({
         data: {
           headerAndRows: headerAndRowsFromSampleResponse(
@@ -2345,13 +2348,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   renderChangeRollupAction() {
-    const { newRollup, spec, sampleStrategy, cacheKey } = this.state;
+    const { newRollup, spec, sampleStrategy, cacheRows } = this.state;
     if (typeof newRollup === 'undefined') return;
 
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheKey);
+          const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheRows);
           this.updateSpec(
             updateSchemaWithSample(
               spec,
@@ -2374,14 +2377,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderChangeDimensionModeAction() {
-    const { newDimensionMode, spec, sampleStrategy, cacheKey } = this.state;
+    const { newDimensionMode, spec, sampleStrategy, cacheRows } = this.state;
     if (typeof newDimensionMode === 'undefined') return;
     const autoDetect = newDimensionMode === 'auto-detect';
 
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheKey);
+          const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheRows);
           this.updateSpec(
             updateSchemaWithSample(
               spec,
