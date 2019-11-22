@@ -50,7 +50,9 @@ public interface RetryingInputEntity extends InputEntity
 
   /**
    * Directly opens an {@link InputStream} starting at the given offset on the input entity.
-   * This is the basic way to read the given entity.
+   *
+   * @param offset an offset to start reading from. A non-negative integer counting
+   *               the number of bytes from the beginning of the entity
    */
   InputStream readFrom(long offset) throws IOException;
 
