@@ -135,7 +135,7 @@ public class TestBroker implements Closeable
       server.awaitShutdown();
     }
     if (directoryCleanup) {
-      FileUtils.forceDelete(directory);
+      FileUtils.deleteDirectory(directory);
     }
   }
 }
