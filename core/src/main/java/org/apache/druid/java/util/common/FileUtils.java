@@ -393,6 +393,7 @@ public class FileUtils
    * Equivalent to {@link org.apache.commons.io.FileUtils#deleteDirectory(File)}. Exists here mostly so callers
    * can avoid dealing with our FileUtils and the Commons FileUtils having the same name.
    */
+  @SuppressForbidden(reason = "FilesUtils#deleteDirectory")
   public static void deleteDirectory(final File directory) throws IOException
   {
     org.apache.commons.io.FileUtils.deleteDirectory(directory);

@@ -30,7 +30,6 @@ import org.hyperic.sigar.SigarLoader;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
 
 public class SigarUtil
 {
@@ -44,7 +43,7 @@ public class SigarUtil
 
       final URL url = SysMonitor.class.getResource("/" + libName);
       if (url != null) {
-        final File tmpDir = FileUtils.createTempDir("sigar").toFile();
+        final File tmpDir = FileUtils.createTempDir("sigar");
         // As per java.io.DeleteOnExitHook.runHooks() deletion order is reversed from registration order
         tmpDir.deleteOnExit();
         final File nativeLibTmpFile = new File(tmpDir, libName);

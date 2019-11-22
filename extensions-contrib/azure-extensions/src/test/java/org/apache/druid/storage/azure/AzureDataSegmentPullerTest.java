@@ -74,7 +74,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     }
     finally {
       pulledFile.delete();
-      org.apache.commons.io.FileUtils.deleteDirectory(toDir);
+      FileUtils.deleteDirectory(toDir);
     }
   }
 
@@ -104,7 +104,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       verifyAll();
     }
     finally {
-      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+      FileUtils.deleteDirectory(outDir);
     }
   }
 }
