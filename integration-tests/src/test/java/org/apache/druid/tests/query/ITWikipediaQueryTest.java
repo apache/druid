@@ -22,7 +22,7 @@ package org.apache.druid.tests.query;
 import com.google.inject.Inject;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;
@@ -48,11 +48,11 @@ public class ITWikipediaQueryTest
   {
 
     // ensure that wikipedia segments are loaded completely
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
     );
     coordinatorClient.initializeLookups(WIKIPEDIA_LOOKUP_RESOURCE);
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areLookupsLoaded(WIKI_LOOKUP), "wikipedia lookup load"
     );
   }

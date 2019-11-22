@@ -96,7 +96,10 @@ public class GoogleCloudStorageInputSource extends AbstractInputSource implement
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(storage, split.get())),
+        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(
+            storage,
+            split.get()
+        )),
         temporaryDirectory
     );
   }
