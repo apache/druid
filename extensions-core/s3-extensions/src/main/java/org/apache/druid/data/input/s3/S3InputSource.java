@@ -24,16 +24,17 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -46,29 +47,29 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class S3InputSource extends AbstractInputSource implements SplittableInputSource<S3Coords>
+public class S3InputSource extends AbstractInputSource implements SplittableInputSource<CloudObjectLocation>
 {
   private static final int MAX_LISTING_LENGTH = 1024;
 
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
-  private final S3Coords object;
+  private final List<CloudObjectLocation> objects;
 
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("object") @Nullable S3Coords object
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
     this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
     this.uris = uris == null ? new ArrayList<>() : uris;
     this.prefixes = prefixes == null ? new ArrayList<>() : prefixes;
 
-    if (object != null) {
-      this.object = object;
+    if (objects != null) {
+      this.objects = objects;
       if (!this.uris.isEmpty()) {
         throw new IAE("uris cannot be used with object");
       }
@@ -76,7 +77,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
         throw new IAE("prefixes cannot be used with object");
       }
     } else {
-      this.object = null;
+      this.objects = null;
       if (!this.uris.isEmpty() && !this.prefixes.isEmpty()) {
         throw new IAE("uris and prefixes cannot be used together");
       }
@@ -95,10 +96,10 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     }
   }
 
-  private S3InputSource(ServerSideEncryptingAmazonS3 s3Client, S3Coords inputSplit)
+  private S3InputSource(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation inputSplit)
   {
     this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
-    this.object = Preconditions.checkNotNull(inputSplit, "object");
+    this.objects = ImmutableList.of(Preconditions.checkNotNull(inputSplit, "object"));
     this.uris = new ArrayList<>();
     this.prefixes = new ArrayList<>();
   }
@@ -115,33 +116,33 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     return prefixes;
   }
 
-  @JsonProperty("object")
-  public S3Coords getObject()
+  @JsonProperty("objects")
+  public List<CloudObjectLocation> getObject()
   {
-    return object;
+    return objects;
   }
 
   @Override
-  public Stream<InputSplit<S3Coords>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public Stream<InputSplit<CloudObjectLocation>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    if (object != null) {
-      return Stream.of(new InputSplit<>(object));
+    if (objects != null) {
+      return objects.stream().map(InputSplit::new);
     }
 
     if (!uris.isEmpty()) {
-      return uris.stream().map(S3Coords::new).map(InputSplit::new);
+      return uris.stream().map(S3Utils::checkURI).map(CloudObjectLocation::new).map(InputSplit::new);
     }
 
     return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
-                        .map(S3Utils::summaryToS3Coords)
+                        .map(S3Utils::summaryToCloudObjectLocation)
                         .map(InputSplit::new);
   }
 
   @Override
   public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    if (object != null) {
-      return 1;
+    if (objects != null) {
+      return objects.size();
     }
 
     if (!uris.isEmpty()) {
@@ -152,7 +153,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   }
 
   @Override
-  public SplittableInputSource<S3Coords> withSplit(InputSplit<S3Coords> split)
+  public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
     return new S3InputSource(s3Client, split.get());
   }
@@ -193,13 +194,13 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     S3InputSource that = (S3InputSource) o;
     return Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
-           Objects.equals(object, that.object);
+           Objects.equals(objects, that.objects);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, object);
+    return Objects.hash(uris, prefixes, objects);
   }
 
   @Override
@@ -208,7 +209,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     return "S3InputSource{" +
            "uris=" + uris +
            ", prefixes=" + prefixes +
-           ", object=" + object +
+           ", objects=" + objects +
            '}';
   }
 

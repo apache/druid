@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -124,7 +125,7 @@ public class S3DataSegmentPullerTest
 
     EasyMock.replay(s3Client);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
-        new S3Coords(
+        new CloudObjectLocation(
             bucket,
             object0.getKey()
         ), tmpDir
@@ -191,7 +192,7 @@ public class S3DataSegmentPullerTest
 
     EasyMock.replay(s3Client);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
-        new S3Coords(
+        new CloudObjectLocation(
             bucket,
             object0.getKey()
         ), tmpDir

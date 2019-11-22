@@ -33,6 +33,8 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -265,9 +267,9 @@ public class S3Utils
     return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 
-  public static S3Coords summaryToS3Coords(S3ObjectSummary object)
+  public static CloudObjectLocation summaryToCloudObjectLocation(S3ObjectSummary object)
   {
-    return new S3Coords(object.getBucketName(), object.getKey());
+    return new CloudObjectLocation(object.getBucketName(), object.getKey());
   }
 
   public static String constructSegmentPath(String baseKey, String storageDir)
@@ -288,6 +290,16 @@ public class S3Utils
   public static String extractS3Key(URI uri)
   {
     return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
+  }
+
+  public static URI checkURI(URI uri)
+  {
+    if (uri.getScheme().equalsIgnoreCase(S3StorageDruidModule.SCHEME)) {
+      uri = URI.create("s3" + uri.toString().substring(S3StorageDruidModule.SCHEME.length()));
+    } else if (!"s3".equalsIgnoreCase(uri.getScheme())) {
+      throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
+    }
+    return uri;
   }
 
   // Copied from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder()

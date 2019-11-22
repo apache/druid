@@ -24,8 +24,8 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -36,12 +36,12 @@ import java.net.URI;
 public class S3Entity implements RetryingInputEntity
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
-  private final S3Coords entityLocation;
+  private final CloudObjectLocation object;
 
-  S3Entity(ServerSideEncryptingAmazonS3 s3Client, S3Coords coords)
+  S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords)
   {
     this.s3Client = s3Client;
-    this.entityLocation = coords;
+    this.object = coords;
   }
 
   @Override
@@ -53,15 +53,15 @@ public class S3Entity implements RetryingInputEntity
   @Override
   public InputStream readFrom(long offset) throws IOException
   {
-    final GetObjectRequest request = new GetObjectRequest(entityLocation.getBucket(), entityLocation.getPath());
+    final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
     request.setRange(offset);
     try {
       final S3Object s3Object = s3Client.getObject(request);
       if (s3Object == null) {
         throw new ISE(
             "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
-            entityLocation.getBucket(),
-            entityLocation.getPath(),
+            object.getBucket(),
+            object.getPath(),
             offset
         );
       }

@@ -46,6 +46,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -56,7 +57,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
-import org.apache.druid.storage.s3.S3Coords;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -86,8 +86,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo/file2.csv")
   );
 
-  private static final List<S3Coords> EXPECTED_COORDS =
-      EXPECTED_URIS.stream().map(S3Coords::new).collect(Collectors.toList());
+  private static final List<CloudObjectLocation> EXPECTED_COORDS =
+      EXPECTED_URIS.stream().map(CloudObjectLocation::new).collect(Collectors.toList());
 
   private static final List<URI> PREFIXES = Arrays.asList(
       URI.create("s3://foo/bar"),
@@ -124,7 +124,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     S3InputSource inputSource = new S3InputSource(SERVICE, EXPECTED_URIS, null, null);
 
-    Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
+    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
@@ -142,7 +142,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES, null);
 
-    Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
+    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
@@ -165,7 +165,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null
     );
 
-    Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
+    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );

@@ -17,26 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.storage.s3;
+package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.common.base.Preconditions;
 
 import java.net.URI;
 import java.util.Objects;
 
-public class S3Coords
+public class CloudObjectLocation
 {
-  final String bucket;
-  final String path;
+  private final String bucket;
+  private final String path;
 
-  public S3Coords(URI uri)
+  @JsonCreator
+  public CloudObjectLocation(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path)
   {
-    if (!"s3".equalsIgnoreCase(uri.getScheme())) {
-      throw new IAE("Unsupported scheme: [%s]", uri.getScheme());
-    }
+    this.bucket = Preconditions.checkNotNull(bucket);
+    this.path = Preconditions.checkNotNull(path);
+  }
+
+  public CloudObjectLocation(URI uri)
+  {
     bucket = uri.getHost();
     String path = uri.getPath();
     if (path.startsWith("/")) {
@@ -45,20 +48,13 @@ public class S3Coords
     this.path = path;
   }
 
-  @JsonCreator
-  public S3Coords(@JsonProperty("bucket") String bucket, @JsonProperty("path") String key)
-  {
-    this.bucket = bucket;
-    this.path = key;
-  }
-
-  @JsonProperty("bucket")
+  @JsonProperty
   public String getBucket()
   {
     return bucket;
   }
 
-  @JsonProperty("path")
+  @JsonProperty
   public String getPath()
   {
     return path;
@@ -67,7 +63,10 @@ public class S3Coords
   @Override
   public String toString()
   {
-    return StringUtils.format("s3://%s/%s", bucket, path);
+    return "CloudObjectLocation {"
+           + "bucket=" + bucket
+           + ",path=" + path
+           + "}";
   }
 
   @Override
@@ -76,12 +75,14 @@ public class S3Coords
     if (this == o) {
       return true;
     }
+
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    S3Coords s3Coords = (S3Coords) o;
-    return bucket.equals(s3Coords.bucket) &&
-           path.equals(s3Coords.path);
+
+    final CloudObjectLocation that = (CloudObjectLocation) o;
+    return Objects.equals(bucket, that.bucket) &&
+           Objects.equals(path, that.path);
   }
 
   @Override
