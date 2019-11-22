@@ -21,7 +21,6 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -38,16 +37,5 @@ public class TsvInputFormat extends SeparateValueInputFormat
   )
   {
     super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.TSV);
-  }
-
-  @VisibleForTesting
-  public TsvInputFormat(
-      List<String> columns,
-      String listDelimiter,
-      boolean findColumnsFromHeader,
-      int skipHeaderRows
-  )
-  {
-    this(columns, listDelimiter, null, findColumnsFromHeader, skipHeaderRows);
   }
 }
