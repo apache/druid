@@ -41,25 +41,31 @@ public class SeparateValueInputFormat implements InputFormat
 
   public enum FlatTextFormat
   {
-    CSV(","),
-    TSV("\t");
+    CSV(',', "comma"),
+    TSV('\t', "tab");
 
-    private final String defaultDelimiter;
+    private final char delimiter;
+    private final String literal;
 
-    FlatTextFormat(String defaultDelimiter)
+    FlatTextFormat(char delimiter, String literal)
     {
-      this.defaultDelimiter = defaultDelimiter;
+      this.delimiter = delimiter;
+      this.literal = literal;
     }
 
-    public String getDefaultDelimiter()
+    public String getDelimiterAsString()
     {
+      return String.valueOf(delimiter);
+    }
 
-      return defaultDelimiter;
+    public char getDelimiter()
+    {
+      return delimiter;
     }
 
     public String getLiteral()
     {
-      return ",".equals(defaultDelimiter) ? "comma" : "tab";
+      return literal;
     }
   }
 
@@ -94,7 +100,7 @@ public class SeparateValueInputFormat implements InputFormat
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
-            !column.contains(format.getDefaultDelimiter()),
+            !column.contains(format.getDelimiterAsString()),
             "Column[%s] has a " + format.getLiteral() + ", it cannot",
             column
         );
@@ -142,26 +148,7 @@ public class SeparateValueInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new SeparateValueReader(
-        inputRowSchema,
-        source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows,
-        format
-    );
-  }
-
-  public InputEntityReader createReader(
-      InputRowSchema inputRowSchema,
-      InputEntity source,
-      File temporaryDirectory,
-      FlatTextFormat format
-  )
-  {
-    return format == FlatTextFormat.TSV ? new TsvReader(
+    return this.format == FlatTextFormat.TSV ? new TsvReader(
         inputRowSchema,
         source,
         temporaryDirectory,
@@ -179,7 +166,7 @@ public class SeparateValueInputFormat implements InputFormat
         skipHeaderRows
     );
   }
-
+  
   @Override
   public boolean equals(Object o)
   {

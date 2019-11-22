@@ -22,12 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputRowSchema;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.List;
 
 public class TsvInputFormat extends SeparateValueInputFormat
@@ -42,12 +38,6 @@ public class TsvInputFormat extends SeparateValueInputFormat
   )
   {
     super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, FlatTextFormat.TSV);
-  }
-
-  @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
-  {
-    return super.createReader(inputRowSchema, source, temporaryDirectory, FlatTextFormat.TSV);
   }
 
   @VisibleForTesting

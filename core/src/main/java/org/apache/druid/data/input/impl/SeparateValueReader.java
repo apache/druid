@@ -85,12 +85,12 @@ public class SeparateValueReader extends TextReader
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
     this.format = format;
-    this.parser = createOpenCsvParser(format.getDefaultDelimiter().charAt(0));
+    this.parser = createOpenCsvParser(format.getDelimiter());
 
     if (this.columns != null) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
-            !column.contains(format.getDefaultDelimiter()),
+            !column.contains(format.getDelimiterAsString()),
             "Column[%s] has a " + format.getLiteral() + ", it cannot",
             column
         );
