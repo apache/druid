@@ -35,7 +35,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -257,7 +257,7 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
     // wait for all kafka indexing tasks to finish
     LOG.info("Waiting for all kafka indexing tasks to finish");
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> (indexer.getPendingTasks().size()
                + indexer.getRunningTasks().size()
                + indexer.getWaitingTasks().size()) == 0,
@@ -266,7 +266,7 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
     // wait for segments to be handed off
     try {
-      RetryUtil.retryUntil(
+      ITRetryUtil.retryUntil(
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
           10000,
