@@ -22,7 +22,6 @@ package org.apache.druid.data.input.google;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.storage.google.GoogleByteSource;
-import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
 import org.apache.druid.utils.CompressionUtils;
 
@@ -33,30 +32,24 @@ import java.net.URI;
 
 public class GoogleCloudStorageEntity implements RetryingInputEntity
 {
-  private final GoogleStorage storage;
-  private final URI uri;
+  private final GoogleByteSource byteSource;
 
-  GoogleCloudStorageEntity(GoogleStorage storage, URI uri)
+  GoogleCloudStorageEntity(GoogleByteSource byteSource)
   {
-    this.storage = storage;
-    this.uri = uri;
+    this.byteSource = byteSource;
   }
 
   @Nullable
   @Override
   public URI getUri()
   {
-    return uri;
+    return null;
   }
 
   @Override
   public InputStream readFrom(long offset) throws IOException
   {
-    // Get data of the given object and open an input stream
-    final String bucket = uri.getAuthority();
-    final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
-    final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
-    return CompressionUtils.decompress(byteSource.openStream(offset), uri.getPath());
+    return CompressionUtils.decompress(byteSource.openStream(offset), byteSource.getPath());
   }
 
   @Override

@@ -17,46 +17,56 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google;
+package org.apache.druid.data.input.impl;
 
-import com.google.common.io.ByteSource;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.net.URI;
 import java.util.Objects;
 
-public class GoogleByteSource extends ByteSource
+public class CloudObjectLocation
 {
-  private final GoogleStorage storage;
   private final String bucket;
   private final String path;
 
-  public GoogleByteSource(final GoogleStorage storage, final String bucket, final String path)
+  @JsonCreator
+  public CloudObjectLocation(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path)
   {
-    this.storage = storage;
-    this.bucket = bucket;
+    this.bucket = Preconditions.checkNotNull(bucket);
+    this.path = Preconditions.checkNotNull(path);
+  }
+
+  public CloudObjectLocation(URI uri)
+  {
+    bucket = uri.getHost();
+    String path = uri.getPath();
+    if (path.startsWith("/")) {
+      path = path.substring(1);
+    }
     this.path = path;
   }
 
+  @JsonProperty
   public String getBucket()
   {
     return bucket;
   }
 
+  @JsonProperty
   public String getPath()
   {
     return path;
   }
 
   @Override
-  public InputStream openStream() throws IOException
+  public String toString()
   {
-    return storage.get(bucket, path);
-  }
-
-  public InputStream openStream(long start) throws IOException
-  {
-    return storage.get(bucket, path, start);
+    return "CloudObjectLocation {"
+           + "bucket=" + bucket
+           + ",path=" + path
+           + "}";
   }
 
   @Override
@@ -65,10 +75,12 @@ public class GoogleByteSource extends ByteSource
     if (this == o) {
       return true;
     }
+
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GoogleByteSource that = (GoogleByteSource) o;
+
+    final CloudObjectLocation that = (CloudObjectLocation) o;
     return Objects.equals(bucket, that.bucket) &&
            Objects.equals(path, that.path);
   }

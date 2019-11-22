@@ -29,10 +29,12 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,25 +49,56 @@ public class GoogleCloudStorageInputSourceTest
 {
   private static final GoogleStorage STORAGE = new GoogleStorage(null);
 
+  private static final List<URI> URIS = Arrays.asList(
+      URI.create("gs://foo/bar/file.gz"),
+      URI.create("gs://bar/foo/file2.gz")
+  );
+
+  private static final List<URI> PREFIXES = Arrays.asList(
+      URI.create("gs://foo/bar"),
+      URI.create("gs://bar/foo")
+  );
+
+  private static final List<GoogleByteSource> BYTE_SOURCES = Arrays.asList(
+      new GoogleByteSource(STORAGE, "foo", "bar/file.gz"),
+      new GoogleByteSource(STORAGE, "bar", "foo/file2.gz")
+  );
+
   @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
-
-    final List<URI> uris = Arrays.asList(
-        new URI("gs://foo/bar/file.gz"),
-        new URI("gs://bar/foo/file2.gz")
-    );
-
-    final List<URI> prefixes = Arrays.asList(
-        new URI("gs://foo/bar"),
-        new URI("gs://bar/foo")
-    );
-
-    final GoogleCloudStorageInputSource withUris = new GoogleCloudStorageInputSource(STORAGE, uris);
+    final GoogleCloudStorageInputSource withUris = new GoogleCloudStorageInputSource(STORAGE, URIS, ImmutableList.of(), null);
     final GoogleCloudStorageInputSource serdeWithUris =
         mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
+  }
+
+  @Test
+  public void testSerdePrefixes() throws Exception
+  {
+    final ObjectMapper mapper = createGoogleObjectMapper();
+    final GoogleCloudStorageInputSource withPrefixes =
+        new GoogleCloudStorageInputSource(STORAGE, ImmutableList.of(), PREFIXES, null);
+    final GoogleCloudStorageInputSource serdeWithPrefixes =
+        mapper.readValue(mapper.writeValueAsString(withPrefixes), GoogleCloudStorageInputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testSerdeObjects() throws Exception
+  {
+    final ObjectMapper mapper = createGoogleObjectMapper();
+    final GoogleCloudStorageInputSource withObjects =
+        new GoogleCloudStorageInputSource(
+            STORAGE,
+            null,
+            null,
+            ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz"))
+        );
+    final GoogleCloudStorageInputSource serdeWithObjects =
+        mapper.readValue(mapper.writeValueAsString(withObjects), GoogleCloudStorageInputSource.class);
+    Assert.assertEquals(withObjects, serdeWithObjects);
   }
 
   @Test
@@ -76,13 +109,13 @@ public class GoogleCloudStorageInputSourceTest
         URI.create("gs://bar/foo/file2.gz")
     );
 
-    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(STORAGE, uris);
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(STORAGE, uris, ImmutableList.of(), null);
 
-    Stream<InputSplit<URI>> splits = inputSource.createSplits(
+    Stream<InputSplit<GoogleByteSource>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
-    Assert.assertEquals(uris, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assert.assertEquals(BYTE_SOURCES, splits.map(InputSplit::get).collect(Collectors.toList()));
   }
 
   public static ObjectMapper createGoogleObjectMapper()
