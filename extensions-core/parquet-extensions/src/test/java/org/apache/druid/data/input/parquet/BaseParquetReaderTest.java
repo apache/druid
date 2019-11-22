@@ -52,17 +52,14 @@ class BaseParquetReaderTest
   {
     FileEntity entity = new FileEntity(new File(parquetFile));
     ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString);
-    InputEntityReader reader = parquet.createReader(schema, entity, null);
-    return reader;
+    return parquet.createReader(schema, entity, null);
   }
 
   List<InputRow> readAllRows(InputEntityReader reader) throws IOException
   {
     List<InputRow> rows = new ArrayList<>();
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      while (iterator.hasNext()) {
-        rows.add(iterator.next());
-      }
+      iterator.forEachRemaining(rows::add);
     }
     return rows;
   }
@@ -71,9 +68,7 @@ class BaseParquetReaderTest
   {
     List<InputRowListPlusRawValues> rows = new ArrayList<>();
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
-      while (iterator.hasNext()) {
-        rows.add(iterator.next());
-      }
+      iterator.forEachRemaining(rows::add);
     }
     return rows;
   }

@@ -50,7 +50,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   private final org.apache.parquet.hadoop.ParquetReader<Group> reader;
   private final Closer closer;
 
-  public ParquetReader(
+  ParquetReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,

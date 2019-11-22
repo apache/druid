@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class ParquetGroupConverter
+class ParquetGroupConverter
 {
   private static final int JULIAN_EPOCH_OFFSET_DAYS = 2_440_588;
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
@@ -469,7 +469,7 @@ public class ParquetGroupConverter
 
   private final boolean binaryAsString;
 
-  public ParquetGroupConverter(boolean binaryAsString)
+  ParquetGroupConverter(boolean binaryAsString)
   {
     this.binaryAsString = binaryAsString;
   }
@@ -482,7 +482,7 @@ public class ParquetGroupConverter
    * if a field is not present, this method will return null.
    */
   @Nullable
-  public Object convertField(Group g, String fieldName)
+  Object convertField(Group g, String fieldName)
   {
     return convertField(g, fieldName, binaryAsString);
   }
@@ -492,7 +492,7 @@ public class ParquetGroupConverter
    * return lists which contain 'wrapped' primitives, that are a {@link Group} with a single, primitive field (see
    * {@link ParquetGroupConverter#isWrappedListPrimitive(Object)})
    */
-  public Object unwrapListPrimitive(Object o)
+  Object unwrapListPrimitive(Object o)
   {
     assert isWrappedListPrimitive(o);
     Group g = (Group) o;
