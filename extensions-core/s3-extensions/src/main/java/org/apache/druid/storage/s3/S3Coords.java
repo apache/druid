@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.s3;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -43,17 +45,20 @@ public class S3Coords
     this.path = path;
   }
 
-  public S3Coords(String bucket, String key)
+  @JsonCreator
+  public S3Coords(@JsonProperty("bucket") String bucket, @JsonProperty("path") String key)
   {
     this.bucket = bucket;
     this.path = key;
   }
 
+  @JsonProperty("bucket")
   public String getBucket()
   {
     return bucket;
   }
 
+  @JsonProperty("path")
   public String getPath()
   {
     return path;

@@ -103,7 +103,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     final ObjectMapper mapper = createS3ObjectMapper();
 
-    final S3InputSource withUris = new S3InputSource(SERVICE, EXPECTED_URIS, null);
+    final S3InputSource withUris = new S3InputSource(SERVICE, EXPECTED_URIS, null, null);
     final S3InputSource serdeWithUris = mapper.readValue(mapper.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
@@ -113,7 +113,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     final ObjectMapper mapper = createS3ObjectMapper();
 
-    final S3InputSource withPrefixes = new S3InputSource(SERVICE, null, PREFIXES);
+    final S3InputSource withPrefixes = new S3InputSource(SERVICE, null, PREFIXES, null);
     final S3InputSource serdeWithPrefixes =
         mapper.readValue(mapper.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
@@ -122,7 +122,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testWithUrisSplit()
   {
-    S3InputSource inputSource = new S3InputSource(SERVICE, EXPECTED_URIS, null);
+    S3InputSource inputSource = new S3InputSource(SERVICE, EXPECTED_URIS, null, null);
 
     Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -140,7 +140,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     EasyMock.replay(S3_CLIENT);
 
-    S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES);
+    S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES, null);
 
     Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -161,7 +161,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         null,
-        ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1))
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null
     );
 
     Stream<InputSplit<S3Coords>> splits = inputSource.createSplits(
@@ -185,7 +186,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         null,
-        ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1))
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null
     );
 
     InputRowSchema someSchema = new InputRowSchema(
