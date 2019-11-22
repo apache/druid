@@ -40,11 +40,11 @@ import com.google.common.collect.Lists;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -68,7 +68,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       @JsonProperty("envConfig") EC2EnvironmentConfig envConfig,
       @JacksonInject AmazonEC2 amazonEC2Client,
       @JacksonInject SimpleWorkerProvisioningConfig config,
-      @JsonProperty(value = "category", defaultValue = CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY) String category
+      @JsonProperty("category") String category
   )
   {
     this.minNumWorkers = minNumWorkers;
@@ -94,6 +94,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   }
 
   @Override
+  @JsonProperty
   public String getCategory()
   {
     return category;
@@ -341,6 +342,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
            "envConfig=" + envConfig +
            ", maxNumWorkers=" + maxNumWorkers +
            ", minNumWorkers=" + minNumWorkers +
+           ", category=" + category +
            '}';
   }
 
@@ -353,28 +355,16 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     EC2AutoScaler that = (EC2AutoScaler) o;
-
-    if (maxNumWorkers != that.maxNumWorkers) {
-      return false;
-    }
-    if (minNumWorkers != that.minNumWorkers) {
-      return false;
-    }
-    if (envConfig != null ? !envConfig.equals(that.envConfig) : that.envConfig != null) {
-      return false;
-    }
-
-    return true;
+    return minNumWorkers == that.minNumWorkers &&
+           maxNumWorkers == that.maxNumWorkers &&
+           Objects.equals(category, that.category) &&
+           Objects.equals(envConfig, that.envConfig);
   }
 
   @Override
   public int hashCode()
   {
-    int result = minNumWorkers;
-    result = 31 * result + maxNumWorkers;
-    result = 31 * result + (envConfig != null ? envConfig.hashCode() : 0);
-    return result;
+    return Objects.hash(minNumWorkers, maxNumWorkers, category, envConfig);
   }
 }

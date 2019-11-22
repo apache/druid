@@ -149,6 +149,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       updateTargetWorkerCount(workerConfig, pendingTasks, workers);
 
       int want = targetWorkerCount - (currValidWorkers + currentlyProvisioning.size());
+      log.info("Want workers: %d", want);
       while (want > 0) {
         final AutoScalingData provisioned = workerConfig.getAutoScaler().provision();
         final List<String> newNodes;

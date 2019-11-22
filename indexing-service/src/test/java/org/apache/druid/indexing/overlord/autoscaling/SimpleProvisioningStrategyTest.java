@@ -458,6 +458,39 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
+  public void testMinCountIncreaseNoWorkers()
+  {
+    EasyMock.reset(autoScaler);
+    // Expect min number to be zero, but autoscaling should work for that case as well even there is no workers running
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Collections.singletonList("ip"));
+    EasyMock.expect(autoScaler.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("aNode"))
+    );
+    EasyMock.replay(autoScaler);
+
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    EasyMock.expect(runner.getPendingTasks()).andReturn(
+        Collections.singletonList(
+            new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
+                .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    );
+    EasyMock.expect(runner.getWorkers()).andReturn(Collections.emptyList());
+
+    EasyMock.replay(runner);
+
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean provisionedSomething = provisioner.doProvision();
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertEquals(1, provisioner.getStats().toList().size());
+    Assert.assertSame(provisioner.getStats().toList().get(0).getEvent(), ScalingStats.EVENT.PROVISION);
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
   public void testNullWorkerConfig()
   {
     workerConfig.set(null);

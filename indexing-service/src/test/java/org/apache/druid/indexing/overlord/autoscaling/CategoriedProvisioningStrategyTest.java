@@ -108,15 +108,11 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
-    setupAutoscaler(
-        autoScalerDefault,
-        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
-        3,
-        5,
-        Collections.emptyList()
+    setupAutoscaler(autoScalerDefault, CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, 3, 5,
+                    Collections.emptyList(), 1, 1, 1, 1
     );
-    setupAutoscaler(autoScalerCategory1, CATEGORY_1, 2, 4, Collections.emptyList());
-    setupAutoscaler(autoScalerCategory2, CATEGORY_2, 4, 6, Collections.emptyList());
+    setupAutoscaler(autoScalerCategory1, CATEGORY_1, 2, 4, Collections.emptyList(), 1, 1, 1, 1);
+    setupAutoscaler(autoScalerCategory2, CATEGORY_2, 4, 6, Collections.emptyList(), 1, 1, 1, 1);
     autoScalers.addAll(Arrays.asList(autoScalerDefault, autoScalerCategory1, autoScalerCategory2));
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -164,8 +160,8 @@ public class CategoriedProvisioningStrategyTest
     AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
 
     CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
-    setupAutoscaler(autoScalerCategory1, CATEGORY_1, 2, 4, Collections.emptyList());
-    setupAutoscaler(autoScalerCategory2, CATEGORY_2, 4, 6, Collections.emptyList());
+    setupAutoscaler(autoScalerCategory1, CATEGORY_1, 2, 4, Collections.emptyList(), 1, 1, 1, 1);
+    setupAutoscaler(autoScalerCategory2, CATEGORY_2, 4, 6, Collections.emptyList(), 1, 1, 1, 1);
     autoScalers.addAll(Arrays.asList(autoScalerCategory1, autoScalerCategory2));
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -626,7 +622,7 @@ public class CategoriedProvisioningStrategyTest
     EasyMock.expect(autoScalerDefault.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScalerDefault.getCategory())
             .andReturn(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
-            .times(2);
+            .times(4);
     EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.emptyList()).times(2);
     EasyMock.expect(autoScalerDefault.terminateWithIds(EasyMock.anyObject()))
@@ -634,7 +630,7 @@ public class CategoriedProvisioningStrategyTest
 
     EasyMock.expect(autoScalerCategory1.getMinNumWorkers()).andReturn(1);
     EasyMock.expect(autoScalerCategory1.getMaxNumWorkers()).andReturn(3);
-    EasyMock.expect(autoScalerCategory1.getCategory()).andReturn(CATEGORY_1).times(2);
+    EasyMock.expect(autoScalerCategory1.getCategory()).andReturn(CATEGORY_1).times(4);
     EasyMock.expect(autoScalerCategory1.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.emptyList()).times(2);
     EasyMock.expect(autoScalerCategory1.terminateWithIds(EasyMock.anyObject()))
@@ -642,7 +638,7 @@ public class CategoriedProvisioningStrategyTest
 
     EasyMock.expect(autoScalerCategory2.getMinNumWorkers()).andReturn(1);
     EasyMock.expect(autoScalerCategory2.getMaxNumWorkers()).andReturn(3);
-    EasyMock.expect(autoScalerCategory2.getCategory()).andReturn(CATEGORY_2).times(2);
+    EasyMock.expect(autoScalerCategory2.getCategory()).andReturn(CATEGORY_2).times(4);
     EasyMock.expect(autoScalerCategory2.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.emptyList()).times(2);
     EasyMock.expect(autoScalerCategory2.terminateWithIds(EasyMock.anyObject()))
@@ -910,6 +906,65 @@ public class CategoriedProvisioningStrategyTest
   }
 
   @Test
+  public void testDoSuccessfulTerminateWithoutDefaultAutoscaler()
+  {
+    WorkerCategorySpec workerCategorySpec = createWorkerCategorySpec(false);
+    AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
+    CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
+
+    setupAutoscaler(autoScalerCategory1, CATEGORY_1, 1, Collections.emptyList());
+    setupAutoscaler(autoScalerCategory2, CATEGORY_2, 1, Collections.emptyList());
+    autoScalers.addAll(Arrays.asList(autoScalerCategory1, autoScalerCategory2));
+
+    EasyMock.expect(autoScalerCategory1.terminate(EasyMock.anyObject())).andReturn(
+        new AutoScalingData(Collections.emptyList())
+    );
+    EasyMock.expect(autoScalerCategory2.terminate(EasyMock.anyObject())).andReturn(
+        new AutoScalingData(Collections.emptyList())
+    );
+    EasyMock.replay(autoScalerCategory1, autoScalerCategory2);
+
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Arrays.asList(
+            new TestZkWorker(testTask).toImmutable(),
+            new TestZkWorker(testTask).toImmutable(),
+            new TestZkWorker(testTask, CATEGORY_1).toImmutable(),
+            new TestZkWorker(testTask, CATEGORY_1).toImmutable(),
+            new TestZkWorker(testTask, CATEGORY_2).toImmutable(),
+            new TestZkWorker(testTask, CATEGORY_2).toImmutable()
+        )
+    );
+
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(
+                Arrays.asList(
+                    new TestZkWorker(testTask).getWorker(),
+                    new TestZkWorker(testTask).getWorker(),
+                    new TestZkWorker(testTask, CATEGORY_1).getWorker(),
+                    new TestZkWorker(testTask, CATEGORY_1).getWorker(),
+                    new TestZkWorker(testTask, CATEGORY_2).getWorker(),
+                    new TestZkWorker(testTask, CATEGORY_2).getWorker()
+                )
+            ).times(2);
+
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Collections.emptyList()).times(2);
+    EasyMock.replay(runner);
+
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean terminatedSomething = provisioner.doTerminate();
+
+    Assert.assertTrue(terminatedSomething);
+    Assert.assertEquals(2, provisioner.getStats().toList().size());
+    for (ScalingStats.ScalingEvent event : provisioner.getStats().toList()) {
+      Assert.assertSame(event.getEvent(), ScalingStats.EVENT.TERMINATE);
+    }
+
+    EasyMock.verify(runner, autoScalerCategory1, autoScalerCategory2);
+  }
+
+  @Test
   public void testSomethingTerminating()
   {
     WorkerCategorySpec workerCategorySpec = createWorkerCategorySpec(false);
@@ -919,7 +974,7 @@ public class CategoriedProvisioningStrategyTest
     EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(1);
     EasyMock.expect(autoScalerDefault.getCategory())
             .andReturn(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
-            .times(2);
+            .times(4);
     EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip")).times(2);
     EasyMock.expect(autoScalerDefault.terminate(EasyMock.anyObject())).andReturn(
@@ -927,7 +982,7 @@ public class CategoriedProvisioningStrategyTest
     );
 
     EasyMock.expect(autoScalerCategory1.getMinNumWorkers()).andReturn(1);
-    EasyMock.expect(autoScalerCategory1.getCategory()).andReturn(CATEGORY_1).times(2);
+    EasyMock.expect(autoScalerCategory1.getCategory()).andReturn(CATEGORY_1).times(4);
     EasyMock.expect(autoScalerCategory1.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip")).times(2);
     EasyMock.expect(autoScalerCategory1.terminate(EasyMock.anyObject())).andReturn(
@@ -935,7 +990,7 @@ public class CategoriedProvisioningStrategyTest
     );
 
     EasyMock.expect(autoScalerCategory2.getMinNumWorkers()).andReturn(1);
-    EasyMock.expect(autoScalerCategory2.getCategory()).andReturn(CATEGORY_2).times(2);
+    EasyMock.expect(autoScalerCategory2.getCategory()).andReturn(CATEGORY_2).times(4);
     EasyMock.expect(autoScalerCategory2.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip")).times(2);
     EasyMock.expect(autoScalerCategory2.terminate(EasyMock.anyObject())).andReturn(
@@ -994,6 +1049,113 @@ public class CategoriedProvisioningStrategyTest
     EasyMock.verify(runner, autoScalerDefault, autoScalerCategory1, autoScalerCategory2);
   }
 
+  @Test
+  public void testMinCountIncrease()
+  {
+    WorkerCategorySpec workerCategorySpec = createWorkerCategorySpec(false);
+    AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
+    CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
+
+    // Don't terminate anything
+    EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Collections.singletonList("ip"));
+    EasyMock.expect(autoScalerDefault.getCategory()).andReturn(null);
+    EasyMock.replay(autoScalerDefault);
+    autoScalers.add(autoScalerDefault);
+
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.emptyList()
+    ).times(2);
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.singletonList(
+            new TestZkWorker(NoopTask.create(), "http", "h1", "i1", MIN_VERSION, 1, DEFAULT_CATEGORY_1).toImmutable()
+        )
+    ).times(3);
+    EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(2);
+
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(new ArrayList<>());
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.emptyList());
+    EasyMock.replay(runner);
+
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean terminatedSomething = provisioner.doTerminate();
+    Assert.assertFalse(terminatedSomething);
+    EasyMock.verify(autoScalerDefault);
+
+    // Don't provision anything
+    EasyMock.reset(autoScalerDefault);
+    EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScalerDefault.getMaxNumWorkers()).andReturn(2);
+    EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Collections.singletonList("ip"));
+    EasyMock.expect(autoScalerDefault.getCategory()).andReturn(null);
+    EasyMock.replay(autoScalerDefault);
+
+    boolean provisionedSomething = provisioner.doProvision();
+    Assert.assertFalse(provisionedSomething);
+    Assert.assertTrue(provisioner.getStats().toList().isEmpty());
+    EasyMock.verify(autoScalerDefault);
+
+    EasyMock.reset(autoScalerDefault);
+    // Increase minNumWorkers
+    EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(3);
+    EasyMock.expect(autoScalerDefault.getMaxNumWorkers()).andReturn(5);
+    EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Collections.singletonList("ip"));
+    EasyMock.expect(autoScalerDefault.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("h3"))
+    );
+    // Should provision two new workers
+    EasyMock.expect(autoScalerDefault.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("h4"))
+    );
+    EasyMock.expect(autoScalerDefault.getCategory()).andReturn(null);
+    EasyMock.replay(autoScalerDefault);
+    provisionedSomething = provisioner.doProvision();
+    Assert.assertTrue(provisionedSomething);
+    EasyMock.verify(autoScalerDefault);
+    EasyMock.verify(runner);
+  }
+
+  @Test
+  public void testMinCountIncreaseNoWorkers()
+  {
+    WorkerCategorySpec workerCategorySpec = createWorkerCategorySpec(false);
+    AtomicReference<WorkerBehaviorConfig> workerConfig = createWorkerConfigRef(workerCategorySpec);
+    CategoriedProvisioningStrategy strategy = createStrategy(workerConfig);
+
+    // Expect min number to be zero, but autoscaling should work for that case as well even there is no workers running
+    EasyMock.expect(autoScalerDefault.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScalerDefault.getMaxNumWorkers()).andReturn(5);
+    EasyMock.expect(autoScalerDefault.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Collections.singletonList("ip"));
+    EasyMock.expect(autoScalerDefault.provision()).andReturn(
+        new AutoScalingData(Collections.singletonList("aNode"))
+    );
+    EasyMock.expect(autoScalerDefault.getCategory()).andReturn(null);
+
+    EasyMock.replay(autoScalerDefault);
+    autoScalers.add(autoScalerDefault);
+
+    RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
+    EasyMock.expect(runner.getPendingTaskPayloads())
+            .andReturn(Collections.singletonList(TestTask.create(TASK_TYPE_1, DATA_SOURCE_2)));
+    EasyMock.expect(runner.getWorkers()).andReturn(Collections.emptyList());
+    EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
+
+    EasyMock.replay(runner);
+
+    Provisioner provisioner = strategy.makeProvisioner(runner);
+    boolean provisionedSomething = provisioner.doProvision();
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertEquals(1, provisioner.getStats().toList().size());
+    Assert.assertSame(provisioner.getStats().toList().get(0).getEvent(), ScalingStats.EVENT.PROVISION);
+
+    EasyMock.verify(autoScalerDefault, runner);
+  }
 
   private void setupAutoscaler(
       AutoScaler autoScaler,
@@ -1007,12 +1169,41 @@ public class CategoriedProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxWorkers);
   }
 
+  private void setupAutoscaler(
+      AutoScaler autoScaler,
+      String category,
+      int minWorkers,
+      int maxWorkers,
+      List<String> pendingTasks,
+      int categoryTimes,
+      int minWorkersTimes,
+      int maxWorkersTimes,
+      int pendingTasksTimes
+  )
+  {
+    setupAutoscaler(autoScaler, category, minWorkers, pendingTasks, categoryTimes, minWorkersTimes, pendingTasksTimes);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxWorkers).times(maxWorkersTimes);
+  }
+
   private void setupAutoscaler(AutoScaler autoScaler, String category, int minWorkers, List<String> pendingTasks)
   {
-    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(minWorkers);
-    EasyMock.expect(autoScaler.getCategory()).andReturn(category);
+    setupAutoscaler(autoScaler, category, minWorkers, pendingTasks, 2, 1, 1);
+  }
+
+  private void setupAutoscaler(
+      AutoScaler autoScaler,
+      String category,
+      int minWorkers,
+      List<String> pendingTasks,
+      int categoryTimes,
+      int minWorkersTimes,
+      int pendingTasksTimes
+  )
+  {
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(minWorkers).times(minWorkersTimes);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(category).times(categoryTimes);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(pendingTasks);
+            .andReturn(pendingTasks).times(pendingTasksTimes);
   }
 
   private WorkerCategorySpec createWorkerCategorySpec(boolean isStrong)

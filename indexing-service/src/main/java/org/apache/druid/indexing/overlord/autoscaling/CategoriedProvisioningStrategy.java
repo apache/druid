@@ -83,7 +83,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     }
     if (!(workerBehaviorConfig instanceof CategoriedWorkerBehaviorConfig)) {
       log.error(
-          "Only DefaultWorkerBehaviorConfig is supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
+          "Only CategoriedWorkerBehaviorConfig is supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
           workerBehaviorConfig,
           action
       );
@@ -219,6 +219,11 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         AutoScaler autoScaler
     )
     {
+      if (autoScaler == null) {
+        log.error("No autoScaler available, cannot execute doTerminate for workers of category %s", category);
+        return false;
+      }
+
       boolean didTerminate = false;
       final Collection<String> workerNodeIds = getWorkerNodeIDs(runner.getLazyWorkers(), autoScaler);
       log.debug(
@@ -472,9 +477,9 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
       final int currValidWorkers = getCurrValidWorkers(workers);
 
-      // If there are no worker, spin up minWorkerCount, we cannot determine the exact capacity here to fulfill the need
+      // If there are no worker, spin up minWorkerCount (or 1 if minWorkerCount is 0), we cannot determine the exact capacity here to fulfill the need
       // since we are not aware of the expectedWorkerCapacity.
-      int moreWorkersNeeded = currValidWorkers == 0 ? minWorkerCount : getWorkersNeededToAssignTasks(
+      int moreWorkersNeeded = currValidWorkers == 0 ? Math.max(minWorkerCount, 1) : getWorkersNeededToAssignTasks(
           remoteTaskRunnerConfig,
           workerConfig,
           pendingTasks,
@@ -655,18 +660,23 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         );
         return null;
       }
-      return autoScaler == null ? autoscalersByCategory.get(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY) : autoScaler;
+      return autoScaler == null
+             ? autoscalersByCategory.get(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
+             : autoScaler;
     }
 
     private Map<String, AutoScaler> mapAutoscalerByCategory(List<AutoScaler> autoScalers)
     {
       Map<String, AutoScaler> result = autoScalers.stream().collect(Collectors.groupingBy(
-          AutoScaler::getCategory,
+          autoScaler -> autoScaler.getCategory() == null
+                        ? CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+                        : autoScaler.getCategory(),
           Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0))
       ));
 
       if (result.size() != autoScalers.size()) {
-        log.warn("Probably autoscalers with duplicated categories were defined. The first instance will be used.");
+        log.warn(
+            "Probably autoscalers with duplicated categories were defined. The first instance of each duplicate category will be used.");
       }
 
       return result;
