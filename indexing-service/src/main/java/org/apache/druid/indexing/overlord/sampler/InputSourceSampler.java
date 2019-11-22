@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.overlord.sampler;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -35,6 +33,7 @@ import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -101,7 +100,7 @@ public class InputSourceSampler
                                                : samplerConfig;
 
     final Closer closer = Closer.create();
-    final File tempDir = Files.createTempDir();
+    final File tempDir = FileUtils.createTempDir();
     closer.register(() -> FileUtils.deleteDirectory(tempDir));
 
     final InputSourceReader reader = buildReader(

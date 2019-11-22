@@ -33,7 +33,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 
 public class AzureDataSegmentPullerTest extends EasyMockSupport
 {
@@ -54,7 +53,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   {
     final String value = "bucket";
     final File pulledFile = AzureTestUtils.createZipTempFile(SEGMENT_FILE_NAME, value);
-    final File toDir = Files.createTempDirectory("druid").toFile();
+    final File toDir = FileUtils.createTempDir();
     try {
       final InputStream zipStream = new FileInputStream(pulledFile);
 
@@ -84,7 +83,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       throws IOException, URISyntaxException, StorageException, SegmentLoadingException
   {
 
-    final File outDir = Files.createTempDirectory("druid").toFile();
+    final File outDir = FileUtils.createTempDir();
     try {
       EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andThrow(
           new URISyntaxException(

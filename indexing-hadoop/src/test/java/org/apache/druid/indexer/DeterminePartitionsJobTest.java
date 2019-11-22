@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -274,7 +273,7 @@ public class DeterminePartitionsJobTest
 
     dataFile = File.createTempFile("test_website_data", "tmp");
     dataFile.deleteOnExit();
-    tmpDir = Files.createTempDir();
+    tmpDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
     tmpDir.deleteOnExit();
 
     FileUtils.writeLines(dataFile, data);
