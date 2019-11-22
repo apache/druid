@@ -46,7 +46,7 @@ public class CsvReader extends SeparateValueReader
         columns,
         findColumnsFromHeader,
         skipHeaderRows,
-        SeparateValueInputFormat.FlatTextFormat.CSV
+        SeparateValueInputFormat.Format.CSV
     );
   }
 }

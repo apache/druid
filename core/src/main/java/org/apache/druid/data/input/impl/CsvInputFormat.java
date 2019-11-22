@@ -37,7 +37,7 @@ public class CsvInputFormat extends SeparateValueInputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, FlatTextFormat.CSV);
+    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.CSV);
   }
 
   @VisibleForTesting

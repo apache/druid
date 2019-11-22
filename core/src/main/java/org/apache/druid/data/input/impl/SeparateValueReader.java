@@ -52,7 +52,7 @@ public class SeparateValueReader extends TextReader
   private final Function<String, Object> multiValueFunction;
   @Nullable
   private List<String> columns;
-  private final SeparateValueInputFormat.FlatTextFormat format;
+  private final SeparateValueInputFormat.Format format;
   private final RFC4180Parser parser;
 
   public static RFC4180Parser createOpenCsvParser(char separator)
@@ -75,7 +75,7 @@ public class SeparateValueReader extends TextReader
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows,
-      SeparateValueInputFormat.FlatTextFormat format
+      SeparateValueInputFormat.Format format
   )
   {
     super(inputRowSchema, source, temporaryDirectory);

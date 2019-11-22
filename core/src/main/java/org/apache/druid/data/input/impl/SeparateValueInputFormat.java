@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -36,10 +35,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * SeparateValueInputFormat abstracts the (Comma/Tab) Separate Value format of input data.
+ * It implements the common logic between {@link CsvInputFormat} and {@link TsvInputFormat}
+ * Should never be instantiated
+ */
 public class SeparateValueInputFormat implements InputFormat
 {
 
-  public enum FlatTextFormat
+  public enum Format
   {
     CSV(',', "comma"),
     TSV('\t', "tab");
@@ -47,7 +51,7 @@ public class SeparateValueInputFormat implements InputFormat
     private final char delimiter;
     private final String literal;
 
-    FlatTextFormat(char delimiter, String literal)
+    Format(char delimiter, String literal)
     {
       this.delimiter = delimiter;
       this.literal = literal;
@@ -73,16 +77,15 @@ public class SeparateValueInputFormat implements InputFormat
   private final List<String> columns;
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final FlatTextFormat format;
+  private final Format format;
 
-  @JsonCreator
-  public SeparateValueInputFormat(
-      @JsonProperty("columns") @Nullable List<String> columns,
-      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
-      @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
-      @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows,
-      FlatTextFormat format
+  protected SeparateValueInputFormat(
+      @Nullable List<String> columns,
+      @Nullable String listDelimiter,
+      @Nullable Boolean hasHeaderRow,
+      @Nullable Boolean findColumnsFromHeader,
+      int skipHeaderRows,
+      Format format
   )
   {
     this.listDelimiter = listDelimiter;
@@ -148,7 +151,7 @@ public class SeparateValueInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return this.format == FlatTextFormat.TSV ? new TsvReader(
+    return this.format == Format.TSV ? new TsvReader(
         inputRowSchema,
         source,
         temporaryDirectory,
@@ -166,7 +169,7 @@ public class SeparateValueInputFormat implements InputFormat
         skipHeaderRows
     );
   }
-  
+
   @Override
   public boolean equals(Object o)
   {
@@ -180,12 +183,13 @@ public class SeparateValueInputFormat implements InputFormat
     return findColumnsFromHeader == format.findColumnsFromHeader &&
            skipHeaderRows == format.skipHeaderRows &&
            Objects.equals(listDelimiter, format.listDelimiter) &&
-           Objects.equals(columns, format.columns);
+           Objects.equals(columns, format.columns) &&
+           Objects.equals(this.format, format.format);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(listDelimiter, columns, findColumnsFromHeader, skipHeaderRows);
+    return Objects.hash(listDelimiter, columns, findColumnsFromHeader, skipHeaderRows, format);
   }
 }
