@@ -21,6 +21,7 @@ package org.apache.druid.data.input.google;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
@@ -53,7 +54,7 @@ public class GoogleCloudStorageEntity implements RetryingInputEntity
   {
     // Get data of the given object and open an input stream
     final String bucket = uri.getAuthority();
-    final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
+    final String key = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
     final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
     return byteSource.openStream(offset);
   }
@@ -61,7 +62,7 @@ public class GoogleCloudStorageEntity implements RetryingInputEntity
   @Override
   public String getDecompressionPath()
   {
-    return GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
+    return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
   }
 
   @Override
