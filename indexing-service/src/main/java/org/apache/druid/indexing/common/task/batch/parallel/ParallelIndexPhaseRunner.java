@@ -171,10 +171,10 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
-                    final SinglePhaseParallelIndexingProgress monitorStatus = taskMonitor.getProgress();
+                    final ParallelIndexingPhaseProgress monitorStatus = taskMonitor.getProgress();
                     throw new ISE(
-                        "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
-                        monitorStatus.getExpectedSucceeded(),
+                        "Expected [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
+                        subTaskSpecIterator.count,
                         monitorStatus.getSucceeded(),
                         monitorStatus.getFailed()
                     );
@@ -349,9 +349,9 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   }
 
   @Override
-  public ParallelIndexingProgress getProgress()
+  public ParallelIndexingPhaseProgress getProgress()
   {
-    return taskMonitor == null ? SinglePhaseParallelIndexingProgress.notRunning() : taskMonitor.getProgress();
+    return taskMonitor == null ? ParallelIndexingPhaseProgress.notRunning() : taskMonitor.getProgress();
   }
 
   @Override

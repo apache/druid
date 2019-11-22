@@ -54,7 +54,7 @@ public interface SplittableInputSource<T> extends InputSource
 
   /**
    * Returns an estimated total number of splits to be created via {@link #createSplits}. The estimated number of splits
-   * doesn't have to be accurate and can be different to the actual number of InputSplits returned from
+   * doesn't have to be accurate and can be different from the actual number of InputSplits returned from
    * {@link #createSplits}. This will be used to estimate the progress of a phase in parallel indexing.
    * See TaskMonitor for more details of the progress estimation.
    *
