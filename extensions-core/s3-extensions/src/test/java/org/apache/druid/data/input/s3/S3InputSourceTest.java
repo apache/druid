@@ -64,7 +64,9 @@ import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -77,6 +79,9 @@ import java.util.stream.Stream;
 
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
   private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
@@ -218,7 +223,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputSourceReader reader = inputSource.reader(
         someSchema,
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, 0),
-        null
+        temporaryFolder.newFolder()
     );
 
     CloseableIterator<InputRow> iterator = reader.read();
@@ -257,7 +262,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputSourceReader reader = inputSource.reader(
         someSchema,
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, 0),
-        null
+        temporaryFolder.newFolder()
     );
 
     CloseableIterator<InputRow> iterator = reader.read();

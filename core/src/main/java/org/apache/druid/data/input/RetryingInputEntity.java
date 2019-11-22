@@ -43,7 +43,8 @@ public interface RetryingInputEntity extends InputEntity
   }
 
   /**
-   * Directly opens an {@link InputStream} on the input entity.
+   * Directly opens an {@link InputStream} on the input entity. Decompression should be handled externally, this should
+   * return the raw stream for the object.
    */
   default InputStream readFromStart() throws IOException
   {
@@ -51,7 +52,8 @@ public interface RetryingInputEntity extends InputEntity
   }
 
   /**
-   * Directly opens an {@link InputStream} starting at the given offset on the input entity.
+   * Directly opens an {@link InputStream} starting at the given offset on the input entity. Decompression should be
+   * handled externally, this should return the raw stream for the object.
    *
    * @param offset an offset to start reading from. A non-negative integer counting
    *               the number of bytes from the beginning of the entity
