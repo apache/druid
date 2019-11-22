@@ -17,11 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl.prefetch;
+package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
+import org.apache.druid.data.input.impl.prefetch.Fetcher;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 

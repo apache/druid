@@ -163,7 +163,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
               if (!subTaskSpecIterator.hasNext()) {
                 // We have no more subTasks to run
-                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
+                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.isEmpty()) {
                   subTaskScheduleAndMonitorStopped = true;
                   if (taskMonitor.isSucceeded()) {
                     // Succeeded

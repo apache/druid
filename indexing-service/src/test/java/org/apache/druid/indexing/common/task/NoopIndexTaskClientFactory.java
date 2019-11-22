@@ -23,10 +23,10 @@ import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.joda.time.Duration;
 
-public class NoopIndexTaskClientFactory implements IndexTaskClientFactory
+public class NoopIndexTaskClientFactory<T extends IndexTaskClient> implements IndexTaskClientFactory<T>
 {
   @Override
-  public IndexTaskClient build(
+  public T build(
       TaskInfoProvider taskInfoProvider,
       String callerId,
       int numThreads,

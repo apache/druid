@@ -88,7 +88,7 @@ public class S3Utils
    */
   public static <T> T retryS3Operation(Task<T> f) throws Exception
   {
-    return RetryUtils.retry(f, S3RETRY, MAX_S3_RETRIES);
+    return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
   static boolean isObjectInBucketIgnoringPermission(

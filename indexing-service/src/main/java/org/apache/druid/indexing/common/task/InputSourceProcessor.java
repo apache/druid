@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Optional;
+import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -28,9 +29,8 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
+import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -63,13 +63,15 @@ public class InputSourceProcessor
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final long pushTimeout;
+  private final IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder;
 
   public InputSourceProcessor(
       RowIngestionMeters buildSegmentsMeters,
       @Nullable CircularBuffer<Throwable> buildSegmentsSavedParseExceptions,
       boolean logParseExceptions,
       int maxParseExceptions,
-      long pushTimeout
+      long pushTimeout,
+      IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder
   )
   {
     this.buildSegmentsMeters = buildSegmentsMeters;
@@ -77,6 +79,7 @@ public class InputSourceProcessor
     this.logParseExceptions = logParseExceptions;
     this.maxParseExceptions = maxParseExceptions;
     this.pushTimeout = pushTimeout;
+    this.inputRowIteratorBuilder = inputRowIteratorBuilder;
   }
 
   /**
@@ -101,6 +104,7 @@ public class InputSourceProcessor
                                                         ? (DynamicPartitionsSpec) partitionsSpec
                                                         : null;
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
+
     final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
                                             .map(AggregatorFactory::getName)
                                             .collect(Collectors.toList());
@@ -115,31 +119,27 @@ public class InputSourceProcessor
             tmpDir
         )
     );
-    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read()) {
-      while (inputRowIterator.hasNext()) {
+    try (
+        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read();
+        HandlingInputRowIterator iterator = inputRowIteratorBuilder
+            .delegate(inputRowIterator)
+            .granularitySpec(granularitySpec)
+            .nullRowRunnable(buildSegmentsMeters::incrementThrownAway)
+            .absentBucketIntervalConsumer(inputRow -> buildSegmentsMeters.incrementThrownAway())
+            .build()
+    ) {
+      while (iterator.hasNext()) {
         try {
-          final InputRow inputRow = inputRowIterator.next();
-
+          final InputRow inputRow = iterator.next();
           if (inputRow == null) {
-            buildSegmentsMeters.incrementThrownAway();
             continue;
           }
 
-          if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
-            final String errorMsg = StringUtils.format(
-                "Encountered row with timestamp that cannot be represented as a long: [%s]",
-                inputRow
-            );
-            throw new ParseException(errorMsg);
-          }
-
-          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-          if (!optInterval.isPresent()) {
-            buildSegmentsMeters.incrementThrownAway();
-            continue;
-          }
-
+          // IndexTaskInputRowIteratorBuilder.absentBucketIntervalConsumer() ensures the interval will be present here
+          Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+          @SuppressWarnings("OptionalGetWithoutIsPresent")
           final Interval interval = optInterval.get();
+
           final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 

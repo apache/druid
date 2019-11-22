@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
@@ -41,6 +42,7 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
 {
   private final String data;
 
+  @VisibleForTesting
   @JsonCreator
   public InlineFirehoseFactory(@JsonProperty("data") String data)
   {

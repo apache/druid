@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer.partitions;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -75,4 +76,29 @@ public interface PartitionsSpec
   {
     return isEffectivelyNull(val) ? null : val;
   }
+
+  /**
+   * @return True if this partitionSpec's type is compatible with forceGuaranteedRollup=true.
+   */
+  @JsonIgnore
+  default boolean isForceGuaranteedRollupCompatibleType()
+  {
+    return !(this instanceof DynamicPartitionsSpec);
+  }
+
+  /**
+   * @return True if this partitionSpec's property values are compatible with forceGuaranteedRollup=true.
+   */
+  @JsonIgnore
+  default boolean isForceGuaranteedRollupCompatible()
+  {
+    return getForceGuaranteedRollupIncompatiblityReason().isEmpty();
+  }
+
+  /**
+   * @return Message describing why this partitionSpec is incompatible with forceGuaranteedRollup=true. Empty string if
+   * the partitionSpec is compatible.
+   */
+  @JsonIgnore
+  String getForceGuaranteedRollupIncompatiblityReason();
 }
