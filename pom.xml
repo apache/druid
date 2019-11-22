@@ -987,6 +987,11 @@
                 <artifactId>sketches-core</artifactId>
                 <version>0.13.4</version>
             </dependency>
+            <dependency>
+                <groupId>com.yahoo.datasketches</groupId>
+                <artifactId>memory</artifactId>
+                <version>0.12.2</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.apache.calcite</groupId>

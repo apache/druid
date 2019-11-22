@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yahoo.sketches.quantiles.ItemsSketch;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.hamcrest.Matchers;
 import org.hamcrest.number.IsCloseTo;
@@ -47,7 +48,7 @@ public class StringSketchTest
   private static final int NUM_STRING = StringSketch.SKETCH_K * FACTOR;
   private static final double DELTA = ItemsSketch.getNormalizedRankError(StringSketch.SKETCH_K, true) * NUM_STRING;
   private static final List<String> STRINGS = IntStream.range(0, NUM_STRING)
-                                                       .mapToObj(i -> String.format("%010d", i))
+                                                       .mapToObj(i -> StringUtils.format("%010d", i))
                                                        .collect(Collectors.toCollection(ArrayList::new));
   private static final String MIN_STRING = STRINGS.get(0);
   private static final String MAX_STRING = STRINGS.get(NUM_STRING - 1);

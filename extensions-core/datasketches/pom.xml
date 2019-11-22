@@ -34,10 +34,6 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <properties>
-    <datasketches.memory.version>0.12.2</datasketches.memory.version>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>com.yahoo.datasketches</groupId>
@@ -52,7 +48,6 @@
     <dependency>
       <groupId>com.yahoo.datasketches</groupId>
       <artifactId>memory</artifactId>
-      <version>${datasketches.memory.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>

@@ -34,6 +34,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
@@ -306,7 +307,7 @@ public class PartialDimensionDistributionTaskTest
 
       long timestamp = 0;
       List<String> dimensionValues = IntStream.range(0, minBloomFilterBits * 10)
-                                              .mapToObj(i -> String.format("%010d", i))
+                                              .mapToObj(i -> StringUtils.format("%010d", i))
                                               .collect(Collectors.toCollection(ArrayList::new));
       String minDimensionValue = dimensionValues.get(0);
       String maxDimensionValue = dimensionValues.get(dimensionValues.size() - 1);
