@@ -48,6 +48,11 @@ import java.util.List;
 public interface Appenderator extends QuerySegmentWalker
 {
   /**
+   * Return the identifier of this Appenderator; useful for log messages and such.
+   */
+  String getId();
+
+  /**
    * Return the name of the dataSource associated with this Appenderator.
    */
   String getDataSource();
@@ -181,8 +186,8 @@ public interface Appenderator extends QuerySegmentWalker
    * <p>
    * If committer is not provided, no metadata is persisted.
    *
-   * @param identifiers list of segments to push
-   * @param committer   a committer associated with all data that has been added so far
+   * @param identifiers   list of segments to push
+   * @param committer     a committer associated with all data that has been added so far
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
    *
    * @return future that resolves when all segments have been pushed. The segment list will be the list of segments

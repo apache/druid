@@ -36,15 +36,19 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
+  private static final String TASK_TYPE = "kafka";
+
   @JsonCreator
   public KafkaSupervisorSpec(
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") KafkaSupervisorTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") KafkaSupervisorIOConfig ioConfig,
+      @JsonProperty("spec") @Nullable KafkaSupervisorIngestionSpec ingestionSchema,
+      @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
+      @JsonProperty("tuningConfig") @Nullable KafkaSupervisorTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") @Nullable KafkaSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
@@ -59,36 +63,15 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
-        dataSchema,
-        tuningConfig != null
-        ? tuningConfig
-        : new KafkaSupervisorTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
+        ingestionSchema != null
+        ? ingestionSchema
+        : new KafkaSupervisorIngestionSpec(
+            dataSchema,
+            ioConfig,
+            tuningConfig != null
+            ? tuningConfig
+            : KafkaSupervisorTuningConfig.defaultConfig()
         ),
-        ioConfig,
         context,
         suspended,
         taskStorage,
@@ -101,6 +84,18 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         rowIngestionMetersFactory,
         supervisorStateManagerConfig
     );
+  }
+
+  @Override
+  public String getType()
+  {
+    return TASK_TYPE;
+  }
+
+  @Override
+  public String getSource()
+  {
+    return getIoConfig() != null ? getIoConfig().getTopic() : null;
   }
 
   @Override
@@ -118,6 +113,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @Deprecated
   @JsonProperty
   public KafkaSupervisorTuningConfig getTuningConfig()
   {
@@ -125,6 +121,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @Deprecated
   @JsonProperty
   public KafkaSupervisorIOConfig getIoConfig()
   {
@@ -132,9 +129,17 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @JsonProperty
+  public KafkaSupervisorIngestionSpec getSpec()
+  {
+    return (KafkaSupervisorIngestionSpec) super.getSpec();
+  }
+
+  @Override
   protected KafkaSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KafkaSupervisorSpec(
+        getSpec(),
         getDataSchema(),
         getTuningConfig(),
         getIoConfig(),

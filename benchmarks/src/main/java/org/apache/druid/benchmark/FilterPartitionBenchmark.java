@@ -102,6 +102,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class FilterPartitionBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Param({"750000"})
   private int rowsPerSegment;
 

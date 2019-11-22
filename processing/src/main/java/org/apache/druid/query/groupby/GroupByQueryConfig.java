@@ -29,6 +29,7 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
+  public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT = "applyLimitPushDownToSegment";
   public static final String CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY = "forcePushDownNestedQuery";
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
   public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
@@ -43,7 +44,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
-  private static final String CTX_KEY_VECTORIZE = "vectorize";
+  public static final String CTX_KEY_VECTORIZE = "vectorize";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -77,6 +78,9 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
+
+  @JsonProperty
+  private boolean applyLimitPushDownToSegment = true;
 
   @JsonProperty
   private boolean forcePushDownNestedQuery = false;
@@ -158,6 +162,11 @@ public class GroupByQueryConfig
     return forcePushDownLimit;
   }
 
+  public boolean isApplyLimitPushDownToSegment()
+  {
+    return applyLimitPushDownToSegment;
+  }
+
   public boolean isForceHashAggregation()
   {
     return forceHashAggregation;
@@ -220,6 +229,10 @@ public class GroupByQueryConfig
         getMaxMergingDictionarySize()
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
+    newConfig.applyLimitPushDownToSegment = query.getContextBoolean(
+        CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
+        isApplyLimitPushDownToSegment()
+    );
     newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
     newConfig.forcePushDownNestedQuery = query.getContextBoolean(CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, isForcePushDownNestedQuery());
     newConfig.intermediateCombineDegree = query.getContextValue(

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +33,7 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-public class LoadingLookupTest
+public class LoadingLookupTest extends InitializedNullHandlingTest
 {
   DataFetcher dataFetcher = EasyMock.createMock(DataFetcher.class);
   LoadingCache lookupCache = EasyMock.createStrictMock(LoadingCache.class);

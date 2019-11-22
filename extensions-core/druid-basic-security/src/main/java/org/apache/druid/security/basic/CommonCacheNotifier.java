@@ -107,6 +107,7 @@ public class CommonCacheNotifier
               Pair<String, byte[]> update = updateQueue.take();
               String authorizer = update.lhs;
               byte[] serializedMap = update.rhs;
+
               BasicAuthDBConfig authorizerConfig = itemConfigMap.get(update.lhs);
               if (!authorizerConfig.isEnableCacheNotifications()) {
                 continue;
@@ -157,20 +158,23 @@ public class CommonCacheNotifier
     );
   }
 
-  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthorizerPrefix, byte[] serializedUserMap)
+  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthenticatorPrefix, byte[] serializedEntity)
   {
     List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
     for (NodeRole nodeRole : NODE_TYPES) {
       DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeRole(nodeRole);
       Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
       for (DiscoveryDruidNode node : nodes) {
-        URL listenerURL = getListenerURL(node.getDruidNode(), baseUrl, updatedAuthorizerPrefix);
+        URL listenerURL = getListenerURL(
+            node.getDruidNode(),
+            StringUtils.format(baseUrl, StringUtils.urlEncode(updatedAuthenticatorPrefix))
+        );
 
         // best effort, if this fails, remote node will poll and pick up the update eventually
         Request req = new Request(HttpMethod.POST, listenerURL);
-        req.setContent(MediaType.APPLICATION_JSON, serializedUserMap);
+        req.setContent(MediaType.APPLICATION_JSON, serializedEntity);
 
-        BasicAuthDBConfig itemConfig = itemConfigMap.get(updatedAuthorizerPrefix);
+        BasicAuthDBConfig itemConfig = itemConfigMap.get(updatedAuthenticatorPrefix);
 
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
@@ -183,18 +187,19 @@ public class CommonCacheNotifier
     return futures;
   }
 
-  private URL getListenerURL(DruidNode druidNode, String baseUrl, String itemName)
+  private URL getListenerURL(DruidNode druidNode, String baseUrl)
   {
     try {
       return new URL(
           druidNode.getServiceScheme(),
           druidNode.getHost(),
           druidNode.getPortToUse(),
-          StringUtils.format(baseUrl, StringUtils.urlEncode(itemName))
+          baseUrl
       );
     }
     catch (MalformedURLException mue) {
-      LOG.error(callerName + ":WTF? Malformed url for DruidNode[%s] and itemName[%s]", druidNode, itemName);
+      LOG.error(callerName + ":WTF? Malformed url for DruidNode[%s] and baseUrl[%s]", druidNode, baseUrl);
+
       throw new RuntimeException(mue);
     }
   }

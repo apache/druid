@@ -55,16 +55,14 @@ public class BasicAuthenticatorUser
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (o == null || !getClass().equals(o.getClass())) {
       return false;
     }
 
     BasicAuthenticatorUser that = (BasicAuthenticatorUser) o;
 
-    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
-      return false;
-    }
-    return getCredentials() != null ? getCredentials().equals(that.getCredentials()) : that.getCredentials() == null;
+    return (getName() != null ? getName().equals(that.getName()) : that.getName() == null)
+           && (getCredentials() != null ? getCredentials().equals(that.getCredentials()) : that.getCredentials() == null);
   }
 
   @Override

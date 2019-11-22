@@ -442,7 +442,7 @@ public class Lifecycle
           }
         }
         if (doStart) {
-          log.info("Invoking start method[%s] on object[%s].", method, o);
+          log.debug("Invoking start method[%s] on object[%s].", method, o);
           method.invoke(o);
         }
       }
@@ -460,7 +460,7 @@ public class Lifecycle
           }
         }
         if (doStop) {
-          log.info("Invoking stop method[%s] on object[%s].", method, o);
+          log.debug("Invoking stop method[%s] on object[%s].", method, o);
           try {
             method.invoke(o);
           }

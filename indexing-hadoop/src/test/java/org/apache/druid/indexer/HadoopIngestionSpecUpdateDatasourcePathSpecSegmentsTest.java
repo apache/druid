@@ -29,7 +29,8 @@ import org.apache.druid.indexer.path.DatasourcePathSpec;
 import org.apache.druid.indexer.path.MultiplePathSpec;
 import org.apache.druid.indexer.path.PathSpec;
 import org.apache.druid.indexer.path.StaticPathSpec;
-import org.apache.druid.indexer.path.UsedSegmentLister;
+import org.apache.druid.indexer.path.UsedSegmentsRetriever;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -37,6 +38,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -65,7 +67,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ObjectMapper.class, jsonMapper)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
     );
   }
 
@@ -296,25 +298,27 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
         HadoopIngestionSpec.class
     );
 
-    UsedSegmentLister segmentLister = EasyMock.createMock(UsedSegmentLister.class);
+    UsedSegmentsRetriever segmentsRetriever = EasyMock.createMock(UsedSegmentsRetriever.class);
 
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(
+        segmentsRetriever.getUsedSegmentsForIntervals(
             TEST_DATA_SOURCE,
-            Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL) : null)
+            Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL) : null),
+            Segments.ONLY_VISIBLE
         )
     ).andReturn(ImmutableList.of(SEGMENT));
 
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(
+        segmentsRetriever.getUsedSegmentsForIntervals(
             TEST_DATA_SOURCE2,
-            Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL2) : null)
+            Collections.singletonList(jobInterval != null ? jobInterval.overlap(TEST_DATA_SOURCE_INTERVAL2) : null),
+            Segments.ONLY_VISIBLE
         )
     ).andReturn(ImmutableList.of(SEGMENT2));
 
-    EasyMock.replay(segmentLister);
+    EasyMock.replay(segmentsRetriever);
 
-    spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(spec, jsonMapper, segmentLister);
+    spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(spec, jsonMapper, segmentsRetriever);
     return HadoopDruidIndexerConfig.fromString(jsonMapper.writeValueAsString(spec));
   }
 }

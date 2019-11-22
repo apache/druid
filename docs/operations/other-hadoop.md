@@ -89,7 +89,7 @@ classloader.
 2. Batch ingestion uses jars from `hadoop-dependencies/` to submit Map/Reduce jobs (location customizable via the
 `druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html#extensions)).
 
-`hadoop-client:2.8.3` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
+`hadoop-client:2.8.5` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
 many Hadoop distributions (the version does not necessarily need to match), but if you run into issues, you can instead
 have Druid load libraries that exactly match your distribution. To do this, either copy the jars from your Hadoop
 cluster, or use the `pull-deps` tool to download the jars from a Maven repository.
@@ -209,7 +209,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.13.0")
 
 **Alternate workaround - 3**
 
-If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat jar: relocation all jackson packages will resolve it too. In this way, druid will not be affected by jackson library embedded in hadoop. Please follow the steps below:
+If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat jar: relocation all Jackson packages will resolve it too. In this way, druid will not be affected by Jackson library embedded in hadoop. Please follow the steps below:
 
 (1) Add all extensions you needed to `services/pom.xml` like
 
@@ -239,7 +239,7 @@ If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat j
   </dependency>
  ```
 
-(2) Shade jackson packages and assemble a fat jar.
+(2) Shade Jackson packages and assemble a fat jar.
 
 ```xml
 <plugin>

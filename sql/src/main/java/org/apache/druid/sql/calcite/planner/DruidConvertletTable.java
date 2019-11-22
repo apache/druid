@@ -68,6 +68,8 @@ public class DruidConvertletTable implements SqlRexConvertletTable
           .add(SqlStdOperatorTable.TIMESTAMP_DIFF)
           .add(SqlStdOperatorTable.UNION)
           .add(SqlStdOperatorTable.UNION_ALL)
+          .add(SqlStdOperatorTable.NULLIF)
+          .add(SqlStdOperatorTable.COALESCE)
           .add(OracleSqlOperatorTable.NVL)
           .build();
 

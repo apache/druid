@@ -91,6 +91,7 @@ public class S3DataSegmentArchiverTest
           S3DataSegmentPuller.KEY,
           "source_key"
       ))
+      .size(0)
       .build();
 
   @BeforeClass

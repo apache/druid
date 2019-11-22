@@ -260,24 +260,6 @@ export function validJson(json: string): boolean {
   }
 }
 
-// stringify JSON to string; if JSON is null, parse empty string ""
-export function stringifyJSON(item: any): string {
-  if (item != null) {
-    return JSON.stringify(item, null, 2);
-  } else {
-    return '';
-  }
-}
-
-// parse string to JSON object; if string is empty, return null
-export function parseStringToJSON(s: string): JSON | null {
-  if (s === '') {
-    return null;
-  } else {
-    return JSON.parse(s);
-  }
-}
-
 export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
@@ -336,5 +318,11 @@ export function copyAndAlert(copyString: string, alertMessage: string): void {
   AppToaster.show({
     message: alertMessage,
     intent: Intent.SUCCESS,
+  });
+}
+
+export function delay(ms: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
   });
 }

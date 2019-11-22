@@ -37,6 +37,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
@@ -48,7 +49,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class DistinctCountTopNQueryTest
+public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
 {
   private CloseableStupidPool<ByteBuffer> pool;
 

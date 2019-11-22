@@ -18,11 +18,8 @@
 import os
 import shutil
 import subprocess
-import sys
 import argparse
 import concurrent.futures
-import time
-import threading
 
 
 def generate_report(module_path, report_orig_path, report_out_path):
@@ -48,7 +45,7 @@ def generate_report(module_path, report_orig_path, report_out_path):
 def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
     tmp_path = os.path.abspath(tmp_path)
     license_report_root = os.path.join(tmp_path, "license-reports")
-    license_core_path =  os.path.join(license_report_root, "core")
+    license_core_path = os.path.join(license_report_root, "core")
     license_ext_path = os.path.join(license_report_root, "ext")
     shutil.rmtree(license_report_root, ignore_errors=True)
     os.makedirs(license_core_path)
@@ -70,7 +67,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
 
             extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
             script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
-    
+
     print("Generating dependency reports")
 
     if num_threads > 1:
@@ -96,7 +93,7 @@ if __name__ == "__main__":
         if args.clean_mvn_artifact_transfer:
             command = "rm -rf ~/.m2/repository/org/apache/maven/shared/maven-artifact-transfer"
             subprocess.check_call(command, shell=True)
-        
+
         generate_reports(args.druid_path, args.tmp_path, args.exclude_ext, args.num_threads)
     except KeyboardInterrupt:
         print('Interrupted, closing.')

@@ -44,7 +44,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.HttpUtil;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -114,7 +114,7 @@ public class ITBasicAuthConfigurationTest
   public void before()
   {
     // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
     );
   }
@@ -463,7 +463,7 @@ public class ITBasicAuthConfigurationTest
 
     LOG.info("Testing Avatica query on broker with incorrect credentials.");
     testAvaticaAuthFailure(brokerUrl);
-    
+
     LOG.info("Testing Avatica query on router with incorrect credentials.");
     testAvaticaAuthFailure(routerUrl);
 
@@ -522,7 +522,7 @@ public class ITBasicAuthConfigurationTest
     catch (AvaticaSqlException ase) {
       Assert.assertEquals(
           ase.getErrorMessage(),
-          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: ForbiddenException: Authentication failed."
+          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed username[admin]."
       );
       return;
     }

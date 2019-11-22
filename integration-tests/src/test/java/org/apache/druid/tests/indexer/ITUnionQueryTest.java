@@ -36,7 +36,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.ServerDiscoveryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -113,7 +113,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       }
 
       // wait until all events are ingested
-      RetryUtil.retryUntil(
+      ITRetryUtil.retryUntil(
           () -> {
             for (int i = 0; i < numTasks; i++) {
               final int countRows = queryHelper.countRows(fullDatasourceName + i, "2013-08-31/2013-09-01");
@@ -157,7 +157,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       // task should complete only after the segments are loaded by historical node
       for (int i = 0; i < numTasks; i++) {
         final int taskNum = i;
-        RetryUtil.retryUntil(
+        ITRetryUtil.retryUntil(
             () -> coordinator.areSegmentsLoaded(fullDatasourceName + taskNum),
             true,
             10000,
@@ -204,7 +204,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       LOG.info("Event Receiver Found at host [%s]", host);
 
       LOG.info("Checking worker /status/health for [%s]", host);
-      RetryUtil.retryUntilTrue(
+      ITRetryUtil.retryUntilTrue(
           () -> {
             try {
               StatusResponseHolder response = httpClient.go(

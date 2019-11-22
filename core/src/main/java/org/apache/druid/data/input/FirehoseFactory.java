@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
@@ -42,7 +43,7 @@ public interface FirehoseFactory<T extends InputRowParser>
    * Initialization method that connects up the fire hose.  If this method returns successfully it should be safe to
    * call hasMore() on the returned Firehose (which might subsequently block).
    * <p/>
-   * If this method returns null, then any attempt to call hasMore(), nextRow(), commit() and close() on the return
+   * If this method returns null, then any attempt to call hasMore(), nextRow() and close() on the return
    * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
    * invalid configuration is preferred over returning null.
    *
@@ -58,7 +59,7 @@ public interface FirehoseFactory<T extends InputRowParser>
    * Initialization method that connects up the fire hose.  If this method returns successfully it should be safe to
    * call hasMore() on the returned Firehose (which might subsequently block).
    * <p/>
-   * If this method returns null, then any attempt to call hasMore(), nextRow(), commit() and close() on the return
+   * If this method returns null, then any attempt to call hasMore(), nextRow() and close() on the return
    * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
    * invalid configuration is preferred over returning null.
    * <p/>
@@ -85,6 +86,7 @@ public interface FirehoseFactory<T extends InputRowParser>
     return connect(parser, temporaryDirectory);
   }
 
+  @JsonIgnore
   default boolean isSplittable()
   {
     return false;

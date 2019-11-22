@@ -84,7 +84,7 @@
             </goals>
             <phase>test</phase>
             <configuration>
-              <arguments>test</arguments>
+              <arguments>run test-ci</arguments>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>

@@ -82,12 +82,6 @@ public class PredicateFirehose implements Firehose
   }
 
   @Override
-  public Runnable commit()
-  {
-    return firehose.commit();
-  }
-
-  @Override
   public void close() throws IOException
   {
     firehose.close();

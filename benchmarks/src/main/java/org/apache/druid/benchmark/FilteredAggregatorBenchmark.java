@@ -27,6 +27,7 @@ import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -99,6 +100,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class FilteredAggregatorBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Param({"75000"})
   private int rowsPerSegment;
 

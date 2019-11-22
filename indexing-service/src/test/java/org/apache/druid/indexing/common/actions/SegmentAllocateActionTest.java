@@ -631,12 +631,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new LinearShardSpec(0))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new LinearShardSpec(1))
+                       .size(0)
                        .build()
         )
     );
@@ -694,12 +696,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(0, 2))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(1, 2))
+                       .size(0)
                        .build()
         )
     );
@@ -755,12 +759,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(0, 2))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(1, 2))
+                       .size(0)
                        .build()
         )
     );
@@ -792,12 +798,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(0, 2))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(1, 2))
+                       .size(0)
                        .build()
         )
     );
@@ -829,12 +837,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(0, 2))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new NumberedShardSpec(1, 2))
+                       .size(0)
                        .build()
         )
     );
@@ -869,12 +879,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new SingleDimensionShardSpec("foo", null, "bar", 0))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new SingleDimensionShardSpec("foo", "bar", null, 1))
+                       .size(0)
                        .build()
         )
     );
@@ -933,12 +945,14 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new HashBasedNumberedShardSpec(0, 2, ImmutableList.of("dim1"), objectMapper))
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(new HashBasedNumberedShardSpec(1, 2, ImmutableList.of("dim1"), objectMapper))
+                       .size(0)
                        .build()
         )
     );

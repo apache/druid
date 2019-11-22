@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +39,7 @@ import java.util.Map;
 
 /**
  */
-public class IncrementalIndexMultiValueSpecTest
+public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingTest
 {
   @Test
   public void test() throws IndexSizeExceededException

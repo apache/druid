@@ -72,7 +72,7 @@ hundred centroids. To get good accuracy readings on 95th percentiles with
 millions of rows of data, you may want to use several thousand centroids,
 especially with long tails, since that's where the approximation will be worse.
 
-### Creating approxiate histogram sketches at ingestion time
+### Creating approximate histogram sketches at ingestion time
 
 To use this feature, an "approxHistogram" or "approxHistogramFold" aggregator must be included at
 indexing time. The ingestion aggregator can only apply to numeric values. If you use "approxHistogram"
@@ -159,7 +159,7 @@ The histogram aggregator's output object has the following fields:
 - `upperLimit`: Upper limit of the histogram
 - `numBuckets`: Number of histogram buckets
 - `outlierHandlingMode`: Outlier handling mode
-- `count`: Total number of values contained in the histgram, excluding outliers
+- `count`: Total number of values contained in the histogram, excluding outliers
 - `lowerOutlierCount`: Count of outlier values below `lowerLimit`. Only used if the outlier mode is `overflow`.
 - `upperOutlierCount`: Count of outlier values above `upperLimit`. Only used if the outlier mode is `overflow`.
 - `missingValueCount`: Count of null values seen by the histogram.

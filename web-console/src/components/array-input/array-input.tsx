@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { TextArea } from '@blueprintjs/core';
-import React from 'react';
+import { Intent, TextArea } from '@blueprintjs/core';
+import React, { useState } from 'react';
 
 import { compact } from '../../utils';
 
@@ -28,41 +28,36 @@ export interface ArrayInputProps {
   placeholder?: string;
   large?: boolean;
   disabled?: boolean;
+  intent?: Intent;
 }
 
-export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringValue: string }> {
-  constructor(props: ArrayInputProps) {
-    super(props);
-    this.state = {
-      stringValue: Array.isArray(props.values) ? props.values.join(', ') : '',
-    };
-  }
+export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps) {
+  const { className, placeholder, large, disabled, intent } = props;
+  const [stringValue, setStringValue] = useState();
 
-  private handleChange = (e: any) => {
-    const { onChange } = this.props;
+  const handleChange = (e: any) => {
+    const { onChange } = props;
     const stringValue = e.target.value;
-    const newValues: string[] = stringValue.split(',').map((v: string) => v.trim());
+    const newValues: string[] = stringValue.split(/[,\s]+/).map((v: string) => v.trim());
     const newValuesFiltered = compact(newValues);
-    this.setState({
-      stringValue:
-        newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue,
-    });
-    if (onChange) onChange(stringValue === '' ? undefined : newValuesFiltered);
+    if (newValues.length === newValuesFiltered.length) {
+      onChange(stringValue === '' ? undefined : newValuesFiltered);
+      setStringValue(undefined);
+    } else {
+      setStringValue(stringValue);
+    }
   };
 
-  render(): JSX.Element {
-    const { className, placeholder, large, disabled } = this.props;
-    const { stringValue } = this.state;
-    return (
-      <TextArea
-        className={className}
-        value={stringValue}
-        onChange={this.handleChange}
-        placeholder={placeholder}
-        large={large}
-        disabled={disabled}
-        fill
-      />
-    );
-  }
-}
+  return (
+    <TextArea
+      className={className}
+      value={stringValue || props.values.join(', ')}
+      onChange={handleChange}
+      placeholder={placeholder}
+      large={large}
+      disabled={disabled}
+      intent={intent}
+      fill
+    />
+  );
+});

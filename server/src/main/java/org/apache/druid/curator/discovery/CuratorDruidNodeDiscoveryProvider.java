@@ -65,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 /**
+ *
  */
 @ManageLifecycle
 public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
@@ -98,7 +99,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
   {
     Preconditions.checkState(lifecycleLock.isStarted());
-    log.info("Creating a NodeDiscoverer for node [%s] and role [%s]", node, nodeRole);
+    log.debug("Creating a NodeDiscoverer for node [%s] and role [%s]", node, nodeRole);
     NodeDiscoverer nodeDiscoverer = new NodeDiscoverer(config, jsonMapper, curatorFramework, node, nodeRole);
     nodeDiscoverers.add(nodeDiscoverer);
     return nodeDiscoverer::nodeDiscovered;
@@ -112,7 +113,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     return nodeRoleWatchers.computeIfAbsent(
         nodeRole,
         role -> {
-          log.info("Creating NodeRoleWatcher for nodeRole [%s].", role);
+          log.debug("Creating NodeRoleWatcher for nodeRole [%s].", role);
           NodeRoleWatcher nodeRoleWatcher = new NodeRoleWatcher(
               listenerExecutor,
               curatorFramework,
@@ -120,7 +121,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               jsonMapper,
               role
           );
-          log.info("Created NodeRoleWatcher for nodeRole [%s].", role);
+          log.debug("Created NodeRoleWatcher for nodeRole [%s].", role);
           return nodeRoleWatcher;
         }
     );
@@ -134,13 +135,11 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     try {
-      log.info("starting");
-
-      // This is single-threaded to ensure that all listener calls are executed precisely in the oder of add/remove
-      // event occurences.
+      // This is single-threaded to ensure that all listener calls are executed precisely in the order of add/remove
+      // event occurrences.
       listenerExecutor = Execs.singleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
 
-      log.info("started");
+      log.debug("Started.");
 
       lifecycleLock.started();
     }
@@ -156,15 +155,13 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       throw new ISE("can't stop.");
     }
 
-    log.info("stopping");
+    log.debug("Stopping.");
 
     Closer closer = Closer.create();
     closer.registerAll(nodeRoleWatchers.values());
     closer.registerAll(nodeDiscoverers);
 
     CloseableUtils.closeBoth(closer, listenerExecutor::shutdownNow);
-
-    log.info("stopped");
   }
 
   private static class NodeRoleWatcher implements DruidNodeDiscovery, Closeable
@@ -176,7 +173,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     private final NodeRole nodeRole;
     private final ObjectMapper jsonMapper;
 
-    /** hostAndPort -> DiscoveryDruidNode */
+    /**
+     * hostAndPort -> DiscoveryDruidNode
+     */
     private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
     private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
@@ -244,7 +243,10 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         nodeViewInitialized = false;
       }
       if (!nodeViewInitialized) {
-        log.info("cache is not initialized yet. getAllNodes() might not return full information.");
+        log.info(
+            "Cache for node role [%s] not initialized yet; getAllNodes() might not return full information.",
+            nodeRole.getJsonName()
+        );
       }
       return unmodifiableNodes;
     }
@@ -285,12 +287,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               break;
             }
             default: {
-              log.info("Ignored event type [%s] for nodeRole watcher.", event.getType());
+              log.warn("Ignored event type[%s] for node watcher of role[%s].", event.getType(), nodeRole.getJsonName());
             }
           }
         }
         catch (Exception ex) {
-          log.error(ex, "unknown error in node watcher.");
+          log.error(ex, "Unknown error in node watcher of role[%s].", nodeRole.getJsonName());
         }
       }
     }
@@ -311,14 +313,15 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
       if (!nodeRole.equals(druidNode.getNodeRole())) {
         log.error(
-            "Node[%s:%s] add is discovered by node watcher of different node role. Ignored.",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode
+            "Node[%s] of role[%s] addition ignored due to mismatched role (expected role[%s]).",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName(),
+            nodeRole.getJsonName()
         );
         return;
       }
 
-      log.info("Node[%s:%s] appeared.", druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+      log.info("Node[%s] of role[%s] detected.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
 
       addNode(druidNode);
     }
@@ -342,9 +345,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         }
       } else {
         log.error(
-            "Node[%s:%s] discovered but existed already [%s].",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode,
+            "Node[%s] of role[%s] discovered but existed already [%s].",
+            druidNode.getDruidNode().getUriToUse(),
+            nodeRole.getJsonName(),
             prev
         );
       }
@@ -355,10 +358,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     {
       final byte[] data = event.getData().getData();
       if (data == null) {
-        log.error(
-            "Failed to get data for path [%s]. Ignoring a child removal event.",
-            event.getData().getPath()
-        );
+        log.error("Failed to get data for path [%s]. Ignoring a child removal event.", event.getData().getPath());
         return;
       }
 
@@ -366,14 +366,15 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
       if (!nodeRole.equals(druidNode.getNodeRole())) {
         log.error(
-            "Node[%s:%s] removal is discovered by node watcher of different role. Ignored.",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode
+            "Node[%s] of role[%s] removal ignored due to mismatched role (expected role[%s]).",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName(),
+            nodeRole.getJsonName()
         );
         return;
       }
 
-      log.info("Node[%s:%s] disappeared.", druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+      log.info("Node[%s] of role[%s] went offline.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
 
       removeNode(druidNode);
     }
@@ -385,9 +386,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
       if (prev == null) {
         log.error(
-            "Noticed disappearance of unknown druid node [%s:%s].",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode
+            "Noticed disappearance of unknown druid node [%s] of role[%s].",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName()
         );
         return;
       }
@@ -398,8 +399,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         for (Listener listener : nodeListeners) {
           safeSchedule(
               () -> listener.nodesRemoved(nodeRemoved),
-              "Exception occured in nodeRemoved(node=[%s]) in listener [%s].",
-              druidNode.getDruidNode().getHostAndPortToUse(),
+              "Exception occured in nodeRemoved(node[%s] of role[%s]) in listener [%s].",
+              druidNode.getDruidNode().getUriToUse(),
+              druidNode.getNodeRole().getJsonName(),
               listener
           );
         }
@@ -432,7 +434,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         return;
       }
 
-      log.info("Received INITIALIZED in node watcher.");
+      log.info("Node watcher of role[%s] is now initialized.", nodeRole.getJsonName());
 
       for (Listener listener : nodeListeners) {
         safeSchedule(
@@ -510,14 +512,18 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
       if (!nodeRole.equals(druidNode.getNodeRole())) {
         log.error(
-            "Node[%s:%s] add is discovered by node watcher of different node role. Ignored.",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode
+            "Node[%s] of role[%s] add is discovered by node watcher of different node role. Ignored.",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName()
         );
         return false;
       }
 
-      log.info("Node[%s:%s] appeared.", druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
+      log.info(
+          "Node[%s] of role[%s] appeared.",
+          druidNode.getDruidNode().getUriToUse(),
+          druidNode.getNodeRole().getJsonName()
+      );
       return true;
     }
 

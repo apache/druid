@@ -188,7 +188,10 @@ public class ExpressionFilterTest extends BaseFilterTest
   public void testConstantExpression()
   {
     assertFilterMatchesSkipVectorize(edf("1 + 1"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    assertFilterMatchesSkipVectorize(edf("'true'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+
     assertFilterMatchesSkipVectorize(edf("0 + 0"), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(edf("'false'"), ImmutableList.of());
   }
 
   @Test

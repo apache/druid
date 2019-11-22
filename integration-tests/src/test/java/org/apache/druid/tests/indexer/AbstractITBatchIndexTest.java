@@ -21,8 +21,8 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -30,12 +30,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.junit.Assert;
+import org.testng.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -166,7 +166,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
           fullReindexDatasourceName,
           "2013-08-31T00:00:00.000Z/2013-09-10T00:00:00.000Z"
       );
-      Assert.assertFalse("dimensions : " + dimensions, dimensions.contains("robot"));
+      Assert.assertFalse(dimensions.contains("robot"), "dimensions : " + dimensions);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -215,10 +215,12 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       final boolean perfectRollup = !taskSpec.contains("dynamic");
       final long newSubTasks = countCompleteSubTasks(dataSourceName, perfectRollup) - startSubTaskCount;
       Assert.assertTrue(
+          newSubTasks > 0,
           StringUtils.format(
               "The supervisor task[%s] didn't create any sub tasks. Was it executed in the parallel mode?",
               taskID
-          ), newSubTasks > 0);
+          )
+      );
     }
 
     // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
@@ -227,7 +229,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     // this method could return too early because the coordinator is merely reporting that all the
     // original segments have loaded.
     if (waitForNewVersion) {
-      RetryUtil.retryUntilTrue(
+      ITRetryUtil.retryUntilTrue(
           () -> {
             final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
                 coordinator.getAvailableSegments(dataSourceName)
@@ -244,7 +246,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       );
     }
 
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"
     );
   }
@@ -257,8 +259,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                     if (!perfectRollup) {
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
-                      return t.getType().equalsIgnoreCase(PartialSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialSegmentMergeTask.TYPE);
+                      return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE);
                     }
                   })
                   .count();

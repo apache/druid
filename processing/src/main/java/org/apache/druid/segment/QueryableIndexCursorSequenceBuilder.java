@@ -430,16 +430,6 @@ public class QueryableIndexCursorSequenceBuilder
     }
 
     @Override
-    public void advanceTo(int offset)
-    {
-      int count = 0;
-      while (count < offset && !isDone()) {
-        advance();
-        count++;
-      }
-    }
-
-    @Override
     public boolean isDone()
     {
       return !cursorOffset.withinBounds();

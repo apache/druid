@@ -239,7 +239,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.warn("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
                   child.getStat().getVersion());
@@ -298,7 +298,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info(
+              log.warn(
                   "Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
@@ -371,7 +371,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       public InventoryCacheListener(String containerKey, String inventoryPath)
       {
         this.containerKey = containerKey;
-        log.info("Created new InventoryCacheListener for %s", inventoryPath);
+        log.debug("Created new InventoryCacheListener for %s", inventoryPath);
       }
 
       @Override
@@ -388,7 +388,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.warn("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
                   child.getStat().getVersion());
@@ -411,7 +411,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.warn("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
                   child.getStat().getVersion());

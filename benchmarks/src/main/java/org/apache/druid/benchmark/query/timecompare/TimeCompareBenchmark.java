@@ -28,6 +28,7 @@ import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -119,6 +120,7 @@ public class TimeCompareBenchmark
   protected static final Map<String, String> SCRIPT_DOUBLE_SUM = new HashMap<>();
 
   static {
+    NullHandling.initializeForTests();
     SCRIPT_DOUBLE_SUM.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     SCRIPT_DOUBLE_SUM.put("fnReset", "function reset() { return 0 }");
     SCRIPT_DOUBLE_SUM.put("fnCombine", "function combine(a,b) { return a + b }");

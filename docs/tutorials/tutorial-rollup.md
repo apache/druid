@@ -24,7 +24,7 @@ sidebar_label: "Roll-up"
   -->
 
 
-Apache Druid (incubating) can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
+Apache Druid (incubating) can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
 This tutorial will demonstrate the effects of roll-up on an example dataset.
 
@@ -114,7 +114,7 @@ We will see how these definitions are used after we load this data.
 
 ## Load the example data
 
-From the apache-druid-#{DRUIDVERSION} package root, run the following command:
+From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/rollup-index.json --url http://localhost:8081

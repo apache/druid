@@ -30,7 +30,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -85,15 +84,15 @@ public class HadoopDruidIndexerConfig
 {
   private static final Injector INJECTOR;
 
-  public static final String CONFIG_PROPERTY = "druid.indexer.config";
-  public static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
-  public static final Splitter TAB_SPLITTER = Splitter.on("\t");
-  public static final Joiner TAB_JOINER = Joiner.on("\t");
+  static final String CONFIG_PROPERTY = "druid.indexer.config";
+  static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
+  static final Splitter TAB_SPLITTER = Splitter.on("\t");
+  static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  public static final IndexMerger INDEX_MERGER_V9;
-  public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
-  public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
+  static final IndexMerger INDEX_MERGER_V9;
+  static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
+  static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
 
@@ -102,18 +101,13 @@ public class HadoopDruidIndexerConfig
     INJECTOR = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder,
-                    Key.get(DruidNode.class, Self.class),
-                    new DruidNode("hadoop-indexer", null, false, null, null, true, false)
-                );
-                JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
-              }
+            (Module) binder -> {
+              JsonConfigProvider.bindInstance(
+                  binder,
+                  Key.get(DruidNode.class, Self.class),
+                  new DruidNode("hadoop-indexer", null, false, null, null, true, false)
+              );
+              JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
             },
             new IndexingHadoopModule()
         )
@@ -139,7 +133,7 @@ public class HadoopDruidIndexerConfig
     return new HadoopDruidIndexerConfig(spec);
   }
 
-  public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
+  private static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
     // Eventually PathSpec needs to get rid of its Hadoop dependency, then maybe this can be ingested directly without
     // the Map<> intermediary
@@ -232,14 +226,7 @@ public class HadoopDruidIndexerConfig
       shardSpecLookups.put(
           entry.getKey(), actualSpec.getLookup(
               Lists.transform(
-                  entry.getValue(), new Function<HadoopyShardSpec, ShardSpec>()
-                  {
-                    @Override
-                    public ShardSpec apply(HadoopyShardSpec input)
-                    {
-                      return input.getActualSpec();
-                    }
-                  }
+                  entry.getValue(), HadoopyShardSpec::getActualSpec
               )
           )
       );
@@ -304,7 +291,7 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getIndexSpecForIntermediatePersists();
   }
 
-  public boolean isOverwriteFiles()
+  boolean isOverwriteFiles()
   {
     return schema.getTuningConfig().isOverwriteFiles();
   }
@@ -319,24 +306,30 @@ public class HadoopDruidIndexerConfig
   {
     Optional<SortedSet<Interval>> setOptional = schema.getDataSchema().getGranularitySpec().bucketIntervals();
     if (setOptional.isPresent()) {
-      return Optional.of((List<Interval>) JodaUtils.condenseIntervals(setOptional.get()));
+      return Optional.of(JodaUtils.condenseIntervals(setOptional.get()));
     } else {
       return Optional.absent();
     }
   }
 
-  public boolean isDeterminingPartitions()
+  boolean isDeterminingPartitions()
   {
     return schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true);
   }
 
   public int getTargetPartitionSize()
   {
-    final Integer targetPartitionSize = schema.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment();
+    DimensionBasedPartitionsSpec spec = schema.getTuningConfig().getPartitionsSpec();
+
+    if (spec.getTargetRowsPerSegment() != null) {
+      return spec.getTargetRowsPerSegment();
+    }
+
+    final Integer targetPartitionSize = spec.getMaxRowsPerSegment();
     return targetPartitionSize == null ? -1 : targetPartitionSize;
   }
 
-  public boolean isForceExtendableShardSpecs()
+  boolean isForceExtendableShardSpecs()
   {
     return schema.getTuningConfig().isForceExtendableShardSpecs();
   }
@@ -353,7 +346,7 @@ public class HadoopDruidIndexerConfig
 
   public InputRowParser getParser()
   {
-    return schema.getDataSchema().getParser();
+    return Preconditions.checkNotNull(schema.getDataSchema().getParser(), "inputRowParser");
   }
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)
@@ -361,7 +354,7 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).get(bucket.partitionNum);
   }
 
-  public int getShardSpecCount(Bucket bucket)
+  int getShardSpecCount(Bucket bucket)
   {
     return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).size();
   }
@@ -376,18 +369,18 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
-  public boolean isUseYarnRMJobStatusFallback()
+  boolean isUseYarnRMJobStatusFallback()
   {
     return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
   }
 
 
-  public void setHadoopJobIdFileName(String hadoopJobIdFileName)
+  void setHadoopJobIdFileName(String hadoopJobIdFileName)
   {
     this.hadoopJobIdFileName = hadoopJobIdFileName;
   }
 
-  public String getHadoopJobIdFileName()
+  String getHadoopJobIdFileName()
   {
     return hadoopJobIdFileName;
   }
@@ -396,9 +389,6 @@ public class HadoopDruidIndexerConfig
    * Job instance should have Configuration set (by calling {@link #addJobProperties(Job)}
    * or via injected system properties) before this method is called.  The {@link PathSpec} may
    * create objects which depend on the values of these configurations.
-   * @param job
-   * @return
-   * @throws IOException
    */
   public Job addInputPaths(Job job) throws IOException
   {
@@ -416,7 +406,7 @@ public class HadoopDruidIndexerConfig
    *
    * @return the Bucket that this row belongs to
    */
-  public Optional<Bucket> getBucket(InputRow inputRow)
+  Optional<Bucket> getBucket(InputRow inputRow)
   {
     final Optional<Interval> timeBucket = schema.getDataSchema().getGranularitySpec().bucketInterval(
         DateTimes.utc(inputRow.getTimestampFromEpoch())
@@ -442,13 +432,13 @@ public class HadoopDruidIndexerConfig
 
   }
 
-  public Optional<Set<Interval>> getSegmentGranularIntervals()
+  Optional<Set<Interval>> getSegmentGranularIntervals()
   {
     return Optional.fromNullable(
-        (Set<Interval>) schema.getDataSchema()
-                              .getGranularitySpec()
-                              .bucketIntervals()
-                              .orNull()
+        schema.getDataSchema()
+              .getGranularitySpec()
+              .bucketIntervals()
+              .orNull()
     );
   }
 
@@ -459,40 +449,35 @@ public class HadoopDruidIndexerConfig
                  .inputIntervals();
   }
 
-  public Optional<Iterable<Bucket>> getAllBuckets()
+  Optional<Iterable<Bucket>> getAllBuckets()
   {
     Optional<Set<Interval>> intervals = getSegmentGranularIntervals();
     if (intervals.isPresent()) {
       return Optional.of(
-          (Iterable<Bucket>) FunctionalIterable
+          FunctionalIterable
               .create(intervals.get())
               .transformCat(
-                  new Function<Interval, Iterable<Bucket>>()
-                  {
-                    @Override
-                    public Iterable<Bucket> apply(Interval input)
-                    {
-                      final DateTime bucketTime = input.getStart();
-                      final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime.getMillis());
-                      if (specs == null) {
-                        return ImmutableList.of();
-                      }
-
-                      return FunctionalIterable
-                          .create(specs)
-                          .transform(
-                              new Function<HadoopyShardSpec, Bucket>()
-                              {
-                                int i = 0;
-
-                                @Override
-                                public Bucket apply(HadoopyShardSpec input)
-                                {
-                                  return new Bucket(input.getShardNum(), bucketTime, i++);
-                                }
-                              }
-                          );
+                  input -> {
+                    final DateTime bucketTime = input.getStart();
+                    final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime.getMillis());
+                    if (specs == null) {
+                      return ImmutableList.of();
                     }
+
+                    return FunctionalIterable
+                        .create(specs)
+                        .transform(
+                            new Function<HadoopyShardSpec, Bucket>()
+                            {
+                              int i = 0;
+
+                              @Override
+                              public Bucket apply(HadoopyShardSpec input)
+                              {
+                                return new Bucket(input.getShardNum(), bucketTime, i++);
+                              }
+                            }
+                        );
                   }
               )
       );
@@ -517,7 +502,7 @@ public class HadoopDruidIndexerConfig
    * @return the intermediate path for this job run.
    */
 
-  public Path makeIntermediatePath()
+  Path makeIntermediatePath()
   {
     return new Path(
         StringUtils.format(
@@ -530,7 +515,7 @@ public class HadoopDruidIndexerConfig
     );
   }
 
-  public Path makeSegmentPartitionInfoPath(Interval bucketInterval)
+  Path makeSegmentPartitionInfoPath(Interval bucketInterval)
   {
     return new Path(
         StringUtils.format(
@@ -542,7 +527,7 @@ public class HadoopDruidIndexerConfig
     );
   }
 
-  public Path makeIntervalInfoPath()
+  Path makeIntervalInfoPath()
   {
     return new Path(
         StringUtils.format(
@@ -552,27 +537,27 @@ public class HadoopDruidIndexerConfig
     );
   }
 
-  public Path makeDescriptorInfoDir()
+  Path makeDescriptorInfoDir()
   {
     return new Path(makeIntermediatePath(), "segmentDescriptorInfo");
   }
 
-  public Path makeGroupedDataDir()
+  Path makeGroupedDataDir()
   {
     return new Path(makeIntermediatePath(), "groupedData");
   }
 
-  public Path makeDescriptorInfoPath(DataSegment segment)
+  Path makeDescriptorInfoPath(DataSegment segment)
   {
     return new Path(makeDescriptorInfoDir(), StringUtils.removeChar(segment.getId() + ".json", ':'));
   }
 
-  public void addJobProperties(Job job)
+  void addJobProperties(Job job)
   {
     addJobProperties(job.getConfiguration());
   }
 
-  public void addJobProperties(Configuration conf)
+  void addJobProperties(Configuration conf)
   {
     for (final Map.Entry<String, String> entry : schema.getTuningConfig().getJobProperties().entrySet()) {
       conf.set(entry.getKey(), entry.getValue());
@@ -594,8 +579,8 @@ public class HadoopDruidIndexerConfig
   public void verify()
   {
     Preconditions.checkNotNull(schema.getDataSchema().getDataSource(), "dataSource");
+    Preconditions.checkNotNull(schema.getDataSchema().getParser(), "inputRowParser");
     Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec(), "parseSpec");
-    Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec().getTimestampSpec(), "timestampSpec");
     Preconditions.checkNotNull(schema.getDataSchema().getGranularitySpec(), "granularitySpec");
     Preconditions.checkNotNull(pathSpec, "inputSpec");
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
@@ -603,7 +588,7 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
   }
 
-  public List<String> getAllowedHadoopPrefix()
+  List<String> getAllowedHadoopPrefix()
   {
     return allowedHadoopPrefix;
   }

@@ -21,8 +21,9 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
 
-import { RuleEditor } from '../../components';
+import { ExternalLink, RuleEditor } from '../../components';
 import { QueryManager } from '../../utils';
+import { DRUID_DOCS_VERSION } from '../../variables';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
 import './retention-dialog.scss';
@@ -171,8 +172,6 @@ export class RetentionDialog extends React.PureComponent<
       <SnitchDialog
         className="retention-dialog"
         saveDisabled={false}
-        canOutsideClickClose={false}
-        isOpen
         onClose={onCancel}
         title={`Edit retention rules: ${datasource}${
           datasource === '_default' ? ' (cluster defaults)' : ''
@@ -184,12 +183,11 @@ export class RetentionDialog extends React.PureComponent<
         <p>
           Druid uses rules to determine what data should be retained in the cluster. The rules are
           evaluated in order from top to bottom. For more information please refer to the{' '}
-          <a
-            href="https://druid.apache.org/docs/latest/operations/rule-configuration.html"
-            target="_blank"
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/rule-configuration.html`}
           >
             documentation
-          </a>
+          </ExternalLink>
           .
         </p>
         <FormGroup>{(currentRules || []).map(this.renderRule)}</FormGroup>

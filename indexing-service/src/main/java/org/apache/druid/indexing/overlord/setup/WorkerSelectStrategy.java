@@ -38,7 +38,9 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "fillCapacityWithAffinity", value = FillCapacityWithAffinityWorkerSelectStrategy.class),
     @JsonSubTypes.Type(name = "equalDistribution", value = EqualDistributionWorkerSelectStrategy.class),
     @JsonSubTypes.Type(name = "equalDistributionWithAffinity", value = EqualDistributionWithAffinityWorkerSelectStrategy.class),
-    @JsonSubTypes.Type(name = "javascript", value = JavaScriptWorkerSelectStrategy.class)
+    @JsonSubTypes.Type(name = "javascript", value = JavaScriptWorkerSelectStrategy.class),
+    @JsonSubTypes.Type(name = "fillCapacityWithCategorySpec", value = FillCapacityWithCategorySpecWorkerSelectStrategy.class),
+    @JsonSubTypes.Type(name = "equalDistributionWithCategorySpec", value = EqualDistributionWithCategorySpecWorkerSelectStrategy.class)
 })
 @PublicApi
 public interface WorkerSelectStrategy

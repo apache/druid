@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -223,6 +224,12 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public int getMaxPendingPersists()
   {
     return maxPendingPersists;
+  }
+
+  @Override
+  public PartitionsSpec getPartitionsSpec()
+  {
+    throw new UnsupportedOperationException();
   }
 
   @JsonProperty

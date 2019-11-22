@@ -16,63 +16,47 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { ShowJson } from '../../components';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface SegmentTableActionDialogProps extends IDialogProps {
+interface SegmentTableActionDialogProps {
   segmentId?: string;
   datasourceId?: string;
   actions: BasicAction[];
   onClose: () => void;
 }
 
-interface SegmentTableActionDialogState {
-  activeTab: 'metadata';
-}
+export const SegmentTableActionDialog = React.memo(function SegmentTableActionDialog(
+  props: SegmentTableActionDialogProps,
+) {
+  const { segmentId, onClose, datasourceId, actions } = props;
+  const [activeTab, setActiveTab] = useState('metadata');
 
-export class SegmentTableActionDialog extends React.PureComponent<
-  SegmentTableActionDialogProps,
-  SegmentTableActionDialogState
-> {
-  constructor(props: SegmentTableActionDialogProps) {
-    super(props);
-    this.state = {
-      activeTab: 'metadata',
-    };
-  }
+  const taskTableSideButtonMetadata: SideButtonMetaData[] = [
+    {
+      icon: 'manually-entered-data',
+      text: 'Metadata',
+      active: activeTab === 'metadata',
+      onClick: () => setActiveTab('metadata'),
+    },
+  ];
 
-  render(): React.ReactNode {
-    const { segmentId, onClose, datasourceId, actions } = this.props;
-    const { activeTab } = this.state;
-
-    const taskTableSideButtonMetadata: SideButtonMetaData[] = [
-      {
-        icon: 'manually-entered-data',
-        text: 'Metadata',
-        active: activeTab === 'metadata',
-        onClick: () => this.setState({ activeTab: 'metadata' }),
-      },
-    ];
-
-    return (
-      <TableActionDialog
-        isOpen
-        sideButtonMetadata={taskTableSideButtonMetadata}
-        onClose={onClose}
-        title={`Segment: ${segmentId}`}
-        actions={actions}
-      >
-        {activeTab === 'metadata' && (
-          <ShowJson
-            endpoint={`/druid/coordinator/v1/metadata/datasources/${datasourceId}/segments/${segmentId}`}
-            downloadFilename={`Segment-metadata-${segmentId}.json`}
-          />
-        )}
-      </TableActionDialog>
-    );
-  }
-}
+  return (
+    <TableActionDialog
+      sideButtonMetadata={taskTableSideButtonMetadata}
+      onClose={onClose}
+      title={`Segment: ${segmentId}`}
+      actions={actions}
+    >
+      {activeTab === 'metadata' && (
+        <ShowJson
+          endpoint={`/druid/coordinator/v1/metadata/datasources/${datasourceId}/segments/${segmentId}`}
+          downloadFilename={`Segment-metadata-${segmentId}.json`}
+        />
+      )}
+    </TableActionDialog>
+  );
+});

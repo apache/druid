@@ -65,6 +65,9 @@ public class CloseableIterators
       @Override
       public boolean hasNext()
       {
+        if (closed) {
+          return false;
+        }
         return innerIterator.hasNext();
       }
 

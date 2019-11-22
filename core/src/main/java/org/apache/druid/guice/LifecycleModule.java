@@ -60,7 +60,7 @@ public class LifecycleModule implements Module
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
-   * @param clazz, the class to instantiate
+   * @param clazz the class to instantiate
    * @return this, for chaining.
    */
   public static void register(Binder binder, Class<?> clazz)
@@ -81,7 +81,7 @@ public class LifecycleModule implements Module
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
-   * @param clazz, the class to instantiate
+   * @param clazz the class to instantiate
    * @param annotation The annotation class to register with Guice
    * @return this, for chaining
    */

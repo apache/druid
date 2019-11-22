@@ -46,7 +46,7 @@ The Overlord provides a UI for managing tasks and workers. For more details, ple
 
 If a MiddleManager has task failures above a threshold, the Overlord will blacklist these MiddleManagers. No more than 20% of the MiddleManagers can be blacklisted. Blacklisted MiddleManagers will be periodically whitelisted.
 
-The following vairables can be used to set the threshold and blacklist timeouts.
+The following variables can be used to set the threshold and blacklist timeouts.
 
 ```
 druid.indexer.runner.maxRetriesBeforeBlacklist

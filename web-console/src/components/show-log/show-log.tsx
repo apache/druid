@@ -75,6 +75,13 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
         return logValue;
       },
       onStateChange: ({ result, loading, error }) => {
+        const { tail } = this.state;
+        if (result && tail) {
+          const { current } = this.log;
+          if (current) {
+            current.scrollTop = current.scrollHeight;
+          }
+        }
         this.setState({
           logValue: result,
           loading,
@@ -101,7 +108,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   addTailer() {
     if (this.interval) return;
     this.interval = Number(
-      setInterval(() => this.showLogQueryManager.runQuery(null), ShowLog.CHECK_INTERVAL),
+      setInterval(() => this.showLogQueryManager.rerunLastQuery(true), ShowLog.CHECK_INTERVAL),
     );
   }
 
@@ -141,7 +148,12 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           )}
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
-              <AnchorButton text="Save" minimal download={downloadFilename} href={endpoint} />
+              <AnchorButton
+                text="Save"
+                minimal
+                download={downloadFilename}
+                href={UrlBaser.base(endpoint)}
+              />
             )}
             <Button
               text="Copy"

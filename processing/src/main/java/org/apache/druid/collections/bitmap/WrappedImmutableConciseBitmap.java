@@ -19,9 +19,9 @@
 
 package org.apache.druid.collections.bitmap;
 
-
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.PeekableIntIterator;
 
 import java.nio.IntBuffer;
 
@@ -74,6 +74,12 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
   public IntIterator iterator()
   {
     return bitmap.iterator();
+  }
+
+  @Override
+  public PeekableIntIterator peekableIterator()
+  {
+    return new ConcisePeekableIteratorAdapter(bitmap.iterator());
   }
 
   @Override

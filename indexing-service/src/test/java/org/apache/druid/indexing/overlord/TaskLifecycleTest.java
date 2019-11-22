@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Function;
@@ -35,11 +33,20 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -79,6 +86,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -88,6 +96,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.Monitor;
@@ -102,6 +112,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -270,65 +281,99 @@ public class TaskLifecycleTest
     );
   }
 
-  private static class MockExceptionalFirehoseFactory implements FirehoseFactory
+  private static class MockExceptionInputSource extends AbstractInputSource
   {
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
     {
-      return new Firehose()
+      return new InputSourceReader()
       {
         @Override
-        public boolean hasMore()
+        public CloseableIterator<InputRow> read()
         {
-          return true;
-        }
-
-        @Nullable
-        @Override
-        public InputRow nextRow()
-        {
-          throw new RuntimeException("HA HA HA");
-        }
-
-        @Override
-        public Runnable commit()
-        {
-          return new Runnable()
+          return new CloseableIterator<InputRow>()
           {
             @Override
-            public void run()
+            public void close()
             {
+            }
 
+            @Override
+            public boolean hasNext()
+            {
+              return true;
+            }
+
+            @Override
+            public InputRow next()
+            {
+              throw new RuntimeException("HA HA HA");
             }
           };
         }
 
         @Override
-        public void close()
+        public CloseableIterator<InputRowListPlusRawValues> sample()
         {
-
+          throw new UnsupportedOperationException();
         }
       };
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
+    }
+  }
+
+  private static class MockInputSource extends AbstractInputSource
+  {
+    @Override
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+    {
+      return new InputSourceReader()
+      {
+        @Override
+        public CloseableIterator<InputRow> read()
+        {
+          final Iterator<InputRow> inputRowIterator = IDX_TASK_INPUT_ROWS.iterator();
+          return CloseableIterators.withEmptyBaggage(inputRowIterator);
+        }
+
+        @Override
+        public CloseableIterator<InputRowListPlusRawValues> sample()
+        {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
     }
   }
 
   private static class MockFirehoseFactory implements FirehoseFactory
   {
-    @JsonProperty
-    private boolean usedByRealtimeIdxTask;
-
-    @JsonCreator
-    public MockFirehoseFactory(@JsonProperty("usedByRealtimeIdxTask") boolean usedByRealtimeIdxTask)
-    {
-      this.usedByRealtimeIdxTask = usedByRealtimeIdxTask;
-    }
-
     @Override
     public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
-      final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
-                                                  ? REALTIME_IDX_TASK_INPUT_ROWS.iterator()
-                                                  : IDX_TASK_INPUT_ROWS.iterator();
+      final Iterator<InputRow> inputRowIterator = REALTIME_IDX_TASK_INPUT_ROWS.iterator();
 
       return new Firehose()
       {
@@ -343,19 +388,6 @@ public class TaskLifecycleTest
         public InputRow nextRow()
         {
           return inputRowIterator.next();
-        }
-
-        @Override
-        public Runnable commit()
-        {
-          return new Runnable()
-          {
-            @Override
-            public void run()
-            {
-
-            }
-          };
         }
 
         @Override
@@ -422,8 +454,9 @@ public class TaskLifecycleTest
       case METADATA_TASK_STORAGE: {
         TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
         mapper.registerSubtypes(
-            new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
-            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
+            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory"),
+            new NamedType(MockInputSource.class, "mockInputSource"),
+            new NamedType(NoopInputFormat.class, "noopInputFormat")
         );
         testDerbyConnector.createTaskTables();
         testDerbyConnector.createSegmentTable();
@@ -693,17 +726,17 @@ public class TaskLifecycleTest
         new IndexIngestionSpec(
             new DataSchema(
                 "foo",
-                null,
+                new TimestampSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
-                null,
-                mapper
+                null
             ),
-            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -787,7 +820,7 @@ public class TaskLifecycleTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
+            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -984,11 +1017,13 @@ public class TaskLifecycleTest
           throw new ISE("Failed to get a lock");
         }
 
-        final DataSegment segment = DataSegment.builder()
-                                               .dataSource("ds")
-                                               .interval(interval)
-                                               .version(lock.getVersion())
-                                               .build();
+        final DataSegment segment = DataSegment
+            .builder()
+            .dataSource("ds")
+            .interval(interval)
+            .version(lock.getVersion())
+            .size(0)
+            .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
@@ -1023,11 +1058,13 @@ public class TaskLifecycleTest
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
-        final DataSegment segment = DataSegment.builder()
-                                               .dataSource("ds")
-                                               .interval(Intervals.of("2012-01-01/P2D"))
-                                               .version(myLock.getVersion())
-                                               .build();
+        final DataSegment segment = DataSegment
+            .builder()
+            .dataSource("ds")
+            .interval(Intervals.of("2012-01-01/P2D"))
+            .version(myLock.getVersion())
+            .size(0)
+            .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
@@ -1063,11 +1100,13 @@ public class TaskLifecycleTest
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
-        final DataSegment segment = DataSegment.builder()
-                                               .dataSource("ds")
-                                               .interval(Intervals.of("2012-01-01/P1D"))
-                                               .version(myLock.getVersion() + "1!!!1!!")
-                                               .build();
+        final DataSegment segment = DataSegment
+            .builder()
+            .dataSource("ds")
+            .interval(Intervals.of("2012-01-01/P1D"))
+            .version(myLock.getVersion() + "1!!!1!!")
+            .size(0)
+            .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
@@ -1199,17 +1238,17 @@ public class TaskLifecycleTest
         new IndexIngestionSpec(
             new DataSchema(
                 "foo",
-                null,
+                new TimestampSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
-                null,
-                mapper
+                null
             ),
-            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1305,17 +1344,17 @@ public class TaskLifecycleTest
         new IndexIngestionSpec(
             new DataSchema(
                 "foo",
-                null,
+                new TimestampSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
-                null,
-                mapper
+                null
             ),
-            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
@@ -1413,14 +1452,22 @@ public class TaskLifecycleTest
     String taskId = StringUtils.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
-        null,
+        TestHelper.makeJsonMapper().convertValue(
+            new MapInputRowParser(
+                new TimeAndDimsParseSpec(
+                    new TimestampSpec(null, null, null),
+                    DimensionsSpec.EMPTY
+                )
+            ),
+            JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+        ),
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
         new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         null,
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
-        new MockFirehoseFactory(true),
+        new MockFirehoseFactory(),
         null
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );

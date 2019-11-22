@@ -28,6 +28,8 @@ import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -35,10 +37,10 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -48,7 +50,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -67,7 +68,6 @@ public class DruidCoordinatorSegmentCompactorTest
     @Override
     public String compactSegments(
         List<DataSegment> segments,
-        @Nullable Long targetCompactionSizeBytes,
         int compactionTaskPriority,
         ClientCompactQueryTuningConfig tuningConfig,
         Map<String, Object> context
@@ -79,18 +79,6 @@ public class DruidCoordinatorSegmentCompactorTest
           segments.get(0).getInterval().getStart(),
           segments.get(segments.size() - 1).getInterval().getEnd()
       );
-      DataSegment compactSegment = new DataSegment(
-          segments.get(0).getDataSource(),
-          compactInterval,
-          "newVersion_" + compactVersionSuffix++,
-          null,
-          segments.get(0).getDimensions(),
-          segments.get(0).getMetrics(),
-          NoneShardSpec.instance(),
-          1,
-          segments.stream().mapToLong(DataSegment::getSize).sum()
-      );
-
       final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(segments.get(0).getDataSource());
       segments.forEach(
           segment -> timeline.remove(
@@ -99,11 +87,44 @@ public class DruidCoordinatorSegmentCompactorTest
               segment.getShardSpec().createChunk(segment)
           )
       );
-      timeline.add(
-          compactInterval,
-          compactSegment.getVersion(),
-          compactSegment.getShardSpec().createChunk(compactSegment)
-      );
+      final String version = "newVersion_" + compactVersionSuffix++;
+      final long segmentSize = segments.stream().mapToLong(DataSegment::getSize).sum() / 2;
+      for (int i = 0; i < 2; i++) {
+        DataSegment compactSegment = new DataSegment(
+            segments.get(0).getDataSource(),
+            compactInterval,
+            version,
+            null,
+            segments.get(0).getDimensions(),
+            segments.get(0).getMetrics(),
+            new NumberedShardSpec(i, 0),
+            new CompactionState(
+                new DynamicPartitionsSpec(
+                    tuningConfig.getMaxRowsPerSegment(),
+                    tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
+                ),
+                ImmutableMap.of(
+                    "bitmap",
+                    ImmutableMap.of("type", "concise"),
+                    "dimensionCompression",
+                    "lz4",
+                    "metricCompression",
+                    "lz4",
+                    "longEncoding",
+                    "longs"
+                )
+            ),
+            1,
+            segmentSize
+        );
+
+        timeline.add(
+            compactInterval,
+            compactSegment.getVersion(),
+            compactSegment.getShardSpec().createChunk(compactSegment)
+        );
+      }
+
       return "task_" + idSuffix++;
     }
 
@@ -129,7 +150,7 @@ public class DruidCoordinatorSegmentCompactorTest
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       for (int j : new int[] {0, 1, 2, 3, 7, 8}) {
-        for (int k = 0; k < 2; k++) {
+        for (int k = 0; k < 4; k++) {
           segments.add(createSegment(dataSource, j, true, k));
           segments.add(createSegment(dataSource, j, false, k));
         }
@@ -174,7 +195,10 @@ public class DruidCoordinatorSegmentCompactorTest
   @Test
   public void testRun()
   {
-    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
+    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(
+        new DefaultObjectMapper(),
+        indexingServiceClient
+    );
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -187,7 +211,7 @@ public class DruidCoordinatorSegmentCompactorTest
       }
     };
     int expectedCompactTaskCount = 1;
-    int expectedRemainingSegments = 200;
+    int expectedRemainingSegments = 400;
 
     // compact for 2017-01-08T12:00:00.000Z/2017-01-09T12:00:00.000Z
     assertCompactSegments(
@@ -197,7 +221,7 @@ public class DruidCoordinatorSegmentCompactorTest
         expectedCompactTaskCount,
         expectedVersionSupplier
     );
-    expectedRemainingSegments -= 20;
+    expectedRemainingSegments -= 40;
     assertCompactSegments(
         compactor,
         Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 8, 9),
@@ -207,7 +231,7 @@ public class DruidCoordinatorSegmentCompactorTest
     );
 
     // compact for 2017-01-07T12:00:00.000Z/2017-01-08T12:00:00.000Z
-    expectedRemainingSegments -= 20;
+    expectedRemainingSegments -= 40;
     assertCompactSegments(
         compactor,
         Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 8, 8),
@@ -215,7 +239,7 @@ public class DruidCoordinatorSegmentCompactorTest
         expectedCompactTaskCount,
         expectedVersionSupplier
     );
-    expectedRemainingSegments -= 20;
+    expectedRemainingSegments -= 40;
     assertCompactSegments(
         compactor,
         Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", 4, 5),
@@ -225,7 +249,7 @@ public class DruidCoordinatorSegmentCompactorTest
     );
 
     for (int endDay = 4; endDay > 1; endDay -= 1) {
-      expectedRemainingSegments -= 20;
+      expectedRemainingSegments -= 40;
       assertCompactSegments(
           compactor,
           Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", endDay, endDay),
@@ -233,7 +257,7 @@ public class DruidCoordinatorSegmentCompactorTest
           expectedCompactTaskCount,
           expectedVersionSupplier
       );
-      expectedRemainingSegments -= 20;
+      expectedRemainingSegments -= 40;
       assertCompactSegments(
           compactor,
           Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT00:00:00", endDay - 1, endDay),
@@ -296,10 +320,12 @@ public class DruidCoordinatorSegmentCompactorTest
       List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(expectedInterval);
       Assert.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
-      Assert.assertEquals(1, chunks.size());
-      DataSegment segment = chunks.get(0).getObject();
-      Assert.assertEquals(expectedInterval, segment.getInterval());
-      Assert.assertEquals(expectedVersionSupplier.get(), segment.getVersion());
+      Assert.assertEquals(2, chunks.size());
+      final String expectedVersion = expectedVersionSupplier.get();
+      for (PartitionChunk<DataSegment> chunk : chunks) {
+        Assert.assertEquals(expectedInterval, chunk.getObject().getInterval());
+        Assert.assertEquals(expectedVersion, chunk.getObject().getVersion());
+      }
     }
   }
 
@@ -313,7 +339,7 @@ public class DruidCoordinatorSegmentCompactorTest
       Assert.assertEquals(1, holders.size());
       for (TimelineObjectHolder<String, DataSegment> holder : holders) {
         List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject());
-        Assert.assertEquals(2, chunks.size());
+        Assert.assertEquals(4, chunks.size());
         for (PartitionChunk<DataSegment> chunk : chunks) {
           DataSegment segment = chunk.getObject();
           Assert.assertEquals(interval, segment.getInterval());
@@ -369,8 +395,6 @@ public class DruidCoordinatorSegmentCompactorTest
               dataSource,
               0,
               50L,
-              50L,
-              null,
               null,
               new Period("PT1H"), // smaller than segment interval
               null,

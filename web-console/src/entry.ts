@@ -38,7 +38,6 @@ if (!container) throw new Error('container not found');
 
 interface ConsoleConfig {
   title?: string;
-  hideLegacy?: boolean;
   baseURL?: string;
   customHeaderName?: string;
   customHeaderValue?: string;
@@ -53,7 +52,7 @@ if (typeof consoleConfig.title === 'string') {
 
 if (consoleConfig.baseURL) {
   axios.defaults.baseURL = consoleConfig.baseURL;
-  UrlBaser.baseURL = consoleConfig.baseURL;
+  UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
   axios.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
@@ -64,7 +63,6 @@ if (consoleConfig.customHeaders) {
 
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
-    hideLegacy: Boolean(consoleConfig.hideLegacy),
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
   }) as any,
   container,

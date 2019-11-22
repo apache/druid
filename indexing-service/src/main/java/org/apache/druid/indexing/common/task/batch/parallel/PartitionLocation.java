@@ -19,34 +19,33 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.Interval;
 
 import java.net.URI;
+import java.util.Objects;
 
 /**
- * This class represents the intermediary data server where the partition of {@link #interval} and {@link #partitionId}
- * is stored.
+ * This class represents the intermediary data server where the partition of {@link #interval} and
+ * {@link #getPartitionId()} is stored.
  */
-public class PartitionLocation
+abstract class PartitionLocation<T>
 {
   private final String host;
   private final int port;
   private final boolean useHttps;
   private final String subTaskId;
   private final Interval interval;
-  private final int partitionId;
+  private final T secondaryPartition;
 
-  @JsonCreator
-  public PartitionLocation(
-      @JsonProperty("host") String host,
-      @JsonProperty("port") int port,
-      @JsonProperty("useHttps") boolean useHttps,
-      @JsonProperty("subTaskId") String subTaskId,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("partitionId") int partitionId
+  PartitionLocation(
+      String host,
+      int port,
+      boolean useHttps,
+      String subTaskId,
+      Interval interval,
+      T secondaryPartition
   )
   {
     this.host = host;
@@ -54,7 +53,7 @@ public class PartitionLocation
     this.useHttps = useHttps;
     this.subTaskId = subTaskId;
     this.interval = interval;
-    this.partitionId = partitionId;
+    this.secondaryPartition = secondaryPartition;
   }
 
   @JsonProperty
@@ -87,13 +86,9 @@ public class PartitionLocation
     return interval;
   }
 
-  @JsonProperty
-  public int getPartitionId()
-  {
-    return partitionId;
-  }
+  abstract int getPartitionId();
 
-  URI toIntermediaryDataServerURI(String supervisorTaskId)
+  final URI toIntermediaryDataServerURI(String supervisorTaskId)
   {
     return URI.create(
         StringUtils.format(
@@ -105,9 +100,33 @@ public class PartitionLocation
             StringUtils.urlEncode(subTaskId),
             interval.getStart(),
             interval.getEnd(),
-            partitionId
+            getPartitionId()
         )
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    PartitionLocation<?> that = (PartitionLocation<?>) o;
+    return port == that.port &&
+           useHttps == that.useHttps &&
+           Objects.equals(host, that.host) &&
+           Objects.equals(subTaskId, that.subTaskId) &&
+           Objects.equals(interval, that.interval) &&
+           Objects.equals(secondaryPartition, that.secondaryPartition);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(host, port, useHttps, subTaskId, interval, secondaryPartition);
   }
 
   @Override
@@ -119,7 +138,7 @@ public class PartitionLocation
            ", useHttps=" + useHttps +
            ", subTaskId='" + subTaskId + '\'' +
            ", interval=" + interval +
-           ", partitionId=" + partitionId +
+           ", secondaryPartition=" + secondaryPartition +
            '}';
   }
 }

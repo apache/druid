@@ -19,33 +19,37 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
+import org.apache.druid.firehose.hdfs.HdfsFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 /**
+ *
  */
 public class HdfsStorageDruidModule implements DruidModule
 {
-  public static final String SCHEME = "hdfs";
+  static final String SCHEME = "hdfs";
   private Properties props = null;
 
   @Inject
@@ -57,27 +61,12 @@ public class HdfsStorageDruidModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(
-        new Module()
-        {
-          @Override
-          public String getModuleName()
-          {
-            return "DruidHDFSStorage-" + System.identityHashCode(this);
-          }
-
-          @Override
-          public Version version()
-          {
-            return Version.unknownVersion();
-          }
-
-          @Override
-          public void setupModule(SetupContext context)
-          {
-            context.registerSubtypes(HdfsLoadSpec.class);
-          }
-        }
+    return Collections.singletonList(
+        new SimpleModule().registerSubtypes(
+            new NamedType(HdfsLoadSpec.class, HdfsStorageDruidModule.SCHEME),
+            new NamedType(HdfsFirehoseFactory.class, HdfsStorageDruidModule.SCHEME),
+            new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME)
+        )
     );
   }
 

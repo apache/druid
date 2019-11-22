@@ -35,7 +35,7 @@ For a list of API endpoints supported by the Coordinator, see [Coordinator API](
 
 The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The Druid Coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
 
-The Druid Coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid Coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the Broker and Historical processses, the Druid Coordinator maintains a connection to a Zookeeper cluster for current cluster information. The Coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
+The Druid Coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid Coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the Broker and Historical processes, the Druid Coordinator maintains a connection to a Zookeeper cluster for current cluster information. The Coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
 
 Before any unassigned segments are serviced by Historical processes, the available Historical processes for each tier are first sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always assigned to the processes with least capacity to maintain a level of balance between processes. The Coordinator does not directly communicate with a historical process when assigning it a new segment; instead the Coordinator creates some temporary information about the new segment under load queue path of the historical process. Once this request is seen, the historical process will load the segment and begin servicing it.
 
@@ -63,11 +63,11 @@ To ensure an even distribution of segments across Historical processes in the cl
 
 ### Compacting Segments
 
-Each run, the Druid Coordinator compacts small segments abutting each other. This is useful when you have a lot of small
-segments which may degrade query performance as well as increase disk space usage. See [Segment Size Optimization](../operations/segment-optimization.md) for details.
+Each run, the Druid Coordinator compacts segments by merging small segments or splitting a large one. This is useful when your segments are not optimized
+in terms of segment size which may degrade query performance. See [Segment Size Optimization](../operations/segment-optimization.md) for details.
 
-The Coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
-Once some segments are found, it launches a [compaction task](../ingestion/tasks.md#compact) to compact those segments.
+The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy).
+Once some segments are found, it issues a [compaction task](../ingestion/tasks.md#compact) to compact those segments.
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
 Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
@@ -76,30 +76,41 @@ See [Compaction Configuration API](../operations/api-reference.html#compaction-c
 Compaction tasks might fail due to the following reasons.
 
 - If the input segments of a compaction task are removed or overshadowed before it starts, that compaction task fails immediately.
-- If a task of a higher priority acquires a lock for an interval overlapping with the interval of a compaction task, the compaction task fails.
+- If a task of a higher priority acquires a [time chunk lock](../ingestion/tasks.html#locking) for an interval overlapping with the interval of a compaction task, the compaction task fails.
 
-Once a compaction task fails, the Coordinator simply finds the segments for the interval of the failed task again, and launches a new compaction task in the next run.
+Once a compaction task fails, the Coordinator simply checks the segments in the interval of the failed task again, and issues another compaction task in the next run.
 
 ### Segment search policy
 
-#### Newest segment first policy
+#### Recent segment first policy
 
-At every coordinator run, this policy searches for segments to compact by iterating segments from the latest to the oldest.
-Once it finds the latest segment among all dataSources, it checks if the segment is _compactible_ with other segments of the same dataSource which have the same or abutting intervals.
-Note that segments are compactible if their total size is smaller than or equal to the configured `inputSegmentSizeBytes`.
+At every coordinator run, this policy looks up time chunks in order of newest-to-oldest and checks whether the segments in those time chunks
+need compaction or not.
+A set of segments need compaction if all conditions below are satisfied.
 
-Here are some details with an example. Let us assume we have two dataSources (`foo`, `bar`)
-and 5 segments (`foo_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION`, `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION`, `bar_2017-08-01T00:00:00.000Z_2017-09-01T00:00:00.000Z_VERSION`, `bar_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION`, `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION`).
-When each segment has the same size of 10 MB and `inputSegmentSizeBytes` is 20 MB, this policy first returns two segments (`foo_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION`) to compact together because
-`foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION` is the latest segment and `foo_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` abuts to it.
+1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
+2) Segments have never been compacted yet or compaction spec has been updated since the last compaction, especially `maxRowsPerSegment`, `maxTotalRows`, and `indexSpec`.
 
-If the coordinator has enough task slots for compaction, this policy would continue searching for the next segments and return
-`bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `bar_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION`.
-Note that `bar_2017-08-01T00:00:00.000Z_2017-09-01T00:00:00.000Z_VERSION` is not compacted together even though it abuts to `bar_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION`.
-This is because the total segment size to compact would be greater than `inputSegmentSizeBytes` if it's included.
+Here are some details with an example. Suppose we have two dataSources (`foo`, `bar`) as seen below:
+
+- `foo`
+  - `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION`
+  - `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION_1`
+  - `foo_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION`
+- `bar`
+  - `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION`
+  - `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION_1`
+
+Assuming that each segment is 10 MB and haven't been compacted yet, this policy first returns two segments of
+`foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION` and `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION_1` to compact together because
+`2017-11-01T00:00:00.000Z/2017-12-01T00:00:00.000Z` is the most recent time chunk.
+
+If the coordinator has enough task slots for compaction, this policy will continue searching for the next segments and return
+`bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION_1`.
+Finally, `foo_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION` will be picked up even though there is only one segment in the time chunk of `2017-09-01T00:00:00.000Z/2017-10-01T00:00:00.000Z`.
 
 The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.html#compaction-dynamic-configuration).
-If this is set, this policy will ignore the segments falling into the interval of (the end time of the very latest segment - `skipOffsetFromLatest`).
+If this is set, this policy will ignore the segments falling into the time chunk of (the end time of the most recent segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
 
