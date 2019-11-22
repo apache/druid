@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
 import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -189,7 +190,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       final Interval rowInterval = queryGranularity.bucket(timestamp);
 
       final Set<DataSegment> usedSegmentsForRow = new HashSet<>(
-          msc.getUsedSegmentsForInterval(dataSource, rowInterval)
+          msc.getUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE)
       );
 
       final SegmentIdWithShardSpec identifier = usedSegmentsForRow.isEmpty() ?
@@ -208,7 +209,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       // overlapping with this row between when we called "mdc.getUsedSegmentsForInterval" and now. Check it again,
       // and if it's different, repeat.
 
-      if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval)).equals(usedSegmentsForRow)) {
+      if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE))
+                       .equals(usedSegmentsForRow)) {
         if (attempt < MAX_ATTEMPTS) {
           final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
           log.debug(

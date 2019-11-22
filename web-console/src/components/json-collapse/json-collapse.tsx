@@ -19,16 +19,16 @@
 import { Button, Collapse, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
-interface JSONCollapseProps {
+interface JsonCollapseProps {
   stringValue: string;
   buttonText: string;
 }
 
-interface JSONCollapseState {
+interface JsonCollapseState {
   isOpen: boolean;
 }
 
-export class JSONCollapse extends React.PureComponent<JSONCollapseProps, JSONCollapseState> {
+export class JsonCollapse extends React.PureComponent<JsonCollapseProps, JsonCollapseState> {
   constructor(props: any) {
     super(props);
     this.state = {

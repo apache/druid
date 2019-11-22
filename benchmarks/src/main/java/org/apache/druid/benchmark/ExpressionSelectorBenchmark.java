@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.benchmark.datagen.BenchmarkColumnSchema;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -70,6 +71,10 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class ExpressionSelectorBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Param({"1000000"})
   private int rowsPerSegment;
 
@@ -114,6 +119,7 @@ public class ExpressionSelectorBenchmark
                                                .interval(schemaInfo.getDataInterval())
                                                .version("1")
                                                .shardSpec(new LinearShardSpec(0))
+                                               .size(0)
                                                .build();
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());

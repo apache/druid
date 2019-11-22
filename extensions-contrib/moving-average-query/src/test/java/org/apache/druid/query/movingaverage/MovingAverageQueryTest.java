@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -66,6 +67,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
@@ -84,12 +86,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Base class for implementing MovingAverageQuery tests
  */
 @RunWith(Parameterized.class)
-public class MovingAverageQueryTest
+public class MovingAverageQueryTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper jsonMapper;
   private final QueryToolChestWarehouse warehouse;
@@ -349,7 +352,16 @@ public class MovingAverageQueryTest
           {
             return 0L;
           }
-        }
+        },
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
+        },
+        ForkJoinPool.commonPool()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

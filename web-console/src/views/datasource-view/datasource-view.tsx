@@ -16,17 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  FormGroup,
-  InputGroup,
-  Intent,
-  Menu,
-  MenuItem,
-  Popover,
-  Position,
-  Switch,
-} from '@blueprintjs/core';
+import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
@@ -34,13 +24,16 @@ import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
   ActionCell,
+  ActionIcon,
+  MoreButton,
   RefreshButton,
-  RuleEditor,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import { ActionIcon } from '../../components/action-icon/action-icon';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
@@ -59,33 +52,47 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
+import { RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
-const tableColumns: string[] = [
-  'Datasource',
-  'Availability',
-  'Segment load/drop',
-  'Retention',
-  'Replicated size',
-  'Size',
-  'Compaction',
-  'Avg. segment size',
-  'Num rows',
-  ActionCell.COLUMN_LABEL,
-];
-const tableColumnsNoSql: string[] = [
-  'Datasource',
-  'Availability',
-  'Segment load/drop',
-  'Retention',
-  'Size',
-  'Compaction',
-  'Avg. segment size',
-  ActionCell.COLUMN_LABEL,
-];
+const tableColumns: Record<CapabilitiesMode, string[]> = {
+  full: [
+    'Datasource',
+    'Availability',
+    'Segment load/drop',
+    'Retention',
+    'Replicated size',
+    'Size',
+    'Compaction',
+    'Avg. segment size',
+    'Num rows',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-sql': [
+    'Datasource',
+    'Availability',
+    'Segment load/drop',
+    'Retention',
+    'Size',
+    'Compaction',
+    'Avg. segment size',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-proxy': [
+    'Datasource',
+    'Availability',
+    'Segment load/drop',
+    'Replicated size',
+    'Size',
+    'Avg. segment size',
+    'Num rows',
+    ACTION_COLUMN_LABEL,
+  ],
+};
 
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
   const loadDrop: string[] = [];
@@ -130,7 +137,7 @@ export interface DatasourcesViewProps {
   goToQuery: (initSql: string) => void;
   goToTask: (datasource?: string, openDialog?: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
-  noSqlMode: boolean;
+  capabilities: Capabilities;
   initDatasource?: string;
 }
 
@@ -188,14 +195,14 @@ GROUP BY 1`;
     if (rules.length === 0) {
       return 'No rules';
     } else if (rules.length <= 2) {
-      return rules.map(RuleEditor.ruleToString).join(', ');
+      return rules.map(RuleUtil.ruleToString).join(', ');
     } else {
-      return `${RuleEditor.ruleToString(rules[0])} +${rules.length - 1} more rules`;
+      return `${RuleUtil.ruleToString(rules[0])} +${rules.length - 1} more rules`;
     }
   }
 
   private datasourceQueryManager: QueryManager<
-    boolean,
+    Capabilities,
     { tiers: string[]; defaultRules: any[]; datasources: Datasource[] }
   >;
 
@@ -228,11 +235,11 @@ GROUP BY 1`;
     };
 
     this.datasourceQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
+      processQuery: async capabilities => {
         let datasources: DatasourceQueryResultRow[];
-        if (!noSqlMode) {
+        if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
-        } else {
+        } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
@@ -255,6 +262,19 @@ GROUP BY 1`;
               };
             },
           );
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
+        }
+
+        if (!capabilities.hasCoordinatorAccess()) {
+          datasources.forEach((ds: any) => {
+            ds.rules = [];
+          });
+          return {
+            datasources,
+            tiers: [],
+            defaultRules: [],
+          };
         }
 
         const seen = countBy(datasources, (x: any) => x.datasource);
@@ -317,8 +337,8 @@ GROUP BY 1`;
   };
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
-    this.datasourceQueryManager.runQuery(noSqlMode);
+    const { capabilities } = this.props;
+    this.datasourceQueryManager.runQuery(capabilities);
     window.addEventListener('resize', this.handleResize);
   }
 
@@ -465,25 +485,18 @@ GROUP BY 1`;
   }
 
   renderBulkDatasourceActions() {
-    const { goToQuery, noSqlMode } = this.props;
-    const bulkDatasourceActionsMenu = (
-      <Menu>
-        {!noSqlMode && (
+    const { goToQuery, capabilities } = this.props;
+
+    return (
+      <MoreButton>
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}
-      </Menu>
-    );
-
-    return (
-      <>
-        <Popover content={bulkDatasourceActionsMenu} position={Position.BOTTOM_LEFT}>
-          <Button icon={IconNames.MORE} />
-        </Popover>
-      </>
+      </MoreButton>
     );
   }
 
@@ -533,7 +546,7 @@ GROUP BY 1`;
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
-        message: e,
+        message: getDruidErrorMessage(e),
         intent: Intent.DANGER,
       });
     }
@@ -556,7 +569,7 @@ GROUP BY 1`;
             );
           } catch (e) {
             AppToaster.show({
-              message: e,
+              message: getDruidErrorMessage(e),
               intent: Intent.DANGER,
             });
           }
@@ -578,7 +591,24 @@ GROUP BY 1`;
     rules: any[],
     compactionConfig: Record<string, any>,
   ): BasicAction[] {
-    const { goToQuery, goToTask } = this.props;
+    const { goToQuery, goToTask, capabilities } = this.props;
+
+    const goToActions: BasicAction[] = [
+      {
+        icon: IconNames.APPLICATION,
+        title: 'Query with SQL',
+        onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
+      },
+      {
+        icon: IconNames.GANTT_CHART,
+        title: 'Go to tasks',
+        onAction: () => goToTask(datasource),
+      },
+    ];
+
+    if (!capabilities.hasCoordinatorAccess()) {
+      return goToActions;
+    }
 
     if (disabled) {
       return [
@@ -595,17 +625,7 @@ GROUP BY 1`;
         },
       ];
     } else {
-      return [
-        {
-          icon: IconNames.APPLICATION,
-          title: 'Query with SQL',
-          onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
-        },
-        {
-          icon: IconNames.GANTT_CHART,
-          title: 'Go to tasks',
-          onAction: () => goToTask(datasource),
-        },
+      return goToActions.concat([
         {
           icon: IconNames.AUTOMATIC_UPDATES,
           title: 'Edit retention rules',
@@ -654,7 +674,7 @@ GROUP BY 1`;
           intent: Intent.DANGER,
           onAction: () => this.setState({ killDatasource: datasource }),
         },
-      ];
+      ]);
     }
   }
 
@@ -691,7 +711,7 @@ GROUP BY 1`;
   }
 
   renderDatasourceTable() {
-    const { goToSegments, noSqlMode } = this.props;
+    const { goToSegments, capabilities } = this.props;
     const {
       datasources,
       defaultRules,
@@ -791,7 +811,7 @@ GROUP BY 1`;
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        &#x25cf;&nbsp;
+                        {num_available_segments ? '\u25cf' : '\u25cb'}&nbsp;
                       </span>
                       {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
                     </span>
@@ -847,7 +867,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: hiddenColumns.exists('Retention'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
             },
             {
               Header: 'Replicated size',
@@ -855,7 +875,7 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Replicated size'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
             },
             {
               Header: 'Size',
@@ -874,12 +894,12 @@ GROUP BY 1`;
                 const { compaction } = row.original;
                 let text: string;
                 if (compaction) {
-                  if (compaction.targetCompactionSizeBytes == null) {
-                    text = `Target: Default (${formatBytes(
-                      CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+                  if (compaction.maxRowsPerSegment == null) {
+                    text = `Target: Default (${formatNumber(
+                      CompactionDialog.DEFAULT_MAX_ROWS_PER_SEGMENT,
                     )})`;
                   } else {
-                    text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                    text = `Target: ${formatNumber(compaction.maxRowsPerSegment)}`;
                   }
                 } else {
                   text = 'None';
@@ -901,7 +921,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: hiddenColumns.exists('Compaction'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
             },
             {
               Header: 'Avg. segment size',
@@ -917,13 +937,13 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatNumber(row.value),
-              show: !noSqlMode && hiddenColumns.exists('Num rows'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Num rows'),
             },
             {
-              Header: ActionCell.COLUMN_LABEL,
+              Header: ACTION_COLUMN_LABEL,
               accessor: 'datasource',
-              id: ActionCell.COLUMN_ID,
-              width: ActionCell.COLUMN_WIDTH,
+              id: ACTION_COLUMN_ID,
+              width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: row => {
                 const datasource = row.value;
@@ -946,7 +966,7 @@ GROUP BY 1`;
                   />
                 );
               },
-              show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}
@@ -962,7 +982,7 @@ GROUP BY 1`;
   }
 
   render(): JSX.Element {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
     const {
       showDisabled,
       hiddenColumns,
@@ -989,14 +1009,16 @@ GROUP BY 1`;
             checked={showChart}
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
           <Switch
             checked={showDisabled}
             label="Show disabled"
             onChange={() => this.toggleDisabled(showDisabled)}
+            disabled={!capabilities.hasCoordinatorAccess()}
           />
           <TableColumnSelector
-            columns={noSqlMode ? tableColumnsNoSql : tableColumns}
+            columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),
@@ -1007,7 +1029,11 @@ GROUP BY 1`;
         </ViewControlBar>
         {showChart && (
           <div className={'chart-container'}>
-            <SegmentTimeline chartHeight={chartHeight} chartWidth={chartWidth} />
+            <SegmentTimeline
+              capabilities={capabilities}
+              chartHeight={chartHeight}
+              chartWidth={chartWidth}
+            />
           </div>
         )}
         {this.renderDatasourceTable()}

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -45,6 +46,7 @@ import org.junit.runner.RunWith;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,7 @@ import java.util.Set;
 @RunWith(EasyMockRunner.class)
 public class SupervisorResourceTest extends EasyMockSupport
 {
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final TestSupervisorSpec SPEC1 = new TestSupervisorSpec(
       "id1",
       null,
@@ -100,7 +103,8 @@ public class SupervisorResourceTest extends EasyMockSupport
               }
             };
           }
-        }
+        },
+        OBJECT_MAPPER
     );
   }
 
@@ -160,7 +164,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expectLastCall().anyTimes();
     replayAll();
 
-    Response response = supervisorResource.specGetAll(null, null, request);
+    Response response = supervisorResource.specGetAll(null, null, null, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -170,7 +174,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specGetAll(null, null, request);
+    response = supervisorResource.specGetAll(null, null, null, request);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
@@ -184,10 +188,10 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(SUPERVISOR_IDS).atLeastOnce();
-    EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(SPEC1)).times(2);
-    EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(SPEC2)).times(2);
-    EasyMock.expect(supervisorManager.getSupervisorState("id1")).andReturn(Optional.of(state1)).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorState("id2")).andReturn(Optional.of(state2)).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(SPEC1)).anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(SPEC2)).anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorState("id1")).andReturn(Optional.of(state1)).anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorState("id2")).andReturn(Optional.of(state2)).anyTimes();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
@@ -197,18 +201,57 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expectLastCall().anyTimes();
     replayAll();
 
-    Response response = supervisorResource.specGetAll("", null, request);
+    Response response = supervisorResource.specGetAll("", null, null, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    List<Map<String, Object>> specs = (List<Map<String, Object>>) response.getEntity();
+    List<SupervisorStatus> specs = (List<SupervisorStatus>) response.getEntity();
     Assert.assertTrue(
         specs.stream()
              .allMatch(spec ->
-                           ("id1".equals(spec.get("id")) && SPEC1.equals(spec.get("spec"))) ||
-                           ("id2".equals(spec.get("id")) && SPEC2.equals(spec.get("spec")))
+                           ("id1".equals(spec.getId()) && SPEC1.equals(spec.getSpec())) ||
+                           ("id2".equals(spec.getId()) && SPEC2.equals(spec.getSpec()))
              )
     );
+  }
+
+  @Test
+  public void testSpecGetAllSystem()
+  {
+    SupervisorStateManager.State state1 = SupervisorStateManager.BasicState.RUNNING;
+    SupervisorStateManager.State state2 = SupervisorStateManager.BasicState.SUSPENDED;
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(SUPERVISOR_IDS).atLeastOnce();
+    EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(SPEC1)).anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(SPEC2)).anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorState("id1")).andReturn(Optional.of(state1)).anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorState("id2")).andReturn(Optional.of(state2)).anyTimes();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
+        new AuthenticationResult("druid", "druid", null, null)
+    ).atLeastOnce();
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    replayAll();
+
+    Response response = supervisorResource.specGetAll(null, null, "", request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    List<SupervisorStatus> specs = (List<SupervisorStatus>) response.getEntity();
+    specs.sort(Comparator.comparing(SupervisorStatus::getId));
+    Assert.assertEquals(2, specs.size());
+    SupervisorStatus spec = specs.get(0);
+    Assert.assertEquals("id1", spec.getId());
+    Assert.assertEquals("RUNNING", spec.getState());
+    Assert.assertEquals("RUNNING", spec.getDetailedState());
+    Assert.assertEquals(true, spec.isHealthy());
+    Assert.assertEquals("{\"type\":\"SupervisorResourceTest$TestSupervisorSpec\"}", spec.getSpecString());
+    Assert.assertEquals("test", spec.getType());
+    Assert.assertEquals("dummy", spec.getSource());
+    Assert.assertEquals(false, spec.isSuspended());
   }
 
   @Test
@@ -232,23 +275,23 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expectLastCall().anyTimes();
     replayAll();
 
-    Response response = supervisorResource.specGetAll(null, true, request);
+    Response response = supervisorResource.specGetAll(null, true, null, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    List<Map<String, Object>> states = (List<Map<String, Object>>) response.getEntity();
+    List<SupervisorStatus> states = (List<SupervisorStatus>) response.getEntity();
     Assert.assertTrue(
         states.stream()
               .allMatch(state -> {
-                final String id = (String) state.get("id");
+                final String id = (String) state.getId();
                 if ("id1".equals(id)) {
-                  return state1.equals(state.get("state"))
-                         && state1.equals(state.get("detailedState"))
-                         && (Boolean) state.get("healthy") == state1.isHealthy();
+                  return state1.toString().equals(state.getState())
+                         && state1.toString().equals(state.getDetailedState())
+                         && (Boolean) state.isHealthy() == state1.isHealthy();
                 } else if ("id2".equals(id)) {
-                  return state2.equals(state.get("state"))
-                         && state2.equals(state.get("detailedState"))
-                         && (Boolean) state.get("healthy") == state2.isHealthy();
+                  return state2.toString().equals(state.getState())
+                         && state2.toString().equals(state.getDetailedState())
+                         && (Boolean) state.isHealthy() == state2.isHealthy();
                 }
                 return false;
               })
@@ -1135,6 +1178,18 @@ public class SupervisorResourceTest extends EasyMockSupport
     public boolean isSuspended()
     {
       return suspended;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "test";
+    }
+
+    @Override
+    public String getSource()
+    {
+      return "dummy";
     }
 
     @Override

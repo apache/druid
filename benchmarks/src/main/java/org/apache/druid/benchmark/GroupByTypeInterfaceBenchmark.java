@@ -33,6 +33,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -43,6 +44,7 @@ import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -107,6 +109,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 30)
 public class GroupByTypeInterfaceBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final SegmentId Q_INDEX_SEGMENT_ID = SegmentId.dummy("qIndex");
 
   @Param({"4"})
@@ -394,6 +400,7 @@ public class GroupByTypeInterfaceBenchmark
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            QueryConfig::new,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),

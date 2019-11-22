@@ -19,20 +19,18 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 /**
  * Handles "unknown" columns by examining what comes out of the selector
  */
-class ObjectBloomFilterAggregator extends BaseBloomFilterAggregator<ColumnValueSelector>
+class ObjectBloomFilterAggregator extends BaseBloomFilterAggregator<BaseObjectColumnValueSelector<Object>>
 {
   ObjectBloomFilterAggregator(
-      ColumnValueSelector selector,
+      BaseObjectColumnValueSelector<Object> selector,
       int maxNumEntries,
       boolean onHeap
   )
@@ -48,16 +46,14 @@ class ObjectBloomFilterAggregator extends BaseBloomFilterAggregator<ColumnValueS
       final ByteBuffer other = (ByteBuffer) object;
       BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
     } else {
-      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-        if (object instanceof Long) {
-          BloomKFilter.addLong(buf, selector.getLong());
-        } else if (object instanceof Double) {
-          BloomKFilter.addDouble(buf, selector.getDouble());
-        } else if (object instanceof Float) {
-          BloomKFilter.addFloat(buf, selector.getFloat());
-        } else {
-          StringBloomFilterAggregator.stringBufferAdd(buf, (DimensionSelector) selector);
-        }
+      if (object instanceof Long) {
+        BloomKFilter.addLong(buf, (long) object);
+      } else if (object instanceof Double) {
+        BloomKFilter.addDouble(buf, (double) object);
+      } else if (object instanceof Float) {
+        BloomKFilter.addFloat(buf, (float) object);
+      } else if (object instanceof String) {
+        BloomKFilter.addString(buf, (String) object);
       } else {
         BloomKFilter.addBytes(buf, null, 0, 0);
       }

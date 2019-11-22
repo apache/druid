@@ -42,7 +42,9 @@ import org.apache.druid.server.RequestLogLine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.OutputStreamAppender;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.layout.JsonLayout;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -154,11 +156,25 @@ public class LoggingRequestLoggerTest
   @BeforeClass
   public static void setUpStatic()
   {
+    LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
+    Configuration configuration = loggerContext.getConfiguration();
     appender = OutputStreamAppender
         .newBuilder()
         .setName("test stream")
         .setTarget(BAOS)
-        .setLayout(JsonLayout.createLayout(false, true, false, true, true, StandardCharsets.UTF_8))
+        .setLayout(JsonLayout.createLayout(
+            configuration,
+            false,
+            true,
+            true,
+            false,
+            true,
+            true,
+            "[",
+            "]",
+            StandardCharsets.UTF_8,
+            true
+        ))
         .build();
     final Logger logger = (Logger)
         LogManager.getLogger(LoggingRequestLogger.class);

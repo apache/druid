@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
 import org.junit.Assert;
@@ -77,7 +78,7 @@ public class TaskMonitorTest
     final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = IntStream
         .range(0, 10)
         .mapToObj(i -> monitor.submit(
-            new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, new IntegerInputSplit(i), 100L, 0)
+            new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, new IntegerInputSplit(i), 100L, 0, false)
         ))
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
@@ -98,7 +99,16 @@ public class TaskMonitorTest
     final List<TestTaskSpec> specs = IntStream
         .range(0, 10)
         .mapToObj(
-            i -> new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, new IntegerInputSplit(i), 100L, 2)
+            i -> new TestTaskSpec(
+                "specId" + i,
+                "groupId",
+                "supervisorId",
+                null,
+                new IntegerInputSplit(i),
+                100L,
+                2,
+                false
+            )
         )
         .collect(Collectors.toList());
     final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = specs
@@ -127,43 +137,97 @@ public class TaskMonitorTest
     }
   }
 
+  @Test
+  public void testResubmitWithOldType() throws InterruptedException, ExecutionException, TimeoutException
+  {
+    final List<TestTaskSpec> specs = IntStream
+        .range(0, 10)
+        .mapToObj(
+            i -> new TestTaskSpec(
+                "specId" + i,
+                "groupId",
+                "supervisorId",
+                null,
+                new IntegerInputSplit(i),
+                100L,
+                0,
+                true
+            )
+        )
+        .collect(Collectors.toList());
+    final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = specs
+        .stream()
+        .map(monitor::submit)
+        .collect(Collectors.toList());
+    for (int i = 0; i < futures.size(); i++) {
+      // # of threads of taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
+      // max timeout is 6 sec. We additionally wait 4 more seconds here to make sure the test passes.
+      final SubTaskCompleteEvent<TestTask> result = futures.get(i).get(2, TimeUnit.SECONDS);
+      Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
+      Assert.assertEquals("specId" + i, result.getSpec().getId());
+
+      Assert.assertNotNull(result.getLastStatus());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
+
+      final TaskHistory<TestTask> taskHistory = monitor.getCompleteSubTaskSpecHistory(specs.get(i).getId());
+      Assert.assertNotNull(taskHistory);
+
+      final List<TaskStatusPlus> attemptHistory = taskHistory.getAttemptHistory();
+      Assert.assertNotNull(attemptHistory);
+      Assert.assertEquals(1, attemptHistory.size());
+      Assert.assertEquals(TaskState.SUCCESS, attemptHistory.get(0).getStatusCode());
+    }
+  }
+
   private static class TestTaskSpec extends SubTaskSpec<TestTask>
   {
     private final long runTime;
     private final int numMaxFails;
+    private final boolean throwUnknownTypeIdError;
 
     private int numFails;
 
-    public TestTaskSpec(
+    TestTaskSpec(
         String id,
         String groupId,
         String supervisorTaskId,
         Map<String, Object> context,
         InputSplit inputSplit,
         long runTime,
-        int numMaxFails
+        int numMaxFails,
+        boolean throwUnknownTypeIdError
     )
     {
       super(id, groupId, supervisorTaskId, context, inputSplit);
       this.runTime = runTime;
       this.numMaxFails = numMaxFails;
+      this.throwUnknownTypeIdError = throwUnknownTypeIdError;
     }
 
     @Override
     public TestTask newSubTask(int numAttempts)
     {
-      return new TestTask(getId(), runTime, numFails++ < numMaxFails);
+      return new TestTask(getId(), runTime, numFails++ < numMaxFails, throwUnknownTypeIdError);
+    }
+
+    @Override
+    public TestTask newSubTaskWithBackwardCompatibleType(int numAttempts)
+    {
+      return new TestTask(getId(), runTime, numFails++ < numMaxFails, false);
     }
   }
 
   private static class TestTask extends NoopTask
   {
     private final boolean shouldFail;
+    private final boolean throwUnknownTypeIdError;
 
-    TestTask(String id, long runTime, boolean shouldFail)
+    TestTask(String id, long runTime, boolean shouldFail, boolean throwUnknownTypeIdError)
     {
       super(id, null, "testDataSource", runTime, 0, null, null, null);
       this.shouldFail = shouldFail;
+      this.throwUnknownTypeIdError = throwUnknownTypeIdError;
     }
 
     @Override
@@ -185,6 +249,9 @@ public class TaskMonitorTest
     {
       final TestTask task = (TestTask) taskObject;
       tasks.put(task.getId(), TaskState.RUNNING);
+      if (task.throwUnknownTypeIdError) {
+        throw new RuntimeException(new ISE("Could not resolve type id 'test_task_id'"));
+      }
       taskRunner.submit(() -> tasks.put(task.getId(), task.run(null).getStatusCode()));
       return task.getId();
     }
@@ -213,7 +280,7 @@ public class TaskMonitorTest
 
   private static class IntegerInputSplit extends InputSplit<Integer>
   {
-    public IntegerInputSplit(int split)
+    IntegerInputSplit(int split)
     {
       super(split);
     }

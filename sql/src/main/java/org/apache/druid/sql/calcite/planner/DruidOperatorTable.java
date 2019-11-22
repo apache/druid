@@ -29,12 +29,14 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
@@ -117,6 +119,8 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new ApproxCountDistinctSqlAggregator())
           .add(new AvgSqlAggregator())
           .add(new CountSqlAggregator())
+          .add(EarliestLatestSqlAggregator.EARLIEST)
+          .add(EarliestLatestSqlAggregator.LATEST)
           .add(new MinSqlAggregator())
           .add(new MaxSqlAggregator())
           .add(new SumSqlAggregator())
@@ -355,7 +359,8 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlIdentifier opName,
       final SqlFunctionCategory category,
       final SqlSyntax syntax,
-      final List<SqlOperator> operatorList
+      final List<SqlOperator> operatorList,
+      final SqlNameMatcher nameMatcher
   )
   {
     if (opName == null) {

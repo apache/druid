@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -34,6 +36,8 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   static final String NAME = "hashed";
   @VisibleForTesting
   static final String NUM_SHARDS = "numShards";
+
+  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
 
   @Nullable
   private final Integer maxRowsPerSegment;
@@ -54,9 +58,9 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
       // Deprecated properties preserved for backward compatibility:
       @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
-          Integer targetPartitionSize,
+          Integer targetPartitionSize,  // prefer targetRowsPerSegment
       @Deprecated @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable
-          Integer maxRowsPerSegment
+          Integer maxRowsPerSegment  // prefer targetRowsPerSegment
   )
   {
     Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
@@ -114,6 +118,13 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
   @Nullable
   @Override
+  public Integer getTargetRowsPerSegment()
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
@@ -138,6 +149,12 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
+  }
+
+  @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return getNumShards() == null ? NUM_SHARDS + " must be specified" : FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
   }
 
   @Override

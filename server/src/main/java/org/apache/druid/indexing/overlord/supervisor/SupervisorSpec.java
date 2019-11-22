@@ -56,4 +56,20 @@ public interface SupervisorSpec
   {
     return false;
   }
+
+  /**
+   * This API is only used for informational purposes in
+   * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
+   *
+   * @return supervisor type
+   */
+  String getType();
+
+  /**
+   * This API is only used for informational purposes in
+   * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
+   *
+   * @return source like stream or topic name
+   */
+  String getSource();
 }

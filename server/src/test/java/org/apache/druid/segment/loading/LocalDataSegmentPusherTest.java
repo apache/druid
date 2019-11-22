@@ -59,7 +59,7 @@ public class LocalDataSegmentPusherTest
       null,
       NoneShardSpec.instance(),
       null,
-      -1
+      0
   );
   DataSegment dataSegment2 = new DataSegment(
       "ds",
@@ -70,7 +70,7 @@ public class LocalDataSegmentPusherTest
       null,
       NoneShardSpec.instance(),
       null,
-      -1
+      0
   );
 
   @Before

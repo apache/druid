@@ -22,6 +22,7 @@ package org.apache.druid.collections.bitmap;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.BenchmarkRule;
 import com.carrotsearch.junitbenchmarks.Clock;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -65,6 +66,10 @@ public class BitmapBenchmark
   static long minIntersection = 0;
   @Rule
   public TestRule benchmarkRun = new BenchmarkRule();
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   protected static ImmutableConciseSet makeOffheapConcise(ImmutableConciseSet concise)
   {

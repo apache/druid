@@ -22,7 +22,6 @@ package org.apache.druid.storage.hdfs;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -30,14 +29,10 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 
-/**
- *
- */
-@JsonTypeName(HdfsStorageDruidModule.SCHEME)
 public class HdfsLoadSpec implements LoadSpec
 {
   private final Path path;
-  final HdfsDataSegmentPuller puller;
+  private final HdfsDataSegmentPuller puller;
 
   @JsonCreator
   public HdfsLoadSpec(

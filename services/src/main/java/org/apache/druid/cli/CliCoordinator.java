@@ -97,6 +97,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 
 /**
+ *
  */
 @Command(
     name = "coordinator",
@@ -105,6 +106,7 @@ import java.util.concurrent.ExecutorService;
 public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
+  private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -121,7 +123,7 @@ public class CliCoordinator extends ServerRunnable
     beOverlord = isOverlord(properties);
 
     if (beOverlord) {
-      log.info("Coordinator is configured to act as Overlord as well.");
+      log.info("Coordinator is configured to act as Overlord as well (%s = true).", AS_OVERLORD_PROPERTY);
     }
   }
 
@@ -146,8 +148,7 @@ public class CliCoordinator extends ServerRunnable
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
-            binder.bind(MetadataStorage.class)
-                  .toProvider(MetadataStorageProvider.class);
+            binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
@@ -291,6 +292,6 @@ public class CliCoordinator extends ServerRunnable
 
   public static boolean isOverlord(Properties properties)
   {
-    return Boolean.parseBoolean(properties.getProperty("druid.coordinator.asOverlord.enabled"));
+    return Boolean.parseBoolean(properties.getProperty(AS_OVERLORD_PROPERTY));
   }
 }

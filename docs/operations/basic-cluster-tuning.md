@@ -117,6 +117,10 @@ To estimate total memory usage of the Historical under these guidelines:
 
 The Historical will use any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system) for memory-mapping of segments on disk. For better query performance, you will want to ensure a good (`free system memory` / `druid.server.maxSize`) ratio so that a greater proportion of segments can be kept in memory.
 
+#### Segment sizes matter
+
+Be sure to check out [segment size optimization](./segment-optimization.md) to help tune your Historical processes for maximum performance.
+
 ### Broker
 
 #### Heap sizing
@@ -278,7 +282,7 @@ If you are only using [Hadoop-based batch ingestion](../ingestion/hadoop.md) wit
 
 If you are using [parallel native batch ingestion](../ingestion/native-batch.md#parallel-task), allocating more available task slots is a good idea and will allow greater ingestion concurrency.
 
-## Coordinator
+### Coordinator
 
 The main performance-related setting on the Coordinator is the heap size.
 
@@ -286,7 +290,7 @@ The heap requirements of the Coordinator scale with the number of servers, segme
 
 You can set the Coordinator heap to the same size as your Broker heap, or slightly smaller: both services have to process cluster-wide state and answer API requests about this state.
 
-## Overlord
+### Overlord
 
 The main performance-related setting on the Overlord is the heap size.
 
@@ -294,7 +298,7 @@ The heap requirements of the Overlord scale primarily with the number of running
 
 The Overlord tends to require less resources than the Coordinator or Broker. You can generally set the Overlord heap to a value that's 25-50% of your Coordinator heap.
 
-## Router
+### Router
 
 The Router has light resource requirements, as it proxies requests to Brokers without performing much computational work itself.
 
@@ -356,16 +360,6 @@ As a starting point, allowing for 50 concurrent queries (requests that read segm
 - If your cluster usage patterns are heavily biased towards a high number of small concurrent queries (where each query takes less than ~15ms), enlarging the connection pool can be a good idea.
 - The 50/10 general guideline here is a rough starting point, since different queries impose different amounts of load on the system. To size the connection pool more exactly for your cluster, you would need to know the execution times for your queries and ensure that the rate of incoming queries does not exceed your "drain" rate.
 
-## Garbage collection
-
-We recommend using the G1GC garbage collector:
-
-`-XX:+UseG1GC`
-
-Enabling process termination on out-of-memory errors is useful as well, since the process generally will not recover from such a state, and it's better to restart the process:
-
-`-XX:+ExitOnOutOfMemoryError`
-
 ## Per-segment direct memory buffers
 
 ### Segment decompression
@@ -385,4 +379,85 @@ For example, if two segments are being merged, the first segment having a single
 These buffers are used for merging the value dictionaries of the String column across segments. These "dictionary merging buffers" are independent of the "merge buffers" configured by `druid.processing.numMergeBuffers`.
 
 
+## General recommendations
+
+### JVM tuning
+
+#### Garbage Collection
+We recommend using the G1GC garbage collector:
+
+`-XX:+UseG1GC`
+
+Enabling process termination on out-of-memory errors is useful as well, since the process generally will not recover from such a state, and it's better to restart the process:
+
+`-XX:+ExitOnOutOfMemoryError`
+
+#### Other useful JVM flags
+
+```
+-Duser.timezone=UTC
+-Dfile.encoding=UTF-8
+-Djava.io.tmpdir=<something other than /tmp which might be mounted to volatile tmpfs file system>
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+-Dorg.jboss.logging.provider=slf4j
+-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
+-Dlog4j.shutdownCallbackRegistry=org.apache.druid.common.config.Log4jShutdown
+-Dlog4j.shutdownHookEnabled=true
+-XX:+PrintGCDetails
+-XX:+PrintGCDateStamps
+-XX:+PrintGCTimeStamps
+-XX:+PrintGCApplicationStoppedTime
+-XX:+PrintGCApplicationConcurrentTime
+-Xloggc:/var/logs/druid/historical.gc.log
+-XX:+UseGCLogFileRotation
+-XX:NumberOfGCLogFiles=50
+-XX:GCLogFileSize=10m
+-XX:+ExitOnOutOfMemoryError
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=/var/logs/druid/historical.hprof
+-XX:MaxDirectMemorySize=10240g
+```
+
+`ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
+
+`MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include `druid.processing.numThreads`, `druid.processing.numMergeBuffers`, and `druid.processing.buffer.sizeBytes`.
+
+Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
+
+Additionally, for large JVM heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
+
+- Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
+- On Disk-IO intensive processes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
+- Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
+- Try disabling biased locking by using `-XX:-UseBiasedLocking` JVM flag. ( See https://dzone.com/articles/logging-stop-world-pauses-jvm )
+
+### Use UTC timezone
+
+We recommend using UTC timezone for all your events and across your hosts, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
+
+### System configuration
+
+#### SSDs
+
+SSDs are highly recommended for Historical, MiddleManager, and Indexer processes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
+
+#### JBOD vs RAID
+
+Historical processes store large number of segments on Disk and support specifying multiple paths for storing those. Typically, hosts have multiple disks configured with RAID which makes them look like a single disk to OS. RAID might have overheads specially if its not hardware controller based but software based. So, Historicals might get improved disk throughput with JBOD.
+
+#### Swap space
+
+We recommend _not_ using swap space for Historical, MiddleManager, and Indexer processes since due to the large number of memory mapped segment files can lead to poor and unpredictable performance.
+
+#### Linux limits
+
+For Historical, MiddleManager, and Indexer processes (and for really large clusters, Broker processes), you might need to adjust some Linux system limits to account for a large number of open files, a large number of network connections, or a large number of memory mapped files.
+
+##### ulimit
+
+The limit on the number of open files can be set permanently by editing `/etc/security/limits.conf`. This value should be substantially greater than the number of segment files that will exist on the server.
+
+##### max_map_count
+
+Historical processes and to a lesser extent, MiddleManager and Indexer processes memory map segment files, so depending on the number of segments per server, `/proc/sys/vm/max_map_count` might also need to be adjusted. Depending on the variant of Linux, this might be done via `sysctl` by placing a file in `/etc/sysctl.d/` that sets `vm.max_map_count`.
 

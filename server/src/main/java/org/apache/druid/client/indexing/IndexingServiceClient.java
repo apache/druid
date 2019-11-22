@@ -37,7 +37,6 @@ public interface IndexingServiceClient
 
   String compactSegments(
       List<DataSegment> segments,
-      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context

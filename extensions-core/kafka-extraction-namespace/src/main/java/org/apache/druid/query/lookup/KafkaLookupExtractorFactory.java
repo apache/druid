@@ -233,9 +233,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
         executorService.shutdown();
-        if (!future.isDone() && !future.cancel(false)) {
-          LOG.warn("Could not cancel kafka listening thread");
-        }
+        future.cancel(true);
         LOG.error(e, "Failed to start kafka extraction factory");
         cacheHandler.close();
         return false;
@@ -259,10 +257,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
       final ListenableFuture<?> future = this.future;
       if (future != null) {
-        if (!future.isDone() && !future.cancel(false)) {
-          LOG.error("Error cancelling future for topic [%s]", getKafkaTopic());
-          return false;
-        }
+        future.cancel(true);
       }
       cacheHandler.close();
       return true;

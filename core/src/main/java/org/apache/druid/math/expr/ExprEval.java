@@ -381,6 +381,7 @@ public abstract class ExprEval<T>
 
     private static final StringExprEval OF_NULL = new StringExprEval(null);
 
+    @Nullable
     private Number numericVal;
 
     private StringExprEval(@Nullable String value)

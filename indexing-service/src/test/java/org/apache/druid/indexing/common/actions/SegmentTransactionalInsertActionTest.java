@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
@@ -125,7 +126,7 @@ public class SegmentTransactionalInsertActionTest
         ImmutableSet.of(SEGMENT1, SEGMENT2),
         ImmutableSet.copyOf(
             actionTestKit.getMetadataStorageCoordinator()
-                         .getUsedSegmentsForInterval(DATA_SOURCE, INTERVAL)
+                         .getUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
         )
     );
 

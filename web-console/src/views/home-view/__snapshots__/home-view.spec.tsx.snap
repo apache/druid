@@ -1,23 +1,133 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`home view matches snapshot 1`] = `
+exports[`home view matches snapshot (coordiantor) 1`] = `
 <div
   className="home-view app-view"
 >
   <StatusCard />
   <DatasourcesCard
-    noSqlMode={false}
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": false,
+        "queryType": "none",
+      }
+    }
   />
   <SegmentsCard
-    noSqlMode={false}
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": false,
+        "queryType": "none",
+      }
+    }
   />
-  <SupervisorsCard />
+  <ServicesCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": false,
+        "queryType": "none",
+      }
+    }
+  />
+  <LookupsCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": false,
+        "queryType": "none",
+      }
+    }
+  />
+</div>
+`;
+
+exports[`home view matches snapshot (full) 1`] = `
+<div
+  className="home-view app-view"
+>
+  <StatusCard />
+  <DatasourcesCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
+  <SegmentsCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
+  <SupervisorsCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
   <TasksCard
-    noSqlMode={false}
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
   />
-  <ServersCard
-    noSqlMode={false}
+  <ServicesCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
   />
-  <LookupsCard />
+  <LookupsCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
+</div>
+`;
+
+exports[`home view matches snapshot (overlord) 1`] = `
+<div
+  className="home-view app-view"
+>
+  <StatusCard />
+  <SupervisorsCard
+    capabilities={
+      Capabilities {
+        "coordinator": false,
+        "overlord": true,
+        "queryType": "none",
+      }
+    }
+  />
+  <TasksCard
+    capabilities={
+      Capabilities {
+        "coordinator": false,
+        "overlord": true,
+        "queryType": "none",
+      }
+    }
+  />
 </div>
 `;

@@ -66,9 +66,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
   private final KafkaIndexTask task;
 
-  public IncrementalPublishingKafkaIndexTaskRunner(
+  IncrementalPublishingKafkaIndexTaskRunner(
       KafkaIndexTask task,
-      InputRowParser<ByteBuffer> parser,
+      @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,
@@ -240,8 +240,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   ) throws IOException
   {
     if (checkpointsString != null) {
-      log.info("Checkpoints [%s]", checkpointsString);
-      return toolbox.getObjectMapper().readValue(
+      log.debug("Got checkpoints from task context[%s].", checkpointsString);
+      return toolbox.getJsonMapper().readValue(
           checkpointsString,
           new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
           {

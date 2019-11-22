@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
 import org.apache.druid.indexing.worker.WorkerTaskMonitor;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -77,7 +78,8 @@ public class WorkerResourceTest
         "host",
         "ip",
         3,
-        "v1"
+        "v1",
+        WorkerConfig.DEFAULT_CATEGORY
     );
 
     curatorCoordinator = new WorkerCuratorCoordinator(

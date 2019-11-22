@@ -55,7 +55,7 @@ public class CacheConfig
   private int maxEntrySize = 1_000_000;
 
   @JsonProperty
-  private List<String> unCacheable = ImmutableList.of(Query.SELECT);
+  private List<String> unCacheable = ImmutableList.of();
 
   @JsonProperty
   private int resultLevelCacheLimit = Integer.MAX_VALUE;

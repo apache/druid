@@ -62,7 +62,7 @@ public class RemoteTaskActionClient implements TaskActionClient
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
   {
-    log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
+    log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
 
     byte[] dataToSend = jsonMapper.writeValueAsBytes(new TaskActionHolder(task, taskAction));
 
@@ -73,7 +73,11 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         final StringFullResponseHolder fullResponseHolder;
 
-        log.info("Submitting action for task[%s] to overlord: [%s].", task.getId(), taskAction);
+        log.debug(
+            "Submitting action for task[%s] to Overlord: %s",
+            task.getId(),
+            jsonMapper.writeValueAsString(taskAction)
+        );
 
         fullResponseHolder = druidLeaderClient.go(
             druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/action")
@@ -96,7 +100,12 @@ public class RemoteTaskActionClient implements TaskActionClient
         }
       }
       catch (IOException | ChannelException e) {
-        log.warn(e, "Exception submitting action for task[%s]", task.getId());
+        log.noStackTrace().warn(
+            e,
+            "Exception submitting action for task[%s]: %s",
+            task.getId(),
+            jsonMapper.writeValueAsString(taskAction)
+        );
 
         final Duration delay = retryPolicy.getAndIncrementRetryDelay();
         if (delay == null) {
@@ -104,7 +113,7 @@ public class RemoteTaskActionClient implements TaskActionClient
         } else {
           try {
             final long sleepTime = jitter(delay.getMillis());
-            log.info("Will try again in [%s].", new Duration(sleepTime).toString());
+            log.warn("Will try again in [%s].", new Duration(sleepTime).toString());
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {

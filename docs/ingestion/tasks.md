@@ -164,7 +164,7 @@ Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as tho
 the `rowStats` map contains information about row counts. There is one entry for each ingestion phase. The definitions of the different row counts are shown below:
 * `processed`: Number of rows successfully ingested without parsing errors
 * `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
-* `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](index.md#transformspec).
+* `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](index.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
 * `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
 
 The `errorMsg` field shows a message describing the error that caused a task to fail. It will be null if the task was successful.
@@ -294,7 +294,7 @@ Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to u
 Please note that segment lock is not always available. The most common use case where time chunk lock is enforced is
 when an overwriting task changes the segment granularity.
 Also, the segment locking is supported by only native indexing tasks and Kafka/Kinesis indexing tasks.
-The Hadoop indexing tasks and realtime indexing tasks (with [Tranquility](tranquility.md)) don't support it yet.
+Hadoop indexing tasks and `index_realtime` tasks (used by [Tranquility](tranquility.md)) don't support it yet.
 
 `forceTimeChunkLock` in the task context is only applied to individual tasks.
 If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.html#overlord-operations).

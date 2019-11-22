@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -29,14 +30,21 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -44,83 +52,99 @@ import java.util.List;
 
 public class StringLastTimeseriesQueryTest
 {
+  private static final String VISITOR_ID = "visitor_id";
+  private static final String CLIENT_TYPE = "client_type";
+  private static final String LAST_CLIENT_TYPE = "last_client_type";
 
-  @Test
-  public void testTopNWithDistinctCountAgg() throws Exception
+  private static final DateTime TIME1 = DateTimes.of("2016-03-04T00:00:00.000Z");
+  private static final DateTime TIME2 = DateTimes.of("2016-03-04T01:00:00.000Z");
+
+  private IncrementalIndex incrementalIndex;
+  private QueryableIndex queryableIndex;
+
+  @Before
+  public void setUp() throws IndexSizeExceededException
   {
-    TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
+    final SerializablePairLongStringSerde serde = new SerializablePairLongStringSerde();
+    ComplexMetrics.registerSerde(serde.getTypeName(), serde);
 
-    String visitor_id = "visitor_id";
-    String client_type = "client_type";
-
-    IncrementalIndex index = new IncrementalIndex.Builder()
+    incrementalIndex = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringLastAggregatorFactory(
-                    "last_client_type", "client_type", 1024)
-                )
+                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, 1024))
                 .build()
         )
         .setMaxRowCount(1000)
         .buildOnheap();
 
+    incrementalIndex.add(
+        new MapBasedInputRow(
+            TIME1,
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
+            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "iphone")
+        )
+    );
+    incrementalIndex.add(
+        new MapBasedInputRow(
+            TIME1,
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
+            ImmutableMap.of(VISITOR_ID, "1", CLIENT_TYPE, "iphone")
+        )
+    );
+    incrementalIndex.add(
+        new MapBasedInputRow(
+            TIME2,
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
+            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "android")
+        )
+    );
 
-    DateTime time = DateTimes.of("2016-03-04T00:00:00.000Z");
-    long timestamp = time.getMillis();
+    queryableIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+  }
 
-    DateTime time1 = DateTimes.of("2016-03-04T01:00:00.000Z");
-    long timestamp1 = time1.getMillis();
-    index.add(
-        new MapBasedInputRow(
-            timestamp,
-            Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
-        )
-    );
-    index.add(
-        new MapBasedInputRow(
-            timestamp,
-            Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
-        )
-    );
-    index.add(
-        new MapBasedInputRow(
-            timestamp1,
-            Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.of(visitor_id, "0", client_type, "android")
-        )
-    );
+  @Test
+  public void testTimeseriesQuery()
+  {
+    TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
+
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.ALL_GRAN)
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
-                                      Collections.singletonList(
-                                          new StringLastAggregatorFactory(
-                                              "last_client_type", client_type, 1024
-                                          )
+                                      ImmutableList.of(
+                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, 1024),
+                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, 1024),
+                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", 1024),
+                                          new StringLastAggregatorFactory("numeric", "cnt", 1024)
                                       )
                                   )
                                   .build();
 
-    final Iterable<Result<TimeseriesResultValue>> results =
-        engine.process(query, new IncrementalIndexStorageAdapter(index)).toList();
-
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
-            time,
+            TIME1,
             new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "last_client_type",
-                    new SerializablePairLongString(timestamp1, "android")
-                )
+                ImmutableMap.<String, Object>builder()
+                    .put("nonfolding", new SerializablePairLongString(TIME2.getMillis(), "android"))
+                    .put("folding", new SerializablePairLongString(TIME2.getMillis(), "android"))
+                    .put("nonexistent", new SerializablePairLongString(DateTimes.MIN.getMillis(), null))
+                    .put("numeric", new SerializablePairLongString(DateTimes.MIN.getMillis(), null))
+                    .build()
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, results);
+
+    final Iterable<Result<TimeseriesResultValue>> iiResults =
+        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex)).toList();
+
+    final Iterable<Result<TimeseriesResultValue>> qiResults =
+        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex)).toList();
+
+    TestHelper.assertExpectedResults(expectedResults, iiResults, "incremental index");
+    TestHelper.assertExpectedResults(expectedResults, qiResults, "queryable index");
   }
 }

@@ -369,7 +369,8 @@ public class FileSmoosher implements Closeable
 
     File metaFile = metaFile(baseDir);
 
-    try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
+    try (Writer out =
+             new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
       out.write(StringUtils.format("v1,%d,%d", maxChunkSize, outFiles.size()));
       out.write("\n");
 
@@ -412,7 +413,7 @@ public class FileSmoosher implements Closeable
       this.outFile = outFile;
       this.maxLength = maxLength;
 
-      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));
+      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));  // lgtm [java/output-resource-leak]
       this.channel = closer.register(outStream.getChannel());
     }
 
@@ -469,7 +470,11 @@ public class FileSmoosher implements Closeable
     public void close() throws IOException
     {
       closer.close();
-      FileSmoosher.LOG.info("Created smoosh file [%s] of size [%s] bytes.", outFile.getAbsolutePath(), outFile.length());
+      FileSmoosher.LOG.debug(
+          "Created smoosh file [%s] of size [%s] bytes.",
+          outFile.getAbsolutePath(),
+          outFile.length()
+      );
     }
   }
 }

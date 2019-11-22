@@ -21,6 +21,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import java.util.EnumSet;
@@ -91,5 +92,6 @@ public interface ServletFilterHolder
    *
    * @return the enumeration of DispatcherTypes that this Filter should apply to
    */
+  @Nullable
   EnumSet<DispatcherType> getDispatcherType();
 }

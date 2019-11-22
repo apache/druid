@@ -163,6 +163,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return partitionsSpec.getMaxTotalRows();
   }
 
+  @Override
   public DynamicPartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
