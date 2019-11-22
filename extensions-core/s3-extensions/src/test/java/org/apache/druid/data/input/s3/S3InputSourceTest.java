@@ -75,6 +75,7 @@ import java.util.stream.Stream;
 
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
+  private static final ObjectMapper MAPPER = createS3ObjectMapper();
   private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
@@ -101,21 +102,32 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithUris() throws Exception
   {
-    final ObjectMapper mapper = createS3ObjectMapper();
-
     final S3InputSource withUris = new S3InputSource(SERVICE, EXPECTED_URIS, null, null);
-    final S3InputSource serdeWithUris = mapper.readValue(mapper.writeValueAsString(withUris), S3InputSource.class);
+    final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
 
   @Test
   public void testSerdeWithPrefixes() throws Exception
   {
-    final ObjectMapper mapper = createS3ObjectMapper();
-
     final S3InputSource withPrefixes = new S3InputSource(SERVICE, null, PREFIXES, null);
     final S3InputSource serdeWithPrefixes =
-        mapper.readValue(mapper.writeValueAsString(withPrefixes), S3InputSource.class);
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testSerdeWithObjects() throws Exception
+  {
+
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        null,
+        null,
+        ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"))
+    );
+    final S3InputSource serdeWithPrefixes =
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
   }
 
