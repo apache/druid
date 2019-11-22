@@ -24,7 +24,6 @@ import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
-import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -56,7 +55,13 @@ public class GoogleCloudStorageEntity implements RetryingInputEntity
     final String bucket = uri.getAuthority();
     final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
     final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
-    return CompressionUtils.decompress(byteSource.openStream(offset), key);
+    return byteSource.openStream(offset);
+  }
+
+  @Override
+  public String getDecompressionPath()
+  {
+    return GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
   }
 
   @Override

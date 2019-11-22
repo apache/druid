@@ -57,8 +57,6 @@ public class S3Utils
   private static final String MIMETYPE_JETS3T_DIRECTORY = "application/x-directory";
   private static final Logger log = new Logger(S3Utils.class);
 
-  public static final int MAX_S3_RETRIES = 10;
-
   static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
@@ -88,7 +86,7 @@ public class S3Utils
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
-  public static <T> T retryS3Operation(Task<T> f) throws Exception
+  static <T> T retryS3Operation(Task<T> f) throws Exception
   {
     return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
@@ -262,7 +260,7 @@ public class S3Utils
     final String authority = originalAuthority.endsWith("/") ?
                              originalAuthority.substring(0, originalAuthority.length() - 1) :
                              originalAuthority;
-    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
+    final String path = StringUtils.maybeRemoveLeadingSlash(originalPath);
 
     return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
@@ -272,7 +270,7 @@ public class S3Utils
     return new CloudObjectLocation(object.getBucketName(), object.getKey());
   }
 
-  public static String constructSegmentPath(String baseKey, String storageDir)
+  static String constructSegmentPath(String baseKey, String storageDir)
   {
     return JOINER.join(
         baseKey.isEmpty() ? null : baseKey,
@@ -289,7 +287,7 @@ public class S3Utils
 
   public static String extractS3Key(URI uri)
   {
-    return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
+    return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
   }
 
   public static URI checkURI(URI uri)
@@ -369,7 +367,13 @@ public class S3Utils
    * @param key The key under which to store the new object.
    * @param file The path of the file to upload to Amazon S3.
    */
-  public static void uploadFileIfPossible(ServerSideEncryptingAmazonS3 service, boolean disableAcl, String bucket, String key, File file)
+  static void uploadFileIfPossible(
+      ServerSideEncryptingAmazonS3 service,
+      boolean disableAcl,
+      String bucket,
+      String key,
+      File file
+  )
   {
     final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
 

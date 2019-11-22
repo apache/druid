@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
-import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -66,10 +65,13 @@ public class HttpEntity implements RetryingInputEntity
   @Override
   public InputStream readFrom(long offset) throws IOException
   {
-    return CompressionUtils.decompress(
-        openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset),
-        uri.toString()
-    );
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
+  }
+
+  @Override
+  public String getDecompressionPath()
+  {
+    return uri.getPath();
   }
 
   @Override

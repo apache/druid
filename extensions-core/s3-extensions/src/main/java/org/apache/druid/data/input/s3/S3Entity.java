@@ -73,6 +73,12 @@ public class S3Entity implements RetryingInputEntity
   }
 
   @Override
+  public String getDecompressionPath()
+  {
+    return object.getPath();
+  }
+
+  @Override
   public Predicate<Throwable> getRetryCondition()
   {
     return S3Utils.S3RETRY;

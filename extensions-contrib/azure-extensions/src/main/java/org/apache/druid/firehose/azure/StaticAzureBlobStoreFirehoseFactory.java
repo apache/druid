@@ -28,6 +28,7 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.AzureByteSource;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
@@ -101,9 +102,7 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   private static AzureByteSource makeByteSource(AzureStorage azureStorage, AzureBlob object)
   {
     final String container = object.getContainer();
-    final String path = object.getPath().startsWith("/")
-                        ? object.getPath().substring(1)
-                        : object.getPath();
+    final String path = StringUtils.maybeRemoveLeadingSlash(object.getPath());
 
     return new AzureByteSource(azureStorage, container, path);
   }

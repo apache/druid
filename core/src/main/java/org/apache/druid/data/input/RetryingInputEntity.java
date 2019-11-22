@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,12 +33,13 @@ public interface RetryingInputEntity extends InputEntity
   @Override
   default InputStream open() throws IOException
   {
-    return new RetryingInputStream<>(
+    RetryingInputStream<?> retryingInputStream = new RetryingInputStream<>(
         this,
         new RetryingInputEntityOpenFunction(),
         getRetryCondition(),
         RetryUtils.DEFAULT_MAX_TRIES
     );
+    return CompressionUtils.decompress(retryingInputStream, getDecompressionPath());
   }
 
   /**
@@ -55,6 +57,12 @@ public interface RetryingInputEntity extends InputEntity
    *               the number of bytes from the beginning of the entity
    */
   InputStream readFrom(long offset) throws IOException;
+
+
+  /**
+   * Get path to decompress a compressed stream for the entity
+   */
+  String getDecompressionPath();
 
   @Override
   Predicate<Throwable> getRetryCondition();

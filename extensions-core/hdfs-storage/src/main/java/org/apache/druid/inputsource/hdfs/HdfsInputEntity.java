@@ -22,7 +22,6 @@ package org.apache.druid.inputsource.hdfs;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
-import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,7 +54,13 @@ public class HdfsInputEntity implements RetryingInputEntity
     final FileSystem fs = path.getFileSystem(conf);
     final FSDataInputStream inputStream = fs.open(path);
     inputStream.seek(offset);
-    return CompressionUtils.decompress(inputStream, path.getName());
+    return inputStream;
+  }
+
+  @Override
+  public String getDecompressionPath()
+  {
+    return path.getName();
   }
 
   @Override

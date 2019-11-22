@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.net.URI;
 import java.util.Objects;
@@ -41,10 +42,7 @@ public class CloudObjectLocation
   public CloudObjectLocation(URI uri)
   {
     bucket = uri.getHost();
-    String path = uri.getPath();
-    if (path.startsWith("/")) {
-      path = path.substring(1);
-    }
+    String path = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
     this.path = path;
   }
 

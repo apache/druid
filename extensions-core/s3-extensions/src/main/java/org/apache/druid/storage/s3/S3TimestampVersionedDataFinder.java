@@ -67,10 +67,8 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       );
       while (objectSummaryIterator.hasNext()) {
         final S3ObjectSummary objectSummary = objectSummaryIterator.next();
-        String keyString = objectSummary.getKey().substring(coords.getPath().length());
-        if (keyString.startsWith("/")) {
-          keyString = keyString.substring(1);
-        }
+        String keyString =
+            StringUtils.maybeRemoveLeadingSlash(objectSummary.getKey().substring(coords.getPath().length()));
         if (pattern != null && !pattern.matcher(keyString).matches()) {
           continue;
         }

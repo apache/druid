@@ -237,6 +237,11 @@ public class StringUtils
     }
   }
 
+  public static String maybeRemoveLeadingSlash(String s)
+  {
+    return s.startsWith("/") ? s.substring(1) : s;
+  }
+
   /**
    * Removes all occurrences of the given char from the given string. This method is an optimal version of
    * {@link String#replace(CharSequence, CharSequence) s.replace("c", "")}.

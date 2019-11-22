@@ -78,12 +78,8 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
       }
     } else {
       this.objects = null;
-      if (!this.uris.isEmpty() && !this.prefixes.isEmpty()) {
-        throw new IAE("uris and prefixes cannot be used together");
-      }
-
-      if (this.uris.isEmpty() && this.prefixes.isEmpty()) {
-        throw new IAE("uris or prefixes must be specified");
+      if (this.uris.isEmpty() == this.prefixes.isEmpty()) {
+        throw new IAE("exactly one of either uris or prefixes must be specified");
       }
 
       for (final URI inputURI : this.uris) {
@@ -104,20 +100,20 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     this.prefixes = new ArrayList<>();
   }
 
-  @JsonProperty("uris")
+  @JsonProperty
   public List<URI> getUris()
   {
     return uris;
   }
 
-  @JsonProperty("prefixes")
+  @JsonProperty
   public List<URI> getPrefixes()
   {
     return prefixes;
   }
 
-  @JsonProperty("objects")
-  public List<CloudObjectLocation> getObject()
+  @JsonProperty
+  public List<CloudObjectLocation> getObjects()
   {
     return objects;
   }

@@ -60,12 +60,14 @@ import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -85,6 +87,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
       URI.create("s3://foo/bar/file.csv"),
       URI.create("s3://bar/foo/file2.csv")
+  );
+
+  private static final List<URI> EXPECTED_COMPRESSED_URIS = Arrays.asList(
+      URI.create("s3://foo/bar/file.csv.gz"),
+      URI.create("s3://bar/foo/file2.csv.gz")
   );
 
   private static final List<CloudObjectLocation> EXPECTED_COORDS =
@@ -224,6 +231,45 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testCompressedReader() throws IOException
+  {
+    EasyMock.reset(S3_CLIENT);
+    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(0)));
+    addExpectedNonPrefixObjectsWithNoListPermission();
+    addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(0));
+    addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(1));
+    EasyMock.replay(S3_CLIENT);
+
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        null,
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null
+    );
+
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ImmutableList.of("count")
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, 0),
+        null
+    );
+
+    CloseableIterator<InputRow> iterator = reader.read();
+
+    while (iterator.hasNext()) {
+      InputRow nextRow = iterator.next();
+      Assert.assertEquals(NOW, nextRow.getTimestamp());
+      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+    }
+  }
+
   private static void addExpectedPrefixObjects(URI prefix, List<URI> uris)
   {
     final String s3Bucket = prefix.getAuthority();
@@ -264,6 +310,20 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     someObject.setBucketName(s3Bucket);
     someObject.setKey(key);
     someObject.setObjectContent(new ByteArrayInputStream(CONTENT));
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
+  }
+
+  private static void addExpectedGetCompressedObjectMock(URI uri) throws IOException
+  {
+    final String s3Bucket = uri.getAuthority();
+    final String key = S3Utils.extractS3Key(uri);
+
+    S3Object someObject = new S3Object();
+    someObject.setBucketName(s3Bucket);
+    someObject.setKey(key);
+    ByteArrayOutputStream gzipped = new ByteArrayOutputStream();
+    CompressionUtils.gzip(new ByteArrayInputStream(CONTENT), gzipped);
+    someObject.setObjectContent(new ByteArrayInputStream(gzipped.toByteArray()));
     EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
   }
 
