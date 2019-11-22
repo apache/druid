@@ -285,7 +285,7 @@ An example of the result is
   "failed":0,
   "complete":0,
   "total":10,
-  "expectedSucceeded":10
+  "estimatedExpectedSucceeded":10
 }
 ```
 
