@@ -21,13 +21,12 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -274,10 +273,10 @@ public class DeterminePartitionsJobTest
 
     dataFile = File.createTempFile("test_website_data", "tmp");
     dataFile.deleteOnExit();
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     tmpDir.deleteOnExit();
 
-    FileUtils.writeLines(dataFile, data);
+    org.apache.commons.io.FileUtils.writeLines(dataFile, data);
 
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
@@ -385,7 +384,7 @@ public class DeterminePartitionsJobTest
   @After
   public void tearDown() throws Exception
   {
-    FileUtils.forceDelete(dataFile);
+    org.apache.commons.io.FileUtils.forceDelete(dataFile);
     FileUtils.deleteDirectory(tmpDir);
   }
 }
