@@ -63,6 +63,7 @@ import {
   LocalStorageKeys,
   localStorageSet,
   parseJson,
+  pluralIfNeeded,
   QueryState,
 } from '../../utils';
 import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
@@ -78,9 +79,9 @@ import {
   fillDataSourceNameIfNeeded,
   fillInputFormat,
   FlattenField,
+  getConstantTimestampSpec,
   getDimensionMode,
   getDimensionSpecFormFields,
-  getEmptyTimestampSpec,
   getFilterFormFields,
   getFlattenFieldFormFields,
   getIngestionComboType,
@@ -167,7 +168,7 @@ import './load-data-view.scss';
 function showRawLine(line: SampleEntry): string {
   if (!line.parsed) return 'No parse';
   const raw = line.parsed.raw;
-  if (typeof raw !== 'string') return 'Bad raw';
+  if (typeof raw !== 'string') return String(raw);
   if (raw.includes('\n')) {
     return `[Multi-line row, length: ${raw.length}]`;
   }
@@ -182,7 +183,7 @@ function showBlankLine(line: SampleEntry): string {
 }
 
 function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
-  if (!headerAndRows) return getEmptyTimestampSpec();
+  if (!headerAndRows) return getConstantTimestampSpec();
 
   const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
     const possibleFormat = possibleDruidFormatForValues(
@@ -199,7 +200,7 @@ function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
     timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
     timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
     timestampSpecs[0] || // Fall back to the first one
-    getEmptyTimestampSpec() // Ok, empty it is...
+    getConstantTimestampSpec() // Ok, empty it is...
   );
 }
 
@@ -984,7 +985,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       inputQueryState: new QueryState({ data: sampleResponse }),
     });
   }
@@ -1306,11 +1306,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </>
           )}
           {this.renderFlattenControls()}
-          {Boolean(sugestedFlattenFields && sugestedFlattenFields.length) && (
+          {sugestedFlattenFields && sugestedFlattenFields.length ? (
             <FormGroup>
               <Button
                 icon={IconNames.LIGHTBULB}
-                text="Auto add flatten specs"
+                text={`Auto add ${pluralIfNeeded(sugestedFlattenFields.length, 'flatten spec')}`}
                 onClick={() => {
                   this.updateSpec(
                     deepSet(spec, 'ioConfig.inputFormat.flattenSpec.fields', sugestedFlattenFields),
@@ -1318,6 +1318,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             </FormGroup>
+          ) : (
+            undefined
           )}
         </div>
         {this.renderNextBar({
@@ -1436,7 +1438,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForTimestamp(initRun = false) {
-    const { spec, sampleStrategy, cacheRows } = this.state;
+    const { spec, cacheRows } = this.state;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
     const timestampSpec = deepGet(spec, 'dataSchema.timestampSpec') || EMPTY_OBJECT;
@@ -1456,7 +1458,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTimestamp(spec, sampleStrategy, cacheRows);
+      sampleResponse = await sampleForTimestamp(spec, cacheRows);
     } catch (e) {
       this.setState({
         timestampQueryState: new QueryState({ error: e.message }),
@@ -1557,7 +1559,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 active={!timestampSpecFromColumn}
                 onClick={() => {
                   this.updateSpecPreview(
-                    deepSet(spec, 'dataSchema.timestampSpec', getEmptyTimestampSpec()),
+                    deepSet(spec, 'dataSchema.timestampSpec', getConstantTimestampSpec()),
                   );
                 }}
               />
@@ -1587,7 +1589,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForTransform(initRun = false) {
-    const { spec, sampleStrategy, cacheRows } = this.state;
+    const { spec, cacheRows } = this.state;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
@@ -1606,7 +1608,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheRows);
+      sampleResponse = await sampleForTransform(spec, cacheRows);
     } catch (e) {
       this.setState({
         transformQueryState: new QueryState({ error: e.message }),
@@ -1806,7 +1808,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForFilter(initRun = false) {
-    const { spec, sampleStrategy, cacheRows } = this.state;
+    const { spec, cacheRows } = this.state;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
@@ -1825,7 +1827,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForFilter(spec, sampleStrategy, cacheRows);
+      sampleResponse = await sampleForFilter(spec, cacheRows);
     } catch (e) {
       this.setState({
         filterQueryState: new QueryState({ error: e.message }),
@@ -1851,7 +1853,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let sampleResponseNoFilter: SampleResponse;
     try {
       const specNoFilter = deepSet(spec, 'dataSchema.transformSpec.filter', null);
-      sampleResponseNoFilter = await sampleForFilter(specNoFilter, sampleStrategy, cacheRows);
+      sampleResponseNoFilter = await sampleForFilter(specNoFilter, cacheRows);
     } catch (e) {
       this.setState({
         filterQueryState: new QueryState({ error: e.message }),
@@ -2080,7 +2082,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForSchema(initRun = false) {
-    const { spec, sampleStrategy, cacheRows } = this.state;
+    const { spec, cacheRows } = this.state;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
     const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || EMPTY_ARRAY;
@@ -2102,7 +2104,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForSchema(spec, sampleStrategy, cacheRows);
+      sampleResponse = await sampleForSchema(spec, cacheRows);
     } catch (e) {
       this.setState({
         schemaQueryState: new QueryState({ error: e.message }),
@@ -2328,13 +2330,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   renderChangeRollupAction() {
-    const { newRollup, spec, sampleStrategy, cacheRows } = this.state;
+    const { newRollup, spec, cacheRows } = this.state;
     if (typeof newRollup === 'undefined' || !cacheRows) return;
 
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheRows);
+          const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
             updateSchemaWithSample(
               spec,
@@ -2357,14 +2359,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderChangeDimensionModeAction() {
-    const { newDimensionMode, spec, sampleStrategy, cacheRows } = this.state;
+    const { newDimensionMode, spec, cacheRows } = this.state;
     if (typeof newDimensionMode === 'undefined' || !cacheRows) return;
     const autoDetect = newDimensionMode === 'auto-detect';
 
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, sampleStrategy, cacheRows);
+          const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
             updateSchemaWithSample(
               spec,

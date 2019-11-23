@@ -399,13 +399,22 @@ export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
 
 const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
 
-const EMPTY_TIMESTAMP_SPEC: TimestampSpec = {
+const DUMMY_TIMESTAMP_SPEC: TimestampSpec = {
+  column: NO_SUCH_COLUMN,
+  missingValue: '1970-01-01T00:00:00Z',
+};
+
+export function getDummyTimestampSpec() {
+  return DUMMY_TIMESTAMP_SPEC;
+}
+
+const CONSTANT_TIMESTAMP_SPEC: TimestampSpec = {
   column: NO_SUCH_COLUMN,
   missingValue: '2010-01-01T00:00:00Z',
 };
 
-export function getEmptyTimestampSpec() {
-  return EMPTY_TIMESTAMP_SPEC;
+export function getConstantTimestampSpec() {
+  return CONSTANT_TIMESTAMP_SPEC;
 }
 
 export function isColumnTimestampSpec(timestampSpec: TimestampSpec) {
@@ -2268,6 +2277,10 @@ export function updateIngestionType(
     }
 
     newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
+  }
+
+  if (!deepGet(spec, 'dataSchema.timestampSpec')) {
+    newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', getDummyTimestampSpec());
   }
 
   if (!deepGet(spec, 'dataSchema.dimensionsSpec')) {

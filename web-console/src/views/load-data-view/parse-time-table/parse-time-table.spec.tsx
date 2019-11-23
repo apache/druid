@@ -19,7 +19,7 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { getEmptyTimestampSpec } from '../../../utils/ingestion-spec';
+import { getDummyTimestampSpec } from '../../../utils/ingestion-spec';
 
 import { ParseTimeTable } from './parse-time-table';
 
@@ -39,7 +39,7 @@ describe('parse time table', () => {
       <ParseTimeTable
         sampleBundle={{
           headerAndRows: sampleData,
-          timestampSpec: getEmptyTimestampSpec(),
+          timestampSpec: getDummyTimestampSpec(),
         }}
         columnFilter=""
         possibleTimestampColumnsOnly={false}

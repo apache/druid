@@ -23,7 +23,7 @@ import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general'
 import {
   DimensionsSpec,
   downgradeSpec,
-  getEmptyTimestampSpec,
+  getDummyTimestampSpec,
   getSpecType,
   IngestionSpec,
   InputFormat,
@@ -295,7 +295,7 @@ export async function sampleForConnect(
       }),
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: getEmptyTimestampSpec(),
+        timestampSpec: getDummyTimestampSpec(),
         dimensionsSpec: {},
       },
     } as any,
@@ -347,7 +347,7 @@ export async function sampleForParser(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: getEmptyTimestampSpec(),
+        timestampSpec: getDummyTimestampSpec(),
         dimensionsSpec: {},
       },
     },
@@ -359,15 +359,10 @@ export async function sampleForParser(
 
 export async function sampleForTimestamp(
   spec: IngestionSpec,
-  sampleStrategy: SampleStrategy,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
-  );
-  const timestampSpec: TimestampSpec =
-    deepGet(spec, 'dataSchema.timestampSpec') || getEmptyTimestampSpec();
+  const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
 
   // First do a query with a static timestamp spec
@@ -375,11 +370,11 @@ export async function sampleForTimestamp(
     type: samplerType,
     spec: {
       type: samplerType,
-      ioConfig,
+      ioConfig: deepGet(spec, 'ioConfig'),
       dataSchema: {
         dataSource: 'sample',
         dimensionsSpec: {},
-        timestampSpec: columnTimestampSpec ? getEmptyTimestampSpec() : timestampSpec,
+        timestampSpec: columnTimestampSpec ? getDummyTimestampSpec() : timestampSpec,
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -399,7 +394,7 @@ export async function sampleForTimestamp(
     type: samplerType,
     spec: {
       type: samplerType,
-      ioConfig,
+      ioConfig: deepGet(spec, 'ioConfig'),
       dataSchema: {
         dataSource: 'sample',
         dimensionsSpec: {},
@@ -431,13 +426,9 @@ export async function sampleForTimestamp(
 
 export async function sampleForTransform(
   spec: IngestionSpec,
-  sampleStrategy: SampleStrategy,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
-  );
   const inputFormatColumns: string[] = deepGet(spec, 'ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
@@ -449,7 +440,7 @@ export async function sampleForTransform(
       type: samplerType,
       spec: {
         type: samplerType,
-        ioConfig,
+        ioConfig: deepGet(spec, 'ioConfig'),
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
@@ -477,7 +468,7 @@ export async function sampleForTransform(
     type: samplerType,
     spec: {
       type: samplerType,
-      ioConfig,
+      ioConfig: deepGet(spec, 'ioConfig'),
       dataSchema: {
         dataSource: 'sample',
         timestampSpec,
@@ -495,13 +486,9 @@ export async function sampleForTransform(
 
 export async function sampleForFilter(
   spec: IngestionSpec,
-  sampleStrategy: SampleStrategy,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
-  );
   const inputFormatColumns: string[] = deepGet(spec, 'ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
@@ -514,7 +501,7 @@ export async function sampleForFilter(
       type: samplerType,
       spec: {
         type: samplerType,
-        ioConfig,
+        ioConfig: deepGet(spec, 'ioConfig'),
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
@@ -542,7 +529,7 @@ export async function sampleForFilter(
     type: samplerType,
     spec: {
       type: samplerType,
-      ioConfig,
+      ioConfig: deepGet(spec, 'ioConfig'),
       dataSchema: {
         dataSource: 'sample',
         timestampSpec,
@@ -561,14 +548,9 @@ export async function sampleForFilter(
 
 export async function sampleForSchema(
   spec: IngestionSpec,
-  sampleStrategy: SampleStrategy,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
-  );
-
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const transformSpec: TransformSpec =
     deepGet(spec, 'dataSchema.transformSpec') || ({} as TransformSpec);
@@ -581,7 +563,7 @@ export async function sampleForSchema(
     type: samplerType,
     spec: {
       type: samplerType,
-      ioConfig,
+      ioConfig: deepGet(spec, 'ioConfig'),
       dataSchema: {
         dataSource: 'sample',
         timestampSpec,
