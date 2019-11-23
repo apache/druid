@@ -32,11 +32,11 @@ import kafka.admin.BrokerMetadata;
 import kafka.admin.RackAwareMode;
 import kafka.utils.ZkUtils;
 import org.apache.curator.test.TestingCluster;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -116,7 +116,6 @@ import scala.collection.Seq;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -131,6 +130,10 @@ import java.util.concurrent.Executor;
 public class KafkaSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
+  private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
+      new JSONPathSpec(true, ImmutableList.of()),
+      ImmutableMap.of()
+  );
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
@@ -256,7 +259,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            null
+            null,
+            INPUT_FORMAT
         ),
         new KafkaIndexTaskTuningConfig(
             null,
@@ -3383,6 +3387,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        INPUT_FORMAT,
         replicas,
         taskCount,
         new Period(duration),
@@ -3452,6 +3457,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,
@@ -3491,6 +3497,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        INPUT_FORMAT,
         replicas,
         taskCount,
         new Period(duration),
@@ -3560,6 +3567,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,
@@ -3603,6 +3611,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        INPUT_FORMAT,
         replicas,
         taskCount,
         new Period(duration),
@@ -3645,6 +3654,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,
@@ -3672,21 +3682,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     return new DataSchema(
         dataSource,
-        OBJECT_MAPPER.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        dimensions,
-                        null,
-                        null
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of()
-                ),
-                StandardCharsets.UTF_8.name()
-            ),
-            Map.class
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(
+            dimensions,
+            null,
+            null
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
@@ -3694,8 +3694,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Granularities.NONE,
             ImmutableList.of()
         ),
-        null,
-        OBJECT_MAPPER
+        null
     );
   }
 
@@ -3770,7 +3769,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             minimumMessageTime,
-            maximumMessageTime
+            maximumMessageTime,
+            INPUT_FORMAT
         ),
         Collections.emptyMap(),
         null,
@@ -3851,8 +3851,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Deserializer keyDeserializerObject = new ByteArrayDeserializer();
       Deserializer valueDeserializerObject = new ByteArrayDeserializer();
       return new KafkaRecordSupplier(
-          consumerProperties,
-          sortingMapper,
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject)
       );
     }

@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -358,7 +359,8 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlIdentifier opName,
       final SqlFunctionCategory category,
       final SqlSyntax syntax,
-      final List<SqlOperator> operatorList
+      final List<SqlOperator> operatorList,
+      final SqlNameMatcher nameMatcher
   )
   {
     if (opName == null) {

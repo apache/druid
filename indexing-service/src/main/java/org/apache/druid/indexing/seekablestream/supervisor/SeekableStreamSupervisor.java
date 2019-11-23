@@ -2779,7 +2779,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             .filter(x -> x.getValue().get() != null)
             .collect(
                 Collectors.collectingAndThen(
-                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
+                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
+                    ImmutableMap::copyOf
                 )
             );
 
@@ -2791,7 +2792,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               .filter(x -> x.getValue().get() != null)
               .collect(
                   Collectors.collectingAndThen(
-                      Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
+                      Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
+                      ImmutableMap::copyOf
                   )
               );
         } else {

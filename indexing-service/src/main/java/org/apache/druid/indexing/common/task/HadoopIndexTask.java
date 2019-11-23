@@ -180,12 +180,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
-  }
-
-  @Override
   public String getType()
   {
     return "index_hadoop";
@@ -332,7 +326,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
     String[] determinePartitionsInput = new String[]{
-        toolbox.getObjectMapper().writeValueAsString(spec),
+        toolbox.getJsonMapper().writeValueAsString(spec),
         toolbox.getConfig().getHadoopWorkingPath(),
         toolbox.getSegmentPusher().getPathForHadoop(),
         hadoopJobIdFile
@@ -357,7 +351,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
 
       determineConfigStatus = toolbox
-          .getObjectMapper()
+          .getJsonMapper()
           .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
 
       indexerSchema = determineConfigStatus.getSchema();
@@ -424,7 +418,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
 
     String[] buildSegmentsInput = new String[]{
-        toolbox.getObjectMapper().writeValueAsString(indexerSchema),
+        toolbox.getJsonMapper().writeValueAsString(indexerSchema),
         version,
         hadoopJobIdFile
     };
@@ -441,7 +435,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           new Object[]{buildSegmentsInput}
       );
 
-      buildSegmentsStatus = toolbox.getObjectMapper().readValue(
+      buildSegmentsStatus = toolbox.getJsonMapper().readValue(
           jobStatusString,
           HadoopIndexGeneratorInnerProcessingStatus.class
       );

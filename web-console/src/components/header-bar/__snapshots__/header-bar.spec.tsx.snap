@@ -26,6 +26,14 @@ exports[`header bar matches snapshot 1`] = `
     <Blueprint3.AnchorButton
       active={false}
       disabled={false}
+      href="#ingestion"
+      icon="gantt-chart"
+      minimal={true}
+      text="Ingestion"
+    />
+    <Blueprint3.AnchorButton
+      active={false}
+      disabled={false}
       href="#datasources"
       icon="multi-select"
       minimal={true}
@@ -38,14 +46,6 @@ exports[`header bar matches snapshot 1`] = `
       icon="stacked-chart"
       minimal={true}
       text="Segments"
-    />
-    <Blueprint3.AnchorButton
-      active={false}
-      disabled={false}
-      href="#tasks"
-      icon="gantt-chart"
-      minimal={true}
-      text="Tasks"
     />
     <Blueprint3.AnchorButton
       active={false}

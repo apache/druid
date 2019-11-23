@@ -37,7 +37,7 @@ import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -313,7 +313,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public CloseableIterator<InputRowListPlusJson> sample()
+        public CloseableIterator<InputRowListPlusRawValues> sample()
         {
           throw new UnsupportedOperationException();
         }
@@ -348,7 +348,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public CloseableIterator<InputRowListPlusJson> sample()
+        public CloseableIterator<InputRowListPlusRawValues> sample()
         {
           throw new UnsupportedOperationException();
         }

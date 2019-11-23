@@ -90,6 +90,7 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InputFormat
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -358,6 +359,7 @@ unmerged
 unparseable
 unparsed
 uptime
+uris
 v1
 v2
 vCPUs

@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,6 +49,10 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class IncrementalIndexRowTypeBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private IncrementalIndex incIndex;
   private IncrementalIndex incFloatIndex;
   private IncrementalIndex incStrIndex;

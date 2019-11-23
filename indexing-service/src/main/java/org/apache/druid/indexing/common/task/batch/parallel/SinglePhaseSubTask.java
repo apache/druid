@@ -100,6 +100,7 @@ import java.util.stream.Collectors;
 public class SinglePhaseSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "single_phase_sub_task";
+  public static final String OLD_TYPE_NAME = "index_sub";
 
   private static final Logger LOG = new Logger(SinglePhaseSubTask.class);
 
@@ -165,12 +166,6 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
-  }
-
-  @Override
-  public int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   @Override

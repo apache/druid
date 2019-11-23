@@ -24,6 +24,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -44,12 +47,20 @@ import java.util.Map;
 
 public class CsvReader extends TextReader
 {
-  private final RFC4180Parser parser = new RFC4180Parser();
+  private final RFC4180Parser parser = CsvReader.createOpenCsvParser();
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Function<String, Object> multiValueFunction;
   @Nullable
   private List<String> columns;
+
+  public static RFC4180Parser createOpenCsvParser()
+  {
+    return NullHandling.replaceWithDefault()
+           ? new RFC4180Parser()
+           : new RFC4180ParserBuilder().withFieldAsNull(
+               CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).build();
+  }
 
   CsvReader(
       InputRowSchema inputRowSchema,
@@ -89,10 +100,9 @@ public class CsvReader extends TextReader
   }
 
   @Override
-  public String toJson(String intermediateRow) throws IOException
+  public Map<String, Object> toMap(String intermediateRow) throws IOException
   {
-    final Map<String, Object> zipped = parseLine(intermediateRow);
-    return DEFAULT_JSON_WRITER.writeValueAsString(zipped);
+    return parseLine(intermediateRow);
   }
 
   private Map<String, Object> parseLine(String line) throws IOException

@@ -86,6 +86,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1636,7 +1637,10 @@ public class IndexTaskTest extends IngestionTestBase
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
   {
     // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
-    Assert.assertTrue(status.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
+    Assert.assertThat(
+        status.getErrorMsg(),
+        CoreMatchers.containsString("Max parse exceptions exceeded")
+    );
   }
 
   private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask task) throws Exception

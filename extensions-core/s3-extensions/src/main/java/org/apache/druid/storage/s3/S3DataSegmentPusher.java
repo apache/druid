@@ -51,8 +51,6 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   {
     this.s3Client = s3Client;
     this.config = config;
-
-    log.info("Configured S3 as deep storage");
   }
 
   @Override
@@ -83,7 +81,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   {
     final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
 
-    log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
+    log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
 
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
@@ -108,7 +106,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       throw new RuntimeException(e);
     }
     finally {
-      log.info("Deleting temporary cached index.zip");
+      log.debug("Deleting temporary cached index.zip");
       zipOutFile.delete();
     }
   }

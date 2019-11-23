@@ -19,17 +19,9 @@
 
 package org.apache.druid.firehose.google;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.module.guice.ObjectMapperModule;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Provides;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.data.input.google.GoogleCloudStorageInputSourceTest;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,7 +36,7 @@ public class StaticGoogleBlobStoreFirehoseFactoryTest
   @Test
   public void testSerde() throws IOException
   {
-    final ObjectMapper mapper = createObjectMapper(new TestGoogleModule());
+    final ObjectMapper mapper = GoogleCloudStorageInputSourceTest.createGoogleObjectMapper();
 
     final List<GoogleBlob> blobs = ImmutableList.of(
         new GoogleBlob("foo", "bar"),
@@ -67,38 +59,5 @@ public class StaticGoogleBlobStoreFirehoseFactoryTest
     );
 
     Assert.assertEquals(factory, outputFact);
-  }
-
-  private static ObjectMapper createObjectMapper(DruidModule baseModule)
-  {
-    final ObjectMapper baseMapper = new DefaultObjectMapper();
-    baseModule.getJacksonModules().forEach(baseMapper::registerModule);
-
-    final Injector injector = Guice.createInjector(
-        new ObjectMapperModule(),
-        baseModule
-    );
-    return injector.getInstance(ObjectMapper.class);
-  }
-
-  private static class TestGoogleModule implements DruidModule
-  {
-    @Override
-    public List<? extends Module> getJacksonModules()
-    {
-      return ImmutableList.of(new SimpleModule());
-    }
-
-    @Override
-    public void configure(Binder binder)
-    {
-
-    }
-
-    @Provides
-    public GoogleStorage getRestS3Service()
-    {
-      return STORAGE;
-    }
   }
 }

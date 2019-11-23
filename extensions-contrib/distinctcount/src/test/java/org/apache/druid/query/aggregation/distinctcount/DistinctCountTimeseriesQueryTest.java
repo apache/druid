@@ -35,13 +35,14 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-public class DistinctCountTimeseriesQueryTest
+public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTest
 {
 
   @Test
