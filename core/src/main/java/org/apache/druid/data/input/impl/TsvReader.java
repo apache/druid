@@ -19,23 +19,34 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputRowSchema;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.List;
 
-public class CsvInputFormat extends SeparateValueInputFormat
+public class TsvReader extends SeparateValueReader
 {
-  @JsonCreator
-  public CsvInputFormat(
-      @JsonProperty("columns") @Nullable List<String> columns,
-      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
-      @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
-      @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
+  TsvReader(
+      InputRowSchema inputRowSchema,
+      InputEntity source,
+      File temporaryDirectory,
+      @Nullable String listDelimiter,
+      @Nullable List<String> columns,
+      boolean findColumnsFromHeader,
+      int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.CSV);
+    super(
+        inputRowSchema,
+        source,
+        temporaryDirectory,
+        listDelimiter,
+        columns,
+        findColumnsFromHeader,
+        skipHeaderRows,
+        SeparateValueInputFormat.Format.TSV
+    );
   }
 }

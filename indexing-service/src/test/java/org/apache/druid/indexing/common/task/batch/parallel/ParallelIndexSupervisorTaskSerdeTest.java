@@ -217,7 +217,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
     private final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
         null,
         new LocalInputSource(new File("tmp"), "test_*"),
-        new CsvInputFormat(Arrays.asList("ts", "dim", "val"), null, false, 0),
+        new CsvInputFormat(Arrays.asList("ts", "dim", "val"), null, null, false, 0),
         false
     );
 

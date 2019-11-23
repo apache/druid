@@ -29,7 +29,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.util.Collections;
 
-public class CsvInputFormatTest
+public class TsvInputFormatTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -38,17 +38,17 @@ public class CsvInputFormatTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), "|", null, true, 10);
+    final TsvInputFormat format = new TsvInputFormat(Collections.singletonList("a"), "|", null, true, 10);
     final byte[] bytes = mapper.writeValueAsBytes(format);
-    final CsvInputFormat fromJson = (CsvInputFormat) mapper.readValue(bytes, InputFormat.class);
+    final TsvInputFormat fromJson = (TsvInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
   }
 
   @Test
-  public void testComma()
+  public void testTab()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Column[a,] has a comma, it cannot");
-    new CsvInputFormat(Collections.singletonList("a,"), ",", null, false, 0);
+    expectedException.expectMessage("Column[a\t] has a tab, it cannot");
+    new TsvInputFormat(Collections.singletonList("a\t"), ",", null, false, 0);
   }
 }

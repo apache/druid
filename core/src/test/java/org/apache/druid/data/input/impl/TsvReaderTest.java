@@ -42,7 +42,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CsvReaderTest
+public class TsvReaderTest
 {
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec("ts", "auto", null),
@@ -61,12 +61,12 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "2019-01-01T00:00:10Z,name_1,5",
-            "2019-01-01T00:00:20Z,name_2,10",
-            "2019-01-01T00:00:30Z,name_3,15"
+            "2019-01-01T00:00:10Z\tname_1\t5",
+            "2019-01-01T00:00:20Z\tname_2\t10",
+            "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 0);
+    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 0);
     assertResult(source, format);
   }
 
@@ -75,13 +75,13 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "ts,name,score",
-            "2019-01-01T00:00:10Z,name_1,5",
-            "2019-01-01T00:00:20Z,name_2,10",
-            "2019-01-01T00:00:30Z,name_3,15"
+            "ts\tname\tscore",
+            "2019-01-01T00:00:10Z\tname_1\t5",
+            "2019-01-01T00:00:20Z\tname_2\t10",
+            "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 0);
+    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), null, null, true, 0);
     assertResult(source, format);
   }
 
@@ -90,13 +90,13 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "this,is,a,row,to,skip",
-            "2019-01-01T00:00:10Z,name_1,5",
-            "2019-01-01T00:00:20Z,name_2,10",
-            "2019-01-01T00:00:30Z,name_3,15"
+            "this\tis\ta\trow\tto\tskip",
+            "2019-01-01T00:00:10Z\tname_1\t5",
+            "2019-01-01T00:00:20Z\tname_2\t10",
+            "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 1);
+    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 1);
     assertResult(source, format);
   }
 
@@ -105,14 +105,14 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "this,is,a,row,to,skip",
-            "ts,name,score",
-            "2019-01-01T00:00:10Z,name_1,5",
-            "2019-01-01T00:00:20Z,name_2,10",
-            "2019-01-01T00:00:30Z,name_3,15"
+            "this\tis\ta\trow\tto\tskip",
+            "ts\tname\tscore",
+            "2019-01-01T00:00:10Z\tname_1\t5",
+            "2019-01-01T00:00:20Z\tname_2\t10",
+            "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 1);
+    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), null, null, true, 1);
     assertResult(source, format);
   }
 
@@ -121,13 +121,13 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "ts,name,score",
-            "2019-01-01T00:00:10Z,name_1,5|1",
-            "2019-01-01T00:00:20Z,name_2,10|2",
-            "2019-01-01T00:00:30Z,name_3,15|3"
+            "ts\tname\tscore",
+            "2019-01-01T00:00:10Z\tname_1\t5|1",
+            "2019-01-01T00:00:20Z\tname_2\t10|2",
+            "2019-01-01T00:00:30Z\tname_3\t15|3"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", null, true, 0);
+    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), "|", null, true, 0);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -156,11 +156,11 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "3,\"Lets do some \"\"normal\"\" quotes\",2018-05-05T10:00:00Z",
-            "34,\"Lets do some \"\"normal\"\", quotes with comma\",2018-05-06T10:00:00Z",
-            "343,\"Lets try \\\"\"it\\\"\" with slash quotes\",2018-05-07T10:00:00Z",
-            "545,\"Lets try \\\"\"it\\\"\", with slash quotes and comma\",2018-05-08T10:00:00Z",
-            "65,Here I write \\n slash n,2018-05-09T10:00:00Z"
+            "3\t\"Lets do some \"\"normal\"\" quotes\"\t2018-05-05T10:00:00Z",
+            "34\t\"Lets do some \"\"normal\"\", quotes with comma\"\t2018-05-06T10:00:00Z",
+            "343\t\"Lets try \\\"\"it\\\"\" with slash quotes\"\t2018-05-07T10:00:00Z",
+            "545\t\"Lets try \\\"\"it\\\"\", with slash quotes and comma\"\t2018-05-08T10:00:00Z",
+            "65\tHere I write \\n slash n\t2018-05-09T10:00:00Z"
         )
     );
     final List<InputRow> expectedResults = ImmutableList.of(
@@ -218,7 +218,7 @@ public class CsvReaderTest
             ImmutableMap.of("Value", "65", "Comment", "Here I write \\n slash n", "Timestamp", "2018-05-09T10:00:00Z")
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(
+    final TsvInputFormat format = new TsvInputFormat(
         ImmutableList.of("Value", "Comment", "Timestamp"),
         null,
         null,
@@ -249,10 +249,10 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "2019-01-01T00:00:10Z,name_1,\"Как говорится: \\\"\"всё течет, всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
+            "2019-01-01T00:00:10Z\tname_1\t\"Как говорится: \\\"\"всё течет\t всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, null, false, 0);
+    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, null, false, 0);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
@@ -260,7 +260,7 @@ public class CsvReaderTest
       Assert.assertEquals(DateTimes.of("2019-01-01T00:00:10Z"), row.getTimestamp());
       Assert.assertEquals("name_1", Iterables.getOnlyElement(row.getDimension("name")));
       Assert.assertEquals(
-          "Как говорится: \\\"всё течет, всё изменяется\\\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева",
+          "Как говорится: \\\"всё течет\t всё изменяется\\\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева",
           Iterables.getOnlyElement(row.getDimension("Comment"))
       );
       Assert.assertFalse(iterator.hasNext());
@@ -281,7 +281,7 @@ public class CsvReaderTest
     return new ByteEntity(outputStream.toByteArray());
   }
 
-  private void assertResult(ByteEntity source, CsvInputFormat format) throws IOException
+  private void assertResult(ByteEntity source, TsvInputFormat format) throws IOException
   {
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;

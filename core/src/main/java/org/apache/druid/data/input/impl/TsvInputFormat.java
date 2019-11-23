@@ -25,10 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CsvInputFormat extends SeparateValueInputFormat
+public class TsvInputFormat extends SeparateValueInputFormat
 {
   @JsonCreator
-  public CsvInputFormat(
+  public TsvInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
       @JsonProperty("listDelimiter") @Nullable String listDelimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
@@ -36,6 +36,6 @@ public class CsvInputFormat extends SeparateValueInputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.CSV);
+    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.TSV);
   }
 }
