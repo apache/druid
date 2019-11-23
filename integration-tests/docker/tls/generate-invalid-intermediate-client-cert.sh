@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-./set-docker-host-ip.sh
+export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
 
 cat <<EOT > invalid_ca_intermediate.conf
 [req]

@@ -47,7 +47,7 @@ Returns the current configuration properties of the process.
 
 * `/status/selfDiscoveredStatus`
 
-Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has recieved a confirmation
+Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation
 from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
 cluster. It is recommended to not consider a Druid node "healthy" or "ready" in automated deployment/container
 management systems until it returns `{"selfDiscovered": true}` from this endpoint. This is because a node may be

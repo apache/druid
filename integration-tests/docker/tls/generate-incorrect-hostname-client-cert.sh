@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-./set-docker-host-ip.sh
+export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
 
 # Generate a client cert with an incorrect hostname for testing
 cat <<EOT > invalid_hostname_csr.conf
@@ -41,7 +41,6 @@ basicConstraints=CA:FALSE,pathlen:0
 
 [ alt_names ]
 DNS.1 = thisisprobablywrongtoo
-email = xyz@example.com
 
 EOT
 
