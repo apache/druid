@@ -70,7 +70,7 @@ class PartialHashSegmentMergeParallelIndexTaskRunner
   }
 
   @Override
-  int getTotalNumSubTasks()
+  int estimateTotalNumSubTasks()
   {
     return mergeIOConfigs.size();
   }

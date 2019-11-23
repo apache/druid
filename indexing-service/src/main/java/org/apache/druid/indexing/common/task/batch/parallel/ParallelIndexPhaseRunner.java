@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -112,23 +113,23 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   /**
    * Returns the total number of sub tasks required to execute this phase.
    */
-  abstract int getTotalNumSubTasks() throws IOException;
+  abstract int estimateTotalNumSubTasks() throws IOException;
 
   @Override
   public TaskState run() throws Exception
   {
-    if (getTotalNumSubTasks() == 0) {
+    final CountingSubTaskSpecIterator subTaskSpecIterator = new CountingSubTaskSpecIterator(subTaskSpecIterator());
+    if (!subTaskSpecIterator.hasNext()) {
       LOG.warn("There's no input split to process");
       return TaskState.SUCCESS;
     }
 
-    final Iterator<SubTaskSpec<SubTaskType>> subTaskSpecIterator = subTaskSpecIterator();
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
         Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
         tuningConfig.getMaxRetry(),
-        getTotalNumSubTasks()
+        estimateTotalNumSubTasks()
     );
     TaskState state = TaskState.RUNNING;
 
@@ -165,15 +166,15 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
                 // We have no more subTasks to run
                 if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.isEmpty()) {
                   subTaskScheduleAndMonitorStopped = true;
-                  if (taskMonitor.isSucceeded()) {
+                  if (subTaskSpecIterator.count == taskMonitor.getNumSucceededTasks()) {
                     // Succeeded
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
-                    final SinglePhaseParallelIndexingProgress monitorStatus = taskMonitor.getProgress();
+                    final ParallelIndexingPhaseProgress monitorStatus = taskMonitor.getProgress();
                     throw new ISE(
-                        "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
-                        monitorStatus.getExpectedSucceeded(),
+                        "Expected [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
+                        subTaskSpecIterator.count,
                         monitorStatus.getSucceeded(),
                         monitorStatus.getFailed()
                     );
@@ -224,6 +225,33 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     }
 
     return state;
+  }
+
+  private class CountingSubTaskSpecIterator implements Iterator<SubTaskSpec<SubTaskType>>
+  {
+    private final Iterator<SubTaskSpec<SubTaskType>> delegate;
+    private int count;
+
+    private CountingSubTaskSpecIterator(Iterator<SubTaskSpec<SubTaskType>> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return delegate.hasNext();
+    }
+
+    @Override
+    public SubTaskSpec<SubTaskType> next()
+    {
+      if (!delegate.hasNext()) {
+        throw new NoSuchElementException();
+      }
+      count++;
+      return delegate.next();
+    }
   }
 
   private boolean isRunning()
@@ -321,9 +349,9 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   }
 
   @Override
-  public ParallelIndexingProgress getProgress()
+  public ParallelIndexingPhaseProgress getProgress()
   {
-    return taskMonitor == null ? SinglePhaseParallelIndexingProgress.notRunning() : taskMonitor.getProgress();
+    return taskMonitor == null ? ParallelIndexingPhaseProgress.notRunning() : taskMonitor.getProgress();
   }
 
   @Override
