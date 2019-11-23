@@ -51,6 +51,7 @@ public class HashPartitionCachingLocalSegmentAllocator implements IndexTaskSegme
   public HashPartitionCachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
+      String supervisorTaskId,
       String dataSource,
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
@@ -62,6 +63,7 @@ public class HashPartitionCachingLocalSegmentAllocator implements IndexTaskSegme
     this.delegate = new CachingLocalSegmentAllocator(
         toolbox,
         taskId,
+        supervisorTaskId,
         this::getIntervalToSegmentIds
     );
   }

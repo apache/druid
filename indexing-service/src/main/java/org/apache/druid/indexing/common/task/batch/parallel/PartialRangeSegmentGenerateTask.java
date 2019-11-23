@@ -153,6 +153,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     return new RangePartitionCachingLocalSegmentAllocator(
         toolbox,
         getId(),
+        supervisorTaskId,
         getDataSource(),
         getPartitionDimension(ingestionSchema),
         intervalToPartitions

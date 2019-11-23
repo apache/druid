@@ -23,6 +23,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,6 +57,7 @@ class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
   {
     /**
      * @param versionFinder Returns the version for the specified interval
+     *
      * @return Information for segment preallocation
      */
     Map<Interval, List<SegmentIdWithShardSpec>> create(Function<Interval, String> versionFinder);
@@ -64,19 +66,21 @@ class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
   CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
+      String supervisorTaskId,
       IntervalToSegmentIdsCreator intervalToSegmentIdsCreator
   ) throws IOException
   {
     this.taskId = taskId;
     this.sequenceNameToSegmentId = new HashMap<>();
 
-    final Map<Interval, String> intervalToVersion = toolbox.getTaskActionClient()
-                                                           .submit(new LockListAction())
-                                                           .stream()
-                                                           .collect(Collectors.toMap(
-                                                               TaskLock::getInterval,
-                                                               TaskLock::getVersion
-                                                           ));
+    final Map<Interval, String> intervalToVersion =
+        toolbox.getTaskActionClient()
+               .submit(new SurrogateAction<>(supervisorTaskId, new LockListAction()))
+               .stream()
+               .collect(Collectors.toMap(
+                   TaskLock::getInterval,
+                   TaskLock::getVersion
+               ));
     Function<Interval, String> versionFinder = interval -> findVersion(intervalToVersion, interval);
 
     final Map<Interval, List<SegmentIdWithShardSpec>> intervalToIds = intervalToSegmentIdsCreator.create(versionFinder);

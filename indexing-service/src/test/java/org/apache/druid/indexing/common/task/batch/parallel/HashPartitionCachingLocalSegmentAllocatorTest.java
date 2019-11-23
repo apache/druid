@@ -53,6 +53,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final String DATASOURCE = "datasource";
   private static final String TASKID = "taskid";
+  private static final String SUPERVISOR_TASKID = "supervisor-taskid";
   private static final Interval INTERVAL = Intervals.utc(0, 1000);
   private static final String VERSION = "version";
   private static final String DIMENSION = "dim";
@@ -76,6 +77,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
     target = new HashPartitionCachingLocalSegmentAllocator(
         toolbox,
         TASKID,
+        SUPERVISOR_TASKID,
         DATASOURCE,
         ALLOCATE_SPEC
     );

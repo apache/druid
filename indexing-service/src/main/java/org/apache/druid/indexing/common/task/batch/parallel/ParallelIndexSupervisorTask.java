@@ -633,8 +633,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       //noinspection ResultOfObjectAllocationIgnored
       new StringSketch();
     }
-    catch (Exception e) {
-      throw new ISE(e, "DataSketches is unvailable. Try loading the druid-datasketches extension.");
+    catch (Throwable t) {
+      throw new ISE(t, "DataSketches is unvailable. Try adding the druid-datasketches extension to the classpath.");
     }
   }
 

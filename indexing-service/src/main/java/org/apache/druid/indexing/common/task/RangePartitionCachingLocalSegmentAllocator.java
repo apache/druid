@@ -52,6 +52,7 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
   public RangePartitionCachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
+      String supervisorTaskId,
       String dataSource,
       String partitionDimension,
       Map<Interval, String[]> intervalsToPartitions
@@ -64,6 +65,7 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
     this.delegate = new CachingLocalSegmentAllocator(
         toolbox,
         taskId,
+        supervisorTaskId,
         this::getIntervalToSegmentIds
     );
   }

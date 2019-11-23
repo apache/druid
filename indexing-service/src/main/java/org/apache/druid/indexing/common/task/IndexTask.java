@@ -828,7 +828,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // We use the timeChunk lock and don't have to ask the overlord to create segmentIds.
       // Instead, a local allocator is used.
       if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
-        return new HashPartitionCachingLocalSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
+        return new HashPartitionCachingLocalSegmentAllocator(toolbox, getId(), getId(), getDataSource(), allocateSpec);
       } else {
         return new LocalSegmentAllocator(toolbox, getId(), getDataSource(), dataSchema.getGranularitySpec());
       }

@@ -50,6 +50,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
 {
   private static final String DATASOURCE = "datasource";
   private static final String TASKID = "taskid";
+  private static final String SUPERVISOR_TASKID = "supervisor-taskid";
   private static final String PARTITION_DIMENSION = "dimension";
   private static final Interval INTERVAL_EMPTY = Intervals.utc(0, 1000);
   private static final Interval INTERVAL_SINGLETON = Intervals.utc(1000, 2000);
@@ -97,6 +98,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     target = new RangePartitionCachingLocalSegmentAllocator(
         toolbox,
         TASKID,
+        SUPERVISOR_TASKID,
         DATASOURCE,
         PARTITION_DIMENSION,
         INTERVAL_TO_PARTITONS
