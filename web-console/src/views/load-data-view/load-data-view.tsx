@@ -1166,7 +1166,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   // ==================================================================
 
   async queryForParser(initRun = false) {
-    const { spec, sampleStrategy, cacheRows } = this.state;
+    const { spec, sampleStrategy } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
@@ -1189,7 +1189,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForParser(spec, sampleStrategy, cacheRows);
+      sampleResponse = await sampleForParser(spec, sampleStrategy);
     } catch (e) {
       this.setState({
         parserQueryState: new QueryState({ error: e.message }),
@@ -1260,7 +1260,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
     }
 
-    let sugestedFlattenFields: FlattenField[] | null = null;
+    let sugestedFlattenFields: FlattenField[] | undefined;
     if (canFlatten && !flattenFields.length && parserQueryState.data) {
       sugestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
@@ -1437,19 +1437,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForTimestamp(initRun = false) {
     const { spec, sampleStrategy, cacheRows } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
     const timestampSpec = deepGet(spec, 'dataSchema.timestampSpec') || EMPTY_OBJECT;
 
-    let issue: string | undefined;
-    if (issueWithIoConfig(ioConfig)) {
-      issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    }
-
-    if (issue) {
+    if (!cacheRows) {
       this.setState({
-        timestampQueryState: initRun ? QueryState.INIT : new QueryState({ error: issue }),
+        timestampQueryState: initRun
+          ? QueryState.INIT
+          : new QueryState({ error: 'must complete parse step' }),
       });
       return;
     }
@@ -1469,7 +1465,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       timestampQueryState: new QueryState({
         data: {
           headerAndRows: headerAndRowsFromSampleResponse(
@@ -1593,18 +1588,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForTransform(initRun = false) {
     const { spec, sampleStrategy, cacheRows } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
-    let issue: string | undefined;
-    if (issueWithIoConfig(ioConfig)) {
-      issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    }
-
-    if (issue) {
+    if (!cacheRows) {
       this.setState({
-        transformQueryState: initRun ? QueryState.INIT : new QueryState({ error: issue }),
+        transformQueryState: initRun
+          ? QueryState.INIT
+          : new QueryState({ error: 'must complete parse step' }),
       });
       return;
     }
@@ -1624,7 +1615,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       transformQueryState: new QueryState({
         data: headerAndRowsFromSampleResponse(
           sampleResponse,
@@ -1817,18 +1807,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForFilter(initRun = false) {
     const { spec, sampleStrategy, cacheRows } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
-    let issue: string | undefined;
-    if (issueWithIoConfig(ioConfig)) {
-      issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    }
-
-    if (issue) {
+    if (!cacheRows) {
       this.setState({
-        filterQueryState: initRun ? QueryState.INIT : new QueryState({ error: issue }),
+        filterQueryState: initRun
+          ? QueryState.INIT
+          : new QueryState({ error: 'must complete parse step' }),
       });
       return;
     }
@@ -1849,7 +1835,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     if (sampleResponse.data.length) {
       this.setState({
-        cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
         filterQueryState: new QueryState({
           data: headerAndRowsFromSampleResponse(
             sampleResponse,
@@ -2096,21 +2081,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   async queryForSchema(initRun = false) {
     const { spec, sampleStrategy, cacheRows } = this.state;
-    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inputFormatColumns: string[] =
       deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
     const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || EMPTY_ARRAY;
     const dimensionsSpec: DimensionsSpec =
       deepGet(spec, 'dataSchema.dimensionsSpec') || EMPTY_OBJECT;
 
-    let issue: string | undefined;
-    if (issueWithIoConfig(ioConfig)) {
-      issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    }
-
-    if (issue) {
+    if (!cacheRows) {
       this.setState({
-        schemaQueryState: initRun ? QueryState.INIT : new QueryState({ error: issue }),
+        schemaQueryState: initRun
+          ? QueryState.INIT
+          : new QueryState({ error: 'must complete parse step' }),
       });
       return;
     }
@@ -2130,7 +2111,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     this.setState({
-      cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       schemaQueryState: new QueryState({
         data: {
           headerAndRows: headerAndRowsFromSampleResponse(
@@ -2349,7 +2329,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderChangeRollupAction() {
     const { newRollup, spec, sampleStrategy, cacheRows } = this.state;
-    if (typeof newRollup === 'undefined') return;
+    if (typeof newRollup === 'undefined' || !cacheRows) return;
 
     return (
       <AsyncActionDialog
@@ -2378,7 +2358,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderChangeDimensionModeAction() {
     const { newDimensionMode, spec, sampleStrategy, cacheRows } = this.state;
-    if (typeof newDimensionMode === 'undefined') return;
+    if (typeof newDimensionMode === 'undefined' || !cacheRows) return;
     const autoDetect = newDimensionMode === 'auto-detect';
 
     return (

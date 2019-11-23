@@ -113,7 +113,7 @@ export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): 
   return filterMap(sampleResponse.data, d => d.input).slice(0, 20);
 }
 
-export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows | undefined) {
+export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   if (!cacheRows) return sampleSpec;
 
   // If this is already an inline spec there is nothing to do
@@ -334,7 +334,6 @@ export async function sampleForConnect(
 export async function sampleForParser(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-  cacheRows: CacheRows | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
   const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
@@ -355,13 +354,13 @@ export async function sampleForParser(
     samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(applyCache(sampleSpec, cacheRows), 'parser');
+  return postToSampler(sampleSpec, 'parser');
 }
 
 export async function sampleForTimestamp(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-  cacheRows: CacheRows | undefined,
+  cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
   const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
@@ -410,7 +409,7 @@ export async function sampleForTimestamp(
     samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  const sampleTime = await postToSampler(sampleSpec, 'timestamp-time');
+  const sampleTime = await postToSampler(applyCache(sampleSpec, cacheRows), 'timestamp-time');
 
   if (sampleTime.data.length !== sampleColumns.data.length) {
     // If the two responses did not come from the same cache (or for some reason have different lengths) then
@@ -433,7 +432,7 @@ export async function sampleForTimestamp(
 export async function sampleForTransform(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-  cacheRows: CacheRows | undefined,
+  cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
   const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
@@ -491,13 +490,13 @@ export async function sampleForTransform(
     samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(sampleSpec, 'transform');
+  return postToSampler(applyCache(sampleSpec, cacheRows), 'transform');
 }
 
 export async function sampleForFilter(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-  cacheRows: CacheRows | undefined,
+  cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
   const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
@@ -563,7 +562,7 @@ export async function sampleForFilter(
 export async function sampleForSchema(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-  cacheRows: CacheRows | undefined,
+  cacheRows: CacheRows,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
   const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(

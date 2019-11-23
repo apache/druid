@@ -383,7 +383,7 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 }
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  return inputFormat.type === 'json';
+  return inputFormat.type === 'json' || inputFormat.type === 'parquet';
 }
 
 export interface TimestampSpec {
@@ -2268,6 +2268,10 @@ export function updateIngestionType(
     }
 
     newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
+  }
+
+  if (!deepGet(spec, 'dataSchema.dimensionsSpec')) {
+    newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec', {});
   }
 
   return newSpec;
