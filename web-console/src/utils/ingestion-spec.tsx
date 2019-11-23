@@ -61,7 +61,7 @@ export type IngestionComboType =
   | 'index:ingestSegment'
   | 'index:inline'
   | 'index:s3'
-  | 'index:static-google-blobstore'
+  | 'index:google'
   | 'index:hdfs';
 
 // Some extra values that can be selected in the initial screen
@@ -100,7 +100,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'ingestSegment':
         case 'inline':
         case 's3':
-        case 'static-google-blobstore':
+        case 'google':
         case 'hdfs':
           return `index:${inputSource.type}` as IngestionComboType;
       }
@@ -126,7 +126,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
     case 'index:s3':
       return 'Amazon S3';
 
-    case 'index:static-google-blobstore':
+    case 'index:google':
       return 'Google Cloud Storage';
 
     case 'index:hdfs':
@@ -178,7 +178,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
     case 'index:s3':
       return 'druid-s3-extensions';
 
-    case 'index:static-google-blobstore':
+    case 'index:google':
       return 'druid-google-extensions';
 
     case 'index:hdfs':
@@ -292,7 +292,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet'],
     info: (
       <>
         <p>The parser used to parse the data.</p>
@@ -974,7 +974,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'static-google-blobstore', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 's3', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -1047,7 +1047,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'File filter',
           type: 'string',
           required: true,
-          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
+          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet'],
           info: (
             <>
               <ExternalLink
@@ -1175,7 +1175,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:static-google-blobstore':
+    case 'index:google':
       return [
         inputSourceType,
         {
@@ -1359,7 +1359,7 @@ function issueWithInputSource(inputSource: InputSource | undefined): string | un
       }
       break;
 
-    case 'static-google-blobstore':
+    case 'google':
       if (!nonEmptyArray(inputSource.blobs)) {
         return 'must have at least one blob';
       }
@@ -1410,7 +1410,7 @@ export function getIoConfigTuningFormFields(
   switch (ingestionComboType) {
     case 'index:http':
     case 'index:s3':
-    case 'index:static-google-blobstore':
+    case 'index:google':
     case 'index:hdfs':
       return [
         {
@@ -2434,9 +2434,16 @@ export function getFilterFormFields() {
 
 export function upgradeSpec(spec: any): any {
   if (deepGet(spec, 'ioConfig.firehose')) {
-    if (deepGet(spec, 'ioConfig.firehose.type') === 'static-s3') {
-      deepSet(spec, 'ioConfig.firehose.type', 's3');
+    switch (deepGet(spec, 'ioConfig.firehose.type')) {
+      case 'static-s3':
+        deepSet(spec, 'ioConfig.firehose.type', 's3');
+        break;
+
+      case 'static-google-blobstore':
+        deepSet(spec, 'ioConfig.firehose.type', 'google');
+        break;
     }
+
     spec = deepMove(spec, 'ioConfig.firehose', 'ioConfig.inputSource');
     spec = deepMove(spec, 'dataSchema.parser.parseSpec.timestampSpec', 'dataSchema.timestampSpec');
     spec = deepMove(
@@ -2463,8 +2470,15 @@ export function downgradeSpec(spec: any): any {
     );
     spec = deepMove(spec, 'dataSchema.timestampSpec', 'dataSchema.parser.parseSpec.timestampSpec');
     spec = deepMove(spec, 'ioConfig.inputSource', 'ioConfig.firehose');
-    if (deepGet(spec, 'ioConfig.firehose.type') === 's3') {
-      deepSet(spec, 'ioConfig.firehose.type', 'static-s3');
+
+    switch (deepGet(spec, 'ioConfig.firehose.type')) {
+      case 's3':
+        deepSet(spec, 'ioConfig.firehose.type', 'static-s3');
+        break;
+
+      case 'google':
+        deepSet(spec, 'ioConfig.firehose.type', 'static-google-blobstore');
+        break;
     }
   }
   return spec;

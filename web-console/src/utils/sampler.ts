@@ -26,6 +26,7 @@ import {
   getEmptyTimestampSpec,
   getSpecType,
   IngestionSpec,
+  InputFormat,
   IoConfig,
   isColumnTimestampSpec,
   isIngestSegment,
@@ -41,7 +42,6 @@ const MS_IN_HOUR = 60 * 60 * 1000;
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
-  // skipCache: true,
   numRows: 500,
   timeoutMs: 15000,
 };
@@ -111,6 +111,29 @@ export function getSamplerType(spec: IngestionSpec): SamplerType {
 
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
   return filterMap(sampleResponse.data, d => d.input).slice(0, 20);
+}
+
+export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows | undefined) {
+  if (!cacheRows) return sampleSpec;
+
+  // If this is already an inline spec there is nothing to do
+  if (deepGet(sampleSpec, 'spec.ioConfig.inputSource.type') === 'inline') return sampleSpec;
+
+  // Make the spec into an inline json spec
+  sampleSpec = deepSet(sampleSpec, 'type', 'index');
+  sampleSpec = deepSet(sampleSpec, 'spec.type', 'index');
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
+    type: 'inline',
+    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+  });
+
+  const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
+  const inputFormat: InputFormat = { type: 'json' };
+  if (flattenSpec) inputFormat.flattenSpec = flattenSpec;
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat', inputFormat);
+
+  return sampleSpec;
 }
 
 export function headerFromSampleResponse(
@@ -333,11 +356,6 @@ export async function sampleForParser(
   };
 
   return postToSampler(applyCache(sampleSpec, cacheRows), 'parser');
-}
-
-function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows | undefined) {
-  if (!cacheRows) return sampleSpec;
-  return sampleSpec; // ToDo;
 }
 
 export async function sampleForTimestamp(

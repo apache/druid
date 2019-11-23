@@ -25,7 +25,7 @@ import {
   updateSchemaWithSample,
 } from './druid-type';
 import { IngestionSpec } from './ingestion-spec';
-import { getSamplerType, headerFromSampleResponse } from './sampler';
+import { applyCache, getSamplerType, headerFromSampleResponse } from './sampler';
 
 describe('test-utils', () => {
   const ingestionSpec: IngestionSpec = {
@@ -65,9 +65,66 @@ describe('test-utils', () => {
   });
 
   it('spec-utils headerFromSampleResponse', () => {
+    expect(headerFromSampleResponse({ data: [{ input: { a: 1 }, parsed: { a: 1 } }] }))
+      .toMatchInlineSnapshot(`
+      Array [
+        "a",
+      ]
+    `);
+  });
+
+  it('spec-utils applyCache', () => {
     expect(
-      headerFromSampleResponse({ data: [{ input: { a: 1 }, parsed: { a: 1 } }] }),
-    ).toMatchInlineSnapshot();
+      applyCache(
+        {
+          type: 'index_parallel',
+          spec: ingestionSpec,
+          samplerConfig: {
+            numRows: 500,
+            timeoutMs: 15000,
+          },
+        },
+        [{ make: 'Honda', model: 'Accord' }, { make: 'Toyota', model: 'Prius' }],
+      ),
+    ).toMatchInlineSnapshot(`
+      Object {
+        "samplerConfig": Object {
+          "numRows": 500,
+          "timeoutMs": 15000,
+        },
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {},
+            "granularitySpec": Object {
+              "queryGranularity": "HOUR",
+              "segmentGranularity": "DAY",
+              "type": "uniform",
+            },
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "data": "{\\"make\\":\\"Honda\\",\\"model\\":\\"Accord\\"}
+      {\\"make\\":\\"Toyota\\",\\"model\\":\\"Prius\\"}",
+              "type": "inline",
+            },
+            "type": "index",
+          },
+          "tuningConfig": Object {
+            "type": "index_parallel",
+          },
+          "type": "index",
+        },
+        "type": "index",
+      }
+    `);
   });
 
   // it('spec-utils sampleForParser', async () => {

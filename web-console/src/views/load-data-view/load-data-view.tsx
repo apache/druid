@@ -703,7 +703,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
           {this.renderIngestionCard('index:s3')}
-          {this.renderIngestionCard('index:static-google-blobstore')}
+          {this.renderIngestionCard('index:google')}
           {this.renderIngestionCard('index:hdfs')}
           {this.renderIngestionCard('index:ingestSegment')}
           {this.renderIngestionCard('index:http')}
@@ -780,7 +780,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:s3':
         return <p>Load text based data from Amazon S3.</p>;
 
-      case 'index:static-google-blobstore':
+      case 'index:google':
         return <p>Load text based data from the Google Blobstore.</p>;
 
       case 'index:hdfs':
@@ -830,7 +830,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:ingestSegment':
       case 'index:inline':
       case 'index:s3':
-      case 'index:static-google-blobstore':
+      case 'index:google':
       case 'index:hdfs':
       case 'kafka':
       case 'kinesis':
