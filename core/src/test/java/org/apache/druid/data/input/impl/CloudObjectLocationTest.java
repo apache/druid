@@ -21,7 +21,9 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.net.URI;
 
@@ -29,15 +31,22 @@ public class CloudObjectLocationTest
 {
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String SCHEME = "s3";
+  private static final String BUCKET_NAME = "bucket";
 
   private static final CloudObjectLocation LOCATION =
-      new CloudObjectLocation("someBucket", "path/to/myobject");
+      new CloudObjectLocation(BUCKET_NAME, "path/to/myobject");
+
+  private static final CloudObjectLocation LOCATION_EXTRA_SLASHES =
+      new CloudObjectLocation(BUCKET_NAME + '/', "/path/to/myobject");
 
   private static final CloudObjectLocation LOCATION_URLENCODE =
-      new CloudObjectLocation("someBucket", "path/to/myobject?question");
+      new CloudObjectLocation(BUCKET_NAME, "path/to/myobject?question");
 
   private static final CloudObjectLocation LOCATION_NON_ASCII =
-      new CloudObjectLocation("someBucket", "pÄth/tø/myøbject");
+      new CloudObjectLocation(BUCKET_NAME, "pÄth/tø/myøbject");
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws Exception
@@ -45,6 +54,11 @@ public class CloudObjectLocationTest
     Assert.assertEquals(
         LOCATION,
         MAPPER.readValue(MAPPER.writeValueAsString(LOCATION), CloudObjectLocation.class)
+    );
+
+    Assert.assertEquals(
+        LOCATION_EXTRA_SLASHES,
+        MAPPER.readValue(MAPPER.writeValueAsString(LOCATION_EXTRA_SLASHES), CloudObjectLocation.class)
     );
 
     Assert.assertEquals(
@@ -62,17 +76,22 @@ public class CloudObjectLocationTest
   public void testToUri()
   {
     Assert.assertEquals(
-        URI.create("s3://someBucket/path/to/myobject"),
+        URI.create("s3://bucket/path/to/myobject"),
         LOCATION.toUri(SCHEME)
     );
 
     Assert.assertEquals(
-        URI.create("s3://someBucket/path/to/myobject%3Fquestion"),
+        URI.create("s3://bucket/path/to/myobject"),
+        LOCATION_EXTRA_SLASHES.toUri(SCHEME)
+    );
+
+    Assert.assertEquals(
+        URI.create("s3://bucket/path/to/myobject%3Fquestion"),
         LOCATION_URLENCODE.toUri(SCHEME)
     );
 
     Assert.assertEquals(
-        URI.create("s3://someBucket/p%C3%84th/t%C3%B8/my%C3%B8bject"),
+        URI.create("s3://bucket/p%C3%84th/t%C3%B8/my%C3%B8bject"),
         LOCATION_NON_ASCII.toUri(SCHEME)
     );
   }
@@ -81,7 +100,17 @@ public class CloudObjectLocationTest
   public void testUriRoundTrip()
   {
     Assert.assertEquals(LOCATION, new CloudObjectLocation(LOCATION.toUri(SCHEME)));
+    Assert.assertEquals(LOCATION_EXTRA_SLASHES, new CloudObjectLocation(LOCATION_EXTRA_SLASHES.toUri(SCHEME)));
     Assert.assertEquals(LOCATION_URLENCODE, new CloudObjectLocation(LOCATION_URLENCODE.toUri(SCHEME)));
     Assert.assertEquals(LOCATION_NON_ASCII, new CloudObjectLocation(LOCATION_NON_ASCII.toUri(SCHEME)));
+  }
+
+  @Test
+  public void testBucketName()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    CloudObjectLocation invalidBucket = new CloudObjectLocation("someBÜcket", "some/path");
+    // will never get here
+    Assert.assertEquals(invalidBucket, new CloudObjectLocation(invalidBucket.toUri(SCHEME)));
   }
 }

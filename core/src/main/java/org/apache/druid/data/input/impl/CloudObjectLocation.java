@@ -33,6 +33,15 @@ import java.util.Objects;
  *
  * The intention is that this is used as a common representation for storage objects as an alternative to dealing in
  * {@link URI} directly, but still provide a mechansim to round-trip with a URI.
+ *
+ * In common clouds, bucket names must be dns compliant:
+ *   https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+ *   https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
+ *   https://cloud.google.com/storage/docs/naming
+ *
+ * The constructor ensures that bucket names are DNS compliant by checking that the URL encoded form of the bucket
+ * matches the supplied value. Technically it should probably confirm that the bucket is also all lower-case, but
+ * S3 has a legacy mode where buckets did not have to be compliant so we can't enforce that here unfortunately.
  */
 public class CloudObjectLocation
 {
@@ -44,6 +53,7 @@ public class CloudObjectLocation
   {
     this.bucket = Preconditions.checkNotNull(StringUtils.maybeRemoveTrailingSlash(bucket));
     this.path = Preconditions.checkNotNull(StringUtils.maybeRemoveLeadingSlash(path));
+    Preconditions.checkArgument(this.bucket.equals(StringUtils.urlEncode(this.bucket)));
   }
 
   public CloudObjectLocation(URI uri)
@@ -55,10 +65,6 @@ public class CloudObjectLocation
    * Given a scheme, encode {@link #bucket} and {@link #path} into a {@link URI}.
    *
    * In all clouds bucket names must be dns compliant, so it does not require encoding
-   *  https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-   *  https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
-   *  https://cloud.google.com/storage/docs/naming
-   *
    * There is no such restriction on object names, so they will be URL encoded when constructing the URI
    */
   public URI toUri(String scheme)
