@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
 
 import java.util.List;
 
@@ -37,7 +38,7 @@ public class S3InputSourceDruidModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-        new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, "s3"))
+        new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, S3StorageDruidModule.SCHEME))
     );
   }
 

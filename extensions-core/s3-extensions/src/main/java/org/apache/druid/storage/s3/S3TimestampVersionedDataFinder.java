@@ -67,17 +67,18 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       );
       while (objectSummaryIterator.hasNext()) {
         final S3ObjectSummary objectSummary = objectSummaryIterator.next();
-        String keyString =
-            StringUtils.maybeRemoveLeadingSlash(objectSummary.getKey().substring(coords.getPath().length()));
+        final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(objectSummary);
+        // remove coords path prefix from object path
+        String keyString = StringUtils.maybeRemoveLeadingSlash(
+            objectLocation.getPath().substring(coords.getPath().length())
+        );
         if (pattern != null && !pattern.matcher(keyString).matches()) {
           continue;
         }
         final long latestModified = objectSummary.getLastModified().getTime();
         if (latestModified >= mostRecent) {
           mostRecent = latestModified;
-          latest = new URI(
-              StringUtils.format("s3://%s/%s", objectSummary.getBucketName(), objectSummary.getKey())
-          );
+          latest = objectLocation.toUri(S3StorageDruidModule.SCHEME);
         }
       }
       return latest;

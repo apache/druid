@@ -34,14 +34,12 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -65,39 +63,20 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   )
   {
     this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
-    this.uris = uris == null ? new ArrayList<>() : uris;
-    this.prefixes = prefixes == null ? new ArrayList<>() : prefixes;
+    this.uris = uris;
+    this.prefixes = prefixes;
+    this.objects = objects;
 
     if (objects != null) {
-      this.objects = objects;
-      if (!this.uris.isEmpty()) {
-        throw new IAE("uris cannot be used with object");
-      }
-      if (!this.prefixes.isEmpty()) {
-        throw new IAE("prefixes cannot be used with object");
-      }
+      throwIfIllegalArgs(uris != null || prefixes != null);
+    } else if (uris != null) {
+      throwIfIllegalArgs(prefixes != null);
+      uris.forEach(S3Utils::checkURI);
+    } else if (prefixes != null) {
+      prefixes.forEach(S3Utils::checkURI);
     } else {
-      this.objects = null;
-      if (this.uris.isEmpty() == this.prefixes.isEmpty()) {
-        throw new IAE("exactly one of either uris or prefixes must be specified");
-      }
-
-      for (final URI inputURI : this.uris) {
-        Preconditions.checkArgument("s3".equals(inputURI.getScheme()), "input uri scheme == s3 (%s)", inputURI);
-      }
-
-      for (final URI inputURI : this.prefixes) {
-        Preconditions.checkArgument("s3".equals(inputURI.getScheme()), "input uri scheme == s3 (%s)", inputURI);
-      }
+      throwIfIllegalArgs(true);
     }
-  }
-
-  private S3InputSource(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation inputSplit)
-  {
-    this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
-    this.objects = ImmutableList.of(Preconditions.checkNotNull(inputSplit, "object"));
-    this.uris = new ArrayList<>();
-    this.prefixes = new ArrayList<>();
   }
 
   @JsonProperty
@@ -119,14 +98,17 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   }
 
   @Override
-  public Stream<InputSplit<CloudObjectLocation>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public Stream<InputSplit<CloudObjectLocation>> createSplits(
+      InputFormat inputFormat,
+      @Nullable SplitHintSpec splitHintSpec
+  )
   {
     if (objects != null) {
       return objects.stream().map(InputSplit::new);
     }
 
-    if (!uris.isEmpty()) {
-      return uris.stream().map(S3Utils::checkURI).map(CloudObjectLocation::new).map(InputSplit::new);
+    if (uris != null) {
+      return uris.stream().map(CloudObjectLocation::new).map(InputSplit::new);
     }
 
     return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
@@ -135,13 +117,13 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     if (objects != null) {
       return objects.size();
     }
 
-    if (!uris.isEmpty()) {
+    if (uris != null) {
       return uris.size();
     }
 
@@ -151,7 +133,7 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new S3InputSource(s3Client, split.get());
+    return new S3InputSource(s3Client, null, null, ImmutableList.of(split.get()));
   }
 
   @Override
@@ -212,5 +194,12 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
     return () -> S3Utils.lazyFetchingObjectSummariesIterator(s3Client, prefixes.iterator(), MAX_LISTING_LENGTH);
+  }
+
+  private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException
+  {
+    if (clause) {
+      throw new IllegalArgumentException("exactly one of either uris or prefixes or objects must be specified");
+    }
   }
 }

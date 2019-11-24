@@ -33,7 +33,7 @@ import java.io.File;
 /**
  *
  */
-@JsonTypeName(S3StorageDruidModule.SCHEME)
+@JsonTypeName(S3StorageDruidModule.SCHEME_S3_ZIP)
 public class S3LoadSpec implements LoadSpec
 {
   private final String bucket;

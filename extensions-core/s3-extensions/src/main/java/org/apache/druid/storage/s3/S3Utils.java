@@ -53,9 +53,11 @@ import java.util.NoSuchElementException;
  */
 public class S3Utils
 {
+  private static final String SCHEME = S3StorageDruidModule.SCHEME;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
   private static final String MIMETYPE_JETS3T_DIRECTORY = "application/x-directory";
   private static final Logger log = new Logger(S3Utils.class);
+
 
   static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
@@ -255,14 +257,7 @@ public class S3Utils
    */
   public static URI summaryToUri(S3ObjectSummary object)
   {
-    final String originalAuthority = object.getBucketName();
-    final String originalPath = object.getKey();
-    final String authority = originalAuthority.endsWith("/") ?
-                             originalAuthority.substring(0, originalAuthority.length() - 1) :
-                             originalAuthority;
-    final String path = StringUtils.maybeRemoveLeadingSlash(originalPath);
-
-    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
+    return summaryToCloudObjectLocation(object).toUri(SCHEME);
   }
 
   public static CloudObjectLocation summaryToCloudObjectLocation(S3ObjectSummary object)
@@ -292,10 +287,10 @@ public class S3Utils
 
   public static URI checkURI(URI uri)
   {
-    if (uri.getScheme().equalsIgnoreCase(S3StorageDruidModule.SCHEME)) {
-      uri = URI.create("s3" + uri.toString().substring(S3StorageDruidModule.SCHEME.length()));
-    } else if (!"s3".equalsIgnoreCase(uri.getScheme())) {
-      throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
+    if (uri.getScheme().equalsIgnoreCase(S3StorageDruidModule.SCHEME_S3_ZIP)) {
+      uri = URI.create(SCHEME + uri.toString().substring(S3StorageDruidModule.SCHEME_S3_ZIP.length()));
+    } else if (!SCHEME.equalsIgnoreCase(uri.getScheme())) {
+      throw new IAE("Invalid URI scheme [%s] must be [%s]", uri.toString(), SCHEME);
     }
     return uri;
   }

@@ -81,7 +81,7 @@ public class S3DataSegmentPuller implements URIDataPuller
     try {
       org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
-      final URI uri = URI.create(StringUtils.format("s3://%s/%s", s3Coords.getBucket(), s3Coords.getPath()));
+      final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
       final ByteSource byteSource = new ByteSource()
       {
         @Override

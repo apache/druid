@@ -222,7 +222,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
         temporaryFolder.newFolder()
     );
 
@@ -261,7 +261,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
         temporaryFolder.newFolder()
     );
 
