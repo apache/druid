@@ -52,10 +52,10 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * This implementation takes query context into consideration, e.g. timeout, maxQueuedBytes, backpressure.
  * It uses a blocking queue to feed a SequenceInputStream that is terminated whenever the handler's
- * {@link #done()} is called or a throwable is detected.
+ * {@link #done} is called or a throwable is detected.
  *
  * The resulting InputStream will attempt to terminate normally, but on exception in HttpResponseHandler
- * may end with an IOException upon {@link java.io.InputStream#read()}
+ * may end with an IOException upon {@link InputStream#read()}
  *
  * {@link org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler} also uses
  * sequence input streams to create final InputStream, but it does not have timeout, backpressure,
