@@ -69,7 +69,7 @@ public class HttpEntity implements RetryingInputEntity
   }
 
   @Override
-  public String getDecompressionPath()
+  public String getPath()
   {
     return uri.getPath();
   }

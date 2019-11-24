@@ -58,7 +58,7 @@ public class HdfsInputEntity implements RetryingInputEntity
   }
 
   @Override
-  public String getDecompressionPath()
+  public String getPath()
   {
     return path.getName();
   }

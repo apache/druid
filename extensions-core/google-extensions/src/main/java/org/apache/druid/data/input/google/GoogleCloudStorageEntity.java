@@ -60,7 +60,7 @@ public class GoogleCloudStorageEntity implements RetryingInputEntity
   }
 
   @Override
-  public String getDecompressionPath()
+  public String getPath()
   {
     return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
   }

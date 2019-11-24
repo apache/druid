@@ -30,6 +30,10 @@ import java.io.InputStream;
 
 public interface RetryingInputEntity extends InputEntity
 {
+  /**
+   * Open a {@link RetryingInputStream} wrapper for an underlying input stream, optionally decompressing the retrying
+   * stream if the file extension matches a known compression, otherwise passing through the retrying stream directly.
+   */
   @Override
   default InputStream open() throws IOException
   {
@@ -39,12 +43,12 @@ public interface RetryingInputEntity extends InputEntity
         getRetryCondition(),
         RetryUtils.DEFAULT_MAX_TRIES
     );
-    return CompressionUtils.decompress(retryingInputStream, getDecompressionPath());
+    return CompressionUtils.decompress(retryingInputStream, getPath());
   }
 
   /**
-   * Directly opens an {@link InputStream} on the input entity. Decompression should be handled externally, this should
-   * return the raw stream for the object.
+   * Directly opens an {@link InputStream} on the input entity. Decompression should be handled externally, and is
+   * handled by the default implementation of {@link #open}, so this should return the raw stream for the object.
    */
   default InputStream readFromStart() throws IOException
   {
@@ -53,7 +57,8 @@ public interface RetryingInputEntity extends InputEntity
 
   /**
    * Directly opens an {@link InputStream} starting at the given offset on the input entity. Decompression should be
-   * handled externally, this should return the raw stream for the object.
+   * handled externally, and is handled by the default implementation of {@link #open},this should return the raw stream
+   * for the object.
    *
    * @param offset an offset to start reading from. A non-negative integer counting
    *               the number of bytes from the beginning of the entity
@@ -62,9 +67,10 @@ public interface RetryingInputEntity extends InputEntity
 
 
   /**
-   * Get path to decompress a compressed stream for the entity
+   * Get path name for this entity, used by the default implementation of {@link #open} to determine if the underlying
+   * stream needs decompressed, based on file extension of the path
    */
-  String getDecompressionPath();
+  String getPath();
 
   @Override
   Predicate<Throwable> getRetryCondition();

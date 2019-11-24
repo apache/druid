@@ -73,7 +73,7 @@ public class S3Entity implements RetryingInputEntity
   }
 
   @Override
-  public String getDecompressionPath()
+  public String getPath()
   {
     return object.getPath();
   }
