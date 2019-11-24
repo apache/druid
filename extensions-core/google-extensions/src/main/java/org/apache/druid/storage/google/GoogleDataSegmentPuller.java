@@ -65,7 +65,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
     }
     catch (Exception e) {
       try {
-        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+        FileUtils.deleteDirectory(outDir);
       }
       catch (IOException ioe) {
         LOG.warn(

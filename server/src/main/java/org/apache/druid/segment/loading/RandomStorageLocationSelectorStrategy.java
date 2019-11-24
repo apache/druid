@@ -17,12 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel;
+package org.apache.druid.segment.loading;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 /**
- * Represents the current progress of {@link ParallelIndexSupervisorTask}. Implementations can be different depending on
- * the distributed indexing algorithm.
+ * A {@link StorageLocation} selector strategy that selects a segment cache location randomly each time
+ * among the available storage locations.
  */
-interface ParallelIndexingProgress
+public class RandomStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
+
+  private final List<StorageLocation> storageLocations;
+
+  public RandomStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  {
+    this.storageLocations = storageLocations;
+  }
+
+  @Override
+  public Iterator<StorageLocation> getLocations()
+  {
+    List<StorageLocation> copyLocation = new ArrayList<>(storageLocations);
+    Collections.shuffle(copyLocation);
+    return copyLocation.iterator();
+  }
+
 }

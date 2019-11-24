@@ -21,9 +21,8 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -58,7 +57,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   @Test
   public void testPushTaskLog() throws Exception
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = FileUtils.createTempDir();
 
     try {
       final File logFile = new File(tmpDir, "log");

@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -185,7 +185,7 @@ public class SegmentManagerThreadSafetyTest
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    FileUtils.forceMkdir(segmentDir);
+    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
 
     final File factoryJson = new File(segmentDir, "factory.json");
     objectMapper.writeValue(factoryJson, new TestSegmentizerFactory());
@@ -203,7 +203,7 @@ public class SegmentManagerThreadSafetyTest
     {
       numFileLoaded.compute(sourceFile, (f, numLoaded) -> numLoaded == null ? 1 : numLoaded + 1);
       try {
-        FileUtils.copyDirectory(sourceFile, dir);
+        org.apache.commons.io.FileUtils.copyDirectory(sourceFile, dir);
       }
       catch (IOException e) {
         throw new RuntimeException(e);

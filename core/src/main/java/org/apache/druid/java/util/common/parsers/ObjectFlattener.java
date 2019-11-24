@@ -24,4 +24,6 @@ import java.util.Map;
 public interface ObjectFlattener<T>
 {
   Map<String, Object> flatten(T obj);
+
+  Map<String, Object> toMap(T obj);
 }

@@ -44,23 +44,27 @@ public interface SplittableInputSource<T> extends InputSource
   /**
    * Creates a {@link Stream} of {@link InputSplit}s. The returned stream is supposed to be evaluated lazily to avoid
    * consuming too much memory.
-   * Note that this interface also has {@link #getNumSplits} which is related to this method. The implementations
+   * Note that this interface also has {@link #estimateNumSplits} which is related to this method. The implementations
    * should be careful to <i>NOT</i> cache the created splits in memory.
    *
    * Implementations can consider {@link InputFormat#isSplittable()} and {@link SplitHintSpec} to create splits
-   * in the same way with {@link #getNumSplits}.
+   * in the same way with {@link #estimateNumSplits}.
    */
   Stream<InputSplit<T>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException;
 
   /**
-   * Returns the total number of splits to be created via {@link #createSplits}.
-   * This method can be expensive since it needs to iterate all directories or whatever substructure
-   * to find all input objects.
+   * Returns an estimated total number of splits to be created via {@link #createSplits}. The estimated number of splits
+   * doesn't have to be accurate and can be different from the actual number of InputSplits returned from
+   * {@link #createSplits}. This will be used to estimate the progress of a phase in parallel indexing.
+   * See TaskMonitor for more details of the progress estimation.
+   *
+   * This method can be expensive if an implementation iterates all directories or whatever substructure
+   * to find all input entities.
    *
    * Implementations can consider {@link InputFormat#isSplittable()} and {@link SplitHintSpec} to find splits
    * in the same way with {@link #createSplits}.
    */
-  int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException;
+  int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException;
 
   /**
    * Helper method for ParallelIndexSupervisorTask.

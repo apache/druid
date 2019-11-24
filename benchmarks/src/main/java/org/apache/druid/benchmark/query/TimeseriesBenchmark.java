@@ -20,14 +20,13 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -280,7 +279,7 @@ public class TimeseriesBenchmark
       incIndexes.add(incIndex);
     }
 
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
     qIndexes = new ArrayList<>();
