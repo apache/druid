@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import com.google.common.collect.MapDifference.ValueDifference;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -31,7 +32,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
@@ -50,21 +50,23 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SQLMetadataSegmentManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntSupplier;
 
 public class MaterializedViewSupervisor implements Supervisor
 {
@@ -97,6 +99,7 @@ public class MaterializedViewSupervisor implements Supervisor
   // In the missing intervals, baseDataSource has data but derivedDataSource does not, which means
   // data in these intervals of derivedDataSource needs to be rebuilt.
   private Set<Interval> missInterval = new HashSet<>();
+  private Boolean isAutoUpdate = false;
 
   public MaterializedViewSupervisor(
       TaskMaster taskMaster,
@@ -124,6 +127,9 @@ public class MaterializedViewSupervisor implements Supervisor
     this.minDataLagMs = spec.getContext().containsKey("minDataLagMs")
         ? Long.parseLong(String.valueOf(spec.getContext().get("minDataLagMs")))
         : DEFAULT_MIN_DATA_LAG_MS;
+    this.isAutoUpdate = spec.getContext().containsKey("isAutoUpdate")
+        ? Boolean.parseBoolean(String.valueOf(spec.getContext().get("isAutoUpdate")))
+        : this.isAutoUpdate;
   }
 
   @Override
@@ -400,6 +406,17 @@ public class MaterializedViewSupervisor implements Supervisor
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
         segmentManager.markSegmentAsUnused(segment.getId().toString());
+      }
+    }
+    // automatically update view data when new segments are generated
+    if (this.isAutoUpdate) {
+      Iterator<Entry<Interval, ValueDifference<String>>> diffiter = difference.entriesDiffering().entrySet().iterator();
+      while (diffiter.hasNext()) {
+        Entry<Interval, ValueDifference<String>> entry = diffiter.next();
+        String maxCreateDate = entry.getValue().leftValue();
+        if(!runningVersion.containsKey(entry.getKey())) {
+          toBuildInterval.put(entry.getKey(), maxCreateDate);
+        }
       }
     }
     // data of the latest interval will be built firstly.
