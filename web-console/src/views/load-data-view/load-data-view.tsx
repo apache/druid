@@ -112,7 +112,6 @@ import {
   isEmptyIngestionSpec,
   isIngestSegment,
   isParallel,
-  issueWithInputFormat,
   issueWithIoConfig,
   isTask,
   joinFilter,
@@ -415,15 +414,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   isStepEnabled(step: Step): boolean {
-    const { spec } = this.state;
+    const { spec, cacheRows } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const inputFormat: InputFormat = deepGet(spec, 'ioConfig.inputFormat') || EMPTY_OBJECT;
 
     switch (step) {
       case 'connect':
         return Boolean(spec.type);
 
       case 'parser':
+        return Boolean(spec.type && !issueWithIoConfig(ioConfig));
+
       case 'timestamp':
       case 'transform':
       case 'filter':
@@ -431,9 +431,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'partition':
       case 'tuning':
       case 'publish':
-        return Boolean(
-          spec.type && !issueWithIoConfig(ioConfig) && !issueWithInputFormat(inputFormat),
-        );
+        return Boolean(cacheRows);
 
       default:
         return true;
@@ -447,7 +445,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
-    this.setState({ spec: newSpec, specPreview: newSpec });
+    const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
+    if (!deepGet(newSpec, 'ioConfig.type')) {
+      deltaState.cacheRows = undefined;
+    }
+    this.setState(deltaState as LoadDataViewState);
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
   };
 
