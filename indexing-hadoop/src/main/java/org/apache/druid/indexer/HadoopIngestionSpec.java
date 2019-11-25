@@ -25,7 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.indexer.hadoop.DatasourceIngestionSpec;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
-import org.apache.druid.indexer.path.UsedSegmentLister;
+import org.apache.druid.indexer.path.UsedSegmentsRetriever;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -34,8 +35,11 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +60,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   public HadoopIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") HadoopIOConfig ioConfig,
-      @JsonProperty("tuningConfig") HadoopTuningConfig tuningConfig,
-      @JsonProperty("uniqueId") String uniqueId
+      @JsonProperty("tuningConfig") @Nullable HadoopTuningConfig tuningConfig,
+      @JsonProperty("uniqueId") @Nullable String uniqueId
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
@@ -138,7 +142,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   public static HadoopIngestionSpec updateSegmentListIfDatasourcePathSpecIsUsed(
       HadoopIngestionSpec spec,
       ObjectMapper jsonMapper,
-      UsedSegmentLister segmentLister
+      UsedSegmentsRetriever segmentsRetriever
   )
       throws IOException
   {
@@ -169,20 +173,21 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           DatasourceIngestionSpec.class
       );
 
-      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForIntervals(
+      Collection<DataSegment> usedVisibleSegments = segmentsRetriever.getUsedSegmentsForIntervals(
           ingestionSpecObj.getDataSource(),
-          ingestionSpecObj.getIntervals()
+          ingestionSpecObj.getIntervals(),
+          Segments.ONLY_VISIBLE
       );
 
       if (ingestionSpecObj.getSegments() != null) {
-        //ensure that user supplied segment list matches with the segmentsList obtained from db
+        //ensure that user supplied segment list matches with the usedVisibleSegments obtained from db
         //this safety check lets users do test-n-set kind of batch delta ingestion where the delta
         //ingestion task would only run if current state of the system is same as when they submitted
         //the task.
         List<DataSegment> userSuppliedSegmentsList = ingestionSpecObj.getSegments();
 
-        if (segmentsList.size() == userSuppliedSegmentsList.size()) {
-          Set<DataSegment> segmentsSet = new HashSet<>(segmentsList);
+        if (usedVisibleSegments.size() == userSuppliedSegmentsList.size()) {
+          Set<DataSegment> segmentsSet = new HashSet<>(usedVisibleSegments);
 
           for (DataSegment userSegment : userSuppliedSegmentsList) {
             if (!segmentsSet.contains(userSegment)) {
@@ -194,7 +199,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         }
       }
 
-      final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segmentsList);
+      final VersionedIntervalTimeline<String, DataSegment> timeline =
+          VersionedIntervalTimeline.forSegments(usedVisibleSegments);
       final List<WindowedDataSegment> windowedSegments = new ArrayList<>();
       for (Interval interval : ingestionSpecObj.getIntervals()) {
         final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(interval);

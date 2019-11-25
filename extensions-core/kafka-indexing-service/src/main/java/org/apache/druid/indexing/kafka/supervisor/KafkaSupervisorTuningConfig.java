@@ -43,6 +43,36 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   private final Duration shutdownTimeout;
   private final Duration offsetFetchPeriod;
 
+  public static KafkaSupervisorTuningConfig defaultConfig()
+  {
+    return new KafkaSupervisorTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
   public KafkaSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
@@ -138,6 +168,17 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public Duration getShutdownTimeout()
   {
     return shutdownTimeout;
+  }
+
+  @Override
+  public Duration getRepartitionTransitionDuration()
+  {
+    // Stopping tasks early for Kafka ingestion on partition set change is not supported yet,
+    // just return a default for now.
+    return SeekableStreamSupervisorTuningConfig.defaultDuration(
+        null,
+        SeekableStreamSupervisorTuningConfig.DEFAULT_REPARTITION_TRANSITION_DURATION
+    );
   }
 
   @JsonProperty

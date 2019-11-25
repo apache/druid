@@ -867,9 +867,13 @@ public class RowBasedGrouperHelper
           fieldIndices.add(i);
           aggFlags.add(false);
           needsReverses.add(false);
-          final ValueType type = dimensions.get(i).getOutputType();
-          isNumericField.add(ValueType.isNumeric(type));
-          comparators.add(StringComparators.LEXICOGRAPHIC);
+          boolean isNumeric = ValueType.isNumeric(dimensions.get(i).getOutputType());
+          isNumericField.add(isNumeric);
+          if (isNumeric) {
+            comparators.add(StringComparators.NUMERIC);
+          } else {
+            comparators.add(StringComparators.LEXICOGRAPHIC);
+          }
         }
       }
 
@@ -1171,57 +1175,12 @@ public class RowBasedGrouperHelper
         initializeRankOfDictionaryIds();
       }
 
-      if (includeTimestamp) {
-        if (sortByDimsFirst) {
-          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
-                serdeHelperComparators,
-                lhsBuffer,
-                rhsBuffer,
-                lhsPosition,
-                rhsPosition
-            );
-            if (cmp != 0) {
-              return cmp;
-            }
-
-            return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-          };
-        } else {
-          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            return compareDimsInBuffersForNullFudgeTimestamp(
-                serdeHelperComparators,
-                lhsBuffer,
-                rhsBuffer,
-                lhsPosition,
-                rhsPosition
-            );
-          };
-        }
-      } else {
-        return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          for (int i = 0; i < dimCount; i++) {
-            final int cmp = serdeHelperComparators[i].compare(
-                lhsBuffer,
-                rhsBuffer,
-                lhsPosition,
-                rhsPosition
-            );
-
-            if (cmp != 0) {
-              return cmp;
-            }
-          }
-
-          return 0;
-        };
-      }
+      return GrouperBufferComparatorUtils.bufferComparator(
+          includeTimestamp,
+          sortByDimsFirst,
+          dimCount,
+          serdeHelperComparators
+      );
     }
 
     @Override
@@ -1230,127 +1189,15 @@ public class RowBasedGrouperHelper
         int[] aggregatorOffsets
     )
     {
-      final List<RowBasedKeySerdeHelper> adjustedSerdeHelpers;
-      final List<Boolean> needsReverses = new ArrayList<>();
-      List<RowBasedKeySerdeHelper> orderByHelpers = new ArrayList<>();
-      List<RowBasedKeySerdeHelper> otherDimHelpers = new ArrayList<>();
-      Set<Integer> orderByIndices = new HashSet<>();
-
-      int aggCount = 0;
-      boolean needsReverse;
-      for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
-        needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
-        int dimIndex = OrderByColumnSpec.getDimIndexForOrderBy(orderSpec, dimensions);
-        if (dimIndex >= 0) {
-          RowBasedKeySerdeHelper serdeHelper = serdeHelpers[dimIndex];
-          orderByHelpers.add(serdeHelper);
-          orderByIndices.add(dimIndex);
-          needsReverses.add(needsReverse);
-        } else {
-          int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
-          if (aggIndex >= 0) {
-            final RowBasedKeySerdeHelper serdeHelper;
-            final StringComparator stringComparator = orderSpec.getDimensionComparator();
-            final String typeName = aggregatorFactories[aggIndex].getTypeName();
-            final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
-
-            aggCount++;
-
-            final ValueType valueType = ValueType.fromString(typeName);
-            if (!ValueType.isNumeric(valueType)) {
-              throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
-            }
-
-            serdeHelper = makeNullHandlingNumericserdeHelper(valueType, aggOffset, true, stringComparator);
-
-            orderByHelpers.add(serdeHelper);
-            needsReverses.add(needsReverse);
-          }
-        }
-      }
-
-      for (int i = 0; i < dimCount; i++) {
-        if (!orderByIndices.contains(i)) {
-          otherDimHelpers.add(serdeHelpers[i]);
-          needsReverses.add(false); // default to Ascending order if dim is not in an orderby spec
-        }
-      }
-
-      adjustedSerdeHelpers = orderByHelpers;
-      adjustedSerdeHelpers.addAll(otherDimHelpers);
-
-      final BufferComparator[] adjustedSerdeHelperComparators = new BufferComparator[adjustedSerdeHelpers.size()];
-      Arrays.setAll(adjustedSerdeHelperComparators, i -> adjustedSerdeHelpers.get(i).getBufferComparator());
-
-      final int fieldCount = dimCount + aggCount;
-
-      if (includeTimestamp) {
-        if (sortByDimsFirst) {
-          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            final int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
-                adjustedSerdeHelperComparators,
-                needsReverses,
-                fieldCount,
-                lhsBuffer,
-                rhsBuffer,
-                lhsPosition,
-                rhsPosition
-            );
-            if (cmp != 0) {
-              return cmp;
-            }
-
-            return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-          };
-        } else {
-          return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            int cmp = compareDimsInBuffersForNullFudgeTimestampForPushDown(
-                adjustedSerdeHelperComparators,
-                needsReverses,
-                fieldCount,
-                lhsBuffer,
-                rhsBuffer,
-                lhsPosition,
-                rhsPosition
-            );
-
-            return cmp;
-          };
-        }
-      } else {
-        return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          for (int i = 0; i < fieldCount; i++) {
-            final int cmp;
-            if (needsReverses.get(i)) {
-              cmp = adjustedSerdeHelperComparators[i].compare(
-                  rhsBuffer,
-                  lhsBuffer,
-                  rhsPosition,
-                  lhsPosition
-              );
-            } else {
-              cmp = adjustedSerdeHelperComparators[i].compare(
-                  lhsBuffer,
-                  rhsBuffer,
-                  lhsPosition,
-                  rhsPosition
-              );
-            }
-
-            if (cmp != 0) {
-              return cmp;
-            }
-          }
-
-          return 0;
-        };
-      }
+      return GrouperBufferComparatorUtils.bufferComparatorWithAggregators(
+          aggregatorFactories,
+          aggregatorOffsets,
+          limitSpec,
+          dimensions,
+          serdeHelperComparators,
+          includeTimestamp,
+          sortByDimsFirst
+      );
     }
 
     @Override
@@ -1476,11 +1323,6 @@ public class RowBasedGrouperHelper
         default:
           throw new IAE("invalid type: %s", valueType);
       }
-    }
-
-    private static boolean isPrimitiveComparable(boolean pushLimitDown, @Nullable StringComparator stringComparator)
-    {
-      return !pushLimitDown || stringComparator == null || stringComparator.equals(StringComparators.NUMERIC);
     }
 
     private abstract class AbstractStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
@@ -1617,19 +1459,11 @@ public class RowBasedGrouperHelper
       )
       {
         this.keyBufferPosition = keyBufferPosition;
-        if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
-          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Longs.compare(
-              lhsBuffer.getLong(lhsPosition + keyBufferPosition),
-              rhsBuffer.getLong(rhsPosition + keyBufferPosition)
-          );
-        } else {
-          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            long lhs = lhsBuffer.getLong(lhsPosition + keyBufferPosition);
-            long rhs = rhsBuffer.getLong(rhsPosition + keyBufferPosition);
-
-            return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
-          };
-        }
+        bufferComparator = GrouperBufferComparatorUtils.makeBufferComparatorForLong(
+            keyBufferPosition,
+            pushLimitDown,
+            stringComparator
+        );
       }
 
       @Override
@@ -1670,18 +1504,11 @@ public class RowBasedGrouperHelper
       )
       {
         this.keyBufferPosition = keyBufferPosition;
-        if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
-          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Float.compare(
-              lhsBuffer.getFloat(lhsPosition + keyBufferPosition),
-              rhsBuffer.getFloat(rhsPosition + keyBufferPosition)
-          );
-        } else {
-          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            float lhs = lhsBuffer.getFloat(lhsPosition + keyBufferPosition);
-            float rhs = rhsBuffer.getFloat(rhsPosition + keyBufferPosition);
-            return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
-          };
-        }
+        bufferComparator = GrouperBufferComparatorUtils.makeBufferComparatorForFloat(
+            keyBufferPosition,
+            pushLimitDown,
+            stringComparator
+        );
       }
 
       @Override
@@ -1722,18 +1549,11 @@ public class RowBasedGrouperHelper
       )
       {
         this.keyBufferPosition = keyBufferPosition;
-        if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
-          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Double.compare(
-              lhsBuffer.getDouble(lhsPosition + keyBufferPosition),
-              rhsBuffer.getDouble(rhsPosition + keyBufferPosition)
-          );
-        } else {
-          bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            double lhs = lhsBuffer.getDouble(lhsPosition + keyBufferPosition);
-            double rhs = rhsBuffer.getDouble(rhsPosition + keyBufferPosition);
-            return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
-          };
-        }
+        bufferComparator = GrouperBufferComparatorUtils.makeBufferComparatorForDouble(
+            keyBufferPosition,
+            pushLimitDown,
+            stringComparator
+        );
       }
 
       @Override
@@ -1776,29 +1596,10 @@ public class RowBasedGrouperHelper
       {
         this.delegate = delegate;
         this.keyBufferPosition = keyBufferPosition;
-        BufferComparator delegateBufferComparator = this.delegate.getBufferComparator();
-        this.comparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          boolean isLhsNull = (lhsBuffer.get(lhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
-          boolean isRhsNull = (rhsBuffer.get(rhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
-          if (isLhsNull && isRhsNull) {
-            // Both are null
-            return 0;
-          }
-          // only lhs is null
-          if (isLhsNull) {
-            return -1;
-          }
-          // only rhs is null
-          if (isRhsNull) {
-            return 1;
-          }
-          return delegateBufferComparator.compare(
-              lhsBuffer,
-              rhsBuffer,
-              lhsPosition,
-              rhsPosition
-          );
-        };
+        this.comparator = GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
+            keyBufferPosition,
+            this.delegate.getBufferComparator()
+        );
       }
 
       @Override
@@ -1836,63 +1637,5 @@ public class RowBasedGrouperHelper
         return comparator;
       }
     }
-  }
-
-  private static int compareDimsInBuffersForNullFudgeTimestamp(
-      BufferComparator[] serdeHelperComparators,
-      ByteBuffer lhsBuffer,
-      ByteBuffer rhsBuffer,
-      int lhsPosition,
-      int rhsPosition
-  )
-  {
-    for (BufferComparator comparator : serdeHelperComparators) {
-      final int cmp = comparator.compare(
-          lhsBuffer,
-          rhsBuffer,
-          lhsPosition + Long.BYTES,
-          rhsPosition + Long.BYTES
-      );
-      if (cmp != 0) {
-        return cmp;
-      }
-    }
-
-    return 0;
-  }
-
-  private static int compareDimsInBuffersForNullFudgeTimestampForPushDown(
-      BufferComparator[] serdeHelperComparators,
-      List<Boolean> needsReverses,
-      int dimCount,
-      ByteBuffer lhsBuffer,
-      ByteBuffer rhsBuffer,
-      int lhsPosition,
-      int rhsPosition
-  )
-  {
-    for (int i = 0; i < dimCount; i++) {
-      final int cmp;
-      if (needsReverses.get(i)) {
-        cmp = serdeHelperComparators[i].compare(
-            rhsBuffer,
-            lhsBuffer,
-            rhsPosition + Long.BYTES,
-            lhsPosition + Long.BYTES
-        );
-      } else {
-        cmp = serdeHelperComparators[i].compare(
-            lhsBuffer,
-            rhsBuffer,
-            lhsPosition + Long.BYTES,
-            rhsPosition + Long.BYTES
-        );
-      }
-      if (cmp != 0) {
-        return cmp;
-      }
-    }
-
-    return 0;
   }
 }

@@ -151,7 +151,10 @@ export async function getOverlordModules(): Promise<string[]> {
   return statusResp.data.modules.map((m: any) => m.artifact);
 }
 
-async function postToSampler(sampleSpec: SampleSpec, forStr: string): Promise<SampleResponse> {
+export async function postToSampler(
+  sampleSpec: SampleSpec,
+  forStr: string,
+): Promise<SampleResponse> {
   let sampleResp: any;
   try {
     sampleResp = await axios.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);

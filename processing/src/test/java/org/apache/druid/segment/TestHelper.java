@@ -36,9 +36,11 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -51,7 +53,7 @@ import java.util.stream.IntStream;
  */
 public class TestHelper
 {
-  private static final ObjectMapper JSON_MAPPER = makeJsonMapper();
+  public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -80,7 +82,7 @@ public class TestHelper
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
     );
     return mapper;
   }
@@ -388,5 +390,22 @@ public class TestHelper
       theVals.put(vals[i].toString(), vals[i + 1]);
     }
     return theVals;
+  }
+
+  public static void testSerializesDeserializes(Object object)
+  {
+    testSerializesDeserializes(JSON_MAPPER, object);
+  }
+
+  public static void testSerializesDeserializes(ObjectMapper objectMapper, Object object)
+  {
+    try {
+      String serialized = objectMapper.writeValueAsString(object);
+      Object deserialized = objectMapper.readValue(serialized, object.getClass());
+      Assert.assertEquals(serialized, objectMapper.writeValueAsString(deserialized));
+    }
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

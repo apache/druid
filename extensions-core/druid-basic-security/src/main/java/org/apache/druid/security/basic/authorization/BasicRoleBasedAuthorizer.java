@@ -28,71 +28,80 @@ import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
-import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.Resource;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @JsonTypeName("basic")
 public class BasicRoleBasedAuthorizer implements Authorizer
 {
-  private final BasicAuthorizerCacheManager cacheManager;
   private final String name;
   private final BasicAuthDBConfig dbConfig;
-
+  private final RoleProvider roleProvider;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
       @JacksonInject BasicAuthorizerCacheManager cacheManager,
       @JsonProperty("name") String name,
+      @JsonProperty("initialAdminUser") String initialAdminUser,
+      @JsonProperty("initialAdminRole") String initialAdminRole,
+      @JsonProperty("initialAdminGroupMapping") String initialAdminGroupMapping,
       @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
-      @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout
+      @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout,
+      @JsonProperty("roleProvider") RoleProvider roleProvider
   )
   {
     this.name = name;
-    this.cacheManager = cacheManager;
     this.dbConfig = new BasicAuthDBConfig(
         null,
         null,
+        initialAdminUser,
+        initialAdminRole,
+        initialAdminGroupMapping,
         enableCacheNotifications == null ? true : enableCacheNotifications,
         cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout,
         0
     );
+    if (roleProvider == null) {
+      this.roleProvider = new MetadataStoreRoleProvider(cacheManager);
+    } else {
+      this.roleProvider = roleProvider;
+    }
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
     if (authenticationResult == null) {
-      throw new IAE("WTF? authenticationResult should never be null.");
+      throw new IAE("authenticationResult is null where it should never be.");
     }
 
-    Map<String, BasicAuthorizerUser> userMap = cacheManager.getUserMap(name);
-    if (userMap == null) {
-      throw new IAE("Could not load userMap for authorizer [%s]", name);
-    }
+    Set<String> roleNames = new HashSet<>(roleProvider.getRoles(name, authenticationResult));
+    Map<String, BasicAuthorizerRole> roleMap = roleProvider.getRoleMap(name);
 
-    Map<String, BasicAuthorizerRole> roleMap = cacheManager.getRoleMap(name);
+    if (roleNames.isEmpty()) {
+      return new Access(false);
+    }
     if (roleMap == null) {
       throw new IAE("Could not load roleMap for authorizer [%s]", name);
     }
 
-    BasicAuthorizerUser user = userMap.get(authenticationResult.getIdentity());
-    if (user == null) {
-      return new Access(false);
-    }
-
-    for (String roleName : user.getRoles()) {
+    for (String roleName : roleNames) {
       BasicAuthorizerRole role = roleMap.get(roleName);
-      for (BasicAuthorizerPermission permission : role.getPermissions()) {
-        if (permissionCheck(resource, action, permission)) {
-          return new Access(true);
+      if (role != null) {
+        for (BasicAuthorizerPermission permission : role.getPermissions()) {
+          if (permissionCheck(resource, action, permission)) {
+            return new Access(true);
+          }
         }
       }
     }

@@ -89,7 +89,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
   }
 
   @Override
-  protected InputStream openObjectStream(String object, File fileName) throws IOException
+  protected InputStream openObjectStream(String sql, File fileName) throws IOException
   {
     Preconditions.checkNotNull(sqlFirehoseDatabaseConnector, "SQL Metadata Connector not configured!");
     try (FileOutputStream fos = new FileOutputStream(fileName)) {
@@ -97,7 +97,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
       sqlFirehoseDatabaseConnector.retryWithHandle(
           (handle) -> {
             ResultIterator<Map<String, Object>> resultIterator = handle.createQuery(
-                object
+                sql
             ).map(
                 (index, r, ctx) -> {
                   Map<String, Object> resultRow = foldCase ? new CaseFoldedMap() : new HashMap<>();

@@ -43,12 +43,13 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 
-public class ExpressionVirtualColumnTest
+public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 {
   private static final InputRow ROW0 = new MapBasedInputRow(
       DateTimes.of("2000-01-01T00:00:00").getMillis(),

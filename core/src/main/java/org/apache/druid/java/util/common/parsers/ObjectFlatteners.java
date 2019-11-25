@@ -20,13 +20,17 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.Iterables;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -194,17 +198,88 @@ public class ObjectFlatteners
           }
         };
       }
+
+      @Override
+      public Map<String, Object> toMap(T obj)
+      {
+        return flattenerMaker.toMap(obj);
+      }
     };
   }
 
   public interface FlattenerMaker<T>
   {
+    JsonProvider getJsonProvider();
+    /**
+     * List all "root" primitive properties and primitive lists (no nested objects, no lists of objects)
+     */
     Iterable<String> discoverRootFields(T obj);
 
+    /**
+     * Get a top level field from a "json" object
+     */
     Object getRootField(T obj, String key);
 
+    /**
+     * Create a "field" extractor for {@link com.jayway.jsonpath.JsonPath} expressions
+     */
     Function<T, Object> makeJsonPathExtractor(String expr);
 
+    /**
+     * Create a "field" extractor for 'jq' expressions
+     */
     Function<T, Object> makeJsonQueryExtractor(String expr);
+
+    /**
+     * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to
+     * extract and convert data
+     */
+    default Map<String, Object> toMap(T obj)
+    {
+      return (Map<String, Object>) toMapHelper(obj);
+    }
+
+    /**
+     * Recursively traverse "json" object using a {@link JsonProvider}, converting to Java {@link Map} and {@link List},
+     * potentially transforming via {@link #finalizeConversionForMap} as we go
+     */
+    default Object toMapHelper(Object o)
+    {
+      final JsonProvider jsonProvider = getJsonProvider();
+      if (jsonProvider.isMap(o)) {
+        Map<String, Object> actualMap = new HashMap<>();
+        for (String key : jsonProvider.getPropertyKeys(o)) {
+          Object field = jsonProvider.getMapValue(o, key);
+          if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
+            actualMap.put(key, toMapHelper(finalizeConversionForMap(field)));
+          } else {
+            actualMap.put(key, finalizeConversionForMap(field));
+          }
+        }
+        return actualMap;
+      } else if (jsonProvider.isArray(o)) {
+        final int length = jsonProvider.length(o);
+        List<Object> actualList = new ArrayList<>(length);
+        for (int i = 0; i < length; i++) {
+          Object element = jsonProvider.getArrayIndex(o, i);
+          if (jsonProvider.isMap(element) || jsonProvider.isArray(element)) {
+            actualList.add(toMapHelper(finalizeConversionForMap(element)));
+          } else {
+            actualList.add(finalizeConversionForMap(element));
+          }
+        }
+        return finalizeConversionForMap(actualList);
+      }
+      // unknown, just pass it through
+      return o;
+    }
+
+    /**
+     * Handle any special conversions for object when translating an input type into a {@link Map} for {@link #toMap}
+     */
+    default Object finalizeConversionForMap(Object o)
+    {
+      return o;
+    }
   }
 }

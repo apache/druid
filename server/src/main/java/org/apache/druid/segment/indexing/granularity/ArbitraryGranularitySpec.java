@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
@@ -48,7 +49,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   public ArbitraryGranularitySpec(
       @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup,
-      @JsonProperty("intervals") List<Interval> inputIntervals
+      @JsonProperty("intervals") @Nullable List<Interval> inputIntervals
   )
   {
     this.queryGranularity = queryGranularity == null ? Granularities.NONE : queryGranularity;

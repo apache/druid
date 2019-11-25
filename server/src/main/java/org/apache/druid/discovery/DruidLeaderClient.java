@@ -104,7 +104,7 @@ public class DruidLeaderClient
     try {
       druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(nodeTypeToWatch);
       lifecycleLock.started();
-      log.info("Started.");
+      log.debug("Started.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -118,7 +118,7 @@ public class DruidLeaderClient
       throw new ISE("can't stop.");
     }
 
-    log.info("Stopped.");
+    log.debug("Stopped.");
   }
 
   /**

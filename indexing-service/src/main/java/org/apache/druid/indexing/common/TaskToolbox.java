@@ -87,7 +87,7 @@ public class TaskToolbox
   private final MonitorScheduler monitorScheduler;
   private final ExecutorService queryExecutorService;
   private final SegmentLoader segmentLoader;
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper jsonMapper;
   private final File taskWorkDir;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -118,7 +118,7 @@ public class TaskToolbox
       ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
-      ObjectMapper objectMapper,
+      ObjectMapper jsonMapper,
       File taskWorkDir,
       IndexIO indexIO,
       Cache cache,
@@ -148,7 +148,7 @@ public class TaskToolbox
     this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoader = segmentLoader;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.taskWorkDir = taskWorkDir;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
@@ -160,7 +160,7 @@ public class TaskToolbox
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
-    this.taskReportFileWriter.setObjectMapper(this.objectMapper);
+    this.taskReportFileWriter.setObjectMapper(this.jsonMapper);
     this.intermediaryDataManager = intermediaryDataManager;
   }
 
@@ -234,9 +234,9 @@ public class TaskToolbox
     return monitorScheduler;
   }
 
-  public ObjectMapper getObjectMapper()
+  public ObjectMapper getJsonMapper()
   {
-    return objectMapper;
+    return jsonMapper;
   }
 
   public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
@@ -294,9 +294,9 @@ public class TaskToolbox
     return indexMergerV9;
   }
 
-  public File getFirehoseTemporaryDir()
+  public File getIndexingTmpDir()
   {
-    return new File(taskWorkDir, "firehose");
+    return new File(taskWorkDir, "indexing-tmp");
   }
 
   public File getMergeDir()

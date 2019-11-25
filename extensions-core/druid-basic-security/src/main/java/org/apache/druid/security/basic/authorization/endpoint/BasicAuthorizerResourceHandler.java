@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authorization.endpoint;
 
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.ws.rs.core.Response;
@@ -34,11 +35,19 @@ public interface BasicAuthorizerResourceHandler
   // coordinator methods
   Response getAllUsers(String authorizerName);
 
+  Response getAllGroupMappings(String authorizerName);
+
   Response getUser(String authorizerName, String userName, boolean isFull, boolean simplifyPermissions);
+
+  Response getGroupMapping(String authorizerName, String groupMappingName, boolean isFull);
 
   Response createUser(String authorizerName, String userName);
 
+  Response createGroupMapping(String authorizerName, BasicAuthorizerGroupMapping groupMapping);
+
   Response deleteUser(String authorizerName, String userName);
+
+  Response deleteGroupMapping(String authorizerName, String groupMappingName);
 
   Response getAllRoles(String authorizerName);
 
@@ -50,16 +59,26 @@ public interface BasicAuthorizerResourceHandler
 
   Response assignRoleToUser(String authorizerName, String userName, String roleName);
 
+  Response assignRoleToGroupMapping(String authorizerName, String groupMappingName, String roleName);
+
   Response unassignRoleFromUser(String authorizerName, String userName, String roleName);
+
+  Response unassignRoleFromGroupMapping(String authorizerName, String groupMappingName, String roleName);
 
   Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions);
 
-  Response getCachedMaps(String authorizerName);
+  Response getRolePermissions(String authorizerName, String roleName);
+
+  Response getCachedUserMaps(String authorizerName);
+
+  Response getCachedGroupMappingMaps(String authorizerName);
 
   Response refreshAll();
 
   // non-coordinator methods
-  Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap);
+  Response authorizerUserUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap);
+
+  Response authorizerGroupMappingUpdateListener(String authorizerName, byte[] serializedGroupMappingAndRoleMap);
 
   // common
   Response getLoadStatus();

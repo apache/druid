@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.io.CountingOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputSplit;
@@ -94,6 +95,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   @BeforeClass
   public static void setup() throws IOException
   {
+    NullHandling.initializeForTests();
     TEST_DIR = tempDir.newFolder();
     for (int i = 0; i < 100; i++) {
       try (

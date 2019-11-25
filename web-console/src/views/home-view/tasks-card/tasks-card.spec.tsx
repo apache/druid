@@ -19,11 +19,13 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { Capabilities } from '../../../utils/capabilities';
+
 import { TasksCard } from './tasks-card';
 
 describe('tasks card', () => {
   it('matches snapshot', () => {
-    const tasksCard = <TasksCard noSqlMode={false} />;
+    const tasksCard = <TasksCard capabilities={Capabilities.FULL} />;
 
     const { container } = render(tasksCard);
     expect(container.firstChild).toMatchSnapshot();

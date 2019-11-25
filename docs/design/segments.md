@@ -29,7 +29,7 @@ interval, where the time interval is configurable in the
 `segmentGranularity` parameter of the
 [`granularitySpec`](../ingestion/index.md#granularityspec).  For Druid to
 operate well under heavy query load, it is important for the segment
-file size to be within the recommended range of 300mb-700mb. If your
+file size to be within the recommended range of 300MB-700MB. If your
 segment files are larger than this range, then consider either
 changing the granularity of the time interval or partitioning your
 data and tweaking the `targetPartitionSize` in your `partitionsSpec`
@@ -67,14 +67,13 @@ three data structures:
 
 
 Why these three data structures? The dictionary simply maps string
-values to integer ids so that the values in 2 and 3 can be
-represented compactly. The bitmaps in 3 -- also known as *inverted
+values to integer ids so that the values in \(2\) and \(3\) can be
+represented compactly. The bitmaps in \(3\) -- also known as *inverted
 indexes* allow for quick filtering operations (specifically, bitmaps
 are convenient for quickly applying AND and OR operators). Finally,
-the list of values in 2 is needed for *group by* and *TopN*
+the list of values in \(2\) is needed for *group by* and *TopN*
 queries. In other words, queries that solely aggregate metrics based
-on filters do not need to touch the list of dimension values stored in
-2.
+on filters do not need to touch the list of dimension values stored in \(2\).
 
 To get a concrete sense of these data structures, consider the ‘page’
 column from the example data above.  The three data structures that
@@ -143,6 +142,11 @@ bitmap. If a row has more than one value for a column, its entry in
 the 'column data' is an array of values. Additionally, a row with *n*
 values in 'column data' will have *n* non-zero valued entries in
 bitmaps.
+
+## SQL Compatible Null Handling
+By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
+
+String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
 
 ## Naming Convention
 
@@ -216,7 +220,7 @@ foo_2015-01-01/2015-01-02_v1_1
 foo_2015-01-01/2015-01-02_v1_2
 ```
 
-In the example segments above, the dataSource = foo, interval = 2015-01-01/2015-01-02, version = v1, partitionNum = 0.
+In the example segments above, the `dataSource = foo`, `interval = 2015-01-01/2015-01-02`, `version = v1`, and `partitionNum = 0`.
 If at some later point in time, you reindex the data with a new schema, the newly created segments will have a higher version id.
 
 ```

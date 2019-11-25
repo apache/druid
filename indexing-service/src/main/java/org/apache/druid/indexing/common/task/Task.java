@@ -20,14 +20,16 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.LegacySinglePhaseSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -48,21 +50,21 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "kill", value = KillTask.class),
-    @JsonSubTypes.Type(name = "move", value = MoveTask.class),
-    @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
-    @JsonSubTypes.Type(name = "restore", value = RestoreTask.class),
-    @JsonSubTypes.Type(name = "index", value = IndexTask.class),
-    @JsonSubTypes.Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
-    @JsonSubTypes.Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
-    @JsonSubTypes.Type(name = "index_sub", value = SinglePhaseSubTask.class), // for backward compatibility
-    @JsonSubTypes.Type(name = PartialSegmentGenerateTask.TYPE, value = PartialSegmentGenerateTask.class),
-    @JsonSubTypes.Type(name = PartialSegmentMergeTask.TYPE, value = PartialSegmentMergeTask.class),
-    @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
-    @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
-    @JsonSubTypes.Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
-    @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
-    @JsonSubTypes.Type(name = "compact", value = CompactionTask.class)
+    @Type(name = "kill", value = KillTask.class),
+    @Type(name = "move", value = MoveTask.class),
+    @Type(name = "archive", value = ArchiveTask.class),
+    @Type(name = "restore", value = RestoreTask.class),
+    @Type(name = "index", value = IndexTask.class),
+    @Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
+    @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
+    @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class), // for backward compatibility
+    @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
+    @Type(name = PartialHashSegmentMergeTask.TYPE, value = PartialHashSegmentMergeTask.class),
+    @Type(name = "index_hadoop", value = HadoopIndexTask.class),
+    @Type(name = "index_realtime", value = RealtimeIndexTask.class),
+    @Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
+    @Type(name = "noop", value = NoopTask.class),
+    @Type(name = "compact", value = CompactionTask.class)
 })
 public interface Task
 {

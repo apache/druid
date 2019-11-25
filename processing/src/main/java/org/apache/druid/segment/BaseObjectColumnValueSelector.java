@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
 @ExtensionPoint
-public interface BaseObjectColumnValueSelector<T> extends BaseNullableColumnValueSelector
+public interface BaseObjectColumnValueSelector<T>
 {
   @Nullable
   T getObject();

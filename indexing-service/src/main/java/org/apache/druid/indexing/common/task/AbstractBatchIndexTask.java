@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
@@ -29,7 +30,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -37,6 +38,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -44,10 +46,9 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -57,6 +58,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -66,7 +68,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Abstract class for batch tasks like {@link IndexTask}.
@@ -159,7 +160,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * The method to acutally process this task. This method is executed in {@link #run(TaskToolbox)}.
+   * The method to actually process this task. This method is executed in {@link #run(TaskToolbox)}.
    */
   public abstract TaskStatus runTask(TaskToolbox toolbox) throws Exception;
 
@@ -186,6 +187,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    */
   @Nullable
   public abstract Granularity getSegmentGranularity();
+
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
 
   public boolean isUseSegmentLock()
   {
@@ -352,15 +359,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             segments
         );
 
-        final List<DataSegment> segmentsToLock = timeline
-            .lookup(JodaUtils.umbrellaInterval(intervals))
-            .stream()
-            .map(TimelineObjectHolder::getObject)
-            .flatMap(partitionHolder -> StreamSupport.stream(partitionHolder.spliterator(), false))
-            .map(PartitionChunk::getObject)
-            .collect(Collectors.toList());
+        Set<DataSegment> segmentsToLock = timeline.findNonOvershadowedObjectsInInterval(
+            JodaUtils.umbrellaInterval(intervals),
+            Partitions.ONLY_COMPLETE
+        );
         log.info("No segmentGranularity change detected and it's not perfect rollup. Using segment lock");
-        return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, segmentsToLock);
+        return new LockGranularityDetermineResult(LockGranularity.SEGMENT, null, new ArrayList<>(segmentsToLock));
       }
     } else {
       // Set useSegmentLock even though we don't get any locks.
@@ -458,6 +462,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * However, firehoseFactory is not IngestSegmentFirehoseFactory, it means this task will overwrite some segments
    * with data read from some input source outside of Druid. As a result, only the segments falling in intervalsToRead
    * should be locked.
+   *
+   * The order of segments within the returned list is unspecified, but each segment is guaranteed to appear in the list
+   * only once.
    */
   protected static List<DataSegment> findInputSegments(
       String dataSource,
@@ -475,20 +482,22 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "input interval"
         );
 
-        return actionClient.submit(
-            new SegmentListUsedAction(dataSource, null, Collections.singletonList(inputInterval))
+        return ImmutableList.copyOf(
+            actionClient.submit(
+                new RetrieveUsedSegmentsAction(dataSource, inputInterval, null, Segments.ONLY_VISIBLE)
+            )
         );
       } else {
-        final List<String> inputSegmentIds = inputSegments.stream()
-                                                          .map(WindowedSegmentId::getSegmentId)
-                                                          .collect(Collectors.toList());
-        final List<DataSegment> dataSegmentsInIntervals = actionClient.submit(
-            new SegmentListUsedAction(
+        final List<String> inputSegmentIds =
+            inputSegments.stream().map(WindowedSegmentId::getSegmentId).collect(Collectors.toList());
+        final Collection<DataSegment> dataSegmentsInIntervals = actionClient.submit(
+            new RetrieveUsedSegmentsAction(
                 dataSource,
                 null,
                 inputSegments.stream()
                              .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
-                             .collect(Collectors.toSet())
+                             .collect(Collectors.toSet()),
+                Segments.ONLY_VISIBLE
             )
         );
         return dataSegmentsInIntervals.stream()
@@ -496,7 +505,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                       .collect(Collectors.toList());
       }
     } else {
-      return actionClient.submit(new SegmentListUsedAction(dataSource, null, intervalsToRead));
+      return ImmutableList.copyOf(
+          actionClient.submit(
+              new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE)
+          )
+      );
     }
   }
 

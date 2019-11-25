@@ -54,13 +54,14 @@ Druid creates necessary sub-folders to store data and index under this newly cre
 
 Edit common.runtime.properties at conf/druid/_common/common.runtime.properties to include the HDFS properties. Folders used for the location are same as the ones used for example above.
 
-### common_runtime_properties
+### common.runtime.properties
 
+```properties
 # Deep storage
 #
 # For HDFS:
- druid.storage.type=hdfs
- druid.storage.storageDirectory=/druid/segments
+druid.storage.type=hdfs
+druid.storage.storageDirectory=/druid/segments
 # OR
 # druid.storage.storageDirectory=/apps/druid/segments
 
@@ -77,7 +78,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Note: Comment out Local storage and S3 Storage parameters in the file
 
-Also include hdfs-storage core extension to conf/druid/_common/common.runtime.
+Also include hdfs-storage core extension to `conf/druid/_common/common.runtime.properties`
 
 ```properties
 #
@@ -95,7 +96,7 @@ Ensure that Druid has necessary jars to support the Hadoop version.
 
 Find the hadoop version using command, `hadoop version`
 
-In case there are other softwares used with hadoop, like WanDisco, ensure that
+In case there is other software used with hadoop, like `WanDisco`, ensure that
 1. the necessary libraries are available
 2. add the requisite extensions to `druid.extensions.loadlist` in `conf/druid/_common/common.runtime.properties`
 

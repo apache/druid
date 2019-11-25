@@ -85,7 +85,11 @@ exports[`parse data table matches snapshot 1`] = `
             role="gridcell"
             style="flex: 100 0 auto; width: 100px;"
           >
-            hello
+            <span
+              class="table-cell plain"
+            >
+              hello
+            </span>
           </div>
         </div>
       </div>

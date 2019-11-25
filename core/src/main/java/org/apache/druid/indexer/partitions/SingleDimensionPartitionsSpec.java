@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -37,10 +39,12 @@ import java.util.Objects;
  */
 public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
 {
-  static final String NAME = "single_dim";
+  public static final String NAME = "single_dim";
   static final String OLD_NAME = "dimension";  // for backward compatibility
 
+  private static final String PARITION_DIMENSION = "partitionDimension";
   private static final String MAX_PARTITION_SIZE = "maxPartitionSize";
+  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
 
   private final Integer targetRowsPerSegment;
   private final Integer maxRowsPerSegment;
@@ -54,7 +58,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   public SingleDimensionPartitionsSpec(
       @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
-      @JsonProperty("partitionDimension") @Nullable String partitionDimension,
+      @JsonProperty(PARITION_DIMENSION) @Nullable String partitionDimension,
       @JsonProperty("assumeGrouped") boolean assumeGrouped,  // false by default
 
       // Deprecated properties preserved for backward compatibility:
@@ -127,6 +131,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   }
 
   @JsonProperty
+  @Override
   @Nullable
   public Integer getTargetRowsPerSegment()
   {
@@ -165,6 +170,12 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   public List<String> getPartitionDimensions()
   {
     return partitionDimension == null ? Collections.emptyList() : Collections.singletonList(partitionDimension);
+  }
+
+  @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return NAME + " partitions unsupported";
   }
 
   @Override

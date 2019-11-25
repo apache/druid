@@ -17,87 +17,32 @@
  */
 
 import { Button, Classes, Dialog, Intent, Tab, Tabs, TextArea } from '@blueprintjs/core';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { CenterMessage } from '../../components';
+import { QueryRecord } from '../../utils/query-history';
 
 import './query-history-dialog.scss';
 
-export interface QueryRecord {
-  version: string;
-  queryString: string;
-  queryContext?: Record<string, any>;
-}
 export interface QueryHistoryDialogProps {
+  queryRecords: readonly QueryRecord[];
   setQueryString: (queryString: string, queryContext: Record<string, any>) => void;
   onClose: () => void;
-  queryRecords: readonly QueryRecord[];
 }
 
-export interface QueryHistoryDialogState {
-  activeTab: number;
-}
+export const QueryHistoryDialog = React.memo(function QueryHistoryDialog(
+  props: QueryHistoryDialogProps,
+) {
+  const [activeTab, setActiveTab] = useState(0);
+  const { queryRecords, setQueryString, onClose } = props;
 
-export class QueryHistoryDialog extends React.PureComponent<
-  QueryHistoryDialogProps,
-  QueryHistoryDialogState
-> {
-  static getHistoryVersion(): string {
-    return new Date()
-      .toISOString()
-      .split('.')[0]
-      .replace('T', ' ');
-  }
-
-  static addQueryToHistory(
-    queryHistory: readonly QueryRecord[],
-    queryString: string,
-    queryContext: Record<string, any>,
-  ): readonly QueryRecord[] {
-    // Do not add to history if already the same as the last element in query and context
-    if (
-      queryHistory.length &&
-      queryHistory[0].queryString === queryString &&
-      JSON.stringify(queryHistory[0].queryContext) === JSON.stringify(queryContext)
-    ) {
-      return queryHistory;
-    }
-
-    return [
-      {
-        version: QueryHistoryDialog.getHistoryVersion(),
-        queryString,
-        queryContext,
-      } as QueryRecord,
-    ]
-      .concat(queryHistory)
-      .slice(0, 10);
-  }
-
-  constructor(props: QueryHistoryDialogProps) {
-    super(props);
-    this.state = {
-      activeTab: 0,
-    };
-  }
-
-  private handleSelect = () => {
-    const { queryRecords, setQueryString, onClose } = this.props;
-    const { activeTab } = this.state;
+  function handleSelect() {
     const queryRecord = queryRecords[activeTab];
-
     setQueryString(queryRecord.queryString, queryRecord.queryContext || {});
     onClose();
-  };
+  }
 
-  private handleTabChange = (tab: number) => {
-    this.setState({ activeTab: tab });
-  };
-
-  renderContent(): JSX.Element {
-    const { queryRecords } = this.props;
-    const { activeTab } = this.state;
-
+  function renderContent(): JSX.Element {
     if (!queryRecords.length) {
       return <CenterMessage>The query history is empty.</CenterMessage>;
     }
@@ -119,7 +64,7 @@ export class QueryHistoryDialog extends React.PureComponent<
         vertical
         className={'tab-area'}
         selectedTabId={activeTab}
-        onChange={this.handleTabChange}
+        onChange={(t: number) => setActiveTab(t)}
       >
         {versions}
         <Tabs.Expander />
@@ -127,21 +72,17 @@ export class QueryHistoryDialog extends React.PureComponent<
     );
   }
 
-  render(): JSX.Element {
-    const { onClose, queryRecords } = this.props;
-
-    return (
-      <Dialog className="query-history-dialog" isOpen onClose={onClose} title="Query history">
-        <div className={Classes.DIALOG_BODY}>{this.renderContent()}</div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" onClick={onClose} />
-            {Boolean(queryRecords.length) && (
-              <Button text="Open" intent={Intent.PRIMARY} onClick={this.handleSelect} />
-            )}
-          </div>
+  return (
+    <Dialog className="query-history-dialog" isOpen onClose={onClose} title="Query history">
+      <div className={Classes.DIALOG_BODY}>{renderContent()}</div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button text="Close" onClick={onClose} />
+          {Boolean(queryRecords.length) && (
+            <Button text="Open" intent={Intent.PRIMARY} onClick={handleSelect} />
+          )}
         </div>
-      </Dialog>
-    );
-  }
-}
+      </div>
+    </Dialog>
+  );
+});

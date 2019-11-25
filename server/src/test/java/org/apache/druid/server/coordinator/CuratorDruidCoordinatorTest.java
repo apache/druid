@@ -171,7 +171,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         10,
-        null,
         new Duration("PT0s")
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
@@ -249,7 +248,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        null
     );
   }
 
@@ -546,7 +546,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        null
     );
   }
 

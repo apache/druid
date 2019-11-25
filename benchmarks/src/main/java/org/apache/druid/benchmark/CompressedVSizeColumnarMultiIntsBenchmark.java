@@ -21,6 +21,7 @@ package org.apache.druid.benchmark;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
@@ -54,6 +55,10 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class CompressedVSizeColumnarMultiIntsBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private ColumnarMultiInts uncompressed;
   private ColumnarMultiInts compressed;
 
