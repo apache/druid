@@ -36,6 +36,7 @@ import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -67,12 +68,12 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     this.prefixes = prefixes;
     this.objects = objects;
 
-    if (objects != null) {
-      throwIfIllegalArgs(uris != null || prefixes != null);
-    } else if (uris != null) {
-      throwIfIllegalArgs(prefixes != null);
+    if (!CollectionUtils.isNullOrEmpty(objects)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
+    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
       uris.forEach(S3Utils::checkURI);
-    } else if (prefixes != null) {
+    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
       prefixes.forEach(S3Utils::checkURI);
     } else {
       throwIfIllegalArgs(true);

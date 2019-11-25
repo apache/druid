@@ -66,6 +66,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
@@ -79,9 +80,6 @@ import java.util.stream.Stream;
 
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
   private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
@@ -107,9 +105,18 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo")
   );
 
+  private static final List<CloudObjectLocation> EXPECTED_LOCATION =
+      ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
+
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final byte[] CONTENT =
       StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerdeWithUris() throws Exception
@@ -136,11 +143,64 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         null,
         null,
-        ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"))
+        EXPECTED_LOCATION
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testSerdeWithExtraEmptyLists() throws Exception
+  {
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        ImmutableList.of(),
+        ImmutableList.of(),
+        EXPECTED_LOCATION
+    );
+    final S3InputSource serdeWithPrefixes =
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testSerdeWithInvalidArgs() throws Exception
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        EXPECTED_URIS,
+        PREFIXES,
+        EXPECTED_LOCATION
+    );
+  }
+
+  @Test
+  public void testSerdeWithOtherInvalidArgs()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        EXPECTED_URIS,
+        PREFIXES,
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testSerdeWithOtherOtherInvalidArgs()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new S3InputSource(
+        SERVICE,
+        ImmutableList.of(),
+        PREFIXES,
+        EXPECTED_LOCATION
+    );
   }
 
   @Test

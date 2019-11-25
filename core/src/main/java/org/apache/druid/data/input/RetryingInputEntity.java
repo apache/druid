@@ -49,7 +49,7 @@ public abstract class RetryingInputEntity implements InputEntity
    * Directly opens an {@link InputStream} on the input entity. Decompression should be handled externally, and is
    * handled by the default implementation of {@link #open}, so this should return the raw stream for the object.
    */
-  private InputStream readFromStart() throws IOException
+  protected InputStream readFromStart() throws IOException
   {
     return readFrom(0);
   }
