@@ -971,12 +971,6 @@
                 <version>1.0.0-M20</version>
             </dependency>
             <dependency>
-                <groupId>com.yahoo.datasketches</groupId>
-                <artifactId>sketches-core</artifactId>
-                <version>0.13.4</version>
-            </dependency>
-
-            <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
