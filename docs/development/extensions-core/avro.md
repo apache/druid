@@ -215,7 +215,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
       "type" : "hadoop",
       "inputSpec" : {
         "type" : "static",
-        "inputFormat": "org.apache.druid.data.input.avro.AvroValueInputFormat",
+        "inputFormat": "io.druid.data.input.avro.AvroValueInputFormat",
         "paths" : ""
       }
     },
