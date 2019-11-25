@@ -387,6 +387,8 @@ public class TaskQueue
    * Shuts down a task if it has not yet finished.
    *
    * @param taskId task to kill
+   * @param reasonFormat A format string indicating the shutdown reason
+   * @param args arguments for reasonFormat
    */
   public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
@@ -406,6 +408,13 @@ public class TaskQueue
     }
   }
 
+  /**
+   * Shuts down a task, but records the task status as a success, unike {@link #shutdown(String, String, Object...)}
+   *
+   * @param taskId task to shutdown
+   * @param reasonFormat A format string indicating the shutdown reason
+   * @param args arguments for reasonFormat
+   */
   public void shutdownWithSuccess(final String taskId, String reasonFormat, Object... args)
   {
     giant.lock();

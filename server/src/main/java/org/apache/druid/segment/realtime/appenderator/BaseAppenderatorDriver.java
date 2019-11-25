@@ -551,10 +551,19 @@ public abstract class BaseAppenderatorDriver implements Closeable
   )
   {
     if (segmentsAndMetadata.getSegments().isEmpty()) {
-      log.debug("Nothing to publish, skipping publish step.");
-      final SettableFuture<SegmentsAndMetadata> retVal = SettableFuture.create();
-      retVal.set(segmentsAndMetadata);
-      return retVal;
+      if (!publisher.supportsEmptyPublish()) {
+        log.info("Nothing to publish, skipping publish step.");
+        final SettableFuture<SegmentsAndMetadata> retVal = SettableFuture.create();
+        retVal.set(segmentsAndMetadata);
+        return retVal;
+      } else {
+        if (appenderator.getTotalRowCount() != 0) {
+          throw new ISE(
+              "Attemping to publish with empty segment set, but total row count was not 0: [%s].",
+              appenderator.getTotalRowCount()
+          );
+        }
+      }
     }
 
     final Object metadata = segmentsAndMetadata.getCommitMetadata();

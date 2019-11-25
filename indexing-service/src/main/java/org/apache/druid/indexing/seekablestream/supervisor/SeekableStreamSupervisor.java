@@ -1299,21 +1299,27 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> seekableStreamIndexTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) task;
       final String taskId = task.getId();
 
-      // Check if the task has any inactive partitions. If so, terminate the task.
+      // Check if the task has any inactive partitions. If so, terminate the task. Even if some of the
+      // partitions assigned to the task are still active, we still terminate the task. We terminate such tasks early
+      // to more rapidly ensure that all active partitions are evenly distributed and being read, and to avoid
+      // having to map expired partitions which are no longer tracked in partitionIds to a task group.
       if (supportsPartitionExpiration()) {
-        boolean hasInactivePartition = false;
-        for (PartitionIdType partitionId : seekableStreamIndexTask.getIOConfig()
-                                                                  .getStartSequenceNumbers()
-                                                                  .getPartitionSequenceNumberMap()
-                                                                  .keySet()) {
-          if (!partitionIds.contains(partitionId)) {
-            log.info("Task [%s] partition is no longer active [%s], stopping task.", taskId, partitionId);
-            hasInactivePartition = true;
-            break;
-          }
-        }
-        if (hasInactivePartition) {
-          killTaskWithSuccess(taskId, "Task [%s] has inactive partition", taskId);
+        Set<PartitionIdType> taskPartitions = seekableStreamIndexTask.getIOConfig()
+                                                                     .getStartSequenceNumbers()
+                                                                     .getPartitionSequenceNumberMap()
+                                                                     .keySet();
+        Set<PartitionIdType> inactivePartitionsInTask = Sets.difference(
+            taskPartitions,
+            new HashSet<>(partitionIds)
+        );
+        if (!inactivePartitionsInTask.isEmpty()) {
+          killTaskWithSuccess(
+              taskId,
+              "Task [%s] with partition set [%s] has inactive partitions [%s], stopping task.",
+              taskId,
+              taskPartitions,
+              inactivePartitionsInTask
+          );
           continue;
         }
       }
@@ -1374,7 +1380,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             SequenceOffsetType sequence = entry.getValue();
 
                             if (sequence.equals(getEndOfPartitionMarker())) {
-                              log.warn(
+                              log.debug(
                                   "Got end of partition marker for partition [%s] from task [%s] in discoverTasks, not updating partition offset.",
                                   taskId,
                                   partition
@@ -2340,7 +2346,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // set endOffsets as the next startOffsets
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
           if (entry.getValue().equals(getEndOfPartitionMarker())) {
-            log.warn(
+            log.debug(
                 "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
                 entry.getKey()
             );
@@ -3143,39 +3149,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
   {
     return makeSequenceNumber(seq, false);
-  }
-
-  /**
-   * If a task finishes reading a shard but no data was actually ingested, the task will not publish any segments.
-   * In that case, a separate message indicating that shards were closed needs to be sent to the supervisor,
-   * containing the IDs of the closed shards. The supervisor should mark those shards with the end-of-shard marker
-   * in metadata storage.
-   *
-   * @param closedShards Set of closed shards
-   * @return true if the update was successful
-   */
-  public boolean updateClosedShards(Set<PartitionIdType> closedShards)
-  {
-    // Mark partitions as closed in metadata
-    @SuppressWarnings("unchecked")
-    SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
-        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) indexerMetadataStorageCoordinator.getDataSourceMetadata(
-            dataSource);
-
-    SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> cleanedMetadata =
-        createDataSourceMetadataWithClosedPartitions(currentMetadata, closedShards);
-
-    try {
-      boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
-      if (!success) {
-        // If this fails, a subsequent task will be reassigned the closed shard and will eventually retry this.
-        log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
-      }
-      return success;
-    }
-    catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
   }
 
   // exposed for testing for visibility into initialization state

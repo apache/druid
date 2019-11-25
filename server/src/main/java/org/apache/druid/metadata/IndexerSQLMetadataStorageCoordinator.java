@@ -354,6 +354,74 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
+  public SegmentPublishResult commitMetadataOnly(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  ) throws IOException
+  {
+    if (dataSource == null) {
+      throw new IllegalArgumentException("datasource name cannot be null");
+    }
+    if (startMetadata == null) {
+      throw new IllegalArgumentException("start metadata cannot be null");
+    }
+    if (endMetadata == null) {
+      throw new IllegalArgumentException("end metadata cannot be null");
+    }
+
+    final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
+
+    try {
+      return connector.retryTransaction(
+          new TransactionCallback<SegmentPublishResult>()
+          {
+            @Override
+            public SegmentPublishResult inTransaction(
+                final Handle handle,
+                final TransactionStatus transactionStatus
+            ) throws Exception
+            {
+              // Set definitelyNotUpdated back to false upon retrying.
+              definitelyNotUpdated.set(false);
+
+              final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+                  handle,
+                  dataSource,
+                  startMetadata,
+                  endMetadata
+              );
+
+              if (result != DataSourceMetadataUpdateResult.SUCCESS) {
+                // Metadata was definitely not updated.
+                transactionStatus.setRollbackOnly();
+                definitelyNotUpdated.set(true);
+
+                if (result == DataSourceMetadataUpdateResult.FAILURE) {
+                  throw new RuntimeException("Aborting transaction!");
+                } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
+                  throw new RetryTransactionException("Aborting transaction!");
+                }
+              }
+
+              return SegmentPublishResult.ok(ImmutableSet.of());
+            }
+          },
+          3,
+          SQLMetadataConnector.DEFAULT_MAX_TRIES
+      );
+    }
+    catch (CallbackFailedException e) {
+      if (definitelyNotUpdated.get()) {
+        return SegmentPublishResult.fail(e.getMessage());
+      } else {
+        // Must throw exception if we are not sure if we updated or not.
+        throw e;
+      }
+    }
+  }
+
+  @Override
   public SegmentIdWithShardSpec allocatePendingSegment(
       final String dataSource,
       final String sequenceName,

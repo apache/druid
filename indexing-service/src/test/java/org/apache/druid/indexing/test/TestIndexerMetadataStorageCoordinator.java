@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -116,6 +117,16 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     // Don't actually compare metadata, just do it!
     return SegmentPublishResult.ok(announceHistoricalSegments(segments));
+  }
+
+  @Override
+  public SegmentPublishResult commitMetadataOnly(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  ) throws IOException
+  {
+    throw new UnsupportedOperationException("Not implemented, no test uses this currently.");
   }
 
   @Override

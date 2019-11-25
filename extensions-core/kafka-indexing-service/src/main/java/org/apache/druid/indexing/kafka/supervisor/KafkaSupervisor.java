@@ -154,14 +154,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     );
   }
 
-
   @Override
   protected int getTaskGroupIdForPartition(Integer partitionId)
   {
-    // record partitionIds so that supervisor knows when a partition is discovered.
-    if (!partitionIds.contains(partitionId)) {
-      partitionIds.add(partitionId);
-    }
     return partitionId % spec.getIoConfig().getTaskCount();
   }
 
@@ -377,13 +372,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
-    return false;
-  }
-
-  @Override
-  public boolean updateClosedShards(Set<Integer> closedShards)
-  {
-    // Kafka doesn't support closed shards
     return false;
   }
 
