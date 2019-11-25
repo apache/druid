@@ -93,14 +93,6 @@
           <artifactId>fastutil</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-api</artifactId>
         </exclusion>
@@ -114,14 +106,6 @@
         <exclusion>
           <groupId>commons-pool</groupId>
           <artifactId>commons-pool</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -316,16 +300,8 @@
           <groupId>org.mortbay.jetty</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>jackson-core-asl</artifactId>
-          <groupId>org.codehaus.jackson</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>jets3t</artifactId>
           <groupId>net.java.dev.jets3t</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jackson-mapper-asl</artifactId>
-          <groupId>org.codehaus.jackson</groupId>
         </exclusion>
         <exclusion>
           <artifactId>jetty</artifactId>
