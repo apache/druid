@@ -33,7 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class S3Entity implements RetryingInputEntity
+public class S3Entity extends RetryingInputEntity
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final CloudObjectLocation object;
@@ -51,7 +51,7 @@ public class S3Entity implements RetryingInputEntity
   }
 
   @Override
-  public InputStream readFrom(long offset) throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
     final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
     request.setRange(offset);
@@ -73,7 +73,7 @@ public class S3Entity implements RetryingInputEntity
   }
 
   @Override
-  public String getPath()
+  protected String getPath()
   {
     return object.getPath();
   }

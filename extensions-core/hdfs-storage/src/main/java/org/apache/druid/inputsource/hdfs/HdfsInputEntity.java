@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class HdfsInputEntity implements RetryingInputEntity
+public class HdfsInputEntity extends RetryingInputEntity
 {
   private final Configuration conf;
   private final Path path;
@@ -49,7 +49,7 @@ public class HdfsInputEntity implements RetryingInputEntity
   }
 
   @Override
-  public InputStream readFrom(long offset) throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
     final FileSystem fs = path.getFileSystem(conf);
     final FSDataInputStream inputStream = fs.open(path);
@@ -58,7 +58,7 @@ public class HdfsInputEntity implements RetryingInputEntity
   }
 
   @Override
-  public String getPath()
+  protected String getPath()
   {
     return path.getName();
   }

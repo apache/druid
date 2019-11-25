@@ -35,7 +35,7 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpEntity implements RetryingInputEntity
+public class HttpEntity extends RetryingInputEntity
 {
   private static final Logger LOG = new Logger(HttpEntity.class);
 
@@ -63,13 +63,13 @@ public class HttpEntity implements RetryingInputEntity
   }
 
   @Override
-  public InputStream readFrom(long offset) throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
     return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
   }
 
   @Override
-  public String getPath()
+  protected String getPath()
   {
     return uri.getPath();
   }

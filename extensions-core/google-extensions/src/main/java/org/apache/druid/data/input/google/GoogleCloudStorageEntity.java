@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class GoogleCloudStorageEntity implements RetryingInputEntity
+public class GoogleCloudStorageEntity extends RetryingInputEntity
 {
   private final GoogleStorage storage;
   private final URI uri;
@@ -50,7 +50,7 @@ public class GoogleCloudStorageEntity implements RetryingInputEntity
   }
 
   @Override
-  public InputStream readFrom(long offset) throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
     // Get data of the given object and open an input stream
     final String bucket = uri.getAuthority();
@@ -60,7 +60,7 @@ public class GoogleCloudStorageEntity implements RetryingInputEntity
   }
 
   @Override
-  public String getPath()
+  protected String getPath()
   {
     return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
   }

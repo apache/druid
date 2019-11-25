@@ -32,12 +32,12 @@ import java.util.Objects;
  * implementations. {@link #bucket} and {@link #path} should NOT be URL encoded.
  *
  * The intention is that this is used as a common representation for storage objects as an alternative to dealing in
- * {@link URI} directly, but still provide a mechansim to round-trip with a URI.
+ * {@link URI} directly, but still provide a mechanism to round-trip with a URI.
  *
  * In common clouds, bucket names must be dns compliant:
- *   https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
- *   https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
- *   https://cloud.google.com/storage/docs/naming
+ * https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+ * https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
+ * https://cloud.google.com/storage/docs/naming
  *
  * The constructor ensures that bucket names are DNS compliant by checking that the URL encoded form of the bucket
  * matches the supplied value. Technically it should probably confirm that the bucket is also all lower-case, but
@@ -95,10 +95,10 @@ public class CloudObjectLocation
   @Override
   public String toString()
   {
-    return "CloudObjectLocation {"
-           + "bucket=" + bucket
-           + ",path=" + path
-           + "}";
+    return "CloudObjectLocation{" +
+           "bucket='" + bucket + '\'' +
+           ", path='" + path + '\'' +
+           '}';
   }
 
   @Override
@@ -122,4 +122,5 @@ public class CloudObjectLocation
   {
     return Objects.hash(bucket, path);
   }
+
 }
