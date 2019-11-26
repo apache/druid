@@ -358,7 +358,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata
-  ) throws IOException
+  )
   {
     if (dataSource == null) {
       throw new IllegalArgumentException("datasource name cannot be null");

@@ -204,7 +204,7 @@ public interface IndexerMetadataStorageCoordinator
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata
-  ) throws IOException;
+  );
 
   /**
    * Read dataSource metadata. Returns null if there is no metadata.
