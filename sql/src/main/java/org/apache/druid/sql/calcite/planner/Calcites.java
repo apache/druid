@@ -395,7 +395,7 @@ public class Calcites
     return Calcites.getInt(sort.fetch, -1);
   }
 
-  public static int combineFetch(int innerFetch, int outerFetch, int outerOffset)
+  public static int collapseFetch(int innerFetch, int outerFetch, int outerOffset)
   {
     final int fetch;
     if (innerFetch < 0 && outerFetch < 0) {

@@ -57,7 +57,7 @@ public class SortCollapseRule extends RelOptRule
       final int outerFetch = Calcites.getFetch(innerSort);
 
       final int offset = innerOffset + outerOffset;
-      final int fetch = Calcites.combineFetch(innerFetch, outerFetch, outerOffset);
+      final int fetch = Calcites.collapseFetch(innerFetch, outerFetch, outerOffset);
 
       final Sort combined = innerSort.copy(
           innerSort.getTraitSet(),

@@ -258,7 +258,7 @@ public class DruidPlanner implements Closeable
     if (root.rel instanceof Sort) {
       Sort innerSort = (Sort) root.rel;
       final int offset = Calcites.getOffset(innerSort);
-      final int fetch = Calcites.combineFetch(
+      final int fetch = Calcites.collapseFetch(
           Calcites.getFetch(innerSort),
           Ints.checkedCast(outerLimit),
           0
