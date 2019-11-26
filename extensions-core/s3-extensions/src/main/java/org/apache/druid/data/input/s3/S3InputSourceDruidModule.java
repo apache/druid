@@ -17,23 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google;
+package org.apache.druid.data.input.s3;
 
-import com.google.api.client.http.HttpResponseException;
-import com.google.common.base.Predicate;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
 
-import java.io.IOException;
+import java.util.List;
 
-public class GoogleUtils
+/**
+ * Druid module to wire up native batch support for S3 input
+ */
+public class S3InputSourceDruidModule implements DruidModule
 {
-  public static boolean isRetryable(Throwable t)
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    if (t instanceof HttpResponseException) {
-      final HttpResponseException e = (HttpResponseException) t;
-      return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
-    }
-    return t instanceof IOException;
+    return ImmutableList.of(
+        new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, S3StorageDruidModule.SCHEME))
+    );
   }
 
-  public static final Predicate<Throwable> GOOGLE_RETRY = e -> isRetryable(e);
+  @Override
+  public void configure(Binder binder)
+  {
+
+  }
 }
