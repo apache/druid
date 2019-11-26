@@ -50,12 +50,12 @@ public class SortCollapseRule extends RelOptRule
 
     if (outerSort.collation.getFieldCollations().isEmpty()
         || outerSort.collation.getFieldCollations().equals(innerSort.collation.getFieldCollations())) {
-      // Add up the offsets.
       final int innerOffset = Calcites.getOffset(innerSort);
       final int innerFetch = Calcites.getFetch(innerSort);
       final int outerOffset = Calcites.getOffset(outerSort);
       final int outerFetch = Calcites.getFetch(innerSort);
 
+      // Add up the offsets.
       final int offset = innerOffset + outerOffset;
       final int fetch = Calcites.collapseFetch(innerFetch, outerFetch, outerOffset);
 
