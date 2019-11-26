@@ -29,9 +29,9 @@ import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.guice.RepositorySystemSessionProvider;
 import io.tesla.aether.internal.DefaultTeslaAether;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -273,8 +273,8 @@ public class PullDependencies implements Runnable
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
-      FileUtils.forceMkdir(extensionsDir);
-      FileUtils.forceMkdir(hadoopDependenciesDir);
+      org.apache.commons.io.FileUtils.forceMkdir(extensionsDir);
+      org.apache.commons.io.FileUtils.forceMkdir(hadoopDependenciesDir);
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
@@ -402,7 +402,7 @@ public class PullDependencies implements Runnable
       for (Artifact artifact : artifacts) {
         if (!EXCLUSIONS.contains(artifact.getGroupId())) {
           log.info("Adding file [%s] at [%s]", artifact.getFile().getName(), toLocation.getAbsolutePath());
-          FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
+          org.apache.commons.io.FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
         } else {
           log.debug("Skipped Artifact[%s]", artifact);
         }

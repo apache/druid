@@ -69,6 +69,7 @@ public class InputEntityIteratingReaderTest
         new CsvInputFormat(
             ImmutableList.of("time", "name", "score"),
             null,
+            null,
             false,
             0
         ),

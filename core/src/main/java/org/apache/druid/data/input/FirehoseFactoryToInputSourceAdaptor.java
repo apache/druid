@@ -68,7 +68,7 @@ public class FirehoseFactoryToInputSourceAdaptor extends AbstractInputSource imp
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
     if (firehoseFactory.isSplittable()) {
       return firehoseFactory.getNumSplits(splitHintSpec);

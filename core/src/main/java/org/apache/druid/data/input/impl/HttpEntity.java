@@ -21,10 +21,12 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import org.apache.druid.data.input.InputEntity;
+import com.google.common.net.HttpHeaders;
+import org.apache.druid.data.input.RetryingInputEntity;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
-import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -33,8 +35,10 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpEntity implements InputEntity
+public class HttpEntity extends RetryingInputEntity
 {
+  private static final Logger LOG = new Logger(HttpEntity.class);
+
   private final URI uri;
   @Nullable
   private final String httpAuthenticationUsername;
@@ -59,29 +63,55 @@ public class HttpEntity implements InputEntity
   }
 
   @Override
-  public InputStream open() throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
-    return CompressionUtils.decompress(
-        openURLConnection(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider).getInputStream(),
-        uri.toString()
-    );
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
   }
 
   @Override
-  public Predicate<Throwable> getFetchRetryCondition()
+  protected String getPath()
+  {
+    return uri.getPath();
+  }
+
+  @Override
+  public Predicate<Throwable> getRetryCondition()
   {
     return t -> t instanceof IOException;
   }
 
-  public static URLConnection openURLConnection(URI object, String userName, PasswordProvider passwordProvider)
+  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
       throws IOException
   {
-    URLConnection urlConnection = object.toURL().openConnection();
+    final URLConnection urlConnection = object.toURL().openConnection();
     if (!Strings.isNullOrEmpty(userName) && passwordProvider != null) {
       String userPass = userName + ":" + passwordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
       urlConnection.setRequestProperty("Authorization", basicAuthString);
     }
-    return urlConnection;
+    final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
+    final boolean withRanges = "bytes".equalsIgnoreCase(acceptRanges);
+    if (withRanges && offset > 0) {
+      // Set header for range request.
+      // Since we need to set only the start offset, the header is "bytes=<range-start>-".
+      // See https://tools.ietf.org/html/rfc7233#section-2.1
+      urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
+      return urlConnection.getInputStream();
+    } else {
+      if (!withRanges && offset > 0) {
+        LOG.warn(
+            "Since the input source doesn't support range requests, the object input stream is opened from the start and "
+            + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
+            + " a lot."
+        );
+      }
+      final InputStream in = urlConnection.getInputStream();
+      final long skipped = in.skip(offset);
+      if (skipped != offset) {
+        throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+      }
+      return in;
+    }
+
   }
 }

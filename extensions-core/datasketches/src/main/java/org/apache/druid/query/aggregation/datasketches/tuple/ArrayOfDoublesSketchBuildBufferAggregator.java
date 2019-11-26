@@ -20,10 +20,10 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.google.common.util.concurrent.Striped;
-import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.datasketches.memory.WritableMemory;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketches;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -41,7 +41,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 /**
  * This aggregator builds sketches from raw data.
  * The input is in the form of a key and array of double values.
- * The output is {@link com.yahoo.sketches.tuple.ArrayOfDoublesSketch}.
+ * The output is {@link org.apache.datasketches.tuple.ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {

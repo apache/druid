@@ -19,8 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 
@@ -59,11 +57,5 @@ public class ByteEntity implements InputEntity
   public InputStream open()
   {
     return new ByteBufferInputStream(buffer);
-  }
-
-  @Override
-  public Predicate<Throwable> getFetchRetryCondition()
-  {
-    return Predicates.alwaysFalse();
   }
 }

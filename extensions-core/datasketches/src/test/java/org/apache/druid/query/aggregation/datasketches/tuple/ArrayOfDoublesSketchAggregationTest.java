@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;

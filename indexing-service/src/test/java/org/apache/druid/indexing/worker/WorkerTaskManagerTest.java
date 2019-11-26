@@ -22,7 +22,6 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -38,6 +37,7 @@ import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -78,7 +78,7 @@ public class WorkerTaskManagerTest
   private WorkerTaskManager createWorkerTaskManager()
   {
     TaskConfig taskConfig = new TaskConfig(
-        Files.createTempDir().toString(),
+        FileUtils.createTempDir().toString(),
         null,
         null,
         0,

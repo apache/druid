@@ -19,8 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.utils.CompressionUtils;
 
@@ -34,7 +32,7 @@ public class FileEntity implements InputEntity
 {
   private final File file;
 
-  FileEntity(File file)
+  public FileEntity(File file)
   {
     this.file = file;
   }
@@ -68,11 +66,5 @@ public class FileEntity implements InputEntity
   public InputStream open() throws IOException
   {
     return CompressionUtils.decompress(new FileInputStream(file), file.getName());
-  }
-
-  @Override
-  public Predicate<Throwable> getFetchRetryCondition()
-  {
-    return Predicates.alwaysFalse();
   }
 }

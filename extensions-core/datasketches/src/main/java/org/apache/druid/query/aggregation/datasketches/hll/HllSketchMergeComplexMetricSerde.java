@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.hll.HllSketch;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;

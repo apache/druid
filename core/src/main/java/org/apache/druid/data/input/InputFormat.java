@@ -28,9 +28,11 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.TsvInputFormat;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * InputFormat abstracts the file format of input data.
@@ -44,7 +46,8 @@ import java.io.File;
 @JsonSubTypes(value = {
     @Type(name = "csv", value = CsvInputFormat.class),
     @Type(name = "json", value = JsonInputFormat.class),
-    @Type(name = "regex", value = RegexInputFormat.class)
+    @Type(name = "regex", value = RegexInputFormat.class),
+    @Type(name = "tsv", value = TsvInputFormat.class)
 })
 public interface InputFormat
 {
@@ -57,5 +60,9 @@ public interface InputFormat
   @JsonIgnore
   boolean isSplittable();
 
-  InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory);
+  InputEntityReader createReader(
+      InputRowSchema inputRowSchema,
+      InputEntity source,
+      File temporaryDirectory
+  ) throws IOException;
 }

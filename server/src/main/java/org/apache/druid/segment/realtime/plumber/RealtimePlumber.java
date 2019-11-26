@@ -26,7 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -36,6 +35,7 @@ import org.apache.druid.concurrent.TaskThreadPriority;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -665,7 +665,7 @@ public class RealtimePlumber implements Plumber
           try {
             File corruptSegmentDir = computeCorruptedFileDumpDir(segmentDir, schema);
             log.info("Renaming %s to %s", segmentDir.getAbsolutePath(), corruptSegmentDir.getAbsolutePath());
-            FileUtils.copyDirectory(segmentDir, corruptSegmentDir);
+            org.apache.commons.io.FileUtils.copyDirectory(segmentDir, corruptSegmentDir);
             FileUtils.deleteDirectory(segmentDir);
           }
           catch (Exception e1) {

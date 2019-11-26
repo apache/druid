@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
@@ -101,7 +101,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Load"
     );
@@ -116,7 +116,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     LOG.info("TaskID for compaction task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Compaction"
     );
@@ -124,7 +124,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void checkCompactionFinished(int numExpectedSegments)
   {
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> {
           int metadataSegmentCount = coordinator.getMetadataSegments(fullDatasourceName).size();
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
@@ -136,7 +136,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void checkCompactionIntervals(List<String> expectedIntervals)
   {
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> {
           final List<String> intervalsAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
           intervalsAfterCompaction.sort(null);
