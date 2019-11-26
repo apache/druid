@@ -34,8 +34,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
-import org.apache.druid.indexing.overlord.setup.EqualDistributionWithCategorySpecWorkerSelectStrategy;
-import org.apache.druid.indexing.overlord.setup.FillCapacityWithCategorySpecWorkerSelectStrategy;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
@@ -90,9 +89,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       return null;
     }
     final CategoriedWorkerBehaviorConfig workerConfig = (CategoriedWorkerBehaviorConfig) workerBehaviorConfig;
-    // TODO Create a superclass
-    if (!((workerConfig.getSelectStrategy() instanceof FillCapacityWithCategorySpecWorkerSelectStrategy)
-          || (workerConfig.getSelectStrategy() instanceof EqualDistributionWithCategorySpecWorkerSelectStrategy))) {
+    if (!(workerConfig.getSelectStrategy() instanceof CategoriedWorkerSelectStrategy)) {
       log.error("Select strategy %s is not supported", workerConfig.getSelectStrategy());
       return null;
     }
@@ -687,11 +684,8 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     {
       if (workerConfig != null && workerConfig.getSelectStrategy() != null) {
         WorkerSelectStrategy selectStrategy = workerConfig.getSelectStrategy();
-        // TODO Replace by superclass
-        if (selectStrategy instanceof FillCapacityWithCategorySpecWorkerSelectStrategy) {
-          return ((FillCapacityWithCategorySpecWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
-        } else if (selectStrategy instanceof EqualDistributionWithCategorySpecWorkerSelectStrategy) {
-          return ((EqualDistributionWithCategorySpecWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
+        if (selectStrategy instanceof CategoriedWorkerSelectStrategy) {
+          return ((CategoriedWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
         }
       }
       return null;
