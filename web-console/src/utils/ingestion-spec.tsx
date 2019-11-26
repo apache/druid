@@ -361,6 +361,18 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
+  {
+    name: 'binaryAsString',
+    type: 'boolean',
+    defaultValue: false,
+    defined: (p: InputFormat) => p.type === 'parquet',
+    info: (
+      <>
+        Specifies if the bytes parquet column which is not logically marked as a string or enum type
+        should be treated as a UTF-8 encoded string.
+      </>
+    ),
+  },
 ];
 
 export function getInputFormatFormFields() {
