@@ -252,7 +252,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         }
 
         if (!isEmptyContext(queryContext) || wrapQueryLimit) {
-          jsonQuery.context = Object.assign(jsonQuery.context || {}, queryContext);
+          jsonQuery.context = Object.assign({}, jsonQuery.context || {}, queryContext);
           jsonQuery.context.sqlOuterLimit = wrapQueryLimit;
         }
 
@@ -318,7 +318,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         };
 
         if (!isEmptyContext(queryContext) || wrapQueryLimit) {
-          explainPayload.context = queryContext || {};
+          explainPayload.context = Object.assign({}, queryContext || {});
           explainPayload.context.sqlOuterLimit = wrapQueryLimit;
         }
         const result = await queryDruidSql(explainPayload);

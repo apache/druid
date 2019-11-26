@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
@@ -377,5 +378,38 @@ public class Calcites
   public static String makePrefixedName(final String prefix, final String suffix)
   {
     return StringUtils.format("%s:%s", prefix, suffix);
+  }
+
+  public static int getInt(RexNode rex, int defaultValue)
+  {
+    return rex == null ? defaultValue : RexLiteral.intValue(rex);
+  }
+
+  public static int getOffset(Sort sort)
+  {
+    return Calcites.getInt(sort.offset, 0);
+  }
+
+  public static int getFetch(Sort sort)
+  {
+    return Calcites.getInt(sort.fetch, -1);
+  }
+
+  public static int combineFetch(int innerFetch, int outerFetch, int outerOffset)
+  {
+    final int fetch;
+    if (innerFetch < 0 && outerFetch < 0) {
+      // Neither has a limit => no limit overall.
+      fetch = -1;
+    } else if (innerFetch < 0) {
+      // Outer limit only.
+      fetch = outerFetch;
+    } else if (outerFetch < 0) {
+      // Inner limit only.
+      fetch = Math.max(0, innerFetch - outerOffset);
+    } else {
+      fetch = Math.max(0, Math.min(innerFetch - outerOffset, outerFetch));
+    }
+    return fetch;
   }
 }
