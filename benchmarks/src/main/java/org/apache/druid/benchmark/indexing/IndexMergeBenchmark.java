@@ -21,14 +21,13 @@ package org.apache.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -141,7 +140,7 @@ public class IndexMergeBenchmark
         incIndex.add(row);
       }
 
-      tmpDir = Files.createTempDir();
+      tmpDir = FileUtils.createTempDir();
       log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
       File indexFile = INDEX_MERGER_V9.persist(

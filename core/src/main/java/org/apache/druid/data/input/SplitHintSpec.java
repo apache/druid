@@ -33,7 +33,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
  * @see FiniteFirehoseFactory#getSplits(SplitHintSpec)
  * @see FiniteFirehoseFactory#getNumSplits(SplitHintSpec)
  * @see SplittableInputSource#createSplits
- * @see SplittableInputSource#getNumSplits
+ * @see SplittableInputSource#estimateNumSplits
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

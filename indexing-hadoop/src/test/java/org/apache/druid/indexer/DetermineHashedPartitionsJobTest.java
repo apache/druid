@@ -21,13 +21,13 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -133,7 +133,7 @@ public class DetermineHashedPartitionsJobTest
     this.expectedNumOfShards = expectedNumOfShards;
     this.expectedNumTimeBuckets = expectedNumTimeBuckets;
     this.errorMargin = errorMargin;
-    File tmpDir = Files.createTempDir();
+    File tmpDir = FileUtils.createTempDir();
 
     ImmutableList<Interval> intervals = null;
     if (interval != null) {

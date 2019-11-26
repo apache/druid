@@ -1090,7 +1090,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
       case STR_JSON:
         return new JsonInputFormat(null, null);
       case STR_CSV:
-        return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, false, 0);
+        return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0);
       default:
         throw new IAE("Unknown parser type: %s", parserType);
     }

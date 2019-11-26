@@ -22,6 +22,7 @@ package org.apache.druid.data.input.orc;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.orc.TypeDescription;
@@ -38,13 +39,15 @@ import java.util.function.Function;
 public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<OrcStruct>
 {
   private final Configuration jsonPathConfiguration;
+  private final JsonProvider orcJsonProvider;
   private final OrcStructConverter converter;
 
   OrcStructFlattenerMaker(boolean binaryAsString)
   {
     this.converter = new OrcStructConverter(binaryAsString);
+    this.orcJsonProvider = new OrcStructJsonProvider(converter);
     this.jsonPathConfiguration = Configuration.builder()
-                                              .jsonProvider(new OrcStructJsonProvider(converter))
+                                              .jsonProvider(orcJsonProvider)
                                               .mappingProvider(new NotImplementedMappingProvider())
                                               .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                               .build();
@@ -86,6 +89,12 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   public Function<OrcStruct, Object> makeJsonQueryExtractor(String expr)
   {
     throw new UnsupportedOperationException("ORC flattener does not support JQ");
+  }
+
+  @Override
+  public JsonProvider getJsonProvider()
+  {
+    return orcJsonProvider;
   }
 
   private Object finalizeConversion(Object o)

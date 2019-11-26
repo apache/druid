@@ -23,15 +23,14 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -135,20 +134,11 @@ public class FileTaskLogs implements TaskLogs
         throw new IOE("taskLogDir [%s] must be a directory.", taskLogDir);
       }
 
-      File[] files = taskLogDir.listFiles(
-          new FileFilter()
-          {
-            @Override
-            public boolean accept(File f)
-            {
-              return f.lastModified() < timestamp;
-            }
-          }
-      );
+      File[] files = taskLogDir.listFiles(f -> f.lastModified() < timestamp);
 
       for (File file : files) {
         log.info("Deleting local task log [%s].", file.getAbsolutePath());
-        FileUtils.forceDelete(file);
+        org.apache.commons.io.FileUtils.forceDelete(file);
 
         if (Thread.currentThread().isInterrupted()) {
           throw new IOException(

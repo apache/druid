@@ -25,10 +25,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-public class RetryUtil
+public class ITRetryUtil
 {
 
-  private static final Logger LOG = new Logger(RetryUtil.class);
+  private static final Logger LOG = new Logger(ITRetryUtil.class);
 
   public static final int DEFAULT_RETRY_COUNT = 30;
 
