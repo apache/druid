@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 
@@ -46,6 +47,8 @@ import java.util.function.BiFunction;
 
 public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
 {
+  private static final EmittingLogger log = new EmittingLogger(SequenceMetadata.class);
+
   private final int sequenceId;
   private final String sequenceName;
   private final Set<PartitionIdType> exclusiveStartPartitions;
@@ -369,8 +372,18 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
             );
         if (isMetadataUnchanged(startPartitions, finalPartitions)) {
           // if we created no segments and didn't change any offsets, just do nothing and return.
+          log.info(
+              "With empty segment set, start offsets [%s] and end offsets [%s] are the same, skipping metadata commit.",
+              startPartitions,
+              finalPartitions
+          );
           return SegmentPublishResult.ok(segmentsToPush);
         } else {
+          log.info(
+              "With empty segment set, start offsets [%s] and end offsets [%s] changed, committing new metadata.",
+              startPartitions,
+              finalPartitions
+          );
           action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
               runner.getAppenderator().getDataSource(),
               runner.createDataSourceMetadata(startPartitions),
