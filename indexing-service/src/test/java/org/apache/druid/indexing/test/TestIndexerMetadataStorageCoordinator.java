@@ -124,7 +124,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata
-  ) throws IOException
+  )
   {
     throw new UnsupportedOperationException("Not implemented, no test uses this currently.");
   }

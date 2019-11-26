@@ -1380,7 +1380,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             PartitionIdType partition = entry.getKey();
                             SequenceOffsetType sequence = entry.getValue();
                             if (sequence.equals(getEndOfPartitionMarker())) {
-                              log.debug(
+                              log.info(
                                   "Got end of partition marker for partition [%s] from task [%s] in discoverTasks, clearing partition offset to refetch from metadata..",
                                   taskId,
                                   partition
@@ -2355,7 +2355,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         boolean endOffsetsAreInvalid = false;
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
           if (entry.getValue().equals(getEndOfPartitionMarker())) {
-            log.debug(
+            log.info(
                 "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
                 entry.getKey()
             );
