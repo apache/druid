@@ -189,11 +189,10 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource the datasource
    * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
-   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
-   *                      not involve a metadata transaction
+   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}.
    * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
-   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
-   *                      involve a metadata transaction
+   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}.
+   *
    * @return segment publish result indicating transaction success or failure.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
    * it must throw an exception instead.
