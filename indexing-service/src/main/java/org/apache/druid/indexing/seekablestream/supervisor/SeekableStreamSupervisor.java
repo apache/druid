@@ -1375,30 +1375,38 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
                               taskId);
 
+                          boolean endOffsetsAreInvalid = false;
                           for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
                             PartitionIdType partition = entry.getKey();
                             SequenceOffsetType sequence = entry.getValue();
-
                             if (sequence.equals(getEndOfPartitionMarker())) {
                               log.debug(
-                                  "Got end of partition marker for partition [%s] from task [%s] in discoverTasks, not updating partition offset.",
+                                  "Got end of partition marker for partition [%s] from task [%s] in discoverTasks, clearing partition offset to refetch from metadata..",
                                   taskId,
                                   partition
                               );
-                              continue;
+                              endOffsetsAreInvalid = true;
+                              partitionOffsets.put(partition, getNotSetMarker());
                             }
+                          }
 
-                            boolean succeeded;
-                            do {
-                              succeeded = true;
-                              SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
-                              if (previousOffset != null
-                                  && (makeSequenceNumber(previousOffset)
-                                  .compareTo(makeSequenceNumber(
-                                      sequence))) < 0) {
-                                succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
-                              }
-                            } while (!succeeded);
+                          if (!endOffsetsAreInvalid) {
+                            for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
+                              PartitionIdType partition = entry.getKey();
+                              SequenceOffsetType sequence = entry.getValue();
+
+                              boolean succeeded;
+                              do {
+                                succeeded = true;
+                                SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
+                                if (previousOffset != null
+                                    && (makeSequenceNumber(previousOffset)
+                                    .compareTo(makeSequenceNumber(
+                                        sequence))) < 0) {
+                                  succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
+                                }
+                              } while (!succeeded);
+                            }
                           }
                         } else {
                           for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
@@ -2343,16 +2351,29 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
 
-        // set endOffsets as the next startOffsets
+
+        boolean endOffsetsAreInvalid = false;
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
           if (entry.getValue().equals(getEndOfPartitionMarker())) {
             log.debug(
                 "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
                 entry.getKey()
             );
-            continue;
+            endOffsetsAreInvalid = true;
           }
-          partitionOffsets.put(entry.getKey(), entry.getValue());
+        }
+
+        // set endOffsets as the next startOffsets
+        // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
+        // from metadata.
+        if (!endOffsetsAreInvalid) {
+          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+            partitionOffsets.put(entry.getKey(), entry.getValue());
+          }
+        } else {
+          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+            partitionOffsets.put(entry.getKey(), getNotSetMarker());
+          }
         }
       } else {
         for (String id : group.taskIds()) {
