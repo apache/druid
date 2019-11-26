@@ -53,7 +53,10 @@ public class CloudObjectLocation
   {
     this.bucket = Preconditions.checkNotNull(StringUtils.maybeRemoveTrailingSlash(bucket));
     this.path = Preconditions.checkNotNull(StringUtils.maybeRemoveLeadingSlash(path));
-    Preconditions.checkArgument(this.bucket.equals(StringUtils.urlEncode(this.bucket)));
+    Preconditions.checkArgument(
+        this.bucket.equals(StringUtils.urlEncode(this.bucket)),
+        "bucket must follow DNS-compliant naming conventions"
+    );
   }
 
   public CloudObjectLocation(URI uri)
