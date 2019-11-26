@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -148,17 +147,12 @@ public class DruidPlanner implements Closeable
           // Add a mapping on top to accommodate root.fields.
           return Sequences.map(
               druidRel.runQuery(),
-              new Function<Object[], Object[]>()
-              {
-                @Override
-                public Object[] apply(final Object[] input)
-                {
-                  final Object[] retVal = new Object[root.fields.size()];
-                  for (int i = 0; i < root.fields.size(); i++) {
-                    retVal[i] = input[root.fields.get(i).getKey()];
-                  }
-                  return retVal;
+              input -> {
+                final Object[] retVal = new Object[root.fields.size()];
+                for (int i = 0; i < root.fields.size(); i++) {
+                  retVal[i] = input[root.fields.get(i).getKey()];
                 }
+                return retVal;
               }
           );
         }
