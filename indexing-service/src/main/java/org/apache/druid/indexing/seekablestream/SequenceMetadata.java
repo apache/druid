@@ -351,7 +351,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       if (!getEndOffsets().equals(finalPartitions.getPartitionSequenceNumberMap())) {
         throw new ISE(
             "WTF?! Driver for sequence [%s], attempted to publish invalid metadata[%s].",
-            toString(),
+            SequenceMetadata.this.toString(),
             commitMetadata
         );
       }
@@ -361,17 +361,22 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       if (segmentsToPush.isEmpty()) {
         // If a task ingested no data but made progress reading through its assigned partitions,
         // we publish no segments but still need to update the supervisor with the current offsets
-        action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
-            runner.getAppenderator().getDataSource(),
-            runner.createDataSourceMetadata(
-                new SeekableStreamStartSequenceNumbers<>(
-                    finalPartitions.getStream(),
-                    getStartOffsets(),
-                    exclusiveStartPartitions
-                )
-            ),
-            runner.createDataSourceMetadata(finalPartitions)
-        );
+        SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> startPartitions =
+            new SeekableStreamStartSequenceNumbers<>(
+                finalPartitions.getStream(),
+                getStartOffsets(),
+                exclusiveStartPartitions
+            );
+        if (isMetadataUnchanged(startPartitions, finalPartitions)) {
+          // if we created no segments and didn't change any offsets, just do nothing and return.
+          return SegmentPublishResult.ok(segmentsToPush);
+        } else {
+          action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
+              runner.getAppenderator().getDataSource(),
+              runner.createDataSourceMetadata(startPartitions),
+              runner.createDataSourceMetadata(finalPartitions)
+          );
+        }
       } else if (useTransaction) {
         action = SegmentTransactionalInsertAction.appendAction(
             segmentsToPush,
@@ -396,5 +401,15 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     {
       return true;
     }
+  }
+
+  private boolean isMetadataUnchanged(
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers
+  )
+  {
+    Map<PartitionIdType, SequenceOffsetType> startMap = startSequenceNumbers.getPartitionSequenceNumberMap();
+    Map<PartitionIdType, SequenceOffsetType> endMap = endSequenceNumbers.getPartitionSequenceNumberMap();
+    return startMap.equals(endMap);
   }
 }
