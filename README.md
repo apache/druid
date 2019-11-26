@@ -32,6 +32,7 @@
 [Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
 [User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
 [Slack](https://s.apache.org/slack-invite) |
+[Twitter](https://twitter.com/druidio) |
 [Download](https://druid.apache.org/downloads.html)
 
 ---
