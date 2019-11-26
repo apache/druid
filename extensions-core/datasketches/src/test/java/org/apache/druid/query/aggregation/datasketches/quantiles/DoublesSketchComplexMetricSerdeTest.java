@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.yahoo.sketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.junit.Assert;
