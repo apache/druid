@@ -2326,6 +2326,10 @@ function guessInputFormat(sampleData: string[]): InputFormat | undefined {
     return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
   }
 
+  if (sampleDatum.startsWith('PAR1')) {
+    return inputFormatFromType('parquet');
+  }
+
   return inputFormatFromType('regex');
 }
 
