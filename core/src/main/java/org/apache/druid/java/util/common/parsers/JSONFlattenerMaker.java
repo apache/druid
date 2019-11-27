@@ -53,7 +53,6 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
-  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)
@@ -150,6 +149,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   @Nullable
   private String charsetFix(String s)
   {
+    CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
     if (s != null && !enc.canEncode(s)) {
       // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
       // by new String(...) but will not encode into the same character. This dance here will replace these
