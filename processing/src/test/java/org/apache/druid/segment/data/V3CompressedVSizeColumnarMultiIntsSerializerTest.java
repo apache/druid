@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -43,7 +44,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -217,11 +217,11 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
 
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
+    File tmpDirectory = FileUtils.createTempDir(StringUtils.format(
         "CompressedVSizeIndexedV3WriterTest_%d_%d",
         offsetChunkFactor,
         offsetChunkFactor
-    )).toFile();
+    ));
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
 

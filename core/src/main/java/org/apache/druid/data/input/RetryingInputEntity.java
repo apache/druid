@@ -19,47 +19,58 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-public interface RetryingInputEntity extends InputEntity
+public abstract class RetryingInputEntity implements InputEntity
 {
+  /**
+   * Open a {@link RetryingInputStream} wrapper for an underlying input stream, optionally decompressing the retrying
+   * stream if the file extension matches a known compression, otherwise passing through the retrying stream directly.
+   */
   @Override
-  default InputStream open() throws IOException
+  public InputStream open() throws IOException
   {
-    return new RetryingInputStream<>(
+    RetryingInputStream<?> retryingInputStream = new RetryingInputStream<>(
         this,
         new RetryingInputEntityOpenFunction(),
         getRetryCondition(),
         RetryUtils.DEFAULT_MAX_TRIES
     );
+    return CompressionUtils.decompress(retryingInputStream, getPath());
   }
 
   /**
-   * Directly opens an {@link InputStream} on the input entity.
+   * Directly opens an {@link InputStream} on the input entity. Decompression should be handled externally, and is
+   * handled by the default implementation of {@link #open}, so this should return the raw stream for the object.
    */
-  default InputStream readFromStart() throws IOException
+  protected InputStream readFromStart() throws IOException
   {
     return readFrom(0);
   }
 
   /**
-   * Directly opens an {@link InputStream} starting at the given offset on the input entity.
+   * Directly opens an {@link InputStream} starting at the given offset on the input entity. Decompression should be
+   * handled externally, and is handled by the default implementation of {@link #open},this should return the raw stream
+   * for the object.
    *
    * @param offset an offset to start reading from. A non-negative integer counting
    *               the number of bytes from the beginning of the entity
    */
-  InputStream readFrom(long offset) throws IOException;
+  protected abstract InputStream readFrom(long offset) throws IOException;
 
-  @Override
-  Predicate<Throwable> getRetryCondition();
+  /**
+   * Get path name for this entity, used by the default implementation of {@link #open} to determine if the underlying
+   * stream needs decompressed, based on file extension of the path
+   */
+  protected abstract String getPath();
 
-  class RetryingInputEntityOpenFunction implements ObjectOpenFunction<RetryingInputEntity>
+  private static class RetryingInputEntityOpenFunction implements ObjectOpenFunction<RetryingInputEntity>
   {
     @Override
     public InputStream open(RetryingInputEntity object) throws IOException

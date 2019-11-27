@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
-import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -36,7 +35,7 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpEntity implements RetryingInputEntity
+public class HttpEntity extends RetryingInputEntity
 {
   private static final Logger LOG = new Logger(HttpEntity.class);
 
@@ -64,12 +63,15 @@ public class HttpEntity implements RetryingInputEntity
   }
 
   @Override
-  public InputStream readFrom(long offset) throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
-    return CompressionUtils.decompress(
-        openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset),
-        uri.toString()
-    );
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
+  }
+
+  @Override
+  protected String getPath()
+  {
+    return uri.getPath();
   }
 
   @Override

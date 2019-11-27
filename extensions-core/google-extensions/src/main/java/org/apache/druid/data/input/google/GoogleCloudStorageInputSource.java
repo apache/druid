@@ -150,7 +150,7 @@ public class GoogleCloudStorageInputSource extends AbstractInputSource implement
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     if (byteSources != null) {
       return 1;

@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.Family;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Union;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.datasketches.Family;
+import org.apache.datasketches.memory.WritableMemory;
+import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Union;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;

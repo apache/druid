@@ -58,7 +58,7 @@ public class CsvInputSourceSamplerTest
         "Michael,Jackson,,Male"
     );
     final InputSource inputSource = new InlineInputSource(String.join("\n", strCsvRows));
-    final InputFormat inputFormat = new CsvInputFormat(null, null, true, 0);
+    final InputFormat inputFormat = new CsvInputFormat(null, null, null, true, 0);
     final InputSourceSampler inputSourceSampler = new InputSourceSampler();
 
     final SamplerResponse response = inputSourceSampler.sample(

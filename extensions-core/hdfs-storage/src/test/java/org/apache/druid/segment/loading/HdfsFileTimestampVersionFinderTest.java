@@ -20,7 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.io.ByteStreams;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.HdfsFileTimestampVersionFinder;

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;

@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -48,6 +50,12 @@ public class CsvReaderTest
       Collections.emptyList()
   );
 
+  @BeforeClass
+  public static void setup()
+  {
+    NullHandling.initializeForTests();
+  }
+
   @Test
   public void testWithoutHeaders() throws IOException
   {
@@ -58,7 +66,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, false, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 0);
     assertResult(source, format);
   }
 
@@ -73,7 +81,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, true, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 0);
     assertResult(source, format);
   }
 
@@ -88,7 +96,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, false, 1);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 1);
     assertResult(source, format);
   }
 
@@ -104,7 +112,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, true, 1);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 1);
     assertResult(source, format);
   }
 
@@ -119,7 +127,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15|3"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", true, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", null, true, 0);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -210,7 +218,13 @@ public class CsvReaderTest
             ImmutableMap.of("Value", "65", "Comment", "Here I write \\n slash n", "Timestamp", "2018-05-09T10:00:00Z")
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("Value", "Comment", "Timestamp"), null, false, 0);
+    final CsvInputFormat format = new CsvInputFormat(
+        ImmutableList.of("Value", "Comment", "Timestamp"),
+        null,
+        null,
+        false,
+        0
+    );
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("Timestamp", "auto", null),
@@ -238,7 +252,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:10Z,name_1,\"Как говорится: \\\"\"всё течет, всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, false, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, null, false, 0);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());

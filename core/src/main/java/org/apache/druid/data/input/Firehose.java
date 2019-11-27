@@ -69,11 +69,11 @@ public interface Firehose extends Closeable
   /**
    * Returns an {@link InputRowListPlusRawValues} object containing the InputRow plus the raw, unparsed data corresponding to
    * the next row available. Used in the sampler to provide the caller with information to assist in configuring a parse
-   * spec. If a ParseException is thrown by the parser, it should be caught and returned in the InputRowListPlusJson so
+   * spec. If a ParseException is thrown by the parser, it should be caught and returned in the InputRowListPlusRawValues so
    * we will be able to provide information on the raw row which failed to be parsed. Should only be called if hasMore
    * returns true.
    *
-   * @return an InputRowListPlusJson which may contain any of: an InputRow, map of the raw data, or a ParseException
+   * @return an InputRowListPlusRawValues which may contain any of: an InputRow, map of the raw data, or a ParseException
    */
   @Deprecated
   default InputRowListPlusRawValues nextRowWithRaw() throws IOException

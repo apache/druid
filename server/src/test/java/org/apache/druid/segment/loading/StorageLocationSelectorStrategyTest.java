@@ -26,6 +26,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -178,6 +179,34 @@ public class StorageLocationSelectorStrategyTest
     loc1 = locations.next();
     Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
         localStorageFolder1, loc1.getPath());
+  }
+
+  @Test
+  public void testRandomLocationSelectorStrategy() throws Exception
+  {
+    List<StorageLocation> storageLocations = new ArrayList<>();
+
+    final File localStorageFolder1 = tmpFolder.newFolder("local_storage_folder_1");
+    final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder_2");
+    final File localStorageFolder3 = tmpFolder.newFolder("local_storage_folder_3");
+
+    storageLocations.add(new StorageLocation(localStorageFolder1, 3000L, null));
+    storageLocations.add(new StorageLocation(localStorageFolder2, 2000L, null));
+    storageLocations.add(new StorageLocation(localStorageFolder3, 1000L, null));
+
+    StorageLocationSelectorStrategy leastBytesUsedStrategy =
+            new RandomStorageLocationSelectorStrategy(storageLocations);
+
+
+    Iterator<StorageLocation> locations = leastBytesUsedStrategy.getLocations();
+
+    StorageLocation loc1 = locations.next();
+    StorageLocation loc2 = locations.next();
+    StorageLocation loc3 = locations.next();
+
+    File[] result = new File[]{loc1.getPath(), loc2.getPath(), loc3.getPath()};
+    Arrays.sort(result);
+    Assert.assertArrayEquals(new File[]{localStorageFolder1, localStorageFolder2, localStorageFolder3}, result);
   }
 
 }

@@ -206,7 +206,7 @@ public class ParseSpecTest
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
-    expectedException.expectMessage("Could not resolve type id 'foo' into a subtype");
+    expectedException.expectMessage("Could not resolve type id 'foo' as a subtype");
     mapper.convertValue(mapValue, ParseSpec.class);
   }
 }
