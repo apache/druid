@@ -22,12 +22,15 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,54 +41,67 @@ import java.util.Map;
 
 public class SinglePhaseSubTaskSpecTest
 {
-  private static final SinglePhaseSubTaskSpec SPEC = new SinglePhaseSubTaskSpec(
-      "id",
-      "groupId",
-      "supervisorTaskId",
-      new ParallelIndexIngestionSpec(
-          new DataSchema(
-              "dataSource",
-              new TimestampSpec(null, null, null),
-              new DimensionsSpec(null),
-              new AggregatorFactory[0],
-              null,
-              null
-          ),
-          new ParallelIndexIOConfig(
-              null,
-              new LocalInputSource(new File("baseDir"), "filter"),
-              new JsonInputFormat(null, null),
-              null
-          ),
-          null
-      ),
-      null,
-      new InputSplit<>("string split")
-  );
+  private static final ObjectMapper MAPPER = new TestUtils().getTestObjectMapper();
 
-  private ObjectMapper mapper;
+  private static ParallelIndexIngestionSpec createParallelIndexIngestionSpec() throws IOException
+  {
+    final InputRowParser parser = new StringInputRowParser(
+        new JSONParseSpec(
+            new TimestampSpec(null, null, null),
+            new DimensionsSpec(null),
+            null,
+            null
+        ),
+        StringUtils.UTF8_STRING
+    );
+    final Map<String, Object> parserMap = MAPPER.readValue(MAPPER.writeValueAsBytes(parser), Map.class);
+    return new ParallelIndexIngestionSpec(
+        new DataSchema(
+            "dataSource",
+            parserMap,
+            new AggregatorFactory[0],
+            null,
+            null,
+            MAPPER
+        ),
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(new File("baseDir"), "filter", null),
+            null
+        ),
+        null
+    );
+  }
+
+  private SinglePhaseSubTaskSpec spec;
 
   @Before
-  public void setup()
+  public void setup() throws IOException
   {
-    mapper = new TestUtils().getTestObjectMapper();
+    spec = new SinglePhaseSubTaskSpec(
+        "id",
+        "groupId",
+        "supervisorTaskId",
+        createParallelIndexIngestionSpec(),
+        null,
+        new InputSplit<>("string split")
+    );
   }
 
   @Test
   public void testNewSubTaskType() throws IOException
   {
-    final SinglePhaseSubTask expected = SPEC.newSubTask(0);
-    final byte[] json = mapper.writeValueAsBytes(expected);
-    final Map<String, Object> actual = mapper.readValue(json, Map.class);
+    final SinglePhaseSubTask expected = spec.newSubTask(0);
+    final byte[] json = MAPPER.writeValueAsBytes(expected);
+    final Map<String, Object> actual = MAPPER.readValue(json, Map.class);
     Assert.assertEquals(SinglePhaseSubTask.TYPE, actual.get("type"));
   }
 
   @Test
   public void testNewSubTaskWithBackwardCompatibleType() throws IOException
   {
-    final SinglePhaseSubTask expected = SPEC.newSubTaskWithBackwardCompatibleType(0);
-    final byte[] json = mapper.writeValueAsBytes(expected);
-    final Map<String, Object> actual = mapper.readValue(json, Map.class);
+    final SinglePhaseSubTask expected = spec.newSubTaskWithBackwardCompatibleType(0);
+    final byte[] json = MAPPER.writeValueAsBytes(expected);
+    final Map<String, Object> actual = MAPPER.readValue(json, Map.class);
     Assert.assertEquals(SinglePhaseSubTask.OLD_TYPE_NAME, actual.get("type"));
   }
 }
