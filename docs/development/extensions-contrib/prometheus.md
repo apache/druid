@@ -44,7 +44,7 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 
 All metric names and labels are reformatted to match Prometheus standards.
 - For names: all characters which are not alphanumeric, underscores, or colons (matching `[^a-zA-Z_:][^a-zA-Z0-9_:]*`) are replaced with `_`
-- For labels: all characters which are not alphanumeric or underscores (matching `[^a-zA-Z_][^a-zA-Z0-9_]*`) are replaced with `_`
+- For labels: all characters which are not alphanumeric or underscores (matching `[^a-zA-Z0-9_][^a-zA-Z0-9_]*`) are replaced with `_`
 
 ### Metric mapping
 
