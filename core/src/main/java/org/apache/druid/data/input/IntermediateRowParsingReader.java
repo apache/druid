@@ -19,14 +19,13 @@
 
 package org.apache.druid.data.input;
 
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -40,53 +39,20 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
-    final CloseableIterator<T> intermediateRowIterator = intermediateRowIterator();
-
-    return new CloseableIterator<InputRow>()
-    {
-      // since parseInputRows() returns a list, the below line always iterates over the list,
-      // which means it calls Iterator.hasNext() and Iterator.next() at least once per row.
-      // This could be unnecessary if the row wouldn't be exploded into multiple inputRows.
-      // If this line turned out to be a performance bottleneck, perhaps parseInputRows() interface might not be a
-      // good idea. Subclasses could implement read() with some duplicate codes to avoid unnecessary iteration on
-      // a singleton list.
-      Iterator<InputRow> rows = null;
-
-      @Override
-      public boolean hasNext()
-      {
-        if (rows == null || !rows.hasNext()) {
-          if (!intermediateRowIterator.hasNext()) {
-            return false;
-          }
-          final T row = intermediateRowIterator.next();
-          try {
-            rows = parseInputRows(row).iterator();
-          }
-          catch (IOException e) {
-            throw new ParseException(e, "Unable to parse row [%s]", row);
-          }
-        }
-
-        return true;
+    return intermediateRowIterator().flatMap(row -> {
+      try {
+        // since parseInputRows() returns a list, the below line always iterates over the list,
+        // which means it calls Iterator.hasNext() and Iterator.next() at least once per row.
+        // This could be unnecessary if the row wouldn't be exploded into multiple inputRows.
+        // If this line turned out to be a performance bottleneck, perhaps parseInputRows() interface might not be a
+        // good idea. Subclasses could implement read() with some duplicate codes to avoid unnecessary iteration on
+        // a singleton list.
+        return CloseableIterators.withEmptyBaggage(parseInputRows(row).iterator());
       }
-
-      @Override
-      public InputRow next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-
-        return rows.next();
+      catch (IOException e) {
+        throw new ParseException(e, "Unable to parse row [%s]", row);
       }
-
-      @Override
-      public void close() throws IOException
-      {
-        intermediateRowIterator.close();
-      }
-    };
+    });
   }
 
   @Override
