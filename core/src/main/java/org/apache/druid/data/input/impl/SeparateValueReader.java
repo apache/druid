@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -62,11 +61,7 @@ public abstract class SeparateValueReader extends TextReader
 
   public static RFC4180Parser createOpenCsvParser(char separator)
   {
-    return NullHandling.replaceWithDefault()
-           ? new RFC4180ParserBuilder()
-               .withSeparator(separator)
-               .build()
-           : new RFC4180ParserBuilder().withFieldAsNull(
+    return new RFC4180ParserBuilder().withFieldAsNull(
                CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
                                        .withSeparator(separator)
                                        .build();
