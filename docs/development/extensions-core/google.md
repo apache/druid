@@ -76,11 +76,40 @@ This extension also provides an input source for Druid native batch ingestion to
 ...
 ```
 
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "objects": [
+          { "bucket": "foo", "path": "bar/file1.json"},
+          { "bucket": "bar", "path": "foo/file2.json"}
+        ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `google`.|N/A|yes|
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|N/A|`uris` or `prefixes` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested.|N/A|`uris` or `prefixes` must be set|
+|objects|JSON array of Google Cloud Storage objects to be ingested.|N/A|`uris` or `prefixes` or `objects` must be set|
+
+
+Google Cloud Storage object:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|bucket|Name of the Google Cloud Storage bucket|N/A|yes|
+|path|The path where data is located.|N/A|yes|
 
 ## Firehose
 
