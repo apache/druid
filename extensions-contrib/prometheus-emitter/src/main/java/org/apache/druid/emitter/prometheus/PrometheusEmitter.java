@@ -42,7 +42,7 @@ public class PrometheusEmitter implements Emitter
   private static final Logger log = new Logger(PrometheusEmitter.class);
   private final Metrics metrics;
   private final PrometheusEmitterConfig config;
-  private final Pattern pattern = Pattern.compile("[^a-zA-Z_][^a-zA-Z0-9_]*");
+  private final Pattern pattern = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
 
   private HTTPServer server;
 

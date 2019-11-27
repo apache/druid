@@ -19,6 +19,7 @@
 
 package org.apache.druid.emitter.prometheus;
 
+import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,6 +31,7 @@ public class MetricsTest
   {
     Metrics metrics = new Metrics("test", null);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
+    DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
     Assert.assertEquals("dataSource", dimensions[0]);
