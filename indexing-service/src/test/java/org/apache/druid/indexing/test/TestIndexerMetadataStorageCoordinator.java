@@ -34,7 +34,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
