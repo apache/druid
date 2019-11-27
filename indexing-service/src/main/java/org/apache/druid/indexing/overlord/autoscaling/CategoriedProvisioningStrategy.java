@@ -152,150 +152,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     }
 
     @Override
-    public boolean doTerminate()
-    {
-      Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
-      log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final CategoriedWorkerBehaviorConfig workerConfig = getCategoriedWorkerBehaviorConfig(
-          workerConfigRef,
-          "terminate",
-          log
-      );
-      if (workerConfig == null) {
-        return false;
-      }
-
-      boolean didTerminate = false;
-
-      Map<String, List<ImmutableWorkerInfo>> workersByCategories = zkWorkers.stream().collect(Collectors.groupingBy(
-          immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
-      );
-
-      Set<String> allCategories = workersByCategories.keySet();
-      log.debug(
-          "Workers of %d categories: %s",
-          workersByCategories.size(),
-          allCategories
-      );
-
-      Map<String, AutoScaler> autoscalersByCategory = mapAutoscalerByCategory(workerConfig.getAutoScalers());
-
-      for (String category : allCategories) {
-        Set<String> currentlyProvisioning = this.currentlyProvisioning.getOrDefault(category, Collections.emptySet());
-        log.info(
-            "Currently provisioning of category %s: %d %s",
-            category,
-            currentlyProvisioning.size(),
-            currentlyProvisioning
-        );
-        if (!currentlyProvisioning.isEmpty()) {
-          log.debug("Already provisioning nodes of category %s, Not Terminating any nodes.", category);
-          return false;
-        }
-
-        List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyTerminating.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
-        AutoScaler groupAutoscaler = getCategoryAutoscaler(category, autoscalersByCategory);
-
-        didTerminate = doTerminate(
-            category,
-            categoryWorkers,
-            currentlyTerminating,
-            groupAutoscaler
-        ) || didTerminate;
-      }
-
-      return didTerminate;
-    }
-
-    private boolean doTerminate(
-        String category,
-        Collection<ImmutableWorkerInfo> zkWorkers,
-        Set<String> currentlyTerminating,
-        AutoScaler autoScaler
-    )
-    {
-      if (autoScaler == null) {
-        log.error("No autoScaler available, cannot execute doTerminate for workers of category %s", category);
-        return false;
-      }
-
-      boolean didTerminate = false;
-      final Collection<String> workerNodeIds = getWorkerNodeIDs(runner.getLazyWorkers(), autoScaler);
-      log.debug(
-          "Currently terminating of category %s: %d %s",
-          category,
-          currentlyTerminating.size(),
-          currentlyTerminating
-      );
-      currentlyTerminating.retainAll(workerNodeIds);
-      log.debug(
-          "Currently terminating of category %s among WorkerNodeIds: %d %s",
-          category,
-          currentlyTerminating.size(),
-          currentlyTerminating
-      );
-
-      if (currentlyTerminating.isEmpty()) {
-        final int maxWorkersToTerminate = maxWorkersToTerminate(zkWorkers, autoScaler);
-        log.info("Max workers to terminate of category %s: %d", category, maxWorkersToTerminate);
-        final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
-        final Collection<String> laziestWorkerIps =
-            Collections2.transform(
-                runner.markWorkersLazy(isLazyWorker, maxWorkersToTerminate),
-                Worker::getIp
-            );
-        log.info("Laziest worker ips of category %s: %d %s", category, laziestWorkerIps.size(), laziestWorkerIps);
-        if (laziestWorkerIps.isEmpty()) {
-          log.debug("Found no lazy workers for category %s", category);
-        } else {
-          log.info(
-              "Terminating %,d lazy workers of category %s: %s",
-              laziestWorkerIps.size(),
-              category,
-              Joiner.on(", ").join(laziestWorkerIps)
-          );
-
-          final AutoScalingData terminated = autoScaler.terminate(ImmutableList.copyOf(laziestWorkerIps));
-          if (terminated != null) {
-            log.info(
-                "Terminated of category %s: %d %s",
-                category,
-                terminated.getNodeIds().size(),
-                terminated.getNodeIds()
-            );
-            currentlyTerminating.addAll(terminated.getNodeIds());
-            lastTerminateTime = DateTimes.nowUtc();
-            scalingStats.addTerminateEvent(terminated);
-            didTerminate = true;
-          }
-        }
-      } else {
-        Duration durSinceLastTerminate = new Duration(lastTerminateTime, DateTimes.nowUtc());
-
-        log.info(
-            "%s terminating of category %s. Current wait time: %s",
-            currentlyTerminating,
-            category,
-            durSinceLastTerminate
-        );
-
-        if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
-          log.makeAlert("Worker node termination taking too long!")
-             .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
-             .addData("terminatingCount", currentlyTerminating.size())
-             .emit();
-
-          currentlyTerminating.clear();
-        }
-      }
-
-      return didTerminate;
-    }
-
-    @Override
-    public boolean doProvision()
+    public synchronized boolean doProvision()
     {
       Collection<Task> pendingTasks = runner.getPendingTaskPayloads();
       log.debug("Pending tasks: %d %s", pendingTasks.size(), pendingTasks);
@@ -444,12 +301,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       return didProvision;
     }
 
-    @Override
-    public ScalingStats getStats()
-    {
-      return scalingStats;
-    }
-
     private Collection<String> getWorkerNodeIDs(Collection<Worker> workers, AutoScaler<?> autoScaler)
     {
       List<String> ips = new ArrayList<>(workers.size());
@@ -554,6 +405,155 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         workersMap.put(workerRunningTask.getWorker().getHost(), workerWithTask(workerRunningTask, task));
       }
       return need;
+    }
+
+    @Override
+    public synchronized boolean doTerminate()
+    {
+      Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
+      log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
+      final CategoriedWorkerBehaviorConfig workerConfig = getCategoriedWorkerBehaviorConfig(
+          workerConfigRef,
+          "terminate",
+          log
+      );
+      if (workerConfig == null) {
+        return false;
+      }
+
+      boolean didTerminate = false;
+
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = zkWorkers.stream().collect(Collectors.groupingBy(
+          immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
+      );
+
+      Set<String> allCategories = workersByCategories.keySet();
+      log.debug(
+          "Workers of %d categories: %s",
+          workersByCategories.size(),
+          allCategories
+      );
+
+      Map<String, AutoScaler> autoscalersByCategory = mapAutoscalerByCategory(workerConfig.getAutoScalers());
+
+      for (String category : allCategories) {
+        Set<String> currentlyProvisioning = this.currentlyProvisioning.getOrDefault(category, Collections.emptySet());
+        log.info(
+            "Currently provisioning of category %s: %d %s",
+            category,
+            currentlyProvisioning.size(),
+            currentlyProvisioning
+        );
+        if (!currentlyProvisioning.isEmpty()) {
+          log.debug("Already provisioning nodes of category %s, Not Terminating any nodes.", category);
+          return false;
+        }
+
+        List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
+        currentlyTerminating.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
+        AutoScaler groupAutoscaler = getCategoryAutoscaler(category, autoscalersByCategory);
+
+        didTerminate = doTerminate(
+            category,
+            categoryWorkers,
+            currentlyTerminating,
+            groupAutoscaler
+        ) || didTerminate;
+      }
+
+      return didTerminate;
+    }
+
+    private boolean doTerminate(
+        String category,
+        Collection<ImmutableWorkerInfo> zkWorkers,
+        Set<String> currentlyTerminating,
+        AutoScaler autoScaler
+    )
+    {
+      if (autoScaler == null) {
+        log.error("No autoScaler available, cannot execute doTerminate for workers of category %s", category);
+        return false;
+      }
+
+      boolean didTerminate = false;
+      final Collection<String> workerNodeIds = getWorkerNodeIDs(runner.getLazyWorkers(), autoScaler);
+      log.debug(
+          "Currently terminating of category %s: %d %s",
+          category,
+          currentlyTerminating.size(),
+          currentlyTerminating
+      );
+      currentlyTerminating.retainAll(workerNodeIds);
+      log.debug(
+          "Currently terminating of category %s among WorkerNodeIds: %d %s",
+          category,
+          currentlyTerminating.size(),
+          currentlyTerminating
+      );
+
+      if (currentlyTerminating.isEmpty()) {
+        final int maxWorkersToTerminate = maxWorkersToTerminate(zkWorkers, autoScaler);
+        log.info("Max workers to terminate of category %s: %d", category, maxWorkersToTerminate);
+        final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
+        final Collection<String> laziestWorkerIps =
+            Collections2.transform(
+                runner.markWorkersLazy(isLazyWorker, maxWorkersToTerminate),
+                Worker::getIp
+            );
+        log.info("Laziest worker ips of category %s: %d %s", category, laziestWorkerIps.size(), laziestWorkerIps);
+        if (laziestWorkerIps.isEmpty()) {
+          log.debug("Found no lazy workers for category %s", category);
+        } else {
+          log.info(
+              "Terminating %,d lazy workers of category %s: %s",
+              laziestWorkerIps.size(),
+              category,
+              Joiner.on(", ").join(laziestWorkerIps)
+          );
+
+          final AutoScalingData terminated = autoScaler.terminate(ImmutableList.copyOf(laziestWorkerIps));
+          if (terminated != null) {
+            log.info(
+                "Terminated of category %s: %d %s",
+                category,
+                terminated.getNodeIds().size(),
+                terminated.getNodeIds()
+            );
+            currentlyTerminating.addAll(terminated.getNodeIds());
+            lastTerminateTime = DateTimes.nowUtc();
+            scalingStats.addTerminateEvent(terminated);
+            didTerminate = true;
+          }
+        }
+      } else {
+        Duration durSinceLastTerminate = new Duration(lastTerminateTime, DateTimes.nowUtc());
+
+        log.info(
+            "%s terminating of category %s. Current wait time: %s",
+            currentlyTerminating,
+            category,
+            durSinceLastTerminate
+        );
+
+        if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
+          log.makeAlert("Worker node termination taking too long!")
+             .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
+             .addData("terminatingCount", currentlyTerminating.size())
+             .emit();
+
+          currentlyTerminating.clear();
+        }
+      }
+
+      return didTerminate;
+    }
+
+    @Override
+    public ScalingStats getStats()
+    {
+      return scalingStats;
     }
 
     private int getCurrValidWorkers(Collection<ImmutableWorkerInfo> workers)
