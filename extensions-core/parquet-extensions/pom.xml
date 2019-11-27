@@ -297,9 +297,11 @@
         </exclusion>
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
         </exclusion>
         <exclusion>
           <groupId>net.java.dev.jets3t</groupId>
+          <artifactId>jets3t</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>

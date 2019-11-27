@@ -246,8 +246,6 @@ public class OrcHadoopInputRowParserTest
     }
   }
 
-  // This method returns a list of the final rows. This is definitely a bug, but it should be better to delete
-  // this obsolete unit tests rather than fixing the bug.
   private static List<InputRow> getAllRows(HadoopDruidIndexerConfig config) throws IOException
   {
     Job job = Job.getInstance(new Configuration());
