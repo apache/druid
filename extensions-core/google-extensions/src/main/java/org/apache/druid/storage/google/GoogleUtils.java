@@ -26,6 +26,7 @@ import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -50,10 +51,6 @@ public class GoogleUtils
     return RetryUtils.retry(f, GOOGLE_RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
-  public static String extractGoogleCloudStorageObjectKey(URI uri)
-  {
-    return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
-  }
 
   public static Iterator<StorageObject> lazyFetchingStorageObjectsIterator(
       final GoogleStorage storage,
@@ -82,7 +79,7 @@ public class GoogleUtils
         try {
           currentUri = uris.next();
           currentBucket = currentUri.getAuthority();
-          currentPrefix = GoogleUtils.extractGoogleCloudStorageObjectKey(currentUri);
+          currentPrefix = StringUtils.maybeRemoveLeadingSlash(currentUri.getPath());
           nextPageToken = null;
           listRequest = storage.list(currentBucket)
                                .setPrefix(currentPrefix)

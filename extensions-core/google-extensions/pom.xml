@@ -126,6 +126,13 @@
         <!-- Tests -->
         <dependency>
             <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
@@ -156,6 +163,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-guice</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-nio</artifactId>
+            <version>0.119.0-alpha</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
