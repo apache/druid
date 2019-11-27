@@ -68,7 +68,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           }
         }
 
-        return rows.hasNext() || intermediateRowIterator.hasNext();
+        return true;
       }
 
       @Override
