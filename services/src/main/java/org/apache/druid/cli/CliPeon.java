@@ -44,6 +44,8 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputFormatModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -258,6 +260,8 @@ public class CliPeon extends GuiceRunnable
         },
         new QueryablePeonModule(),
         new IndexingServiceFirehoseModule(),
+        new IndexingServiceInputSourceModule(),
+        new IndexingServiceInputFormatModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule()
     );

@@ -32,7 +32,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -59,7 +59,7 @@ import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -1084,16 +1084,16 @@ public class CompactionTaskTest
       // assert ioConfig
       final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
       Assert.assertFalse(ioConfig.isAppendToExisting());
-      final FirehoseFactory firehoseFactory = ioConfig.getFirehoseFactory();
-      Assert.assertTrue(firehoseFactory instanceof IngestSegmentFirehoseFactory);
-      final IngestSegmentFirehoseFactory ingestSegmentFirehoseFactory = (IngestSegmentFirehoseFactory) firehoseFactory;
-      Assert.assertEquals(DATA_SOURCE, ingestSegmentFirehoseFactory.getDataSource());
-      Assert.assertEquals(expectedSegmentIntervals.get(i), ingestSegmentFirehoseFactory.getInterval());
-      Assert.assertNull(ingestSegmentFirehoseFactory.getDimensionsFilter());
+      final InputSource inputSource = ioConfig.getInputSource();
+      Assert.assertTrue(inputSource instanceof DruidInputSource);
+      final DruidInputSource druidInputSource = (DruidInputSource) inputSource;
+      Assert.assertEquals(DATA_SOURCE, druidInputSource.getDataSource());
+      Assert.assertEquals(expectedSegmentIntervals.get(i), druidInputSource.getInterval());
+      Assert.assertNull(druidInputSource.getDimFilter());
 
       Assert.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensionNames()),
-          new HashSet<>(ingestSegmentFirehoseFactory.getDimensions())
+          new HashSet<>(druidInputSource.getDimensions())
       );
 
       // assert tuningConfig
