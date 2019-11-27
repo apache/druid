@@ -97,7 +97,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
-    final GoogleCloudStorageInputSource withUris = new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
+    final GoogleCloudStorageInputSource withUris =
+        new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
     final GoogleCloudStorageInputSource serdeWithUris =
         mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
@@ -134,7 +135,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   public void testWithUrisSplit()
   {
 
-    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
+    GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -151,7 +153,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     EasyMock.replay(STORAGE);
 
-    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(STORAGE, null, PREFIXES, null);
+    GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, null, PREFIXES, null);
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -247,7 +250,9 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     EasyMock.expect(STORAGE.list(EasyMock.eq(bucket))).andReturn(listRequest).once();
     EasyMock.expect(listRequest.setPageToken(EasyMock.anyString())).andReturn(listRequest).once();
     EasyMock.expect(listRequest.setMaxResults(EasyMock.anyLong())).andReturn(listRequest).once();
-    EasyMock.expect(listRequest.setPrefix(EasyMock.eq(StringUtils.maybeRemoveLeadingSlash(prefix.getPath())))).andReturn(listRequest).once();
+    EasyMock.expect(listRequest.setPrefix(EasyMock.eq(StringUtils.maybeRemoveLeadingSlash(prefix.getPath()))))
+            .andReturn(listRequest)
+            .once();
 
     List<StorageObject> mockObjects = new ArrayList<>();
     for (URI uri : uris) {

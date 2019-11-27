@@ -37,7 +37,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public abstract class CloudObjectInputSource<T extends InputEntity> extends AbstractInputSource implements SplittableInputSource<CloudObjectLocation>
+public abstract class CloudObjectInputSource<T extends InputEntity> extends AbstractInputSource
+    implements SplittableInputSource<CloudObjectLocation>
 {
   private final List<URI> uris;
   private final List<URI> prefixes;
