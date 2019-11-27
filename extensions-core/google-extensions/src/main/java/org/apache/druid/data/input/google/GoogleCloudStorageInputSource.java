@@ -43,6 +43,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   private static final String SCHEME = "gs";
 
   private final GoogleStorage storage;
+
   @JsonCreator
   public GoogleCloudStorageInputSource(
       @JacksonInject GoogleStorage storage,
