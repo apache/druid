@@ -92,8 +92,9 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
 
   @Override
   public Stream<InputSplit<CloudObjectLocation>> createSplits(
-      InputFormat inputFormat, @Nullable
-      SplitHintSpec splitHintSpec)
+      InputFormat inputFormat,
+      @Nullable SplitHintSpec splitHintSpec
+  )
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       return objects.stream().map(InputSplit::new);
