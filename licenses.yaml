@@ -3780,6 +3780,17 @@ source_paths:
 
 ---
 
+name: example data collected from the Wikipedia edit stream API (this content is NOT part of the source code and is only used for example and tutorial purposes)
+license_category: source
+module: java-core
+license_name: Creative Commons Attribution-ShareAlike 3.0 Unported License
+copyright: Wikipedia editors and contributors for the text content
+license_file_path: licenses/src/CC-BY-SA.txt
+source_paths:
+  - examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
+
+---
+
 name: AOP Alliance
 license_category: binary
 module: java-core

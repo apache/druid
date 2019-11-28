@@ -320,8 +320,8 @@ Creative Commons Attribution-ShareAlike 3.0 Unported License
 ================================
 
 SOURCE/JAVA-CORE:
-    This product bundle example data collected from the Wikipedia edit stream API, the text content of which is
-     copyright by Wikipedia editors and contributors and is available under the Creative Commons Attribution-ShareAlike
-     3.0 Unported License. For details, see licenses/src/CC-BY-SA.txt. This content is NOT part of the source code and
-     is only used for example and tutorial purposes.
+    This product contains example data collected from the Wikipedia edit stream API (this content is NOT part of the source
+     code and is only used for example and tutorial purposes), copyright Wikipedia editors and contributors for the text
+     content which is available under Creative Commons Attribution-ShareAlike 3.0 Unported License. For details, see
+     licenses/src/CC-BY-SA.txt.
       * examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
