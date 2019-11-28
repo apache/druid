@@ -66,11 +66,11 @@ public class PullDependenciesTest
   );
   private static final String HADOOP_CLIENT_VULNERABLE_JAR1 = HADOOP_CLIENT_VULNERABLE_ARTIFACTID1 + ".jar";
   private static final String HADOOP_CLIENT_VULNERABLE_JAR2 = HADOOP_CLIENT_VULNERABLE_ARTIFACTID2 + ".jar";
-  private static final PullDependencies.Exclusions HADOOP_EXCLUSIONS =
-      PullDependencies.Exclusions.builder()
-                                 .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID1)
-                                 .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID2)
-                                 .build();
+  private static final PullDependencies.Dependencies HADOOP_EXCLUSIONS =
+      PullDependencies.Dependencies.builder()
+                                   .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID1)
+                                   .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID2)
+                                   .build();
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();

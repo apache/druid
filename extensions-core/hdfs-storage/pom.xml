@@ -140,10 +140,6 @@
               <!-- Following are excluded to remove security vulnerabilities: -->
               <exclusion>
                 <groupId>commons-beanutils</groupId>
-                <artifactId>commons-beanutils</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils-core</artifactId>
               </exclusion>
             </exclusions>
@@ -255,11 +251,6 @@
               <artifactId>jersey-server</artifactId>
             </exclusion>
             <!-- Following are excluded to remove security vulnerabilities: -->
-            <exclusion>
-              <!-- provided by core -->
-              <groupId>commons-beanutils</groupId>
-              <artifactId>commons-beanutils</artifactId>
-            </exclusion>
             <exclusion>
               <groupId>commons-beanutils</groupId>
               <artifactId>commons-beanutils-core</artifactId>

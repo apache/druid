@@ -73,9 +73,18 @@ public class PullDependencies implements Runnable
 {
   private static final Logger log = new Logger(PullDependencies.class);
 
-  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-  private static final Exclusions EXCLUSIONS = Exclusions.builder().build();
-      /*
+  private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
+      "https://repo1.maven.org/maven2/"
+  );
+
+  private static final Dependencies PROVIDED_BY_CORE_DEPENDENCIES =
+      Dependencies.builder()
+                  .put("com.squareup.okhttp", "okhttp")
+                  .put("commons-beanutils", "commons-beanutils")
+                  .put("org.apache.commons", "commons-compress")
+                  .put("org.apache.zookeeper", "zookeeper")
+                  .build();
+   /*
 
       // It is possible that extensions will pull down a lot of jars that are either
       // duplicates OR conflict with druid jars. In that case, there are two problems that arise
@@ -143,22 +152,13 @@ public class PullDependencies implements Runnable
       "net.java.dev.jets3t"
       */
 
-  private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
-      "https://repo1.maven.org/maven2/"
-  );
+  private static final Dependencies SECURITY_VULNERABILITY_EXCLUSIONS =
+      Dependencies.builder()
+                  .put("commons-beanutils", "commons-beanutils-core")
+                  .put("org.codehaus.jackson", "jackson-mapper-asl")
+                  .build();
 
-  // These are either not needed or are provided by core
-  private static final Exclusions HADOOP_DEFAULT_SECURITY_VULNERABILITY_EXCLUSIONS =
-      Exclusions.builder()
-                .put("com.squareup.okhttp", "okhttp")
-                .put("commons-beanutils", "commons-beanutils")
-                .put("commons-beanutils", "commons-beanutils-core")
-                .put("org.apache.commons", "commons-compress")
-                .put("org.apache.zookeeper", "zookeeper")
-                .put("org.codehaus.jackson", "jackson-mapper-asl")
-                .build();
-
-  private final Exclusions hadoopExclusions;
+  private final Dependencies hadoopExclusions;
 
   private TeslaAether aether;
 
@@ -254,11 +254,14 @@ public class PullDependencies implements Runnable
   @SuppressWarnings("unused")  // used by io.airlift:airline
   public PullDependencies()
   {
-    hadoopExclusions = HADOOP_DEFAULT_SECURITY_VULNERABILITY_EXCLUSIONS;
+    hadoopExclusions = Dependencies.builder()
+                                   .putAll(PROVIDED_BY_CORE_DEPENDENCIES)
+                                   .putAll(SECURITY_VULNERABILITY_EXCLUSIONS)
+                                   .build();
   }
 
   // Used for testing only
-  PullDependencies(TeslaAether aether, ExtensionsConfig extensionsConfig, Exclusions hadoopExclusions)
+  PullDependencies(TeslaAether aether, ExtensionsConfig extensionsConfig, Dependencies hadoopExclusions)
   {
     this.aether = aether;
     this.extensionsConfig = extensionsConfig;
@@ -312,10 +315,6 @@ public class PullDependencies implements Runnable
       }
 
       log.info("Start downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
-      Exclusions allHadoopExclusions = Exclusions.builder()
-                                                 .putAll(EXCLUSIONS)
-                                                 .putAll(hadoopExclusions)
-                                                 .build();
       for (final String hadoopCoordinate : hadoopCoordinates) {
         final Artifact versionedArtifact = getArtifact(hadoopCoordinate);
 
@@ -326,7 +325,7 @@ public class PullDependencies implements Runnable
         currExtensionDir = new File(currExtensionDir, versionedArtifact.getVersion());
         createExtensionDirectory(hadoopCoordinate, currExtensionDir);
 
-        downloadExtension(versionedArtifact, currExtensionDir, allHadoopExclusions);
+        downloadExtension(versionedArtifact, currExtensionDir, hadoopExclusions);
       }
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
     }
@@ -361,10 +360,10 @@ public class PullDependencies implements Runnable
    */
   private void downloadExtension(Artifact versionedArtifact, File toLocation)
   {
-    downloadExtension(versionedArtifact, toLocation, EXCLUSIONS);
+    downloadExtension(versionedArtifact, toLocation, PROVIDED_BY_CORE_DEPENDENCIES);
   }
 
-  private void downloadExtension(Artifact versionedArtifact, File toLocation, Exclusions exclusions)
+  private void downloadExtension(Artifact versionedArtifact, File toLocation, Dependencies exclusions)
   {
     final CollectRequest collectRequest = new CollectRequest();
     collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
@@ -569,13 +568,13 @@ public class PullDependencies implements Runnable
   }
 
   @VisibleForTesting
-  static class Exclusions
+  static class Dependencies
   {
     private static final String ANY_ARTIFACT_ID = "*";
 
     private final SetMultimap<String, String> groupIdToArtifactIds;
 
-    private Exclusions(Builder builder)
+    private Dependencies(Builder builder)
     {
       groupIdToArtifactIds = builder.groupIdToArtifactIdsBuilder.build();
     }
@@ -600,9 +599,9 @@ public class PullDependencies implements Runnable
       {
       }
 
-      Builder putAll(Exclusions exclusions)
+      Builder putAll(Dependencies dependencies)
       {
-        groupIdToArtifactIdsBuilder.putAll(exclusions.groupIdToArtifactIds);
+        groupIdToArtifactIdsBuilder.putAll(dependencies.groupIdToArtifactIds);
         return this;
       }
 
@@ -617,9 +616,9 @@ public class PullDependencies implements Runnable
         return this;
       }
 
-      Exclusions build()
+      Dependencies build()
       {
-        return new Exclusions(this);
+        return new Dependencies(this);
       }
     }
   }
