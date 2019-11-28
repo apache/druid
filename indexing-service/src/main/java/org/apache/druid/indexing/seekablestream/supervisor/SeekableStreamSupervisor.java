@@ -1375,6 +1375,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
                               taskId);
 
+                          // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
+                          // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
                           boolean endOffsetsAreInvalid = false;
                           for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
                             PartitionIdType partition = entry.getKey();
@@ -2365,7 +2367,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // set endOffsets as the next startOffsets
         // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
-        // from metadata.
+        // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
         if (!endOffsetsAreInvalid) {
           for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
             partitionOffsets.put(entry.getKey(), entry.getValue());

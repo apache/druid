@@ -557,9 +557,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
         retVal.set(segmentsAndMetadata);
         return retVal;
       } else {
+        // Sanity check: if we have no segments to publish, but the appenderator did ingest > 0 valid rows,
+        // something is wrong. This check could be expanded to cover publishers that return false for
+        // supportsEmptyPublish, but is kept limited for now until further testing.
         if (appenderator.getTotalRowCount() != 0) {
           throw new ISE(
-              "Attemping to publish with empty segment set, but total row count was not 0: [%s].",
+              "Attempting to publish with empty segment set, but total row count was not 0: [%s].",
               appenderator.getTotalRowCount()
           );
         }

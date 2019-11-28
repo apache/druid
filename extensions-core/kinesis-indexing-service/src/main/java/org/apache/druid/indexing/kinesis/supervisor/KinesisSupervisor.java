@@ -80,8 +80,6 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
-  private static final HashFunction HASH_FUNCTION = Hashing.sha1();
-
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
@@ -244,9 +242,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected Map<Integer, Set<String>> recomputePartitionGroupsForExpiration(
-      Set<String> availablePartitions
-  )
+  protected Map<Integer, Set<String>> recomputePartitionGroupsForExpiration(Set<String> availablePartitions)
   {
     List<String> availablePartitionsList = new ArrayList<>(availablePartitions);
 
