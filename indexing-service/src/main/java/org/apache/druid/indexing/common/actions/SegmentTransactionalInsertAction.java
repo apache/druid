@@ -64,13 +64,15 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
+  @Nullable
+  private final String dataSource;
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null);
   }
 
   public static SegmentTransactionalInsertAction appendAction(
@@ -79,21 +81,32 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null);
+  }
+
+  public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource);
   }
 
   @JsonCreator
   private SegmentTransactionalInsertAction(
       @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
+      @JsonProperty("dataSource") @Nullable String dataSource
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
-    this.segments = ImmutableSet.copyOf(segments);
+    this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
+    this.dataSource = dataSource;
   }
 
   @JsonProperty
@@ -123,6 +136,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     return endMetadata;
   }
 
+  @JsonProperty
+  @Nullable
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
@@ -137,6 +157,24 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    final SegmentPublishResult retVal;
+
+    if (segments.isEmpty()) {
+      // A stream ingestion task didn't ingest any rows and created no segments (e.g., all records were unparseable),
+      // but still needs to update metadata with the progress that the task made.
+      try {
+        retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
+            dataSource,
+            startMetadata,
+            endMetadata
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      return retVal;
+    }
+
     final Set<DataSegment> allSegments = new HashSet<>(segments);
     if (segmentsToBeOverwritten != null) {
       allSegments.addAll(segmentsToBeOverwritten);
@@ -151,7 +189,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       }
     }
 
-    final SegmentPublishResult retVal;
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
@@ -271,6 +308,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
            ", segments=" + segments +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
+           ", dataSource=" + dataSource +
            '}';
   }
 }
