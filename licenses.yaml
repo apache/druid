@@ -196,7 +196,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.10
+version: 2.10.1
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -230,6 +230,30 @@ notice: |
   A list of contributors may be found from CREDITS file, which is included
   in some artifacts (usually source distributions); but is always available
   from the source code management (SCM) system project uses.
+
+---
+
+name: JavaBeans Activation Framework API JAR
+license_category: binary
+module: java-core
+license_name: Eclipse Distribution License 1.0
+version: 1.2.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jakarta.activation-api.EDL1
+libraries:
+  - jakarta.activation: jakarta.activation-api
+
+---
+
+name: Jakarta XML Bind API
+license_category: binary
+module: java-core
+license_name: Eclipse Distribution License 1.0
+version: 2.3.2
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jakarta.activation-api.EDL1
+libraries:
+  - jakarta.xml.bind: jakarta.xml.bind-api
 
 ---
 
@@ -2744,11 +2768,21 @@ license_name: Apache License version 2.0
 version: 1.0.0-M20
 libraries:
   - org.apache.directory.api: api-asn1-api
+
+---
+
+name: Apache Directory
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.0.3
+libraries:
   - org.apache.directory.api: api-util
 notices:
   - api-util: |
       Apache Directory LDAP API Utilities
       Copyright 2003-2013 The Apache Software Foundation
+
 ---
 
 name: Apache Directory Server
@@ -3161,7 +3195,7 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.7
+version: 2.8.6
 libraries:
   - com.google.code.gson: gson
 
@@ -3279,7 +3313,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.1.0
+version: 3.11.0
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3444,7 +3478,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.2.0
+version: 3.11.0
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -3932,7 +3966,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.1.0
+version: 2.1.1
 libraries:
   - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
