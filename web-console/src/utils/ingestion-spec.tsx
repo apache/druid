@@ -1804,6 +1804,7 @@ export interface TuningConfig {
   maxRowsInMemory?: number;
   maxBytesInMemory?: number;
   maxTotalRows?: number;
+  partitionsSpec?: PartitionsSpec;
   numShards?: number;
   maxPendingPersists?: number;
   indexSpec?: IndexSpec;
@@ -1830,6 +1831,23 @@ export interface TuningConfig {
   fetchThreads?: number;
 }
 
+export interface PartitionsSpec {
+  type: 'string';
+
+  // For type: dynamic
+  maxTotalRows?: number;
+
+  // For type: hashed
+  numShards?: number;
+  partitionDimensions?: string[];
+
+  // For type: single_dim
+  targetRowsPerSegment?: number;
+  maxRowsPerSegment?: number;
+  partitionDimension?: string;
+  assumeGrouped?: boolean;
+}
+
 export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
   return Boolean(
     tuningConfig.type === 'index_parallel' &&
@@ -1850,23 +1868,67 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'boolean',
           defaultValue: false,
           info: (
-            <>
-              <p>
-                Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size
-                of generated segments and querying time while indexing time will be increased. If
-                this is set to true, the index task will read the entire input data twice: one for
-                finding the optimal number of partitions per time chunk and one for generating
-                segments.
-              </p>
-            </>
+            <p>
+              Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size of
+              generated segments and querying time while indexing time will be increased. If this is
+              set to true, the index task will read the entire input data twice: one for finding the
+              optimal number of partitions per time chunk and one for generating segments.
+            </p>
           ),
+          adjustment: (t: TuningConfig) => {
+            const partitionsSpecType = deepGet(t, 'partitionsSpec.type');
+            if (t.forceGuaranteedRollup) {
+              if (partitionsSpecType !== 'hashed' && partitionsSpecType !== 'single_dim') {
+                t = deepSet(t, 'partitionsSpec', { type: 'hashed' });
+              }
+            } else {
+              if (partitionsSpecType !== 'dynamic') {
+                t = deepSet(t, 'partitionsSpec', { type: 'dynamic' });
+              }
+            }
+            return t;
+          },
         },
         {
-          name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
+          name: 'partitionsSpec.type',
+          label: 'Partitioning type',
+          type: 'string',
+          defaultValue: 'hashed',
+          suggestions: (t: TuningConfig) =>
+            t.forceGuaranteedRollup ? ['hashed', 'single_dim'] : ['dynamic'],
+          info: (
+            <p>
+              For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
+              the hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a
+              single dimension. For best-effort rollup, you should use dynamic.
+            </p>
+          ),
+        },
+        // partitionsSpec type: dynamic
+        {
+          name: 'partitionsSpec.maxRowsPerSegment',
+          label: 'Max rows per segment',
           type: 'number',
-          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
-          required: (t: TuningConfig) =>
-            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+          defaultValue: 5000000,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          info: <>Determines how many rows are in each segment.</>,
+        },
+        {
+          name: 'partitionsSpec.maxTotalRows',
+          label: 'Max total rows',
+          type: 'number',
+          defaultValue: 20000000,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          info: <>Total number of rows in segments waiting for being pushed.</>,
+        },
+        // partitionsSpec type: hashed
+        {
+          name: 'partitionsSpec.numShards', // This is mandatory if index_parallel and forceGuaranteedRollup ToDo: ???
+          label: 'Num shards',
+          type: 'number',
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          // required: (t: TuningConfig) =>
+          //   Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -1877,32 +1939,58 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionDimensions',
+          name: 'partitionsSpec.partitionDimensions',
+          label: 'Partition dimensions',
           type: 'string-array',
-          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
+        },
+        // partitionsSpec type: single_dim
+        {
+          name: 'partitionsSpec.partitionDimension',
+          label: 'Partition dimension',
+          type: 'string',
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          required: true,
+          info: <p>The dimension to partition on.</p>,
+        },
+        {
+          name: 'partitionsSpec.targetRowsPerSegment',
+          label: 'Target rows per segment',
+          type: 'number',
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          required: (t: TuningConfig) =>
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
           info: (
-            <>
-              <p>Does not currently work with parallel ingestion</p>
-              <p>
-                The dimensions to partition on. Leave blank to select all dimensions. Only used with
-                forceGuaranteedRollup = true, will be ignored otherwise.
-              </p>
-            </>
+            <p>
+              Target number of rows to include in a partition, should be a number that targets
+              segments of 500MB~1GB.
+            </p>
           ),
         },
         {
-          name: 'maxRowsPerSegment',
+          name: 'partitionsSpec.maxRowsPerSegment',
+          label: 'Max rows per segment',
           type: 'number',
-          defaultValue: 5000000,
-          defined: (t: TuningConfig) => !t.forceGuaranteedRollup && t.numShards == null, // Can not be set if numShards is specified
-          info: <>Determines how many rows are in each segment.</>,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          required: (t: TuningConfig) =>
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
+          info: <p>Maximum number of rows to include in a partition.</p>,
         },
         {
-          name: 'maxTotalRows',
-          type: 'number',
-          defaultValue: 20000000,
-          defined: (t: TuningConfig) => !t.forceGuaranteedRollup,
-          info: <>Total number of rows in segments waiting for being pushed.</>,
+          name: 'partitionsSpec.assumeGrouped',
+          label: 'Assume grouped',
+          type: 'boolean',
+          defaultValue: false,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          info: (
+            <p>
+              Assume that input data has already been grouped on time and dimensions. Ingestion will
+              run faster, but may choose sub-optimal partitions if this assumption is violated.
+            </p>
+          ),
         },
       ];
 
