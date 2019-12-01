@@ -292,7 +292,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc'],
     info: (
       <>
         <p>The parser used to parse the data.</p>
@@ -365,7 +365,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => p.type === 'parquet',
+    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc',
     info: (
       <>
         Specifies if the bytes parquet column which is not logically marked as a string or enum type
@@ -395,7 +395,8 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 }
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
-  return inputFormat.type === 'json' || inputFormat.type === 'parquet';
+  const inputFormatType = inputFormat.type;
+  return inputFormatType === 'json' || inputFormatType === 'parquet' || inputFormatType === 'orc';
 }
 
 export interface TimestampSpec {
@@ -1068,7 +1069,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'File filter',
           type: 'string',
           required: true,
-          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet'],
+          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet', '*.orc'],
           info: (
             <>
               <ExternalLink
@@ -2428,6 +2429,10 @@ function guessInputFormat(sampleData: string[]): InputFormat | undefined {
 
   if (sampleDatum.startsWith('PAR1')) {
     return inputFormatFromType('parquet');
+  }
+
+  if (sampleDatum.startsWith('ORC')) {
+    return inputFormatFromType('orc');
   }
 
   return inputFormatFromType('regex');
