@@ -22,7 +22,6 @@ package org.apache.druid.segment.incremental;
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.Clock;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -170,73 +169,37 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     protected AddToFactsResult addToFacts(
         InputRow row,
         IncrementalIndexRow key,
-        ThreadLocal<InputRow> rowContainer,
-        Supplier<InputRow> rowSupplier,
         boolean skipMaxRowsInMemoryCheck // ignore for benchmark
     ) throws IndexSizeExceededException
     {
 
       final Integer priorIdex = getFacts().getPriorIndex(key);
-
-      Aggregator[] aggs;
-      final AggregatorFactory[] metrics = getMetrics();
+      final Aggregator[] aggs = indexedMap.get(priorIdex);
       final AtomicInteger numEntries = getNumEntries();
       final AtomicLong sizeInBytes = getBytesInMemory();
-      if (null != priorIdex) {
-        aggs = indexedMap.get(priorIdex);
-      } else {
-        aggs = new Aggregator[metrics.length];
+      
+      aggregatorRowContextExecutor(row, aggs).execute();
 
-        for (int i = 0; i < metrics.length; i++) {
-          final AggregatorFactory agg = metrics[i];
-          aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, getDeserializeComplexMetrics())
-          );
-        }
-        Integer rowIndex;
+      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
+    }
 
-        do {
-          rowIndex = indexIncrement.incrementAndGet();
-        } while (null != indexedMap.putIfAbsent(rowIndex, aggs));
-
-
-        // Last ditch sanity checks
-        if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
-            && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
-          throw new IndexSizeExceededException("Maximum number of rows or max bytes reached");
-        }
-        final int prev = getFacts().putIfAbsent(key, rowIndex);
-        if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
-          numEntries.incrementAndGet();
-          sizeInBytes.incrementAndGet();
-        } else {
-          // We lost a race
-          aggs = indexedMap.get(prev);
-          // Free up the misfire
-          indexedMap.remove(rowIndex);
-          // This is expected to occur ~80% of the time in the worst scenarios
-        }
-      }
-
-      rowContainer.set(row);
-
-      for (Aggregator agg : aggs) {
-        synchronized (agg) {
-          try {
-            agg.aggregate();
-          }
-          catch (ParseException e) {
-            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (getReportParseExceptions()) {
-              throw e;
+    protected InputRowContextExecutor aggregatorRowContextExecutor(InputRow row, final Aggregator[] aggs)
+    {
+      return new InputRowContextExecutor(row, () -> {
+        for (Aggregator agg : aggs) {
+          synchronized (agg) {
+            try {
+              agg.aggregate();
+            }
+            catch (ParseException e) {
+              // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+              if (getReportParseExceptions()) {
+                throw e;
+              }
             }
           }
         }
-      }
-
-      rowContainer.set(null);
-
-      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
+      });
     }
 
     @Override

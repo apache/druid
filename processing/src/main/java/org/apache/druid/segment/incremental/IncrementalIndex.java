@@ -244,10 +244,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
 
-  // This is modified on add() in a critical section.
-  private final ThreadLocal<InputRow> in = new ThreadLocal<>();
-  private final Supplier<InputRow> rowSupplier = in::get;
-
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
@@ -287,7 +283,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         this.rollup
     );
 
-    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
+    this.aggs = initAggs(metrics, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
@@ -477,7 +473,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract AggregatorType[] initAggs(
       AggregatorFactory[] metrics,
-      Supplier<InputRow> rowSupplier,
       boolean deserializeComplexMetrics,
       boolean concurrentEventAdd
   );
@@ -486,8 +481,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   protected abstract AddToFactsResult addToFacts(
       InputRow row,
       IncrementalIndexRow key,
-      ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier,
       boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException;
 
@@ -607,8 +600,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     final AddToFactsResult addToFactsResult = addToFacts(
         row,
         incrementalIndexRowResult.getIncrementalIndexRow(),
-        in,
-        rowSupplier,
         skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
@@ -1150,11 +1141,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected ColumnSelectorFactory makeColumnSelectorFactory(
       final AggregatorFactory agg,
-      final Supplier<InputRow> in,
       final boolean deserializeComplexMetrics
   )
   {
-    return makeColumnSelectorFactory(virtualColumns, agg, in, deserializeComplexMetrics);
+    Supplier<InputRow> rowSupplier = InputRowContextExecutor.getRowSupplier();
+    return makeColumnSelectorFactory(virtualColumns, agg, rowSupplier, deserializeComplexMetrics);
   }
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()

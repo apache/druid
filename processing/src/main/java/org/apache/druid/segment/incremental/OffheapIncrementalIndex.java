@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.InputRow;
@@ -109,7 +108,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   @Override
   protected BufferAggregator[] initAggs(
       final AggregatorFactory[] metrics,
-      final Supplier<InputRow> rowSupplier,
       final boolean deserializeComplexMetrics,
       final boolean concurrentEventAdd
   )
@@ -122,7 +120,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
       ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
           agg,
-          rowSupplier,
           deserializeComplexMetrics
       );
 
@@ -148,8 +145,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   protected AddToFactsResult addToFacts(
       InputRow row,
       IncrementalIndexRow key,
-      ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier,
       boolean skipMaxRowsInMemoryCheck // ignored, we always want to check this for offheap
   ) throws IndexSizeExceededException
   {
@@ -169,12 +164,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         if (metrics.length > 0 && getAggs()[0] == null) {
           // note: creation of Aggregators is done lazily when at least one row from input is available
           // so that FilteredAggregators could be initialized correctly.
-          rowContainer.set(row);
-          for (int i = 0; i < metrics.length; i++) {
-            final AggregatorFactory agg = metrics[i];
-            getAggs()[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
-          }
-          rowContainer.set(null);
+          aggregatorsRowContextExecutor(row, metrics).execute();
         }
 
         bufferIndex = aggBuffers.size() - 1;
@@ -222,27 +212,42 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
 
-    rowContainer.set(row);
+    aggregateRowContextExecutor(row, aggBuffer, bufferOffset).execute();
+    
+    return new AddToFactsResult(getNumEntries().get(), 0, new ArrayList<>());
+  }
 
-    for (int i = 0; i < getMetrics().length; i++) {
-      final BufferAggregator agg = getAggs()[i];
+  protected InputRowContextExecutor aggregateRowContextExecutor(InputRow row, ByteBuffer aggBuffer, int bufferOffset)
+  {
+    return new InputRowContextExecutor(row, () -> {
+      for (int i = 0; i < getMetrics().length; i++) {
+        final BufferAggregator agg = getAggs()[i];
 
-      synchronized (agg) {
-        try {
-          agg.aggregate(aggBuffer, bufferOffset + aggOffsetInBuffer[i]);
-        }
-        catch (ParseException e) {
-          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (getReportParseExceptions()) {
-            throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
-          } else {
-            log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());
+        synchronized (agg) {
+          try {
+            agg.aggregate(aggBuffer, bufferOffset + aggOffsetInBuffer[i]);
+          }
+          catch (ParseException e) {
+            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+            if (getReportParseExceptions()) {
+              throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
+            } else {
+              log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());
+            }
           }
         }
       }
-    }
-    rowContainer.set(null);
-    return new AddToFactsResult(getNumEntries().get(), 0, new ArrayList<>());
+    });
+  }
+
+  protected InputRowContextExecutor aggregatorsRowContextExecutor(InputRow row, final AggregatorFactory[] metrics)
+  {
+    return new InputRowContextExecutor(row, () -> {
+      for (int i = 0; i < metrics.length; i++) {
+        final AggregatorFactory agg = metrics[i];
+        getAggs()[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
+      }
+    });
   }
 
   @Override

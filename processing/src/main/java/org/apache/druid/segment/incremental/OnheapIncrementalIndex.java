@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -122,7 +121,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   @Override
   protected Aggregator[] initAggs(
       final AggregatorFactory[] metrics,
-      final Supplier<InputRow> rowSupplier,
       final boolean deserializeComplexMetrics,
       final boolean concurrentEventAdd
   )
@@ -132,7 +130,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       selectors.put(
           agg.getName(),
           new CachingColumnSelectorFactory(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
+              makeColumnSelectorFactory(agg, deserializeComplexMetrics),
               concurrentEventAdd
           )
       );
@@ -145,8 +143,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   protected AddToFactsResult addToFacts(
       InputRow row,
       IncrementalIndexRow key,
-      ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier,
       boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException
   {
@@ -159,11 +155,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
-      parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
+      parseExceptionMessages = doAggregate(metrics, aggs, row);
     } else {
       aggs = new Aggregator[metrics.length];
-      factorizeAggs(metrics, aggs, rowContainer, row);
-      parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
+      factorizeAggs(metrics, aggs, row);
+      parseExceptionMessages = doAggregate(metrics, aggs, row);
 
       final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
@@ -186,7 +182,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       } else {
         // We lost a race
         aggs = concurrentGet(prev);
-        parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
+        parseExceptionMessages = doAggregate(metrics, aggs, row);
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
@@ -223,44 +219,53 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private void factorizeAggs(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
-      ThreadLocal<InputRow> rowContainer,
       InputRow row
   )
   {
-    rowContainer.set(row);
-    for (int i = 0; i < metrics.length; i++) {
-      final AggregatorFactory agg = metrics[i];
-      aggs[i] = agg.factorize(selectors.get(agg.getName()));
-    }
-    rowContainer.set(null);
+    aggregatorsRowContextExecutor(row, aggs, metrics).execute();
+  }
+
+  protected InputRowContextExecutor aggregatorsRowContextExecutor(InputRow row, Aggregator[] aggs,
+      AggregatorFactory[] metrics)
+  {
+    return new InputRowContextExecutor(row, () -> {
+      for (int i = 0; i < metrics.length; i++) {
+        final AggregatorFactory agg = metrics[i];
+        aggs[i] = agg.factorize(selectors.get(agg.getName()));
+      }
+    });
   }
 
   private List<String> doAggregate(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
-      ThreadLocal<InputRow> rowContainer,
       InputRow row
   )
   {
     List<String> parseExceptionMessages = new ArrayList<>();
-    rowContainer.set(row);
+    aggregateRowContextExecutor(row, aggs, metrics, parseExceptionMessages).execute();
 
-    for (int i = 0; i < aggs.length; i++) {
-      final Aggregator agg = aggs[i];
-      synchronized (agg) {
-        try {
-          agg.aggregate();
-        }
-        catch (ParseException e) {
-          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-          parseExceptionMessages.add(e.getMessage());
+    return parseExceptionMessages;
+  }
+
+  protected InputRowContextExecutor aggregateRowContextExecutor(InputRow row, Aggregator[] aggs,
+      AggregatorFactory[] metrics, List<String> parseExceptionMessages)
+  {
+    return new InputRowContextExecutor(row, () -> {
+      for (int i = 0; i < aggs.length; i++) {
+        final Aggregator agg = aggs[i];
+        synchronized (agg) {
+          try {
+            agg.aggregate();
+          }
+          catch (ParseException e) {
+            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
+            parseExceptionMessages.add(e.getMessage());
+          }
         }
       }
-    }
-
-    rowContainer.set(null);
-    return parseExceptionMessages;
+    });
   }
 
   private void closeAggregators()
