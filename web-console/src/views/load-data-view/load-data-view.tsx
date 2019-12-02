@@ -708,7 +708,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('index:s3')}
           {this.renderIngestionCard('index:google')}
           {this.renderIngestionCard('index:hdfs')}
-          {this.renderIngestionCard('index:ingestSegment')}
+          {this.renderIngestionCard('index:druid')}
           {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:local')}
           {this.renderIngestionCard('index:inline')}
@@ -762,7 +762,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         );
 
-      case 'index:ingestSegment':
+      case 'index:druid':
         return (
           <>
             <p>Reindex data from existing Druid segments.</p>
@@ -830,7 +830,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     switch (selectedComboType) {
       case 'index:http':
       case 'index:local':
-      case 'index:ingestSegment':
+      case 'index:druid':
       case 'index:inline':
       case 'index:s3':
       case 'index:google':

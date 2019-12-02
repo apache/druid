@@ -38,8 +38,6 @@ import {
 } from './ingestion-spec';
 import { deepGet, deepSet } from './object-change';
 
-const MS_IN_HOUR = 60 * 60 * 1000;
-
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   numRows: 500,
@@ -224,75 +222,31 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
-/**
- * This function scopes down the interval of an ingestSegment firehose for the data sampler
- * this is needed because the ingestSegment firehose gets the interval you are sampling over,
- * looks up the corresponding segments and segment locations from metadata store, downloads
- * every segment from deep storage to disk, and then maps all the segments into memory;
- * and this happens in the constructor before the timer thread is even created meaning the sampler
- * will time out on a larger interval.
- * This is essentially a workaround for https://github.com/apache/incubator-druid/issues/8448
- * @param ioConfig The IO Config to scope down the interval of
- */
-export async function scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-  ioConfig: IoConfig,
-): Promise<IoConfig> {
-  if (deepGet(ioConfig, 'firehose.type') !== 'ingestSegment') return ioConfig;
-  const interval = deepGet(ioConfig, 'firehose.interval');
-  const intervalParts = interval.split('/');
-  const start = new Date(intervalParts[0]);
-  if (isNaN(start.valueOf())) throw new Error(`could not decode interval start`);
-  const end = new Date(intervalParts[1]);
-  if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
-
-  // Less than or equal to 1 hour so there is no need to adjust intervals
-  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HOUR) return ioConfig;
-
-  const dataSourceMetadataResponse = await queryDruidRune({
-    queryType: 'dataSourceMetadata',
-    dataSource: deepGet(ioConfig, 'firehose.dataSource'),
-  });
-
-  const maxIngestedEventTime = new Date(
-    deepGet(dataSourceMetadataResponse, '0.result.maxIngestedEventTime'),
-  );
-
-  // If invalid maxIngestedEventTime do nothing
-  if (isNaN(maxIngestedEventTime.valueOf())) return ioConfig;
-
-  // If maxIngestedEventTime is before the start of the interval do nothing
-  if (maxIngestedEventTime < start) return ioConfig;
-
-  const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
-  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1 hour ago
-
-  return deepSet(
-    ioConfig,
-    'firehose.interval',
-    `${newStart.toISOString()}/${newEnd.toISOString()}`,
-  );
-}
-
 export async function sampleForConnect(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponseWithExtraInfo> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
+  let ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
   );
 
-  const ingestSegmentMode = isIngestSegment(spec);
+  const reingestMode = isIngestSegment(spec);
+  if (!reingestMode) {
+    ioConfig = deepSet(ioConfig, 'inputFormat', {
+      type: 'regex',
+      pattern: '(.*)',
+      columns: ['raw'],
+    });
+  }
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
       type: samplerType,
-      ioConfig: deepSet(ioConfig, 'inputFormat', {
-        type: 'regex',
-        pattern: '(.*)',
-        columns: ['raw'],
-      }),
+      ioConfig,
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: getDummyTimestampSpec(),
@@ -306,11 +260,11 @@ export async function sampleForConnect(
 
   if (!samplerResponse.data.length) return samplerResponse;
 
-  if (ingestSegmentMode) {
+  if (reingestMode) {
     const segmentMetadataResponse = await queryDruidRune({
       queryType: 'segmentMetadata',
-      dataSource: deepGet(ioConfig, 'firehose.dataSource'),
-      intervals: [deepGet(ioConfig, 'firehose.interval')],
+      dataSource: deepGet(ioConfig, 'inputSource.dataSource'),
+      intervals: [deepGet(ioConfig, 'inputSource.interval')],
       merge: true,
       lenientAggregatorMerge: true,
       analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
@@ -336,8 +290,10 @@ export async function sampleForParser(
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = await scopeDownIngestSegmentInputSourceIntervalIfNeeded(
-    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'ioConfig'),
+    samplerType,
+    sampleStrategy,
   );
 
   const sampleSpec: SampleSpec = {

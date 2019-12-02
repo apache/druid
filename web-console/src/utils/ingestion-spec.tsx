@@ -58,7 +58,7 @@ export type IngestionComboType =
   | 'kinesis'
   | 'index:http'
   | 'index:local'
-  | 'index:ingestSegment'
+  | 'index:druid'
   | 'index:inline'
   | 'index:s3'
   | 'index:google'
@@ -97,7 +97,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
       switch (inputSource.type) {
         case 'local':
         case 'http':
-        case 'ingestSegment':
+        case 'druid':
         case 'inline':
         case 's3':
         case 'google':
@@ -117,7 +117,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
     case 'index:http':
       return 'HTTP(s)';
 
-    case 'index:ingestSegment':
+    case 'index:druid':
       return 'Reindex from Druid';
 
     case 'index:inline':
@@ -254,7 +254,7 @@ export function isTask(spec: IngestionSpec) {
 }
 
 export function isIngestSegment(spec: IngestionSpec): boolean {
-  return deepGet(spec, 'ioConfig.inputSource.type') === 'ingestSegment';
+  return deepGet(spec, 'ioConfig.inputSource.type') === 'druid';
 }
 
 export function changeParallel(spec: IngestionSpec, parallel: boolean): IngestionSpec {
@@ -977,7 +977,7 @@ export interface InputSource {
   blobs?: { bucket: string; path: string }[];
   fetchTimeout?: number;
 
-  // ingestSegment
+  // druid
   dataSource?: string;
   interval?: string;
   dimensions?: string[];
@@ -1089,7 +1089,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:ingestSegment':
+    case 'index:druid':
       return [
         inputSourceType,
         {
@@ -1366,7 +1366,7 @@ function issueWithInputSource(inputSource: InputSource | undefined): string | un
       }
       break;
 
-    case 'ingestSegment':
+    case 'druid':
       if (!inputSource.dataSource) return `must have a 'dataSource'`;
       if (!inputSource.interval) return `must have an 'interval'`;
       break;
@@ -1502,7 +1502,7 @@ export function getIoConfigTuningFormFields(
     case 'index:inline':
       return [];
 
-    case 'index:ingestSegment':
+    case 'index:druid':
       return [
         {
           name: 'inputSource.maxFetchCapacityBytes',
@@ -1778,7 +1778,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
             ? filenameFromPath(inputSource.uris[0])
             : undefined;
 
-        case 'ingestSegment':
+        case 'druid':
           return inputSource.dataSource;
 
         case 'inline':
@@ -2399,7 +2399,7 @@ export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): Inge
   //   return deepSet(spec, 'dataSchema.parser', { type: 'map' });
   // }
   //
-  // if (inputSourceType === 'ingestSegment') {
+  // if (inputSourceType === 'druid') {
   //   return deepSet(spec, 'dataSchema.parser', {
   //     type: 'string',
   //   });
