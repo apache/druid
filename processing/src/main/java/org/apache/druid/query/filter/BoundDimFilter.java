@@ -371,7 +371,7 @@ public class BoundDimFilter implements DimFilter
           synchronized (initLock) {
             syncedDruidLongPredicate = predicate;
             if (syncedDruidLongPredicate == null) {
-              updateSyncedDruidLongPredicate(syncedDruidLongPredicate);
+              syncedDruidLongPredicate = updateSyncedDruidLongPredicate();
               predicate = syncedDruidLongPredicate;
             }
           }
@@ -379,7 +379,7 @@ public class BoundDimFilter implements DimFilter
         return syncedDruidLongPredicate;
       }
 
-      private void updateSyncedDruidLongPredicate(DruidLongPredicate syncedDruidLongPredicate)
+      private DruidLongPredicate updateSyncedDruidLongPredicate()
       {
         boolean hasLowerLongBound;
         boolean hasUpperLongBound;
@@ -453,9 +453,9 @@ public class BoundDimFilter implements DimFilter
         }
 
         if (matchesNothing) {
-          syncedDruidLongPredicate = DruidLongPredicate.ALWAYS_FALSE;
+          return DruidLongPredicate.ALWAYS_FALSE;
         } else {
-          syncedDruidLongPredicate = makeLongPredicateFromBounds(
+          return makeLongPredicateFromBounds(
               hasLowerLongBound,
               hasUpperLongBound,
               lowerStrict,
@@ -519,7 +519,7 @@ public class BoundDimFilter implements DimFilter
           synchronized (initLock) {
             syncedDruidFloatPredicate = predicate;
             if (syncedDruidFloatPredicate == null) {
-              updateSyncedDruidFloatPredicate(syncedDruidFloatPredicate);
+              syncedDruidFloatPredicate = updateSyncedDruidFloatPredicate();
               predicate = syncedDruidFloatPredicate;
             }
           }
@@ -527,7 +527,7 @@ public class BoundDimFilter implements DimFilter
         return syncedDruidFloatPredicate;
       }
 
-      private void updateSyncedDruidFloatPredicate(DruidFloatPredicate syncedDruidFloatPredicate)
+      private DruidFloatPredicate updateSyncedDruidFloatPredicate()
       {
         final boolean hasLowerFloatBound;
         final boolean hasUpperFloatBound;
@@ -554,8 +554,7 @@ public class BoundDimFilter implements DimFilter
         if (hasUpperBound()) {
           Float upperFloat = Floats.tryParse(upper);
           if (upperFloat == null) {
-            // Unparseable values fall before all actual numbers, so no numbers
-            // can match the upper bound.
+            // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
             matchesNothing = true;
             hasUpperFloatBound = false;
             upperFloatBound = 0L;
@@ -569,9 +568,9 @@ public class BoundDimFilter implements DimFilter
         }
 
         if (matchesNothing) {
-          syncedDruidFloatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
+            return DruidFloatPredicate.ALWAYS_FALSE;
         } else {
-          syncedDruidFloatPredicate = input -> {
+            return input -> {
             final DruidDoublePredicate druidDoublePredicate = makeDoublePredicateFromBounds(
                 hasLowerFloatBound,
                 hasUpperFloatBound,
@@ -602,7 +601,7 @@ public class BoundDimFilter implements DimFilter
           synchronized (initLock) {
             syncedDruidDoublePredicate = predicate;
             if (syncedDruidDoublePredicate == null) {
-              updateSyncedDruidDoublePredicate(syncedDruidDoublePredicate);
+              syncedDruidDoublePredicate = updateSyncedDruidDoublePredicate();
               predicate = syncedDruidDoublePredicate;
             }
           }
@@ -610,7 +609,7 @@ public class BoundDimFilter implements DimFilter
         return syncedDruidDoublePredicate;
       }
 
-      private void updateSyncedDruidDoublePredicate(DruidDoublePredicate syncedDruidDoublePredicate)
+      private DruidDoublePredicate updateSyncedDruidDoublePredicate()
       {
         final boolean hasLowerBound;
         final boolean hasUpperBound;
@@ -621,8 +620,7 @@ public class BoundDimFilter implements DimFilter
         if (hasLowerBound()) {
           final Double lowerDouble = Doubles.tryParse(lower);
           if (lowerDouble == null) {
-            // Unparseable values fall before all actual numbers, so all numbers
-            // will match the lower bound.
+            // Unparseable values fall before all actual numbers, so all numberswill match the lower bound.
             hasLowerBound = false;
             lowerDoubleBound = 0L;
           } else {
@@ -637,8 +635,7 @@ public class BoundDimFilter implements DimFilter
         if (hasUpperBound()) {
           Double upperDouble = Doubles.tryParse(upper);
           if (upperDouble == null) {
-            // Unparseable values fall before all actual numbers, so no numbers
-            // can match the upper bound.
+            // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
             matchesNothing = true;
             hasUpperBound = false;
             upperDoubleBound = 0L;
@@ -652,9 +649,9 @@ public class BoundDimFilter implements DimFilter
         }
 
         if (matchesNothing) {
-          syncedDruidDoublePredicate = DruidDoublePredicate.ALWAYS_FALSE;
+          return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
-          syncedDruidDoublePredicate = makeDoublePredicateFromBounds(
+          return makeDoublePredicateFromBounds(
               hasLowerBound,
               hasUpperBound,
               lowerStrict,
