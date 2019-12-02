@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.ZkWorker;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
@@ -61,6 +62,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class SimpleProvisioningStrategyTest
 {
+  public static final String DEFAULT_CATEGORY = CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
   private AutoScaler autoScaler;
   private Task testTask;
   private SimpleWorkerProvisioningStrategy strategy;
@@ -113,6 +115,7 @@ public class SimpleProvisioningStrategyTest
   @Test
   public void testSuccessfulProvision()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -125,6 +128,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    );
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     );
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -151,6 +159,7 @@ public class SimpleProvisioningStrategyTest
   @Test
   public void testSomethingProvisioning()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(8);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -163,6 +172,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    ).times(2);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -207,6 +221,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(emitter);
 
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(8);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -222,6 +237,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    ).times(2);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -262,6 +282,7 @@ public class SimpleProvisioningStrategyTest
   @Test
   public void testDoSuccessfulTerminate()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -275,6 +296,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    ).times(2);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -302,6 +328,7 @@ public class SimpleProvisioningStrategyTest
   @Test
   public void testSomethingTerminating()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(8);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -316,6 +343,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    ).times(2);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -353,6 +385,7 @@ public class SimpleProvisioningStrategyTest
   public void testNoActionNeeded()
   {
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -364,6 +397,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    ).times(2);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -384,6 +422,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.verify(autoScaler);
 
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -402,6 +441,7 @@ public class SimpleProvisioningStrategyTest
   {
     // Don't terminate anything
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -410,6 +450,11 @@ public class SimpleProvisioningStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.emptyList()
+    ).times(3);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
+        )
     ).times(3);
     EasyMock.expect(runner.getWorkers()).andReturn(
         Collections.singletonList(
@@ -428,6 +473,7 @@ public class SimpleProvisioningStrategyTest
 
     // Don't provision anything
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -439,6 +485,7 @@ public class SimpleProvisioningStrategyTest
 
     EasyMock.reset(autoScaler);
     // Increase minNumWorkers
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -461,6 +508,7 @@ public class SimpleProvisioningStrategyTest
   public void testMinCountIncreaseNoWorkers()
   {
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     // Expect min number to be zero, but autoscaling should work for that case as well even there is no workers running
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -476,6 +524,11 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new RemoteTaskRunnerWorkItem(testTask.getId(), testTask.getType(), null, null, testTask.getDataSource())
                 .withQueueInsertionTime(DateTimes.nowUtc())
+        )
+    );
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
+        Collections.singletonList(
+            testTask
         )
     );
     EasyMock.expect(runner.getWorkers()).andReturn(Collections.emptyList());
@@ -507,7 +560,7 @@ public class SimpleProvisioningStrategyTest
         Collections.singletonList(
             new TestZkWorker(null).toImmutable()
         )
-    ).times(1);
+    ).times(2);
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);

@@ -31,9 +31,11 @@ import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.ZkWorker;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -54,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,6 +65,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class PendingTaskBasedProvisioningStrategyTest
 {
+  public static final String DEFAULT_CATEGORY = CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
   private AutoScaler autoScaler;
   private Task testTask;
   private PendingTaskBasedWorkerProvisioningStrategy strategy;
@@ -109,6 +113,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSuccessfulInitialMinWorkersProvision()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -140,6 +145,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSuccessfulMinWorkersProvision()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -174,6 +180,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSuccessfulMinWorkersProvisionWithOldVersionNodeRunning()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -209,6 +216,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSomethingProvisioning()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(8);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -266,6 +274,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.expectLastCall();
     EasyMock.replay(emitter);
 
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(8);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -323,6 +332,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testDoSuccessfulTerminate()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(new ArrayList<String>());
@@ -367,6 +377,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   @Test
   public void testSomethingTerminating()
   {
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(8);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip")).times(2);
@@ -411,6 +422,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   public void testNoActionNeeded()
   {
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
@@ -442,6 +454,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.verify(autoScaler);
 
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -460,6 +473,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     // Don't terminate anything
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Collections.singletonList("ip"));
@@ -487,6 +501,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     // Don't provision anything
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
@@ -497,6 +512,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.verify(autoScaler);
 
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     // Increase minNumWorkers
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -520,6 +536,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   public void testMinCountIncreaseNoWorkers()
   {
     EasyMock.reset(autoScaler);
+    EasyMock.expect(autoScaler.getCategory()).andReturn(DEFAULT_CATEGORY).times(4);
     // Expect min number to be zero, but autoscaling should work for that case as well even there is no workers running
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
