@@ -107,11 +107,6 @@
           <groupId>commons-pool</groupId>
           <artifactId>commons-pool</artifactId>
         </exclusion>
-        <exclusion>
-          <!-- excluded to remove security vulnerabilities; jackson-mapper-asl is renamed to jackson-databind -->
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -359,11 +354,6 @@
         <exclusion>
           <artifactId>nimbus-jose-jwt</artifactId>
           <groupId>com.nimbusds</groupId>
-        </exclusion>
-        <exclusion>
-          <!-- excluded to remove security vulnerabilities; jackson-mapper-asl is renamed to jackson-databind -->
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

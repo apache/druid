@@ -155,7 +155,6 @@ public class PullDependencies implements Runnable
   private static final Dependencies SECURITY_VULNERABILITY_EXCLUSIONS =
       Dependencies.builder()
                   .put("commons-beanutils", "commons-beanutils-core")
-                  .put("org.codehaus.jackson", "jackson-mapper-asl")
                   .build();
 
   private final Dependencies hadoopExclusions;
