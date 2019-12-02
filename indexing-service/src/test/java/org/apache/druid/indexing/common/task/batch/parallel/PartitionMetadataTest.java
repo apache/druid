@@ -25,16 +25,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class GenericPartitionStatTest
+public class PartitionMetadataTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
-  private GenericPartitionStat target;
+  private PartitionMetadata target;
 
   @Before
   public void setup()
   {
-    target = new GenericPartitionStat(
+    target = new PartitionMetadata(
         ParallelIndexTestingFactory.TASK_EXECUTOR_HOST,
         ParallelIndexTestingFactory.TASK_EXECUTOR_PORT,
         ParallelIndexTestingFactory.USE_HTTPS,

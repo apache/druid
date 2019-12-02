@@ -70,11 +70,11 @@ public class StringSketchMergerTest
     target.merge(sketch3);
     StringDistribution merged = target.getResult();
 
-    String[] partitions = merged.getEvenPartitionsByMaxSize(1);
-    Assert.assertEquals(4, partitions.length);
-    Assert.assertEquals(string1, partitions[0]);  // min
-    Assert.assertEquals(string2, partitions[1]);  // median
-    Assert.assertEquals(string3, partitions[2]);  // max
-    Assert.assertEquals(string3, partitions[3]);  // max
+    Partitions partitions = merged.getEvenPartitionsByMaxSize(1);
+    Assert.assertEquals(4, partitions.size());
+    Assert.assertEquals(string1, partitions.get(0));  // min
+    Assert.assertEquals(string2, partitions.get(1));  // median
+    Assert.assertEquals(string3, partitions.get(2));  // max
+    Assert.assertEquals(string3, partitions.get(3));  // max
   }
 }

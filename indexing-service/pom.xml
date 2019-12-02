@@ -208,6 +208,7 @@
             <artifactId>log4j-api</artifactId>
         </dependency>
         <dependency>
+            <!-- Used in native parallel batch indexing to determine distribution of dimension values -->
             <groupId>com.yahoo.datasketches</groupId>
             <artifactId>sketches-core</artifactId>
             <scope>provided</scope>

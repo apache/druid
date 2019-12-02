@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
 import org.apache.druid.indexing.common.task.RangePartitionCachingLocalSegmentAllocator;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -45,12 +46,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * The worker task of {@link PartialRangeSegmentGenerateParallelIndexTaskRunner}. This task
- * partitions input data by ranges of the partition dimension specified in
- * {@link SingleDimensionPartitionsSpec}. Partitioned segments are stored in local storage using
- * {@link ShuffleDataSegmentPusher}.
+ * The worker task of {@link PartialRangeSegmentGenerateParallelIndexTaskRunner}. This task partitions input data by
+ * ranges of the partition dimension specified in {@link SingleDimensionPartitionsSpec}. Partitioned segments are stored
+ * in local storage using {@link ShuffleDataSegmentPusher}.
  */
-public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<GeneratedGenericPartitionsReport>
+public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<GeneratedPartitionsMetadataReport>
 {
   public static final String TYPE = "partial_range_index_generate";
   private static final String PROP_SPEC = "spec";
@@ -58,7 +58,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   private final String supervisorTaskId;
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final Map<Interval, String[]> intervalToPartitions;
+  private final Map<Interval, Partitions> intervalToPartitions;
 
   @JsonCreator
   public PartialRangeSegmentGenerateTask(
@@ -70,7 +70,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
       @JsonProperty("numAttempts") int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("intervalToPartitions") Map<Interval, String[]> intervalToPartitions,
+      @JsonProperty("intervalToPartitions") Map<Interval, Partitions> intervalToPartitions,
       @JacksonInject IndexingServiceClient indexingServiceClient,
       @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
       @JacksonInject AppenderatorsManager appenderatorsManager
@@ -130,7 +130,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @JsonProperty
-  public Map<Interval, String[]> getIntervalToPartitions()
+  public Map<Interval, Partitions> getIntervalToPartitions()
   {
     return intervalToPartitions;
   }
@@ -161,17 +161,17 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @Override
-  GeneratedGenericPartitionsReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
+  GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
   {
-    List<GenericPartitionStat> partitionStats = segments.stream()
-                                                     .map(segment -> createPartitionStat(toolbox, segment))
-                                                     .collect(Collectors.toList());
-    return new GeneratedGenericPartitionsReport(getId(), partitionStats);
+    List<PartitionMetadata> partitionsMetadata = segments.stream()
+                                                         .map(segment -> createPartitionStat(toolbox, segment))
+                                                         .collect(Collectors.toList());
+    return new GeneratedPartitionsMetadataReport(getId(), partitionsMetadata);
   }
 
-  private GenericPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
+  private PartitionMetadata createPartitionStat(TaskToolbox toolbox, DataSegment segment)
   {
-    return new GenericPartitionStat(
+    return new PartitionMetadata(
         toolbox.getTaskExecutorNode().getHost(),
         toolbox.getTaskExecutorNode().getPortToUse(),
         toolbox.getTaskExecutorNode().isEnableTlsPort(),

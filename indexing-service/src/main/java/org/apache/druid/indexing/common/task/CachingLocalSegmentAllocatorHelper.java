@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  * @see HashPartitionCachingLocalSegmentAllocator
  * @see RangePartitionCachingLocalSegmentAllocator
  */
-class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
+class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
 {
   private final String taskId;
   private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
@@ -63,7 +63,7 @@ class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
     Map<Interval, List<SegmentIdWithShardSpec>> create(Function<Interval, String> versionFinder);
   }
 
-  CachingLocalSegmentAllocator(
+  CachingLocalSegmentAllocatorHelper(
       TaskToolbox toolbox,
       String taskId,
       String supervisorTaskId,

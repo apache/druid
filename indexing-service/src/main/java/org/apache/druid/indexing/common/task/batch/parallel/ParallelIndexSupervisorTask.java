@@ -36,7 +36,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -59,6 +58,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
@@ -323,7 +323,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   PartialRangeSegmentGenerateParallelIndexTaskRunner createPartialRangeSegmentGenerateRunner(
       TaskToolbox toolbox,
-      Map<Interval, String[]> intervalToPartitions
+      Map<Interval, Partitions> intervalToPartitions
   )
   {
     return new PartialRangeSegmentGenerateParallelIndexTaskRunner(
@@ -377,6 +377,22 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
+  }
+
+  private boolean useRangePartitions()
+  {
+    return (ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec);
+  }
+
+  private static void assertDataSketchesAvailable()
+  {
+    try {
+      //noinspection ResultOfObjectAllocationIgnored
+      new StringSketch();
+    }
+    catch (NoClassDefFoundError e) {
+      throw new ISE(e, "DataSketches is unvailable. Try adding the druid-datasketches extension to the classpath.");
+    }
   }
 
   @Override
@@ -528,14 +544,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private TaskStatus runMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
-    return useHashPartitions()
-           ? runHashPartitionMultiPhaseParallel(toolbox)
-           : runRangePartitionMultiPhaseParallel(toolbox);
-  }
-
-  private boolean useHashPartitions()
-  {
-    return (ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof HashedPartitionsSpec);
+    return useRangePartitions()
+           ? runRangePartitionMultiPhaseParallel(toolbox)
+           : runHashPartitionMultiPhaseParallel(toolbox);
   }
 
   private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
@@ -576,8 +587,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private TaskStatus runRangePartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
-    assertDataSketchesAvailable();
-
     ParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport> distributionRunner =
         createRunner(
             toolbox,
@@ -589,7 +598,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId());
     }
 
-    Map<Interval, String[]> intervalToPartitions =
+    Map<Interval, Partitions> intervalToPartitions =
         determineAllRangePartitions(distributionRunner.getReports().values());
 
     if (intervalToPartitions.isEmpty()) {
@@ -599,7 +608,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.success(getId(), msg);
     }
 
-    ParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner =
+    ParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<PartitionMetadata>> indexingRunner =
         createRunner(toolbox, tb -> createPartialRangeSegmentGenerateRunner(tb, intervalToPartitions));
 
     TaskState indexingState = runNextPhase(indexingRunner);
@@ -627,18 +636,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TaskStatus.fromCode(getId(), mergeState);
   }
 
-  private static void assertDataSketchesAvailable()
-  {
-    try {
-      //noinspection ResultOfObjectAllocationIgnored
-      new StringSketch();
-    }
-    catch (Throwable t) {
-      throw new ISE(t, "DataSketches is unvailable. Try adding the druid-datasketches extension to the classpath.");
-    }
-  }
-
-  private Map<Interval, String[]> determineAllRangePartitions(Collection<DimensionDistributionReport> reports)
+  private Map<Interval, Partitions> determineAllRangePartitions(Collection<DimensionDistributionReport> reports)
   {
     Multimap<Interval, StringDistribution> intervalToDistributions = ArrayListMultimap.create();
     reports.forEach(report -> {
@@ -649,7 +647,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return CollectionUtils.mapValues(intervalToDistributions.asMap(), this::determineRangePartition);
   }
 
-  private String[] determineRangePartition(Collection<StringDistribution> distributions)
+  private Partitions determineRangePartition(Collection<StringDistribution> distributions)
   {
     StringDistributionMerger distributionMerger = new StringSketchMerger();
     distributions.forEach(distributionMerger::merge);
@@ -658,7 +656,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     SingleDimensionPartitionsSpec partitionsSpec =
         (SingleDimensionPartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
 
-    final String[] partitions;
+    final Partitions partitions;
     Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();
     if (targetRowsPerSegment == null) {
       partitions = mergedDistribution.getEvenPartitionsByMaxSize(partitionsSpec.getMaxRowsPerSegment());
@@ -688,10 +686,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private static Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> groupGenericPartitionLocationsPerPartition(
-      Map<String, GeneratedPartitionsReport<GenericPartitionStat>> subTaskIdToReport
+      Map<String, GeneratedPartitionsReport<PartitionMetadata>> subTaskIdToReport
   )
   {
-    BiFunction<String, GenericPartitionStat, GenericPartitionLocation> createPartitionLocationFunction =
+    BiFunction<String, PartitionMetadata, GenericPartitionLocation> createPartitionLocationFunction =
         (subtaskId, partitionStat) ->
             new GenericPartitionLocation(
                 partitionStat.getTaskExecutorHost(),

@@ -86,26 +86,26 @@ public class StringSketch implements StringDistribution
   }
 
   @Override
-  public String[] getEvenPartitionsByMaxSize(int maxSize)
+  public Partitions getEvenPartitionsByMaxSize(int maxSize)
   {
     Preconditions.checkArgument(maxSize > 0, "maxSize must be positive but is %s", maxSize);
     long n = delegate.getN();
     double delta = delegate.getNormalizedRankError(true) * n;  // account for approx distribution
     int targetSize = Math.max(1, (int) Math.floor(maxSize - delta));  // floor() to increase chance below max size
     int evenPartitionCount = (int) Math.ceil((double) n / targetSize);  // ceil() to increase chance below max size
-    return getEventPartitionsByCount(Math.max(1, evenPartitionCount));
+    return getEvenPartitionsByCount(Math.max(1, evenPartitionCount));
   }
 
   @Override
-  public String[] getEvenPartitionsByTargetSize(int targetSize)
+  public Partitions getEvenPartitionsByTargetSize(int targetSize)
   {
     Preconditions.checkArgument(targetSize > 0, "targetSize must be positive but is %s", targetSize);
     long n = delegate.getN();
     int evenPartitionCount = Math.max(1, (int) Math.round((double) n / targetSize));
-    return getEventPartitionsByCount(evenPartitionCount);
+    return getEvenPartitionsByCount(evenPartitionCount);
   }
 
-  private String[] getEventPartitionsByCount(int evenPartitionCount)
+  private Partitions getEvenPartitionsByCount(int evenPartitionCount)
   {
     Preconditions.checkArgument(
         evenPartitionCount > 0,
@@ -113,7 +113,7 @@ public class StringSketch implements StringDistribution
         evenPartitionCount
     );
     String[] partitions = delegate.getQuantiles(evenPartitionCount + 1); // add 1 since this returns endpoints
-    return (partitions == null) ? new String[0] : partitions;
+    return new Partitions((partitions == null) ? new String[0] : partitions);
   }
 
   @Override

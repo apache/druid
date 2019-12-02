@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -217,6 +218,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       expectedNumPartition -= 1;
     }
     expectedNumPartition *= NUM_DAY;
+    expectedNumPartition += 1;  // max dimension value has its own partition
     Assert.assertEquals(expectedNumPartition, segments.size());
   }
 
@@ -289,7 +291,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     @Override
     PartialRangeSegmentGenerateParallelIndexTaskRunner createPartialRangeSegmentGenerateRunner(
         TaskToolbox toolbox,
-        Map<Interval, String[]> intervalToPartitions
+        Map<Interval, Partitions> intervalToPartitions
     )
     {
       return new TestPartialRangeSegmentGenerateRunner(
@@ -342,7 +344,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
         IndexingServiceClient indexingServiceClient,
-        Map<Interval, String[]> intervalToPartitions
+        Map<Interval, Partitions> intervalToPartitions
     )
     {
       super(

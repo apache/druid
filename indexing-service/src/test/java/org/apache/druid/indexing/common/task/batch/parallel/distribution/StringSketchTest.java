@@ -155,8 +155,8 @@ public class StringSketchTest
       public void handlesEmptySketch()
       {
         StringSketch sketch = new StringSketch();
-        String[] partitions = sketch.getEvenPartitionsByTargetSize(1);
-        Assert.assertEquals(0, partitions.length);
+        Partitions partitions = sketch.getEvenPartitionsByTargetSize(1);
+        Assert.assertEquals(0, partitions.size());
       }
 
       @Test
@@ -165,16 +165,16 @@ public class StringSketchTest
         String value = MIN_STRING;
         StringSketch sketch = new StringSketch();
         sketch.put(value);
-        String[] partitions = sketch.getEvenPartitionsByTargetSize(1);
-        Assert.assertEquals(2, partitions.length);
-        Assert.assertEquals(value, partitions[0]);
-        Assert.assertEquals(value, partitions[1]);
+        Partitions partitions = sketch.getEvenPartitionsByTargetSize(1);
+        Assert.assertEquals(2, partitions.size());
+        Assert.assertEquals(value, partitions.get(0));
+        Assert.assertEquals(value, partitions.get(1));
       }
 
       @Test
       public void handlesMinimimumSize()
       {
-        String[] partitions = SKETCH.getEvenPartitionsByTargetSize(1);
+        Partitions partitions = SKETCH.getEvenPartitionsByTargetSize(1);
         assertMaxNumberOfPartitions(partitions);
       }
 
@@ -187,7 +187,7 @@ public class StringSketchTest
 
       private static void testHandlesUnevenPartitions(int targetSize)
       {
-        String[] partitions = SKETCH.getEvenPartitionsByTargetSize(targetSize);
+        Partitions partitions = SKETCH.getEvenPartitionsByTargetSize(targetSize);
 
         assertFirstAndLastPartitionsCorrect(partitions);
 
@@ -196,18 +196,18 @@ public class StringSketchTest
         int expectedLowPartitionCount = expectedHighPartitionCount - 1;
         Assert.assertThat(
             "targetSize=" + targetSize + " " + partitionsString,
-            partitions.length,
+            partitions.size(),
             Matchers.lessThanOrEqualTo(expectedHighPartitionCount + 1)
         );
         Assert.assertThat(
             "targetSize=" + targetSize + " " + partitionsString,
-            partitions.length,
+            partitions.size(),
             Matchers.greaterThanOrEqualTo(expectedLowPartitionCount + 1)
         );
 
         int previous = 0;
-        for (int i = 1; i < partitions.length; i++) {
-          int current = Integer.parseInt(partitions[i]);
+        for (int i = 1; i < partitions.size(); i++) {
+          int current = Integer.parseInt(partitions.get(i));
           int size = current - previous;
           Assert.assertThat(
               getErrMsgPrefix(targetSize, i) + partitionsString,
@@ -221,14 +221,14 @@ public class StringSketchTest
       @Test
       public void handlesSinglePartition()
       {
-        String[] partitions = SKETCH.getEvenPartitionsByTargetSize(NUM_STRING);
+        Partitions partitions = SKETCH.getEvenPartitionsByTargetSize(NUM_STRING);
         assertSinglePartition(partitions);
       }
 
       @Test
       public void handlesOversizedPartition()
       {
-        String[] partitions = SKETCH.getEvenPartitionsByTargetSize(Integer.MAX_VALUE);
+        Partitions partitions = SKETCH.getEvenPartitionsByTargetSize(Integer.MAX_VALUE);
         assertSinglePartition(partitions);
       }
     }
@@ -251,8 +251,8 @@ public class StringSketchTest
       public void handlesEmptySketch()
       {
         StringSketch sketch = new StringSketch();
-        String[] partitions = sketch.getEvenPartitionsByMaxSize(1);
-        Assert.assertEquals(0, partitions.length);
+        Partitions partitions = sketch.getEvenPartitionsByMaxSize(1);
+        Assert.assertEquals(0, partitions.size());
       }
 
       @Test
@@ -261,16 +261,16 @@ public class StringSketchTest
         String value = MIN_STRING;
         StringSketch sketch = new StringSketch();
         sketch.put(value);
-        String[] partitions = sketch.getEvenPartitionsByMaxSize(1);
-        Assert.assertEquals(2, partitions.length);
-        Assert.assertEquals(value, partitions[0]);
-        Assert.assertEquals(value, partitions[1]);
+        Partitions partitions = sketch.getEvenPartitionsByMaxSize(1);
+        Assert.assertEquals(2, partitions.size());
+        Assert.assertEquals(value, partitions.get(0));
+        Assert.assertEquals(value, partitions.get(1));
       }
 
       @Test
       public void handlesMinimimumSize()
       {
-        String[] partitions = SKETCH.getEvenPartitionsByMaxSize(1);
+        Partitions partitions = SKETCH.getEvenPartitionsByMaxSize(1);
         assertMaxNumberOfPartitions(partitions);
       }
 
@@ -283,7 +283,7 @@ public class StringSketchTest
 
       private static void testHandlesUnevenPartitions(int maxSize)
       {
-        String[] partitions = SKETCH.getEvenPartitionsByMaxSize(maxSize);
+        Partitions partitions = SKETCH.getEvenPartitionsByMaxSize(maxSize);
 
         assertFirstAndLastPartitionsCorrect(partitions);
 
@@ -292,14 +292,14 @@ public class StringSketchTest
         Assert.assertEquals(
             "maxSize=" + maxSize + " " + partitionsString,
             expectedPartitionCount + 1,
-            partitions.length
+            partitions.size()
         );
 
         double minSize = (double) NUM_STRING / expectedPartitionCount - DELTA;
 
         int previous = 0;
-        for (int i = 1; i < partitions.length; i++) {
-          int current = Integer.parseInt(partitions[i]);
+        for (int i = 1; i < partitions.size(); i++) {
+          int current = Integer.parseInt(partitions.get(i));
           int size = current - previous;
           Assert.assertThat(
               getErrMsgPrefix(maxSize, i) + partitionsString,
@@ -318,28 +318,28 @@ public class StringSketchTest
       @Test
       public void handlesSinglePartition()
       {
-        String[] partitions = SKETCH.getEvenPartitionsByMaxSize((int) Math.ceil(NUM_STRING + DELTA));
+        Partitions partitions = SKETCH.getEvenPartitionsByMaxSize((int) Math.ceil(NUM_STRING + DELTA));
         assertSinglePartition(partitions);
       }
 
       @Test
       public void handlesOversizedPartition()
       {
-        String[] partitions = SKETCH.getEvenPartitionsByMaxSize(Integer.MAX_VALUE);
+        Partitions partitions = SKETCH.getEvenPartitionsByMaxSize(Integer.MAX_VALUE);
         assertSinglePartition(partitions);
       }
     }
 
-    private static void assertMaxNumberOfPartitions(String[] partitions)
+    private static void assertMaxNumberOfPartitions(Partitions partitions)
     {
       String partitionsString = toString(partitions);
 
-      Assert.assertEquals(partitionsString, NUM_STRING + 1, partitions.length);
+      Assert.assertEquals(partitionsString, NUM_STRING + 1, partitions.size());
       assertFirstAndLastPartitionsCorrect(partitions);
 
       int previous = 0;
-      for (int i = 1; i < partitions.length; i++) {
-        int current = Integer.parseInt(partitions[i]);
+      for (int i = 1; i < partitions.size(); i++) {
+        int current = Integer.parseInt(partitions.get(i));
         Assert.assertEquals(
             getErrMsgPrefix(1, i) + partitionsString,
             1,
@@ -350,16 +350,16 @@ public class StringSketchTest
       }
     }
 
-    private static void assertSinglePartition(String[] partitions)
+    private static void assertSinglePartition(Partitions partitions)
     {
-      Assert.assertEquals(2, partitions.length);
+      Assert.assertEquals(2, partitions.size());
       assertFirstAndLastPartitionsCorrect(partitions);
     }
 
-    private static void assertFirstAndLastPartitionsCorrect(String[] partitions)
+    private static void assertFirstAndLastPartitionsCorrect(Partitions partitions)
     {
-      Assert.assertEquals(MIN_STRING, partitions[0]);
-      Assert.assertEquals(MAX_STRING, partitions[partitions.length - 1]);
+      Assert.assertEquals(MIN_STRING, partitions.get(0));
+      Assert.assertEquals(MAX_STRING, partitions.get(partitions.size() - 1));
     }
 
     private static String getErrMsgPrefix(int size, int i)
@@ -367,12 +367,12 @@ public class StringSketchTest
       return "size=" + size + " i=" + i + " of ";
     }
 
-    private static String toString(String[] partitions)
+    private static String toString(Partitions partitions)
     {
-      String prefix = "partitions[" + partitions.length + "]=";
+      String prefix = "partitions[" + partitions.size() + "]=";
       StringJoiner sj = new StringJoiner(" ", prefix, "]");
-      for (int i = 0; i < partitions.length; i++) {
-        sj.add("[" + i + "]=" + partitions[i]);
+      for (int i = 0; i < partitions.size(); i++) {
+        sj.add("[" + i + "]=" + partitions.get(i));
       }
       return sj.toString();
     }

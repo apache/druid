@@ -246,8 +246,8 @@ You should use different partitionsSpec depending on the [rollup mode](../ingest
 For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
 `single_dim` (based on ranges of a single dimension. For best-effort rollup, you should use `dynamic`.
 
-Hashed partitioning is recommended in most cases, as it will improve indexing performance and create more uniformly
-sized data segments relative to single-dimension or dynamic partitioning.
+For perfect rollup, `ashed partitioning is recommended in most cases, as it will improve indexing
+performance and create more uniformly sized data segments relative to single-dimension partitioning.
 
 #### Hash-based partitioning
 
@@ -266,9 +266,9 @@ sized data segments relative to single-dimension or dynamic partitioning.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `single_dim`|none|yes|
+|partitionDimension|The dimension to partition on. Only rows with a single dimension value will be included.|none|yes|
 |targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
 |maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetRowsPerSegment`.|none|either this or `targetRowsPerSegment`|
-|partitionDimension|The dimension to partition on.|none|yes|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
 
 #### Dynamic partitioning

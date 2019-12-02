@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
@@ -29,7 +30,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,13 +40,13 @@ import java.util.stream.IntStream;
 /**
  * Allocates all necessary range-partitioned segments locally at the beginning and reuses them.
  *
- * @see CachingLocalSegmentAllocator
+ * @see CachingLocalSegmentAllocatorHelper
  */
 public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final String dataSource;
   private final String partitionDimension;
-  private final Map<Interval, String[]> intervalsToPartitions;
+  private final Map<Interval, Partitions> intervalsToPartitions;
   private final IndexTaskSegmentAllocator delegate;
 
   public RangePartitionCachingLocalSegmentAllocator(
@@ -55,14 +55,14 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
       String supervisorTaskId,
       String dataSource,
       String partitionDimension,
-      Map<Interval, String[]> intervalsToPartitions
+      Map<Interval, Partitions> intervalsToPartitions
   ) throws IOException
   {
     this.dataSource = dataSource;
     this.partitionDimension = partitionDimension;
     this.intervalsToPartitions = intervalsToPartitions;
 
-    this.delegate = new CachingLocalSegmentAllocator(
+    this.delegate = new CachingLocalSegmentAllocatorHelper(
         toolbox,
         taskId,
         supervisorTaskId,
@@ -86,35 +86,22 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
     return intervalToSegmentIds;
   }
 
+  /**
+   * Translate {@link org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution} partititions
+   * into the corresponding {@link org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec} with segment id.
+   */
   private List<SegmentIdWithShardSpec> translatePartitions(
       Interval interval,
-      String[] partitions,
+      Partitions partitions,
       Function<Interval, String> versionFinder
   )
   {
-    if (partitions.length == 0) {
+    if (partitions.isEmpty()) {
       return Collections.emptyList();
     }
 
-    String[] uniquePartitions = Arrays.stream(partitions).distinct().toArray(String[]::new);
+    String[] uniquePartitions = partitions.stream().distinct().toArray(String[]::new);
     int numUniquePartition = uniquePartitions.length;
-
-    if (numUniquePartition == 1) {
-      return Collections.singletonList(
-          createLastSegmentIdWithShardSpec(
-              interval,
-              versionFinder.apply(interval),
-              uniquePartitions[0],
-              0
-          )
-      );
-    }
-
-    if (isLastPartitionOnlyMaxValue(partitions)) {
-      // The last partition only contains the max value. A shard that just contains the max value is likely to be
-      // small, so combine it with the second to last one.
-      numUniquePartition -= 1;
-    }
 
     List<SegmentIdWithShardSpec> segmentIds =
         IntStream.range(0, numUniquePartition - 1)
@@ -138,13 +125,6 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
     return segmentIds;
   }
 
-  private boolean isLastPartitionOnlyMaxValue(String[] partitions)
-  {
-    String lastPartition = partitions[partitions.length - 1];
-    String secondToLastPartition = partitions[partitions.length - 2];
-    return !lastPartition.equals(secondToLastPartition);
-  }
-
   private SegmentIdWithShardSpec createLastSegmentIdWithShardSpec(
       Interval interval,
       String version,
@@ -163,6 +143,8 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
       int partitionNum
   )
   {
+    // The shardSpec created here will be reused in PartialGenericSegmentMergeTask. This is ok because
+    // all PartialSegmentGenerateTasks create the same set of segmentIds (and thus shardSpecs).
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,

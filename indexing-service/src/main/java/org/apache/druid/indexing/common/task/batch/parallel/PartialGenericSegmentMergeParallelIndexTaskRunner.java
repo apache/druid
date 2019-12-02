@@ -76,12 +76,11 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
   @VisibleForTesting
   SubTaskSpec<PartialGenericSegmentMergeTask> newTaskSpec(PartialGenericSegmentMergeIOConfig ioConfig)
   {
-    final PartialGenericSegmentMergeIngestionSpec ingestionSpec =
-        new PartialGenericSegmentMergeIngestionSpec(
-            dataSchema,
-            ioConfig,
-            getTuningConfig()
-        );
+    final PartialGenericSegmentMergeIngestionSpec ingestionSpec = new PartialGenericSegmentMergeIngestionSpec(
+        dataSchema,
+        ioConfig,
+        getTuningConfig()
+    );
     return new SubTaskSpec<PartialGenericSegmentMergeTask>(
         getTaskId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),

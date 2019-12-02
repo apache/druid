@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.hash.BloomFilter;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.HandlingInputRowIterator;
@@ -202,7 +203,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
                                       .map(AggregatorFactory::getName)
                                       .collect(Collectors.toList());
-    InputFormat inputFormat = ParallelIndexSupervisorTask.getInputFormat(ingestionSchema);
+    InputFormat inputFormat = inputSource.needsFormat()
+                              ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
+                              : null;
     InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
             new InputRowSchema(
@@ -211,7 +214,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
                 metricsNames
             ),
             inputFormat,
-            null
+            toolbox.getIndexingTmpDir()
         )
     );
 
@@ -244,16 +247,16 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       String partitionDimension,
       boolean isAssumeGrouped,
       boolean isLogParseExceptions,
-      long maxParseExceptions
+      int maxParseExceptions
   )
   {
     Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
     DimensionValueFilter dimValueFilter =
-        isAssumeGrouped
+        isAssumeGrouped && granularitySpec.isRollup()
         ? new GroupedRowDimensionValueFilter()
         : ungroupedRowDimValueFilterSupplier.get();
 
-    long numParseExceptions = 0;
+    int numParseExceptions = 0;
 
     while (inputRowIterator.hasNext()) {
       try {
@@ -272,7 +275,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         String dimensionValue = dimValueFilter.accept(
             interval,
             timestamp,
-            inputRow.getDimension(partitionDimension).get(0)
+            Iterables.getOnlyElement(inputRow.getDimension(partitionDimension))
         );
 
         if (dimensionValue != null) {
@@ -319,7 +322,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
      * @return Dimension value if it should be accepted, else null
      */
     @Nullable
-    String accept(Interval interval, DateTime timestamp, String dimesionValue);
+    String accept(Interval interval, DateTime timestamp, String dimensionValue);
 
     /**
      * @return Minimum dimension value for each interval processed so far.
@@ -332,6 +335,10 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     Map<Interval, String> getIntervalToMaxDimensionValue();
   }
 
+  /**
+   * Filters out reoccurrences of rows that have timestamps with the same query granularity and dimension value.
+   * Approximate matching is used, so there is a small probability that rows that are not reoccurences are discarded.
+   */
   @VisibleForTesting
   static class UngroupedRowDimensionValueFilter implements DimensionValueFilter
   {
@@ -419,18 +426,30 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     private void updateMinDimensionValue(Interval interval, String dimensionValue)
     {
-      String minDimensionValue = intervalToMinDimensionValue.get(interval);
-      if (minDimensionValue == null || dimensionValue.compareTo(minDimensionValue) < 0) {
-        intervalToMinDimensionValue.put(interval, dimensionValue);
-      }
+      intervalToMinDimensionValue.compute(
+          interval,
+          (intervalKey, currentMinValue) -> {
+            if (currentMinValue == null || dimensionValue.compareTo(currentMinValue) < 0) {
+              return dimensionValue;
+            } else {
+              return currentMinValue;
+            }
+          }
+      );
     }
 
     private void updateMaxDimensionValue(Interval interval, String dimensionValue)
     {
-      String maxDimensionValue = intervalToMaxDimensionValue.get(interval);
-      if (maxDimensionValue == null || dimensionValue.compareTo(maxDimensionValue) > 0) {
-        intervalToMaxDimensionValue.put(interval, dimensionValue);
-      }
+      intervalToMaxDimensionValue.compute(
+          interval,
+          (intervalKey, currentMaxValue) -> {
+            if (currentMaxValue == null || dimensionValue.compareTo(currentMaxValue) > 0) {
+              return dimensionValue;
+            } else {
+              return currentMaxValue;
+            }
+          }
+      );
     }
 
     @Override

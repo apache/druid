@@ -32,17 +32,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface StringDistribution
 {
   /**
-   * Record occurence of {@link String}
+   * Record occurrence of {@link String}
    */
   void put(String element);
 
   /**
-   * Record occurence of {@link String} if it will become the new minimum element.
+   * Record occurrence of {@link String} if it will become the new minimum element.
    */
   void putIfNewMin(String element);
 
   /**
-   * Record occurence of {@link String} if it will become the new maximum element;
+   * Record occurrence of {@link String} if it will become the new maximum element;
    */
   void putIfNewMax(String element);
 
@@ -53,7 +53,7 @@ public interface StringDistribution
    * @return Array of elements that correspond to the endpoints of evenly-sized partitions of the
    * sorted elements.
    */
-  String[] getEvenPartitionsByMaxSize(int maxSize);
+  Partitions getEvenPartitionsByMaxSize(int maxSize);
 
   /**
    * Split the distribution in the fewest number of evenly-sized partitions while honoring a target
@@ -62,5 +62,5 @@ public interface StringDistribution
    * @return Array of elements that correspond to the endpoints of evenly-sized partitions of the
    * sorted elements.
    */
-  String[] getEvenPartitionsByTargetSize(int targetSize);
+  Partitions getEvenPartitionsByTargetSize(int targetSize);
 }
