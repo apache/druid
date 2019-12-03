@@ -103,8 +103,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     private final WorkerTaskRunner runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
-    private final Map<String, Set<String>> currentlyProvisioning = new HashMap<>();
-    private final Map<String, Set<String>> currentlyTerminating = new HashMap<>();
+    private final Map<String, Set<String>> currentlyProvisioningMap = new HashMap<>();
+    private final Map<String, Set<String>> currentlyTerminatingMap = new HashMap<>();
 
     private final Map<String, Integer> targetWorkerCountMap = new HashMap<>();
     private final Map<String, DateTime> lastProvisionTimeMap = new HashMap<>();
@@ -203,10 +203,10 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
 
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyProvisioning.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioning.get(category);
-        currentlyTerminating.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
+        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
 
         didProvision = doProvision(
             category,
@@ -332,10 +332,10 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         // Correct category name by selected autoscaler
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyProvisioning.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioning.get(category);
-        currentlyTerminating.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
+        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
         List<? extends TaskRunnerWorkItem> categoryPendingTasks = pendingTasksByCategories.getOrDefault(
             category,
             Collections.emptyList()
@@ -553,10 +553,10 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
     private boolean initAutoscaler(AutoScaler autoScaler, String category)
     {
-      currentlyProvisioning.putIfAbsent(category, new HashSet<>());
-      Set<String> currentlyProvisioning = this.currentlyProvisioning.get(category);
-      currentlyTerminating.putIfAbsent(category, new HashSet<>());
-      Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
+      currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+      Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+      currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+      Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
       return doProvision(
           category,
           Collections.emptyList(),

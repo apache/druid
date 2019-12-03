@@ -106,8 +106,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     private final WorkerTaskRunner runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
-    private final Map<String, Set<String>> currentlyProvisioning = new HashMap<>();
-    private final Map<String, Set<String>> currentlyTerminating = new HashMap<>();
+    private final Map<String, Set<String>> currentlyProvisioningMap = new HashMap<>();
+    private final Map<String, Set<String>> currentlyTerminatingMap = new HashMap<>();
 
     private final Map<String, DateTime> lastProvisionTimeMap = new HashMap<>();//DateTimes.nowUtc();
     private final Map<String, DateTime> lastTerminateTimeMap = new HashMap<>();//lastProvisionTime;
@@ -164,12 +164,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       );
 
       if (allCategories.isEmpty()) {
-        // Likely empty categories means initialization. Just try to spinup required amount of workers of each non empty autoscalers
-        for (AutoScaler autoScaler : workerConfig.getAutoScalers()) {
-          String category = ProvisioningUtil.getAutoscalerCategory(autoScaler);
-          didProvision = initAutoscaler(autoScaler, category, workerConfig, currentlyProvisioning) || didProvision;
-        }
-        return didProvision;
+        // Likely empty categories means initialization.
+        // Just try to spinup required amount of workers of each non empty autoscalers
+        return initAutoscalers(workerConfig);
       }
 
       Map<String, AutoScaler> autoscalersByCategory = ProvisioningUtil.mapAutoscalerByCategory(workerConfig.getAutoScalers());
@@ -178,15 +175,15 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         AutoScaler categoryAutoscaler = ProvisioningUtil.getAutoscalerByCategory(category, autoscalersByCategory);
         if (categoryAutoscaler == null) {
           log.error("No autoScaler available, cannot execute doProvision for workers of category %s", category);
-          return false;
+          continue;
         }
         // Correct category name by selected autoscaler
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
 
         List<Task> categoryTasks = tasksByCategories.getOrDefault(category, Collections.emptyList());
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyProvisioning.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioning.get(category);
+        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
 
         didProvision = doProvision(
             category,
@@ -293,14 +290,16 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       log.info("Min/max workers: %d/%d", minWorkerCount, maxWorkerCount);
       final int currValidWorkers = getCurrValidWorkers(workers);
 
-      // If there are no worker, spin up minWorkerCount (or 1 if minWorkerCount is 0), we cannot determine the exact capacity here to fulfill the need
+      // If there are no worker, spin up minWorkerCount (or 1 if minWorkerCount is 0 and there are pending tasks), we cannot determine the exact capacity here to fulfill the need
       // since we are not aware of the expectedWorkerCapacity.
-      int moreWorkersNeeded = currValidWorkers == 0 ? Math.max(minWorkerCount, 1) : getWorkersNeededToAssignTasks(
-          remoteTaskRunnerConfig,
-          workerConfig,
-          pendingTasks,
-          workers
-      );
+      int moreWorkersNeeded = currValidWorkers == 0
+                              ? Math.max(minWorkerCount, pendingTasks.isEmpty() ? 0 : 1)
+                              : getWorkersNeededToAssignTasks(
+                                  remoteTaskRunnerConfig,
+                                  workerConfig,
+                                  pendingTasks,
+                                  workers
+                              );
       log.debug("More workers needed: %d", moreWorkersNeeded);
 
       int want = Math.max(
@@ -405,7 +404,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Map<String, AutoScaler> autoscalersByCategory = ProvisioningUtil.mapAutoscalerByCategory(workerConfig.getAutoScalers());
 
       for (String category : allCategories) {
-        Set<String> currentlyProvisioning = this.currentlyProvisioning.getOrDefault(category, Collections.emptySet());
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.getOrDefault(
+            category,
+            Collections.emptySet()
+        );
         log.info(
             "Currently provisioning of category %s: %d %s",
             category,
@@ -420,14 +422,14 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         AutoScaler categoryAutoscaler = ProvisioningUtil.getAutoscalerByCategory(category, autoscalersByCategory);
         if (categoryAutoscaler == null) {
           log.error("No autoScaler available, cannot execute doTerminate for workers of category %s", category);
-          return false;
+          continue;
         }
         // Correct category name by selected autoscaler
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
 
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyTerminating.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
+        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
 
         didTerminate = doTerminate(
             category,
@@ -521,6 +523,16 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       }
 
       return didTerminate;
+    }
+
+    private boolean initAutoscalers(CategoriedWorkerBehaviorConfig workerConfig)
+    {
+      boolean didProvision = false;
+      for (AutoScaler autoScaler : workerConfig.getAutoScalers()) {
+        String category = ProvisioningUtil.getAutoscalerCategory(autoScaler);
+        didProvision = initAutoscaler(autoScaler, category, workerConfig, currentlyProvisioningMap) || didProvision;
+      }
+      return didProvision;
     }
 
     private boolean initAutoscaler(
