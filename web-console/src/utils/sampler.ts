@@ -30,7 +30,7 @@ import {
   InputFormat,
   IoConfig,
   isColumnTimestampSpec,
-  isIngestSegment,
+  isDruidSource,
   MetricSpec,
   TimestampSpec,
   Transform,
@@ -64,7 +64,6 @@ export type CacheRows = Record<string, any>[];
 
 export interface SampleResponseWithExtraInfo extends SampleResponse {
   queryGranularity?: any;
-  timestampSpec?: any;
   rollup?: boolean;
   columns?: Record<string, any>;
   aggregators?: Record<string, any>;
@@ -100,8 +99,12 @@ function dedupe(xs: string[]): string[] {
   });
 }
 
-export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
-  return filterMap(sampleResponse.data, d => d.input).slice(0, 20);
+export function getCacheRowsFromSampleResponse(
+  sampleResponse: SampleResponse,
+  useParsed = false,
+): CacheRows {
+  const key = useParsed ? 'parsed' : 'input';
+  return filterMap(sampleResponse.data, d => d[key]).slice(0, 20);
 }
 
 export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
@@ -222,6 +225,25 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
+function cleanupQueryGranularity(queryGranularity: any): any {
+  let queryGranularityType = deepGet(queryGranularity, 'type');
+  if (typeof queryGranularityType !== 'string') return queryGranularity;
+  queryGranularityType = queryGranularityType.toUpperCase();
+
+  const knownGranularity = [
+    'NONE',
+    'SECOND',
+    'MINUTE',
+    'HOUR',
+    'DAY',
+    'WEEK',
+    'MONTH',
+    'YEAR',
+  ].includes(queryGranularityType);
+
+  return knownGranularity ? queryGranularityType : queryGranularity;
+}
+
 export async function sampleForConnect(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
@@ -233,7 +255,7 @@ export async function sampleForConnect(
     sampleStrategy,
   );
 
-  const reingestMode = isIngestSegment(spec);
+  const reingestMode = isDruidSource(spec);
   if (!reingestMode) {
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
@@ -272,8 +294,9 @@ export async function sampleForConnect(
 
     if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
       const segmentMetadataResponse0 = segmentMetadataResponse[0];
-      samplerResponse.queryGranularity = segmentMetadataResponse0.queryGranularity;
-      samplerResponse.timestampSpec = segmentMetadataResponse0.timestampSpec;
+      samplerResponse.queryGranularity = cleanupQueryGranularity(
+        segmentMetadataResponse0.queryGranularity,
+      );
       samplerResponse.rollup = segmentMetadataResponse0.rollup;
       samplerResponse.columns = segmentMetadataResponse0.columns;
       samplerResponse.aggregators = segmentMetadataResponse0.aggregators;

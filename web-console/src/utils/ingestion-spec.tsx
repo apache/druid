@@ -248,7 +248,7 @@ export function isTask(spec: IngestionSpec) {
   );
 }
 
-export function isIngestSegment(spec: IngestionSpec): boolean {
+export function isDruidSource(spec: IngestionSpec): boolean {
   return deepGet(spec, 'ioConfig.inputSource.type') === 'druid';
 }
 

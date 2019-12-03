@@ -108,8 +108,8 @@ import {
   invalidTuningConfig,
   IoConfig,
   isColumnTimestampSpec,
+  isDruidSource,
   isEmptyIngestionSpec,
-  isIngestSegment,
   issueWithIoConfig,
   isTask,
   joinFilter,
@@ -173,6 +173,11 @@ function showRawLine(line: SampleEntry): string {
     return raw.substr(0, 1000) + '...';
   }
   return raw;
+}
+
+function showDruidLine(line: SampleEntry): string {
+  if (!line.parsed) return 'No parse';
+  return `Druid row: ${JSON.stringify(line.parsed)}`;
 }
 
 function showBlankLine(line: SampleEntry): string {
@@ -413,6 +418,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   isStepEnabled(step: Step): boolean {
     const { spec, cacheRows } = this.state;
+    const druidSource = isDruidSource(spec);
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
     switch (step) {
@@ -420,9 +426,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return Boolean(spec.type);
 
       case 'parser':
-        return Boolean(spec.type && !issueWithIoConfig(ioConfig));
+        return Boolean(!druidSource && spec.type && !issueWithIoConfig(ioConfig));
 
       case 'timestamp':
+        return Boolean(!druidSource && cacheRows);
+
       case 'transform':
       case 'filter':
       case 'schema':
@@ -615,22 +623,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderNextBar(options: {
-    nextStep?: Step;
-    disabled?: boolean;
-    onNextStep?: () => void;
-    onPrevStep?: () => void;
-    prevLabel?: string;
-  }) {
-    const { disabled, onNextStep, onPrevStep, prevLabel } = options;
+  renderNextBar(options: { nextStep?: Step; disabled?: boolean; onNextStep?: () => void }) {
+    const { disabled, onNextStep } = options;
     const { step } = this.state;
     const nextStep = options.nextStep || STEPS[STEPS.indexOf(step) + 1] || STEPS[0];
 
     return (
       <div className="next-bar">
-        {onPrevStep && (
-          <Button className="prev" icon={IconNames.UNDO} text={prevLabel} onClick={onPrevStep} />
-        )}
         <Button
           text={`Next: ${VIEW_TITLE[nextStep]}`}
           rightIcon={IconNames.ARROW_RIGHT}
@@ -985,9 +984,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
-    this.setState({
+    const deltaState: Partial<LoadDataViewState> = {
       inputQueryState: new QueryState({ data: sampleResponse }),
-    });
+    };
+    if (isDruidSource(spec)) {
+      deltaState.cacheRows = getCacheRowsFromSampleResponse(sampleResponse, true);
+    }
+    this.setState(deltaState as LoadDataViewState);
   }
 
   renderConnectStep() {
@@ -995,6 +998,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'ioConfig.inputSource.type') === 'inline';
+    const druidSource = isDruidSource(spec);
 
     let mainFill: JSX.Element | string = '';
     if (inlineMode) {
@@ -1025,15 +1029,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       mainFill = (
         <TextArea
           className="raw-lines"
+          readOnly
           value={
             inputData.length
               ? (inputData.every(l => !l.parsed)
                   ? inputData.map(showBlankLine)
+                  : druidSource
+                  ? inputData.map(showDruidLine)
                   : inputData.map(showRawLine)
                 ).join('\n')
               : 'No data returned from sampler'
           }
-          readOnly
         />
       );
     }
@@ -1100,19 +1106,21 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         {this.renderNextBar({
           disabled: !inputQueryState.data,
+          nextStep: druidSource ? 'transform' : 'parser',
           onNextStep: () => {
             if (!inputQueryState.data) return;
             const inputData = inputQueryState.data;
 
-            if (isIngestSegment(spec)) {
+            if (druidSource) {
               let newSpec = fillInputFormat(spec, []);
+
+              newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', {
+                column: '__time',
+                format: 'iso',
+              });
 
               if (typeof inputData.rollup === 'boolean') {
                 newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.rollup', inputData.rollup);
-              }
-
-              if (inputData.timestampSpec) {
-                newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', inputData.timestampSpec);
               }
 
               if (inputData.queryGranularity) {
@@ -1328,7 +1336,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           onNextStep: () => {
             if (!parserQueryState.data) return;
             let possibleTimestampSpec: TimestampSpec;
-            if (isIngestSegment(spec)) {
+            if (isDruidSource(spec)) {
               possibleTimestampSpec = {
                 column: '__time',
                 format: 'auto',
@@ -1718,7 +1726,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !transformQueryState.data,
           onNextStep: () => {
             if (!transformQueryState.data) return;
-            if (!isIngestSegment(spec)) {
+            if (!isDruidSource(spec)) {
               this.updateSpec(
                 updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
               );
