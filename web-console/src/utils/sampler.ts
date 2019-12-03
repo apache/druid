@@ -26,6 +26,7 @@ import {
   getDummyTimestampSpec,
   getSpecType,
   IngestionSpec,
+  IngestionType,
   InputFormat,
   IoConfig,
   isColumnTimestampSpec,
@@ -97,14 +98,6 @@ function dedupe(xs: string[]): string[] {
       return true;
     }
   });
-}
-
-type SamplerType = 'index' | 'kafka' | 'kinesis';
-
-export function getSamplerType(spec: IngestionSpec): SamplerType {
-  const specType = getSpecType(spec);
-  if (specType === 'kafka' || specType === 'kinesis') return specType;
-  return 'index';
 }
 
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
@@ -201,20 +194,27 @@ export type SampleStrategy = 'start' | 'end';
 
 function makeSamplerIoConfig(
   ioConfig: IoConfig,
-  samplerType: SamplerType,
+  specType: IngestionType,
   sampleStrategy: SampleStrategy,
 ): IoConfig {
-  ioConfig = deepSet(ioConfig || {}, 'type', samplerType);
-  if (samplerType === 'kafka') {
+  ioConfig = deepSet(ioConfig || {}, 'type', specType);
+  if (specType === 'kafka') {
     ioConfig = deepSet(ioConfig, 'useEarliestOffset', sampleStrategy === 'start');
-  } else if (samplerType === 'kinesis') {
+  } else if (specType === 'kinesis') {
     ioConfig = deepSet(ioConfig, 'useEarliestSequenceNumber', sampleStrategy === 'start');
   }
   return ioConfig;
 }
 
+/**
+  This is a hack to deal with the fact that the sampler can not deal with the index_parallel type
+ */
 function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
-  const samplerType = getSamplerType(sampleSpec.spec);
+  let samplerType: string = getSpecType(sampleSpec.spec);
+  if (samplerType === 'index_parallel') {
+    samplerType = 'index';
+  }
+
   sampleSpec = deepSet(sampleSpec, 'type', samplerType);
   sampleSpec = deepSet(sampleSpec, 'spec.type', samplerType);
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', samplerType);
@@ -226,7 +226,7 @@ export async function sampleForConnect(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponseWithExtraInfo> {
-  const samplerType = getSamplerType(spec);
+  const samplerType = getSpecType(spec);
   let ioConfig: IoConfig = makeSamplerIoConfig(
     deepGet(spec, 'ioConfig'),
     samplerType,
@@ -289,7 +289,7 @@ export async function sampleForParser(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponse> {
-  const samplerType = getSamplerType(spec);
+  const samplerType = getSpecType(spec);
   const ioConfig: IoConfig = makeSamplerIoConfig(
     deepGet(spec, 'ioConfig'),
     samplerType,
@@ -317,7 +317,7 @@ export async function sampleForTimestamp(
   spec: IngestionSpec,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
-  const samplerType = getSamplerType(spec);
+  const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
 
@@ -384,7 +384,7 @@ export async function sampleForTransform(
   spec: IngestionSpec,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
-  const samplerType = getSamplerType(spec);
+  const samplerType = getSpecType(spec);
   const inputFormatColumns: string[] = deepGet(spec, 'ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
@@ -444,7 +444,7 @@ export async function sampleForFilter(
   spec: IngestionSpec,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
-  const samplerType = getSamplerType(spec);
+  const samplerType = getSpecType(spec);
   const inputFormatColumns: string[] = deepGet(spec, 'ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
@@ -506,7 +506,7 @@ export async function sampleForSchema(
   spec: IngestionSpec,
   cacheRows: CacheRows,
 ): Promise<SampleResponse> {
-  const samplerType = getSamplerType(spec);
+  const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec');
   const transformSpec: TransformSpec =
     deepGet(spec, 'dataSchema.transformSpec') || ({} as TransformSpec);
@@ -541,11 +541,11 @@ export async function sampleForExampleManifests(
   exampleManifestUrl: string,
 ): Promise<ExampleManifest[]> {
   const exampleSpec: SampleSpec = {
-    type: 'index',
+    type: 'index_parallel',
     spec: {
-      type: 'index',
+      type: 'index_parallel',
       ioConfig: {
-        type: 'index',
+        type: 'index_parallel',
         inputSource: { type: 'http', uris: [exampleManifestUrl] },
         inputFormat: { type: 'tsv', hasHeaderRow: true },
       },

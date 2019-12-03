@@ -69,7 +69,7 @@ import {
 import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/druid-time';
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
-  changeParallel,
+  adjustIngestionSpec,
   DimensionMode,
   DimensionSpec,
   DimensionsSpec,
@@ -100,7 +100,6 @@ import {
   getTransformFormFields,
   getTuningSpecFormFields,
   GranularitySpec,
-  hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
   InputFormat,
@@ -111,7 +110,6 @@ import {
   isColumnTimestampSpec,
   isEmptyIngestionSpec,
   isIngestSegment,
-  isParallel,
   issueWithIoConfig,
   isTask,
   joinFilter,
@@ -445,6 +443,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
     newSpec = upgradeSpec(newSpec);
+    newSpec = adjustIngestionSpec(newSpec);
     const deltaState: Partial<LoadDataViewState> = { spec: newSpec, specPreview: newSpec };
     if (!deepGet(newSpec, 'ioConfig.type')) {
       deltaState.cacheRows = undefined;
@@ -705,13 +704,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
-          {this.renderIngestionCard('index:s3')}
-          {this.renderIngestionCard('index:google')}
-          {this.renderIngestionCard('index:hdfs')}
-          {this.renderIngestionCard('index:druid')}
-          {this.renderIngestionCard('index:http')}
-          {this.renderIngestionCard('index:local')}
-          {this.renderIngestionCard('index:inline')}
+          {this.renderIngestionCard('index_parallel:s3')}
+          {this.renderIngestionCard('index_parallel:google')}
+          {this.renderIngestionCard('index_parallel:hdfs')}
+          {this.renderIngestionCard('index_parallel:druid')}
+          {this.renderIngestionCard('index_parallel:http')}
+          {this.renderIngestionCard('index_parallel:local')}
+          {this.renderIngestionCard('index_parallel:inline')}
           {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
           {this.renderIngestionCard('other')}
         </div>
@@ -737,7 +736,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (issue) return issue;
 
     switch (selectedComboType) {
-      case 'index:http':
+      case 'index_parallel:http':
         return (
           <>
             <p>Load data accessible through HTTP(s).</p>
@@ -748,7 +747,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         );
 
-      case 'index:local':
+      case 'index_parallel:local':
         return (
           <>
             <p>
@@ -762,7 +761,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         );
 
-      case 'index:druid':
+      case 'index_parallel:druid':
         return (
           <>
             <p>Reindex data from existing Druid segments.</p>
@@ -773,20 +772,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         );
 
-      case 'index:inline':
+      case 'index_parallel:inline':
         return (
           <>
             <p>Ingest a small amount of data directly from the clipboard.</p>
           </>
         );
 
-      case 'index:s3':
+      case 'index_parallel:s3':
         return <p>Load text based data from Amazon S3.</p>;
 
-      case 'index:google':
+      case 'index_parallel:google':
         return <p>Load text based data from the Google Blobstore.</p>;
 
-      case 'index:hdfs':
+      case 'index_parallel:hdfs':
         return <p>Load text based data from HDFS.</p>;
 
       case 'kafka':
@@ -828,13 +827,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (issue) return;
 
     switch (selectedComboType) {
-      case 'index:http':
-      case 'index:local':
-      case 'index:druid':
-      case 'index:inline':
-      case 'index:s3':
-      case 'index:google':
-      case 'index:hdfs':
+      case 'index_parallel:http':
+      case 'index_parallel:local':
+      case 'index_parallel:druid':
+      case 'index_parallel:inline':
+      case 'index_parallel:s3':
+      case 'index_parallel:google':
+      case 'index_parallel:hdfs':
       case 'kafka':
       case 'kinesis':
         return (
@@ -2709,7 +2708,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="other">
           <H5>Secondary partitioning</H5>
           <AutoForm
-            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index')}
+            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index_parallel')}
             model={tuningConfig}
             onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
           />
@@ -2722,7 +2721,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#partitioning`}
             />
           </Callout>
-          {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
           disabled:
@@ -2789,7 +2787,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#tuningconfig`}
             />
           </Callout>
-          {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
           disabled: invalidIoConfig(ioConfig),
@@ -2798,44 +2795,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderParallelPickerIfNeeded(): JSX.Element | undefined {
-    const { spec } = this.state;
-    if (!hasParallelAbility(spec)) return;
-
-    return (
-      <FormGroup>
-        <Switch
-          large
-          checked={isParallel(spec)}
-          onChange={() => this.updateSpec(changeParallel(spec, !isParallel(spec)))}
-          labelElement={
-            <>
-              {'Parallel indexing '}
-              <Popover
-                content={
-                  <PopoverText>
-                    Druid currently has two types of native batch indexing tasks,{' '}
-                    <Code>index_parallel</Code> which runs tasks in parallel on multiple
-                    MiddleManager processes, and <Code>index</Code> which will run a single indexing
-                    task locally on a single MiddleManager.
-                  </PopoverText>
-                }
-                position="left-bottom"
-              >
-                <Icon icon={IconNames.INFO_SIGN} iconSize={16} />
-              </Popover>
-            </>
-          }
-        />
-      </FormGroup>
-    );
-  }
-
   // ==================================================================
 
   renderPublishStep() {
     const { spec } = this.state;
-    const parallel = isParallel(spec);
+    const parallel = deepGet(spec, 'tuningConfig.maxNumConcurrentSubTasks') > 1;
 
     return (
       <>
@@ -2925,7 +2889,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p>Configure behavior of indexed data once it reaches Druid.</p>
           </Callout>
-          {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({})}
       </>

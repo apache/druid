@@ -48,6 +48,7 @@ export interface Field<M> {
   suggestions?: Functor<M, Suggestion[]>;
   placeholder?: string;
   min?: number;
+  zeroMeansUndefined?: boolean;
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
@@ -132,13 +133,17 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderNumberInput(field: Field<T>): JSX.Element {
     const { model, large, onFinalize } = this.props;
 
-    const modelValue = deepGet(model as any, field.name) || field.defaultValue;
+    let modelValue = deepGet(model as any, field.name);
+    if (typeof modelValue !== 'number') modelValue = field.defaultValue;
     return (
       <NumericInput
         value={modelValue}
         onValueChange={(valueAsNumber: number, valueAsString: string) => {
           if (valueAsString === '' || isNaN(valueAsNumber)) return;
-          this.fieldChange(field, valueAsNumber);
+          this.fieldChange(
+            field,
+            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
+          );
         }}
         onBlur={e => {
           if (e.target.value === '') {

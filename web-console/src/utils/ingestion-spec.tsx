@@ -50,33 +50,36 @@ export function isEmptyIngestionSpec(spec: IngestionSpec) {
   return Object.keys(spec).length === 0;
 }
 
-export type IngestionType = 'kafka' | 'kinesis' | 'index_hadoop' | 'index' | 'index_parallel';
+export type IngestionType = 'kafka' | 'kinesis' | 'index_parallel';
 
 // A combination of IngestionType and inputSourceType
 export type IngestionComboType =
   | 'kafka'
   | 'kinesis'
-  | 'index:http'
-  | 'index:local'
-  | 'index:druid'
-  | 'index:inline'
-  | 'index:s3'
-  | 'index:google'
-  | 'index:hdfs';
+  | 'index_parallel:http'
+  | 'index_parallel:local'
+  | 'index_parallel:druid'
+  | 'index_parallel:inline'
+  | 'index_parallel:s3'
+  | 'index_parallel:google'
+  | 'index_parallel:hdfs';
 
 // Some extra values that can be selected in the initial screen
 export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
+
+export function adjustIngestionSpec(spec: IngestionSpec) {
+  if (spec.tuningConfig) {
+    spec = deepSet(spec, 'tuningConfig', adjustTuningConfig(spec.tuningConfig));
+  }
+  return spec;
+}
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
     case 'kafka':
     case 'kinesis':
-    case 'index':
     case 'index_parallel':
       return ingestionType;
-
-    case 'index_hadoop':
-      return 'hadoop';
 
     default:
       throw new Error(`unknown type '${ingestionType}'`);
@@ -91,7 +94,6 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
     case 'kinesis':
       return ioConfig.type;
 
-    case 'index':
     case 'index_parallel':
       const inputSource = deepGet(spec, 'ioConfig.inputSource') || EMPTY_OBJECT;
       switch (inputSource.type) {
@@ -102,7 +104,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 's3':
         case 'google':
         case 'hdfs':
-          return `index:${inputSource.type}` as IngestionComboType;
+          return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
       }
   }
 
@@ -111,25 +113,25 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
 
 export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
   switch (ingestionType) {
-    case 'index:local':
+    case 'index_parallel:local':
       return 'Local disk';
 
-    case 'index:http':
+    case 'index_parallel:http':
       return 'HTTP(s)';
 
-    case 'index:druid':
+    case 'index_parallel:druid':
       return 'Reindex from Druid';
 
-    case 'index:inline':
+    case 'index_parallel:inline':
       return 'Paste data';
 
-    case 'index:s3':
+    case 'index_parallel:s3':
       return 'Amazon S3';
 
-    case 'index:google':
+    case 'index_parallel:google':
       return 'Google Cloud Storage';
 
-    case 'index:hdfs':
+    case 'index_parallel:hdfs':
       return 'HDFS';
 
     case 'kafka':
@@ -175,13 +177,13 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
-    case 'index:s3':
+    case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
-    case 'index:google':
+    case 'index_parallel:google':
       return 'druid-google-extensions';
 
-    case 'index:hdfs':
+    case 'index_parallel:hdfs':
       return 'druid-hdfs-storage';
 
     case 'kafka':
@@ -217,16 +219,6 @@ export interface InputFormat {
   flattenSpec?: FlattenSpec;
 }
 
-export function hasParallelAbility(spec: IngestionSpec): boolean {
-  const specType = getSpecType(spec);
-  return specType === 'index' || specType === 'index_parallel';
-}
-
-export function isParallel(spec: IngestionSpec): boolean {
-  const specType = getSpecType(spec);
-  return specType === 'index_parallel';
-}
-
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
@@ -239,9 +231,12 @@ export function getRollup(spec: IngestionSpec): boolean {
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
 
-export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undefined {
+export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   return (
-    deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type')
+    deepGet(spec, 'type') ||
+    deepGet(spec, 'ioConfig.type') ||
+    deepGet(spec, 'tuningConfig.type') ||
+    'index_parallel'
   );
 }
 
@@ -255,16 +250,6 @@ export function isTask(spec: IngestionSpec) {
 
 export function isIngestSegment(spec: IngestionSpec): boolean {
   return deepGet(spec, 'ioConfig.inputSource.type') === 'druid';
-}
-
-export function changeParallel(spec: IngestionSpec, parallel: boolean): IngestionSpec {
-  if (!hasParallelAbility(spec)) return spec;
-  const newType = parallel ? 'index_parallel' : 'index';
-  let newSpec = spec;
-  newSpec = deepSet(newSpec, 'type', newType);
-  newSpec = deepSet(newSpec, 'ioConfig.type', newType);
-  newSpec = deepSet(newSpec, 'tuningConfig.type', newType);
-  return newSpec;
 }
 
 /**
@@ -1011,7 +996,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
   };
 
   switch (ingestionComboType) {
-    case 'index:http':
+    case 'index_parallel:http':
       return [
         inputSourceType,
         {
@@ -1044,7 +1029,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:local':
+    case 'index_parallel:local':
       return [
         inputSourceType,
         {
@@ -1089,7 +1074,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:druid':
+    case 'index_parallel:druid':
       return [
         inputSourceType,
         {
@@ -1155,13 +1140,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:inline':
+    case 'index_parallel:inline':
       return [
         inputSourceType,
         // do not add 'data' here as it has special handling in the load-data view
       ];
 
-    case 'index:s3':
+    case 'index_parallel:s3':
       return [
         inputSourceType,
         {
@@ -1197,7 +1182,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:google':
+    case 'index_parallel:google':
       return [
         inputSourceType,
         {
@@ -1221,7 +1206,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:hdfs':
+    case 'index_parallel:hdfs':
       return [
         inputSourceType,
         {
@@ -1430,10 +1415,10 @@ export function getIoConfigTuningFormFields(
   ingestionComboType: IngestionComboType,
 ): Field<IoConfig>[] {
   switch (ingestionComboType) {
-    case 'index:http':
-    case 'index:s3':
-    case 'index:google':
-    case 'index:hdfs':
+    case 'index_parallel:http':
+    case 'index_parallel:s3':
+    case 'index_parallel:google':
+    case 'index_parallel:hdfs':
       return [
         {
           name: 'inputSource.fetchTimeout',
@@ -1498,11 +1483,11 @@ export function getIoConfigTuningFormFields(
         },
       ];
 
-    case 'index:local':
-    case 'index:inline':
+    case 'index_parallel:local':
+    case 'index_parallel:inline':
       return [];
 
-    case 'index:druid':
+    case 'index_parallel:druid':
       return [
         {
           name: 'inputSource.maxFetchCapacityBytes',
@@ -1804,9 +1789,7 @@ export interface TuningConfig {
   type: string;
   maxRowsInMemory?: number;
   maxBytesInMemory?: number;
-  maxTotalRows?: number;
   partitionsSpec?: PartitionsSpec;
-  numShards?: number;
   maxPendingPersists?: number;
   indexSpec?: IndexSpec;
   forceExtendableShardSpecs?: boolean;
@@ -1849,19 +1832,49 @@ export interface PartitionsSpec {
   assumeGrouped?: boolean;
 }
 
+export function adjustTuningConfig(tuningConfig: TuningConfig) {
+  const tuningConfigType = deepGet(tuningConfig, 'type');
+  if (tuningConfigType !== 'index_parallel') return tuningConfig;
+
+  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type');
+  if (tuningConfig.forceGuaranteedRollup) {
+    if (partitionsSpecType !== 'hashed' && partitionsSpecType !== 'single_dim') {
+      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'hashed' });
+    }
+  } else {
+    if (partitionsSpecType !== 'dynamic') {
+      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'dynamic' });
+    }
+  }
+  return tuningConfig;
+}
+
 export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
-  return Boolean(
-    tuningConfig.type === 'index_parallel' &&
-      tuningConfig.forceGuaranteedRollup &&
-      (!tuningConfig.numShards || !intervals),
-  );
+  if (tuningConfig.type !== 'index_parallel' || !tuningConfig.forceGuaranteedRollup) return false;
+
+  if (!intervals) return true;
+  switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
+    case 'hashed':
+      if (!deepGet(tuningConfig, 'partitionsSpec.numShards')) return true;
+      break;
+
+    case 'single_dim':
+      if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
+      if (
+        !deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment') &&
+        !deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment')
+      ) {
+        return true;
+      }
+  }
+
+  return false;
 }
 
 export function getPartitionRelatedTuningSpecFormFields(
   specType: IngestionType,
 ): Field<TuningConfig>[] {
   switch (specType) {
-    case 'index':
     case 'index_parallel':
       return [
         {
@@ -1876,25 +1889,12 @@ export function getPartitionRelatedTuningSpecFormFields(
               optimal number of partitions per time chunk and one for generating segments.
             </p>
           ),
-          adjustment: (t: TuningConfig) => {
-            const partitionsSpecType = deepGet(t, 'partitionsSpec.type');
-            if (t.forceGuaranteedRollup) {
-              if (partitionsSpecType !== 'hashed' && partitionsSpecType !== 'single_dim') {
-                t = deepSet(t, 'partitionsSpec', { type: 'hashed' });
-              }
-            } else {
-              if (partitionsSpecType !== 'dynamic') {
-                t = deepSet(t, 'partitionsSpec', { type: 'dynamic' });
-              }
-            }
-            return t;
-          },
+          adjustment: adjustTuningConfig,
         },
         {
           name: 'partitionsSpec.type',
           label: 'Partitioning type',
           type: 'string',
-          defaultValue: 'hashed',
           suggestions: (t: TuningConfig) =>
             t.forceGuaranteedRollup ? ['hashed', 'single_dim'] : ['dynamic'],
           info: (
@@ -1924,12 +1924,11 @@ export function getPartitionRelatedTuningSpecFormFields(
         },
         // partitionsSpec type: hashed
         {
-          name: 'partitionsSpec.numShards', // This is mandatory if index_parallel and forceGuaranteedRollup ToDo: ???
+          name: 'partitionsSpec.numShards',
           label: 'Num shards',
           type: 'number',
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
-          // required: (t: TuningConfig) =>
-          //   Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+          required: true,
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -1959,6 +1958,7 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.targetRowsPerSegment',
           label: 'Target rows per segment',
           type: 'number',
+          zeroMeansUndefined: true,
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
           required: (t: TuningConfig) =>
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
@@ -1974,6 +1974,7 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'partitionsSpec.maxRowsPerSegment',
           label: 'Max rows per segment',
           type: 'number',
+          zeroMeansUndefined: true,
           defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
           required: (t: TuningConfig) =>
             !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
@@ -2345,8 +2346,7 @@ export function updateIngestionType(
   spec: IngestionSpec,
   comboType: IngestionComboType,
 ): IngestionSpec {
-  let [ingestionType, inputSourceType] = comboType.split(':');
-  if (ingestionType === 'index') ingestionType = 'index_parallel';
+  const [ingestionType, inputSourceType] = comboType.split(':');
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
     ingestionType as IngestionType,
   );
@@ -2392,19 +2392,6 @@ export function updateIngestionType(
 }
 
 export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
-  // const inputSourceType = deepGet(spec, 'ioConfig.inputSource.type');
-
-  // ToDo: !!!
-  // if (inputSourceType === 'sql') {
-  //   return deepSet(spec, 'dataSchema.parser', { type: 'map' });
-  // }
-  //
-  // if (inputSourceType === 'druid') {
-  //   return deepSet(spec, 'dataSchema.parser', {
-  //     type: 'string',
-  //   });
-  // }
-
   const inputFormat = guessInputFormat(sampleData);
   if (!inputFormat) return spec;
 

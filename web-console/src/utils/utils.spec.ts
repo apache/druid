@@ -25,7 +25,7 @@ import {
   updateSchemaWithSample,
 } from './druid-type';
 import { IngestionSpec } from './ingestion-spec';
-import { applyCache, getSamplerType, headerFromSampleResponse } from './sampler';
+import { applyCache, headerFromSampleResponse } from './sampler';
 
 describe('test-utils', () => {
   const ingestionSpec: IngestionSpec = {
@@ -59,10 +59,6 @@ describe('test-utils', () => {
   };
 
   // const cacheRows: CacheRows = [{ make: 'Honda', model: 'Civic' }, { make: 'BMW', model: 'M3' }];
-
-  it('spec-utils getSamplerType', () => {
-    expect(getSamplerType(ingestionSpec)).toMatchInlineSnapshot(`"index"`);
-  });
 
   it('spec-utils headerFromSampleResponse', () => {
     expect(headerFromSampleResponse({ data: [{ input: { a: 1 }, parsed: { a: 1 } }] }))
@@ -189,7 +185,7 @@ describe('druid-type.ts', () => {
     },
   };
 
-  it('spec-utils getSamplerType', () => {
+  it('spec-utils guessTypeFromSample', () => {
     expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
   });
 
