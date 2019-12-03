@@ -261,7 +261,7 @@ export interface LoadDataViewProps {
   initSupervisorId?: string;
   initTaskId?: string;
   exampleManifestsUrl?: string;
-  goToTask: (taskId: string | undefined, supervisor?: string) => void;
+  goToIngestion: (taskGroupId: string | undefined, supervisor?: string) => void;
 }
 
 export interface LoadDataViewState {
@@ -819,7 +819,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStepControls(): JSX.Element | undefined {
-    const { goToTask } = this.props;
+    const { goToIngestion } = this.props;
     const { spec, selectedComboType, exampleManifests } = this.state;
 
     const issue = this.selectedIngestionTypeIssue();
@@ -869,7 +869,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 text="Submit supervisor"
                 rightIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
-                onClick={() => goToTask(undefined, 'supervisor')}
+                onClick={() => goToIngestion(undefined, 'supervisor')}
               />
             </FormGroup>
             <FormGroup>
@@ -877,7 +877,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 text="Submit task"
                 rightIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
-                onClick={() => goToTask(undefined, 'task')}
+                onClick={() => goToIngestion(undefined, 'task')}
               />
             </FormGroup>
           </>
@@ -2984,7 +2984,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private handleSubmit = async () => {
-    const { goToTask } = this.props;
+    const { goToIngestion } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3014,7 +3014,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
 
       setTimeout(() => {
-        goToTask(taskResp.data.task);
+        goToIngestion(taskResp.data.task);
       }, 1000);
     } else {
       try {
@@ -3034,7 +3034,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
 
       setTimeout(() => {
-        goToTask(undefined); // Can we get the supervisor ID here?
+        goToIngestion(undefined); // Can we get the supervisor ID here?
       }, 1000);
     }
   };
