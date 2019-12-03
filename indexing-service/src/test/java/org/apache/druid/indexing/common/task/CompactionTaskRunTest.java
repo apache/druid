@@ -30,6 +30,7 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -42,12 +43,16 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
+import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -59,6 +64,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
@@ -88,6 +94,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -636,6 +643,93 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Pair<TaskStatus, List<DataSegment>> compactionResult = compactionFuture.get();
     Assert.assertEquals(TaskState.FAILED, compactionResult.lhs.getStatusCode());
+  }
+
+  /**
+   * Run a regular index task that's equivalent to the compaction task in {@link #testRun()}, using
+   * {@link IngestSegmentFirehoseFactory}.
+   *
+   * This is not entirely CompactionTask related, but it's similar conceptually and it requires
+   * similar setup to what this test suite already has.
+   *
+   * It could be moved to a separate test class if needed.
+   */
+  @Test
+  public void testRunRegularIndexTaskWithIngestSegmentFirehose() throws Exception
+  {
+    runIndexTask();
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "test",
+                getObjectMapper().convertValue(
+                    new StringInputRowParser(
+                        DEFAULT_PARSE_SPEC,
+                        null
+                    ),
+                    Map.class
+                ),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("val", "val")
+                },
+                new UniformGranularitySpec(
+                    Granularities.HOUR,
+                    Granularities.MINUTE,
+                    null
+                ),
+                null,
+                getObjectMapper()
+            ),
+            new IndexTask.IndexIOConfig(
+                new IngestSegmentFirehoseFactory(
+                    DATA_SOURCE,
+                    Intervals.of("2014-01-01/2014-01-02"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    getIndexIO(),
+                    coordinatorClient,
+                    segmentLoaderFactory,
+                    RETRY_POLICY_FACTORY
+                ),
+                false
+            ),
+            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, null, false, true)
+        ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        rowIngestionMetersFactory,
+        appenderatorsManager
+    );
+
+    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(indexTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    final List<DataSegment> segments = resultPair.rhs;
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      }
+    }
   }
 
   private Pair<TaskStatus, List<DataSegment>> runIndexTask() throws Exception
