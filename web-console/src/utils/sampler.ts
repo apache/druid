@@ -22,7 +22,6 @@ import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
-  downgradeSpec,
   getDummyTimestampSpec,
   getSpecType,
   IngestionSpec,
@@ -177,11 +176,6 @@ export async function postToSampler(
   forStr: string,
 ): Promise<SampleResponse> {
   sampleSpec = fixSamplerTypes(sampleSpec);
-  if (sampleSpec.type === 'kafka' || sampleSpec.type === 'kinesis') {
-    console.log('pre downgrade', sampleSpec);
-    sampleSpec = deepSet(sampleSpec, 'spec', downgradeSpec(sampleSpec.spec)); // ToDo: remove this line when new format is supported by sampler
-    console.log('post downgrade', sampleSpec);
-  }
 
   let sampleResp: any;
   try {
