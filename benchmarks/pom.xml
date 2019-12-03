@@ -123,10 +123,6 @@
       <artifactId>commons-math3</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
     </dependency>
@@ -155,8 +151,9 @@
       <artifactId>jsr305</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>sketches-core</artifactId>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-java</artifactId>
+      <version>1.1.0-incubating</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

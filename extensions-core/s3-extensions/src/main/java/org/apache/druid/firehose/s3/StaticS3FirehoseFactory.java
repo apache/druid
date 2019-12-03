@@ -37,7 +37,6 @@ import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFa
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -68,7 +67,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
@@ -115,8 +114,6 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @Override
   protected Collection<URI> initObjects() throws IOException
   {
-    // Here, the returned s3 objects contain minimal information without data.
-    // Getting data is deferred until openObjectStream() is called for each object.
     if (!uris.isEmpty()) {
       return uris;
     } else {
@@ -128,8 +125,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         try {
           final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
               s3Client,
-              bucket,
-              prefix,
+              uri,
               MAX_LISTING_LENGTH
           );
           objects.addAll(Lists.newArrayList(objectSummaryIterator));
@@ -164,7 +160,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
           }
         }
       }
-      return objects.stream().map(StaticS3FirehoseFactory::toUri).collect(Collectors.toList());
+      return objects.stream().map(S3Utils::summaryToUri).collect(Collectors.toList());
     }
   }
 
@@ -272,24 +268,5 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         getFetchTimeout(),
         getMaxFetchRetry()
     );
-  }
-
-  /**
-   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
-   *
-   * <pre>
-   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
-   * </pre>
-   */
-  private static URI toUri(S3ObjectSummary object)
-  {
-    final String originalAuthority = object.getBucketName();
-    final String originalPath = object.getKey();
-    final String authority = originalAuthority.endsWith("/") ?
-                             originalAuthority.substring(0, originalAuthority.length() - 1) :
-                             originalAuthority;
-    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
-
-    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 }

@@ -17,13 +17,25 @@
   ~ under the License.
   -->
 
-[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
+[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://s.apache.org/slack-invite)
 [![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/incubator-druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/incubator-druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/incubator-druid)](https://codecov.io/gh/apache/incubator-druid)
 [![Docker](https://img.shields.io/badge/container-docker-blue.svg)](https://hub.docker.com/r/apache/incubator-druid)
 <!--- Following badges are disabled until they can be fixed: -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
+
+---
+
+[Website](https://druid.apache.org/) |
+[Documentation](https://druid.apache.org/docs/latest/design/) |
+[Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
+[User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
+[Slack](https://s.apache.org/slack-invite) |
+[Twitter](https://twitter.com/druidio) |
+[Download](https://druid.apache.org/downloads.html)
+
+---
 
 ## Apache Druid (incubating)
 
