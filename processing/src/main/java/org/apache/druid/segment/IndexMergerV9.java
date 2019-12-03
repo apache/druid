@@ -27,10 +27,10 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -138,7 +138,7 @@ public class IndexMergerV9 implements IndexMerger
     Closer closer = Closer.create();
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
-      FileUtils.forceMkdir(outDir);
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
       SegmentWriteOutMediumFactory omf = segmentWriteOutMediumFactory != null ? segmentWriteOutMediumFactory
                                                                               : defaultSegmentWriteOutMediumFactory;
@@ -774,7 +774,7 @@ public class IndexMergerV9 implements IndexMerger
       );
     }
 
-    FileUtils.forceMkdir(outDir);
+    org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
     log.debug("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
@@ -864,7 +864,7 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    FileUtils.forceMkdir(outDir);
+    org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
     final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
 
@@ -967,7 +967,7 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    FileUtils.forceMkdir(outDir);
+    org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
     final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
 

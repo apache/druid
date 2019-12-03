@@ -174,7 +174,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
     cachePathsIfNeeded();
     return cachedPaths.size();

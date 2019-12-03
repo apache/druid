@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
@@ -42,6 +40,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -204,7 +203,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       DataSegmentMaker... segmentMakers
   )
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = FileUtils.createTempDir();
     final Set<DataSegment> segments = new HashSet<>();
     for (DataSegmentMaker segmentMaker : segmentMakers) {
       segments.add(segmentMaker.make(tmpDir));

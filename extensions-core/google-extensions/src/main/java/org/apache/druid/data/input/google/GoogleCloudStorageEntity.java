@@ -20,18 +20,18 @@
 package org.apache.druid.data.input.google;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.RetryingInputEntity;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
-import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-public class GoogleCloudStorageEntity implements InputEntity
+public class GoogleCloudStorageEntity extends RetryingInputEntity
 {
   private final GoogleStorage storage;
   private final URI uri;
@@ -50,17 +50,23 @@ public class GoogleCloudStorageEntity implements InputEntity
   }
 
   @Override
-  public InputStream open() throws IOException
+  protected InputStream readFrom(long offset) throws IOException
   {
     // Get data of the given object and open an input stream
     final String bucket = uri.getAuthority();
-    final String key = GoogleUtils.extractGoogleCloudStorageObjectKey(uri);
+    final String key = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
     final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
-    return CompressionUtils.decompress(byteSource.openStream(), uri.getPath());
+    return byteSource.openStream(offset);
   }
 
   @Override
-  public Predicate<Throwable> getFetchRetryCondition()
+  protected String getPath()
+  {
+    return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
+  }
+
+  @Override
+  public Predicate<Throwable> getRetryCondition()
   {
     return GoogleUtils.GOOGLE_RETRY;
   }

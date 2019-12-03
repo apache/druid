@@ -209,13 +209,14 @@
         </dependency>
         <dependency>
             <!-- Used in native parallel batch indexing to determine distribution of dimension values -->
-            <groupId>com.yahoo.datasketches</groupId>
-            <artifactId>sketches-core</artifactId>
+            <groupId>org.apache.datasketches</groupId>
+            <artifactId>datasketches-java</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.yahoo.datasketches</groupId>
-            <artifactId>memory</artifactId>
+            <!-- Used in native parallel batch indexing to determine distribution of dimension values -->
+            <groupId>org.apache.datasketches</groupId>
+            <artifactId>datasketches-memory</artifactId>
             <scope>provided</scope>
         </dependency>
 

@@ -69,7 +69,7 @@ public class GoogleCloudStorageInputSource extends AbstractInputSource implement
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     return uris.size();
   }
@@ -96,7 +96,10 @@ public class GoogleCloudStorageInputSource extends AbstractInputSource implement
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(storage, split.get())),
+        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(
+            storage,
+            split.get()
+        )),
         temporaryDirectory
     );
   }

@@ -22,9 +22,8 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.InputStreamContent;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -37,6 +36,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 public class GoogleTaskLogsTest extends EasyMockSupport
 {
@@ -58,11 +58,11 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   @Test
   public void testPushTaskLog() throws Exception
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = FileUtils.createTempDir();
 
     try {
       final File logFile = new File(tmpDir, "log");
-      BufferedWriter output = java.nio.file.Files.newBufferedWriter(logFile.toPath(), StandardCharsets.UTF_8);
+      BufferedWriter output = Files.newBufferedWriter(logFile.toPath(), StandardCharsets.UTF_8);
       output.write("test");
       output.close();
 

@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -232,7 +232,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     // this method could return too early because the coordinator is merely reporting that all the
     // original segments have loaded.
     if (waitForNewVersion) {
-      RetryUtil.retryUntilTrue(
+      ITRetryUtil.retryUntilTrue(
           () -> {
             final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
                 coordinator.getAvailableSegments(dataSourceName)
@@ -249,7 +249,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       );
     }
 
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"
     );
   }

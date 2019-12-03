@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
-import com.yahoo.sketches.quantiles.ItemsUnion;
+import org.apache.datasketches.quantiles.ItemsUnion;
 
 /**
  * Merges {@link StringSketch}es.

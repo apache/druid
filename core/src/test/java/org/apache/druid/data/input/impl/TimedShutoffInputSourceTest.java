@@ -43,7 +43,7 @@ public class TimedShutoffInputSourceTest
         new InlineInputSource("this,is,test\nthis,data,has\n3,rows,\n"),
         DateTimes.nowUtc().plusMillis(timeoutMs)
     );
-    final InputFormat inputFormat = new CsvInputFormat(ImmutableList.of("col1", "col2", "col3"), null, false, 0);
+    final InputFormat inputFormat = new CsvInputFormat(ImmutableList.of("col1", "col2", "col3"), null, null, false, 0);
     final InputSourceReader reader = inputSource.reader(
         new InputRowSchema(new TimestampSpec(null, null, null), new DimensionsSpec(null), Collections.emptyList()),
         inputFormat,

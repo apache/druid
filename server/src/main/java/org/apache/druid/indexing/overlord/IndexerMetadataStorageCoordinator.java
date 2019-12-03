@@ -180,6 +180,33 @@ public interface IndexerMetadataStorageCoordinator
   ) throws IOException;
 
   /**
+   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * the case where the task ingested no records and created no segments, but still needs to update the metadata
+   * with the progress that the task made.
+   *
+   * The metadata should undergo the same validation checks as performed by announceHistoricalSegments.
+   *
+   *
+   * @param dataSource the datasource
+   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
+   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}.
+   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
+   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}.
+   *
+   * @return segment publish result indicating transaction success or failure.
+   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
+   * it must throw an exception instead.
+   *
+   * @throws IllegalArgumentException if either startMetadata and endMetadata are null
+   * @throws RuntimeException         if the state of metadata storage after this call is unknown
+   */
+  SegmentPublishResult commitMetadataOnly(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
+
+  /**
    * Read dataSource metadata. Returns null if there is no metadata.
    */
   DataSourceMetadata getDataSourceMetadata(String dataSource);

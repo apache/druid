@@ -104,7 +104,7 @@ FROM sys.supervisors`,
     return (
       <HomeViewCard
         className="supervisors-card"
-        href={'#tasks'}
+        href={'#ingestion'}
         icon={IconNames.LIST_COLUMNS}
         title={'Supervisors'}
         loading={supervisorCountLoading}

@@ -36,8 +36,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>sketches-core</artifactId>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-java</artifactId>
       <exclusions>
         <exclusion>
           <groupId>com.google.code.findbugs</groupId>
@@ -46,8 +46,8 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>memory</artifactId>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-memory</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>

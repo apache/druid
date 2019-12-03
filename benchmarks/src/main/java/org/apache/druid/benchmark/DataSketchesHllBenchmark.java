@@ -19,7 +19,7 @@
 
 package org.apache.druid.benchmark;
 
-import com.yahoo.sketches.hll.HllSketch;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;

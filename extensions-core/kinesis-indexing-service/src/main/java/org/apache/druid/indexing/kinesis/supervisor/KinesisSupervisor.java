@@ -24,8 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -66,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -81,8 +78,6 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
-  private static final HashFunction HASH_FUNCTION = Hashing.sha1();
-
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
@@ -232,39 +227,32 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected int getTaskGroupIdForPartition(String partitionId)
   {
-    if (!partitionIds.contains(partitionId)) {
-      partitionIds.add(partitionId);
-    }
-
     return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
   }
 
   private int getTaskGroupIdForPartitionWithProvidedList(String partitionId, List<String> availablePartitions)
   {
+    int index = availablePartitions.indexOf(partitionId);
+    if (index < 0) {
+      return index;
+    }
     return availablePartitions.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
   }
 
   @Override
-  protected Map<Integer, ConcurrentHashMap<String, String>> recomputePartitionGroupsForExpiration(
-      Set<String> availablePartitions
-  )
+  protected Map<Integer, Set<String>> recomputePartitionGroupsForExpiration(Set<String> availablePartitions)
   {
     List<String> availablePartitionsList = new ArrayList<>(availablePartitions);
 
-    Map<Integer, ConcurrentHashMap<String, String>> newPartitionGroups = new HashMap<>();
+    Map<Integer, Set<String>> newPartitionGroups = new HashMap<>();
 
-    for (ConcurrentHashMap<String, String> oldGroup : partitionGroups.values()) {
-      for (Map.Entry<String, String> partitionOffsetMapping : oldGroup.entrySet()) {
-        String partitionId = partitionOffsetMapping.getKey();
-        if (availablePartitions.contains(partitionId)) {
-          int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
-          ConcurrentHashMap<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
-              newTaskGroupId,
-              k -> new ConcurrentHashMap<>()
-          );
-          partitionMap.put(partitionId, partitionOffsetMapping.getValue());
-        }
-      }
+    for (String availablePartition : availablePartitions) {
+      int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(availablePartition, availablePartitionsList);
+      Set<String> newGroup = newPartitionGroups.computeIfAbsent(
+          newTaskGroupId,
+          k -> new HashSet<>()
+      );
+      newGroup.add(availablePartition);
     }
 
     return newPartitionGroups;
@@ -398,6 +386,32 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   {
     log.info("Marking expired shards in metadata: " + expiredPartitionIds);
 
+    return createDataSourceMetadataWithClosedOrExpiredPartitions(
+        currentMetadata,
+        expiredPartitionIds,
+        KinesisSequenceNumber.EXPIRED_MARKER
+    );
+  }
+
+  @Override
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> closedPartitionIds
+  )
+  {
+    log.info("Marking closed shards in metadata: " + closedPartitionIds);
+    return createDataSourceMetadataWithClosedOrExpiredPartitions(
+        currentMetadata,
+        closedPartitionIds,
+        KinesisSequenceNumber.END_OF_SHARD_MARKER
+    );
+  }
+
+  private SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithClosedOrExpiredPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata,
+      Set<String> terminatedPartitionIds,
+      String terminationMarker
+  )
+  {
     final KinesisDataSourceMetadata dataSourceMetadata = (KinesisDataSourceMetadata) currentMetadata;
 
     SeekableStreamSequenceNumbers<String, String> old = dataSourceMetadata.getSeekableStreamSequenceNumbers();
@@ -405,10 +419,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     Map<String, String> oldPartitionSequenceNumberMap = old.getPartitionSequenceNumberMap();
     Map<String, String> newPartitionSequenceNumberMap = new HashMap<>();
     for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
-      if (!expiredPartitionIds.contains(entry.getKey())) {
+      if (!terminatedPartitionIds.contains(entry.getKey())) {
         newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
       } else {
-        newPartitionSequenceNumberMap.put(entry.getKey(), KinesisSequenceNumber.EXPIRED_MARKER);
+        newPartitionSequenceNumberMap.put(entry.getKey(), terminationMarker);
       }
     }
 
@@ -420,7 +434,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       newExclusiveStartPartitions = new HashSet<>();
       oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
       for (String partitionId : oldExclusiveStartPartitions) {
-        if (!expiredPartitionIds.contains(partitionId)) {
+        if (!terminatedPartitionIds.contains(partitionId)) {
           newExclusiveStartPartitions.add(partitionId);
         }
       }
@@ -443,4 +457,5 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     return new KinesisDataSourceMetadata(newSequences);
   }
+
 }

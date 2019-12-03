@@ -17,12 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel;
+package org.apache.druid.data.input.s3;
+
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
+
+import java.util.List;
 
 /**
- * Represents the current progress of {@link ParallelIndexSupervisorTask}. Implementations can be different depending on
- * the distributed indexing algorithm.
+ * Druid module to wire up native batch support for S3 input
  */
-interface ParallelIndexingProgress
+public class S3InputSourceDruidModule implements DruidModule
 {
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return ImmutableList.of(
+        new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, S3StorageDruidModule.SCHEME))
+    );
+  }
+
+  @Override
+  public void configure(Binder binder)
+  {
+
+  }
 }

@@ -30,9 +30,9 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.common.base.Preconditions;
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.ArrayOfStringsSerDe;
-import com.yahoo.sketches.quantiles.ItemsSketch;
+import org.apache.datasketches.ArrayOfStringsSerDe;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.quantiles.ItemsSketch;
 
 import java.io.IOException;
 import java.util.Comparator;

@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -117,6 +118,7 @@ public class EmitterTest
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(timeInMillis)
+        .setFlushTimeout(TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS))
         .setFlushCount(Integer.MAX_VALUE)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(
@@ -132,6 +134,7 @@ public class EmitterTest
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
+        .setFlushTimeout(TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS))
         .setFlushCount(size)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(

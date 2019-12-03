@@ -293,7 +293,7 @@ Returns the name of the current phase if the task running in the parallel mode.
 
 * `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/progress`
 
-Returns the current progress if the supervisor task is running in the parallel mode.
+Returns the estimated progress of the current phase if the supervisor task is running in the parallel mode.
 
 An example of the result is
 
@@ -304,7 +304,7 @@ An example of the result is
   "failed":0,
   "complete":0,
   "total":10,
-  "expectedSucceeded":10
+  "estimatedExpectedSucceeded":10
 }
 ```
 

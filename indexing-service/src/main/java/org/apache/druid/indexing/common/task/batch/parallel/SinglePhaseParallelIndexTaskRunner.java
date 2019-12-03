@@ -90,9 +90,9 @@ class SinglePhaseParallelIndexTaskRunner
   }
 
   @Override
-  int getTotalNumSubTasks() throws IOException
+  int estimateTotalNumSubTasks() throws IOException
   {
-    return baseInputSource.getNumSplits(
+    return baseInputSource.estimateNumSplits(
         ingestionSchema.getIOConfig().getInputFormat(),
         getTuningConfig().getSplitHintSpec()
     );
