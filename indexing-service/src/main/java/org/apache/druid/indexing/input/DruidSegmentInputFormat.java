@@ -27,16 +27,26 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
 
 import java.io.File;
+import java.util.List;
 
 public class DruidSegmentInputFormat implements InputFormat
 {
   private final IndexIO indexIO;
   private final DimFilter dimFilter;
+  private List<String> dimensions;
+  private List<String> metrics;
 
-  DruidSegmentInputFormat(IndexIO indexIO, DimFilter dimFilter)
+  DruidSegmentInputFormat(
+      IndexIO indexIO,
+      DimFilter dimFilter,
+      List<String> dimensions,
+      List<String> metrics
+  )
   {
     this.indexIO = indexIO;
     this.dimFilter = dimFilter;
+    this.dimensions = dimensions;
+    this.metrics = metrics;
   }
 
   @Override
@@ -55,8 +65,8 @@ public class DruidSegmentInputFormat implements InputFormat
     return new DruidSegmentReader(
         source,
         indexIO,
-        inputRowSchema.getDimensionsSpec().getDimensionNames(),
-        inputRowSchema.getMetricNames(),
+        dimensions,
+        metrics,
         dimFilter,
         temporaryDirectory
     );
