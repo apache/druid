@@ -246,7 +246,7 @@ You should use different partitionsSpec depending on the [rollup mode](../ingest
 For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
 `single_dim` (based on ranges of a single dimension. For best-effort rollup, you should use `dynamic`.
 
-For perfect rollup, `ashed partitioning is recommended in most cases, as it will improve indexing
+For perfect rollup, `hashed` partitioning is recommended in most cases, as it will improve indexing
 performance and create more uniformly sized data segments relative to single-dimension partitioning.
 
 #### Hash-based partitioning
@@ -261,7 +261,7 @@ performance and create more uniformly sized data segments relative to single-dim
 
 > Single-dimension range partitioning currently requires the
 > [druid-datasketches](../development/extensions-core/datasketches-extension.md)
-> extension to be loaded.
+> extension to be added to the classpath.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|

@@ -376,6 +376,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
+    if (useRangePartitions()) {
+      assertDataSketchesAvailable();
+    }
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 

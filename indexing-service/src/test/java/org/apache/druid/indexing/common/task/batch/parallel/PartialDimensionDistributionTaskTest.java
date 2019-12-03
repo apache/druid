@@ -346,8 +346,8 @@ public class PartialDimensionDistributionTaskTest
           .tuningConfig(tuningConfig)
           .dataSchema(dataSchema)
           .inputSource(inlineInputSource)
-          .ungroupedRowDimValueFilterSupplier(
-              () -> new PartialDimensionDistributionTask.UngroupedRowDimensionValueFilter(
+          .dedupRowDimValueFilterSupplier(
+              () -> new PartialDimensionDistributionTask.DedupRowDimensionValueFilter(
                   dataSchema.getGranularitySpec().getQueryGranularity(),
                   smallBloomFilter,
                   manyFalsePositiveBloomFilter
@@ -412,8 +412,8 @@ public class PartialDimensionDistributionTaskTest
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS);
     private IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory =
         ParallelIndexTestingFactory.TASK_CLIENT_FACTORY;
-    private Supplier<PartialDimensionDistributionTask.UngroupedRowDimensionValueFilter>
-        ungroupedRowDimValueFilterSupplier = null;
+    private Supplier<PartialDimensionDistributionTask.DedupRowDimensionValueFilter> dedupRowDimValueFilterSupplier =
+        null;
 
     @SuppressWarnings("SameParameterValue")
     PartialDimensionDistributionTaskBuilder id(String id)
@@ -448,11 +448,11 @@ public class PartialDimensionDistributionTaskTest
       return this;
     }
 
-    PartialDimensionDistributionTaskBuilder ungroupedRowDimValueFilterSupplier(
-        Supplier<PartialDimensionDistributionTask.UngroupedRowDimensionValueFilter> ungroupedRowDimValueFilterSupplier
+    PartialDimensionDistributionTaskBuilder dedupRowDimValueFilterSupplier(
+        Supplier<PartialDimensionDistributionTask.DedupRowDimensionValueFilter> dedupRowDimValueFilterSupplier
     )
     {
-      this.ungroupedRowDimValueFilterSupplier = ungroupedRowDimValueFilterSupplier;
+      this.dedupRowDimValueFilterSupplier = dedupRowDimValueFilterSupplier;
       return this;
     }
 
@@ -461,12 +461,12 @@ public class PartialDimensionDistributionTaskTest
       ParallelIndexIngestionSpec ingestionSpec =
           ParallelIndexTestingFactory.createIngestionSpec(inputSource, INPUT_FORMAT, tuningConfig, dataSchema);
 
-      Supplier<PartialDimensionDistributionTask.UngroupedRowDimensionValueFilter> supplier =
-          ungroupedRowDimValueFilterSupplier == null
-          ? () -> new PartialDimensionDistributionTask.UngroupedRowDimensionValueFilter(
+      Supplier<PartialDimensionDistributionTask.DedupRowDimensionValueFilter> supplier =
+          dedupRowDimValueFilterSupplier == null
+          ? () -> new PartialDimensionDistributionTask.DedupRowDimensionValueFilter(
               dataSchema.getGranularitySpec().getQueryGranularity()
           )
-          : ungroupedRowDimValueFilterSupplier;
+          : dedupRowDimValueFilterSupplier;
 
       return new PartialDimensionDistributionTask(
           id,

@@ -82,7 +82,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
 
   // For testing
-  private final Supplier<UngroupedRowDimensionValueFilter> ungroupedRowDimValueFilterSupplier;
+  private final Supplier<DedupRowDimensionValueFilter> dedupRowDimValueFilterSupplier;
 
   @JsonCreator
   PartialDimensionDistributionTask(
@@ -108,7 +108,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         context,
         indexingServiceClient,
         taskClientFactory,
-        () -> new UngroupedRowDimensionValueFilter(
+        () -> new DedupRowDimensionValueFilter(
             ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity()
         )
     );
@@ -125,7 +125,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       final Map<String, Object> context,
       IndexingServiceClient indexingServiceClient,
       IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      Supplier<UngroupedRowDimensionValueFilter> ungroupedRowDimValueFilterSupplier
+      Supplier<DedupRowDimensionValueFilter> dedupRowDimValueFilterSupplier
   )
   {
     super(
@@ -148,7 +148,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
-    this.ungroupedRowDimValueFilterSupplier = ungroupedRowDimValueFilterSupplier;
+    this.dedupRowDimValueFilterSupplier = dedupRowDimValueFilterSupplier;
   }
 
   @JsonProperty
@@ -252,9 +252,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   {
     Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
     DimensionValueFilter dimValueFilter =
-        isAssumeGrouped && granularitySpec.isRollup()
-        ? new GroupedRowDimensionValueFilter()
-        : ungroupedRowDimValueFilterSupplier.get();
+        !isAssumeGrouped && granularitySpec.isRollup()
+        ? dedupRowDimValueFilterSupplier.get()
+        : new PassthroughRowDimensionValueFilter();
 
     int numParseExceptions = 0;
 
@@ -340,7 +340,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
    * Approximate matching is used, so there is a small probability that rows that are not reoccurences are discarded.
    */
   @VisibleForTesting
-  static class UngroupedRowDimensionValueFilter implements DimensionValueFilter
+  static class DedupRowDimensionValueFilter implements DimensionValueFilter
   {
     // A bloom filter is used to approximately group rows by query granularity. These values assume
     // time chunks have fewer than BLOOM_FILTER_EXPECTED_INSERTIONS rows. With the below values, the
@@ -351,23 +351,23 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     private static final int BLOOM_FILTER_EXPECTED_INSERTIONS = 100_000_000;
     private static final double BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY = 0.001;
 
-    private final GroupedRowDimensionValueFilter delegate;
+    private final PassthroughRowDimensionValueFilter delegate;
     private final TimeDimTupleFactory timeDimTupleFactory;
     private final BloomFilter<TimeDimTuple> timeDimTupleBloomFilter;
 
-    UngroupedRowDimensionValueFilter(Granularity queryGranularity)
+    DedupRowDimensionValueFilter(Granularity queryGranularity)
     {
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
     @VisibleForTesting  // to allow controlling false positive rate of bloom filter
-    UngroupedRowDimensionValueFilter(
+    DedupRowDimensionValueFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,
         double bloomFilterFalsePositiveProbability
     )
     {
-      delegate = new GroupedRowDimensionValueFilter();
+      delegate = new PassthroughRowDimensionValueFilter();
       timeDimTupleFactory = new TimeDimTupleFactory(queryGranularity);
       timeDimTupleBloomFilter = BloomFilter.create(
           TimeDimTupleFunnel.INSTANCE,
@@ -404,12 +404,16 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     }
   }
 
-  private static class GroupedRowDimensionValueFilter implements DimensionValueFilter
+  /**
+   * Accepts all input rows, even if they are reoccurrences of timestamps with the same query granularity and dimension
+   * value.
+   */
+  private static class PassthroughRowDimensionValueFilter implements DimensionValueFilter
   {
     private final Map<Interval, String> intervalToMinDimensionValue;
     private final Map<Interval, String> intervalToMaxDimensionValue;
 
-    GroupedRowDimensionValueFilter()
+    PassthroughRowDimensionValueFilter()
     {
       this.intervalToMinDimensionValue = new HashMap<>();
       this.intervalToMaxDimensionValue = new HashMap<>();

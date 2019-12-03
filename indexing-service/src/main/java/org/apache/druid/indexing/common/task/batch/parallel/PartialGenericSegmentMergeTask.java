@@ -95,7 +95,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Shar
           ShardSpec currShardSpec = intervalAndIntegerToShardSpec.get(p.getInterval(), p.getPartitionId());
           Preconditions.checkArgument(
               currShardSpec == null || p.getShardSpec().equals(currShardSpec),
-              "interval %s, partitionId %d mismatched shard specs: %s",
+              "interval %s, partitionId %s mismatched shard specs: %s",
               p.getInterval(),
               p.getPartitionId(),
               partitionLocations
@@ -125,7 +125,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Shar
   {
     return Preconditions.checkNotNull(
         intervalAndIntegerToShardSpec.get(interval, partitionId),
-        "no shard spec exists for interval %s, partitionId %d: %s",
+        "no shard spec exists for interval %s, partitionId %s: %s",
         interval,
         partitionId,
         intervalAndIntegerToShardSpec.rowMap()
