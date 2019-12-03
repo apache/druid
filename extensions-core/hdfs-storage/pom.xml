@@ -137,6 +137,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
               </exclusion>
+              <!-- Following are excluded to remove security vulnerabilities: -->
+              <exclusion>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils-core</artifactId>
+              </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -244,6 +249,11 @@
             <exclusion>
               <groupId>com.sun.jersey</groupId>
               <artifactId>jersey-server</artifactId>
+            </exclusion>
+            <!-- Following are excluded to remove security vulnerabilities: -->
+            <exclusion>
+              <groupId>commons-beanutils</groupId>
+              <artifactId>commons-beanutils-core</artifactId>
             </exclusion>
             <exclusion>
               <!-- excluded to remove security vulnerabilities; jackson-mapper-asl is renamed to jackson-databind -->
