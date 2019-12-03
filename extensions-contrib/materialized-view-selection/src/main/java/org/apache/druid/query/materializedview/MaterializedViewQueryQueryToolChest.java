@@ -19,9 +19,18 @@
 
 package org.apache.druid.query.materializedview;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
@@ -31,7 +40,11 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.ResultRow;
 
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.function.BinaryOperator;
 
@@ -126,5 +139,60 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
       return ((MaterializedViewQuery) query).getQuery();
     }
     return query;
+  }
+
+  @Override
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final Query query)
+  {
+    if (!(getRealQuery(query) instanceof GroupByQuery)) {
+      return objectMapper;
+    }
+    final boolean resultAsArray = query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+
+    // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
+    final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
+    {
+      @Override
+      public void serialize(
+              final ResultRow resultRow,
+              final JsonGenerator jg,
+              final SerializerProvider serializers
+      ) throws IOException
+      {
+        if (resultAsArray) {
+          jg.writeObject(resultRow.getArray());
+        } else {
+          jg.writeObject(resultRow.toMapBasedRow((GroupByQuery) getRealQuery(query)));
+        }
+      }
+    };
+
+    // Deserializer that can deserialize either array- or map-based rows.
+    final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
+    {
+      @Override
+      public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
+      {
+        if (jp.isExpectedStartObjectToken()) {
+          final Row row = jp.readValueAs(Row.class);
+          return ResultRow.fromLegacyRow(row, (GroupByQuery) getRealQuery(query));
+        } else {
+          return ResultRow.of(jp.readValueAs(Object[].class));
+        }
+      }
+    };
+
+    class MaterializedViewResultRowModule extends SimpleModule
+    {
+      private MaterializedViewResultRowModule()
+      {
+        addSerializer(ResultRow.class, serializer);
+        addDeserializer(ResultRow.class, deserializer);
+      }
+    }
+
+    final ObjectMapper newObjectMapper = objectMapper.copy();
+    newObjectMapper.registerModule(new MaterializedViewResultRowModule());
+    return newObjectMapper;
   }
 }

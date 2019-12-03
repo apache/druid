@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.materializedview;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
@@ -30,12 +33,20 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class MaterializedViewQueryQueryToolChestTest
@@ -89,5 +100,121 @@ public class MaterializedViewQueryQueryToolChestTest
     Assert.assertEquals(postResultMap.size(), 2);
     Assert.assertEquals(postResultMap.get(QueryRunnerTestHelper.ROWS_COUNT.getName()), "metricvalue1");
     Assert.assertEquals(postResultMap.get("dim1"), "dimvalue1");
+  }
+
+  @Test
+  public void testResultSerde() throws Exception
+  {
+    final GroupByQuery query = GroupByQuery
+            .builder()
+            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+            .setDimensions(Collections.singletonList(DefaultDimensionSpec.of("test")))
+            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
+            .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10)))
+            .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+            .build();
+    MaterializedViewQuery materializedViewQuery = new MaterializedViewQuery(query, null);
+
+    QueryToolChest materializedViewQueryQueryToolChest =
+            new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
+                    ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+                            .put(
+                                    GroupByQuery.class,
+                                    new GroupByQueryQueryToolChest(null,
+                                            QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+                                    )
+                            )
+                            .build()
+            ));
+
+
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper arraysObjectMapper = materializedViewQueryQueryToolChest.decorateObjectMapper(
+            objectMapper,
+            materializedViewQuery.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+    );
+    final ObjectMapper mapsObjectMapper = materializedViewQueryQueryToolChest.decorateObjectMapper(
+            objectMapper,
+            materializedViewQuery.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+    );
+
+    final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10};
+    final ResultRow resultRow = ResultRow.of(rowObjects);
+
+    Assert.assertEquals(
+            resultRow,
+            arraysObjectMapper.readValue(
+                    StringUtils.format("[%s, \"foo\", 100, 10]", DateTimes.of("2000").getMillis()),
+                    ResultRow.class
+            )
+    );
+
+    Assert.assertEquals(
+            resultRow,
+            arraysObjectMapper.readValue(
+                    StringUtils.format(
+                            "{\"version\":\"v1\","
+                                    + "\"timestamp\":\"%s\","
+                                    + "\"event\":"
+                                    + "  {\"test\":\"foo\", \"rows\":100, \"post\":10}"
+                                    + "}",
+                            DateTimes.of("2000")
+                    ),
+                    ResultRow.class
+            )
+    );
+
+    Assert.assertArrayEquals(
+            rowObjects,
+            objectMapper.readValue(
+                    arraysObjectMapper.writeValueAsBytes(resultRow),
+                    Object[].class
+            )
+    );
+
+    Assert.assertEquals(
+            resultRow.toMapBasedRow(query),
+            objectMapper.readValue(
+                    mapsObjectMapper.writeValueAsBytes(resultRow),
+                    Row.class
+            )
+    );
+
+    Assert.assertEquals(
+            "arrays read arrays",
+            resultRow,
+            arraysObjectMapper.readValue(
+                    arraysObjectMapper.writeValueAsBytes(resultRow),
+                    ResultRow.class
+            )
+    );
+
+    Assert.assertEquals(
+            "arrays read maps",
+            resultRow,
+            arraysObjectMapper.readValue(
+                    mapsObjectMapper.writeValueAsBytes(resultRow),
+                    ResultRow.class
+            )
+    );
+
+    Assert.assertEquals(
+            "maps read arrays",
+            resultRow,
+            mapsObjectMapper.readValue(
+                    arraysObjectMapper.writeValueAsBytes(resultRow),
+                    ResultRow.class
+            )
+    );
+
+    Assert.assertEquals(
+            "maps read maps",
+            resultRow,
+            mapsObjectMapper.readValue(
+                    mapsObjectMapper.writeValueAsBytes(resultRow),
+                    ResultRow.class
+            )
+    );
   }
 }
