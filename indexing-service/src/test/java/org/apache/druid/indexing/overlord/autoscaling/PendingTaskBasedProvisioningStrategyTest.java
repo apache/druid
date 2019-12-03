@@ -35,7 +35,6 @@ import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -56,12 +55,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 public class PendingTaskBasedProvisioningStrategyTest
 {
@@ -624,7 +623,11 @@ public class PendingTaskBasedProvisioningStrategyTest
         int capacity
     )
     {
-      super(new Worker(scheme, host, ip, capacity, version, WorkerConfig.DEFAULT_CATEGORY), null, new DefaultObjectMapper());
+      super(
+          new Worker(scheme, host, ip, capacity, version, WorkerConfig.DEFAULT_CATEGORY),
+          null,
+          new DefaultObjectMapper()
+      );
 
       this.testTask = testTask;
     }

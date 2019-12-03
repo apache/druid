@@ -142,7 +142,9 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     public synchronized boolean doProvision()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
+      log.debug("Pending tasks: %d %s", pendingTasks.size(), pendingTasks);
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
+      log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
       final CategoriedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategoriedWorkerBehaviorConfig(
           workerConfigRef,
