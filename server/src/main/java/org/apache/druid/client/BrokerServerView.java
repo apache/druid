@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -80,7 +79,6 @@ public class BrokerServerView implements TimelineServerView
   private final HttpClient httpClient;
   private final FilteredServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
-  private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
 
@@ -94,7 +92,6 @@ public class BrokerServerView implements TimelineServerView
       final @EscalatedClient HttpClient httpClient,
       final FilteredServerInventoryView baseView,
       final TierSelectorStrategy tierSelectorStrategy,
-      final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
@@ -104,7 +101,6 @@ public class BrokerServerView implements TimelineServerView
     this.httpClient = httpClient;
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
-    this.emitter = emitter;
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.clients = new ConcurrentHashMap<>();
     this.selectors = new HashMap<>();
@@ -202,8 +198,7 @@ public class BrokerServerView implements TimelineServerView
         smileMapper,
         httpClient,
         server.getScheme(),
-        server.getHost(),
-        emitter
+        server.getHost()
     );
   }
 

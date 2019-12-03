@@ -44,7 +44,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -347,7 +346,6 @@ public class BrokerServerViewTest extends CuratorTestBase
         EasyMock.createMock(HttpClient.class),
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
-        new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig()
     );
 

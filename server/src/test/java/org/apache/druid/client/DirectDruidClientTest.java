@@ -44,7 +44,6 @@ import org.apache.druid.query.ReflectionQueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
@@ -102,8 +101,7 @@ public class DirectDruidClientTest
         new DefaultObjectMapper(),
         httpClient,
         "http",
-        hostName,
-        new NoopServiceEmitter()
+        hostName
     );
     queryableDruidServer = new QueryableDruidServer(
         new DruidServer(
@@ -167,8 +165,7 @@ public class DirectDruidClientTest
         new DefaultObjectMapper(),
         httpClient,
         "http",
-        "foo2",
-        new NoopServiceEmitter()
+        "foo2"
     );
 
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(

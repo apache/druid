@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -79,7 +78,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final HttpClient httpClient;
   private final String scheme;
   private final String host;
-  private final ServiceEmitter emitter;
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
@@ -106,8 +104,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       ObjectMapper objectMapper,
       HttpClient httpClient,
       String scheme,
-      String host,
-      ServiceEmitter emitter
+      String host
   )
   {
     this.warehouse = warehouse;
@@ -116,7 +113,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.httpClient = httpClient;
     this.scheme = scheme;
     this.host = host;
-    this.emitter = emitter;
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
