@@ -2022,6 +2022,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,
+    min: 1,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: (
       <>
