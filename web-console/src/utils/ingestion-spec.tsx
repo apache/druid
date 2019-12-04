@@ -210,7 +210,7 @@ export interface DataSchema {
 
 export interface InputFormat {
   type: string;
-  hasHeaderRow?: boolean;
+  findColumnsFromHeader?: boolean;
   skipHeaderRows?: number;
   columns?: string[];
   listDelimiter?: string;
@@ -276,6 +276,7 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
   {
     name: 'type',
+    label: 'Input format',
     type: 'string',
     suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc'],
     info: (
@@ -306,9 +307,9 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     defined: (p: InputFormat) => p.type === 'javascript',
   },
   {
-    name: 'hasHeaderRow',
+    name: 'findColumnsFromHeader',
     type: 'boolean',
-    defaultValue: false,
+    required: true,
     defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
   },
   {
@@ -329,21 +330,21 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'columns',
     type: 'string-array',
     required: (p: InputFormat) =>
-      ((p.type === 'csv' || p.type === 'tsv') && !p.hasHeaderRow) || p.type === 'regex',
+      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
     defined: (p: InputFormat) =>
-      ((p.type === 'csv' || p.type === 'tsv') && !p.hasHeaderRow) || p.type === 'regex',
+      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
   },
-  {
-    name: 'delimiter',
-    type: 'string',
-    defaultValue: '\t',
-    defined: (p: InputFormat) => p.type === 'tsv',
-    info: <>A custom delimiter for data values.</>,
-  },
+  // {
+  //   name: 'delimiter',
+  //   type: 'string',
+  //   defaultValue: '\t',
+  //   defined: (p: InputFormat) => p.type === 'tsv',
+  //   info: <>A custom delimiter for data values.</>,
+  // },
   {
     name: 'listDelimiter',
     type: 'string',
-    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
+    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv' || p.type === 'regex',
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
@@ -2426,7 +2427,7 @@ function guessInputFormat(sampleData: string[]): InputFormat | undefined {
   return inputFormatFromType('regex');
 }
 
-function inputFormatFromType(type: string, hasHeaderRow?: boolean): InputFormat {
+function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): InputFormat {
   const inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
@@ -2434,8 +2435,8 @@ function inputFormatFromType(type: string, hasHeaderRow?: boolean): InputFormat 
     inputFormat.columns = ['column1'];
   }
 
-  if (typeof hasHeaderRow === 'boolean') {
-    inputFormat.hasHeaderRow = hasHeaderRow;
+  if (typeof findColumnsFromHeader === 'boolean') {
+    inputFormat.findColumnsFromHeader = findColumnsFromHeader;
   }
 
   return inputFormat;

@@ -564,7 +564,7 @@ export async function sampleForExampleManifests(
       ioConfig: {
         type: 'index_parallel',
         inputSource: { type: 'http', uris: [exampleManifestUrl] },
-        inputFormat: { type: 'tsv', hasHeaderRow: true },
+        inputFormat: { type: 'tsv', findColumnsFromHeader: true },
       },
       dataSchema: {
         dataSource: 'sample',
