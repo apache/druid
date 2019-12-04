@@ -890,3 +890,31 @@ This Firehose can be used to combine and merge data from a list of different Fir
 |--------|-----------|---------|
 |type|This should be "combining"|yes|
 |delegates|List of Firehoses to combine data from|yes|
+
+
+## Input Sources
+
+### DruidInputSource
+
+This InputSource can be used to read data from existing Druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
+This InputSource is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
+This InputSource has a fixed InputFormat for reading from Druid segments; no InputFormat needs to be specified in the ingestion spec when using this InputSource.
+
+A sample DruidInputSource spec is shown below:
+
+```json
+{
+    "type": "druid",
+    "dataSource": "wikipedia",
+    "interval": "2013-01-01/2013-01-02"
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "druid".|yes|
+|dataSource|A String defining the data source to fetch rows from, very similar to a table in a relational database|yes|
+|interval|A String representing the ISO-8601 interval. This defines the time range to fetch the data over.|yes|
+|dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
+|metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
+|filter| See [Filters](../querying/filters.md)|no|
