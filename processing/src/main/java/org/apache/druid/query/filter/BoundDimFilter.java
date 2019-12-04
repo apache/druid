@@ -33,18 +33,19 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.nio.ByteBuffer;
-import java.util.Objects;
-import java.util.Set;
-import javax.annotation.Nullable;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.filter.BoundFilter;
+
+import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.ByteBuffer;
+import java.util.Objects;
+import java.util.Set;
 
 public class BoundDimFilter implements DimFilter
 {
@@ -365,14 +366,16 @@ public class BoundDimFilter implements DimFilter
       if (lowerLong == null) {
         BigDecimal lowerBigDecimal = getBigDecimalLowerBoundFromFloatString(lower);
         if (lowerBigDecimal == null) {
-          // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
+          // Unparseable values fall before all actual numbers, so all numbers
+          // will match the lower bound.
           hasLowerLongBound = false;
           lowerLongBound = 0L;
         } else {
           try {
             lowerLongBound = lowerBigDecimal.longValueExact();
             hasLowerLongBound = true;
-          } catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+          } 
+          catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
             hasLowerLongBound = false;
             lowerLongBound = 0L;
             if (lowerBigDecimal.compareTo(BigDecimal.ZERO) > 0) {
@@ -395,7 +398,8 @@ public class BoundDimFilter implements DimFilter
       if (upperLong == null) {
         BigDecimal upperBigDecimal = getBigDecimalUpperBoundFromFloatString(upper);
         if (upperBigDecimal == null) {
-          // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
+          // Unparseable values fall before all actual numbers, so no numbers
+          // can match the upper bound.
           matchesNothing = true;
           hasUpperLongBound = false;
           upperLongBound = 0L;
@@ -403,7 +407,9 @@ public class BoundDimFilter implements DimFilter
           try {
             upperLongBound = upperBigDecimal.longValueExact();
             hasUpperLongBound = true;
-          } catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+          }
+          catch (ArithmeticException ae) { // the BigDecimal can't be
+                                           // contained in a long
             hasUpperLongBound = false;
             upperLongBound = 0L;
             if (upperBigDecimal.compareTo(BigDecimal.ZERO) < 0) {
@@ -446,7 +452,8 @@ public class BoundDimFilter implements DimFilter
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } catch (NumberFormatException nfe) {
+    } 
+    catch (NumberFormatException nfe) {
       return null;
     }
 
@@ -463,7 +470,8 @@ public class BoundDimFilter implements DimFilter
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } catch (NumberFormatException nfe) {
+    } 
+    catch (NumberFormatException nfe) {
       return null;
     }
 
@@ -485,7 +493,8 @@ public class BoundDimFilter implements DimFilter
     if (hasLowerBound()) {
       final Float lowerFloat = Floats.tryParse(lower);
       if (lowerFloat == null) {
-        // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
+        // Unparseable values fall before all actual numbers, so all numbers
+        // will match the lower bound.
         hasLowerFloatBound = false;
         lowerFloatBound = 0L;
       } else {
@@ -547,7 +556,8 @@ public class BoundDimFilter implements DimFilter
     if (hasLowerBound()) {
       final Double lowerDouble = Doubles.tryParse(lower);
       if (lowerDouble == null) {
-        // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
+        // Unparseable values fall before all actual numbers, so all numbers
+        // will match the lower bound.
         hasLowerBound = false;
         lowerDoubleBound = 0L;
       } else {
@@ -562,7 +572,8 @@ public class BoundDimFilter implements DimFilter
     if (hasUpperBound()) {
       Double upperDouble = Doubles.tryParse(upper);
       if (upperDouble == null) {
-        // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
+        // Unparseable values fall before all actual numbers, so no numbers can
+        // match the upper bound.
         matchesNothing = true;
         hasUpperBound = false;
         upperDoubleBound = 0L;
