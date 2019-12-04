@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.16.1-incubating</version>
+        <version>0.16.1-incubating-SNAPSHOT</version>
     </parent>
 
     <properties>
