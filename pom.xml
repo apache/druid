@@ -135,6 +135,7 @@
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-bloom-filter</module>
         <module>extensions-core/druid-kerberos</module>
+        <module>extensions-core/druid-pac4j</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
