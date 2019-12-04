@@ -234,6 +234,25 @@
                                     </arguments>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>mysql-tarball</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>tar</executable>
+                                    <arguments>
+                                        <argument>-C</argument>
+                                        <argument>${project.build.directory}/extensions</argument>
+                                        <argument>-czvf</argument>
+                                        <argument>
+                                            ${project.build.directory}/mysql-metadata-storage-${project.parent.version}.tar.gz
+                                        </argument>
+                                        <argument>mysql-metadata-storage</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
