@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -58,9 +60,11 @@ public class SelectorDimFilter implements DimFilter
 
   private final Object initLock = new Object();
 
-  private DruidLongPredicate longPredicate;
-  private DruidFloatPredicate floatPredicate;
-  private DruidDoublePredicate druidDoublePredicate;
+  private volatile DruidLongPredicate longPredicate;
+  private volatile DruidFloatPredicate floatPredicate;
+  private volatile DruidDoublePredicate druidDoublePredicate;
+  
+  
 
   @JsonCreator
   public SelectorDimFilter(
@@ -71,7 +75,9 @@ public class SelectorDimFilter implements DimFilter
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
-
+    this.longPredicate = makeLongPredicateSupplier().get();
+    this.floatPredicate = makeFloatPredicateSupplier().get();
+    this.druidDoublePredicate = makeDoublePredicateSupplier().get();
     this.dimension = dimension;
     this.value = NullHandling.emptyToNullIfNeeded(value);
     this.extractionFn = extractionFn;
@@ -121,21 +127,18 @@ public class SelectorDimFilter implements DimFilter
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          initLongPredicate();
           return longPredicate;
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          initFloatPredicate();
           return floatPredicate;
         }
 
         @Override
         public DruidDoublePredicate makeDoublePredicate()
         {
-          initDoublePredicate();
           return druidDoublePredicate;
         }
       };
@@ -227,76 +230,67 @@ public class SelectorDimFilter implements DimFilter
   }
 
 
-  private void initLongPredicate()
+  private DruidLongPredicate createLongPredicate()
   {
-    if (longPredicate != null) {
-      return;
+    if (value == null) {
+      return DruidLongPredicate.MATCH_NULL_ONLY;
     }
-    synchronized (initLock) {
-      if (longPredicate != null) {
-        return;
-      }
-      if (value == null) {
-        longPredicate = DruidLongPredicate.MATCH_NULL_ONLY;
-        return;
-      }
-      final Long valueAsLong = GuavaUtils.tryParseLong(value);
-      if (valueAsLong == null) {
-        longPredicate = DruidLongPredicate.ALWAYS_FALSE;
-      } else {
-        // store the primitive, so we don't unbox for every comparison
-        final long unboxedLong = valueAsLong.longValue();
-        longPredicate = input -> input == unboxedLong;
-      }
+    final Long valueAsLong = GuavaUtils.tryParseLong(value);
+    if (valueAsLong == null) {
+      return DruidLongPredicate.ALWAYS_FALSE;
+    } else {
+      // store the primitive, so we don't unbox for every comparison
+      final long unboxedLong = valueAsLong.longValue();
+      return input -> input == unboxedLong;
+    }
+  }
+  
+  private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
+  {
+    Supplier<DruidLongPredicate> longPredicate = () -> createLongPredicate();
+    return Suppliers.memoize(longPredicate);
+  }
+
+  private DruidFloatPredicate createFloatPredicate()
+  {
+    if (value == null) {
+      return DruidFloatPredicate.MATCH_NULL_ONLY;
+    }
+    final Float valueAsFloat = Floats.tryParse(value);
+
+    if (valueAsFloat == null) {
+      return DruidFloatPredicate.ALWAYS_FALSE;
+    } else {
+      final int floatBits = Float.floatToIntBits(valueAsFloat);
+      return input -> Float.floatToIntBits(input) == floatBits;
     }
   }
 
-  private void initFloatPredicate()
+  private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
   {
-    if (floatPredicate != null) {
-      return;
+    Supplier<DruidFloatPredicate> floatPredicate = () -> createFloatPredicate();
+    return Suppliers.memoize(floatPredicate);
+  }
+  
+  
+  private DruidDoublePredicate createDoublePredicate()
+  {
+    if (value == null) {
+      return DruidDoublePredicate.MATCH_NULL_ONLY;
     }
-    synchronized (initLock) {
-      if (floatPredicate != null) {
-        return;
-      }
+    final Double aDouble = Doubles.tryParse(value);
 
-      if (value == null) {
-        floatPredicate = DruidFloatPredicate.MATCH_NULL_ONLY;
-        return;
-      }
-      final Float valueAsFloat = Floats.tryParse(value);
-
-      if (valueAsFloat == null) {
-        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
-      } else {
-        final int floatBits = Float.floatToIntBits(valueAsFloat);
-        floatPredicate = input -> Float.floatToIntBits(input) == floatBits;
-      }
+    if (aDouble == null) {
+      return DruidDoublePredicate.ALWAYS_FALSE;
+    } else {
+      final long bits = Double.doubleToLongBits(aDouble);
+      return input -> Double.doubleToLongBits(input) == bits;
     }
   }
-
-  private void initDoublePredicate()
+  
+  private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
   {
-    if (druidDoublePredicate != null) {
-      return;
-    }
-    synchronized (initLock) {
-      if (druidDoublePredicate != null) {
-        return;
-      }
-      if (value == null) {
-        druidDoublePredicate = DruidDoublePredicate.MATCH_NULL_ONLY;
-        return;
-      }
-      final Double aDouble = Doubles.tryParse(value);
-
-      if (aDouble == null) {
-        druidDoublePredicate = DruidDoublePredicate.ALWAYS_FALSE;
-      } else {
-        final long bits = Double.doubleToLongBits(aDouble);
-        druidDoublePredicate = input -> Double.doubleToLongBits(input) == bits;
-      }
-    }
+    Supplier<DruidDoublePredicate> doublePredicate = () -> createDoublePredicate();
+    return Suppliers.memoize(doublePredicate);
   }
 }
