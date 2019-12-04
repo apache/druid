@@ -37,7 +37,7 @@ To use this Apache Druid (incubating) extension, make sure to [include](../../de
 |`druid.storage.basePath`||Rackspace Cloud Files base path to use in the container.|Must be set.|
 |`druid.storage.operationMaxRetries`||Number of tries before cancel a Rackspace operation.|10|
 |`druid.cloudfiles.userName`||Rackspace Cloud username|Must be set.|
-|`druid.cloudfiles.apiKey`||Rackspace Cloud api key.|Must be set.|
+|`druid.cloudfiles.apiKey`||Rackspace Cloud API key.|Must be set.|
 |`druid.cloudfiles.provider`|rackspace-cloudfiles-us,rackspace-cloudfiles-uk|Name of the provider depending on the region.|Must be set.|
 |`druid.cloudfiles.useServiceNet`|true,false|Whether to use the internal service net.|true|
 
@@ -51,7 +51,7 @@ This firehose ingests events, similar to the StaticAzureBlobStoreFirehose, but f
 
 Data is newline delimited, with one JSON object per line and parsed as per the `InputRowParser` configuration.
 
-The storage account is shared with the one used for Racksapce's Cloud Files deep storage functionality, but blobs can be in a different region and container.
+The storage account is shared with the one used for Rackspace's Cloud Files deep storage functionality, but blobs can be in a different region and container.
 
 As with the Azure blobstore, it is assumed to be gzipped if the extension ends in .gz
 

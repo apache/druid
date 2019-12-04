@@ -42,6 +42,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -66,6 +67,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * This class manages the list of tasks assigned to this worker.
@@ -129,7 +131,7 @@ public abstract class WorkerTaskManager
 
     synchronized (lock) {
       try {
-        log.info("Starting...");
+        log.debug("Starting...");
         cleanupAndMakeTmpTaskDir();
         registerLocationListener();
         restoreRestorableTasks();
@@ -137,7 +139,7 @@ public abstract class WorkerTaskManager
         initCompletedTasks();
         scheduleCompletedTasksCleanup();
         lifecycleLock.started();
-        log.info("Started.");
+        log.debug("Started.");
       }
       catch (Exception e) {
         log.makeAlert(e, "Exception starting WorkerTaskManager.").emit();
@@ -163,7 +165,7 @@ public abstract class WorkerTaskManager
         taskRunner.unregisterListener("WorkerTaskManager");
         exec.shutdownNow();
         taskRunner.stop();
-        log.info("Stopped WorkerTaskManager.");
+        log.debug("Stopped WorkerTaskManager.");
       }
       catch (Exception e) {
         log.makeAlert(e, "Exception stopping WorkerTaskManager")
@@ -263,16 +265,18 @@ public abstract class WorkerTaskManager
       if (assignedTasks.containsKey(task.getId())
           || runningTasks.containsKey(task.getId())
           || completedTasks.containsKey(task.getId())) {
-        log.info("Assign task[%s] request ignored because it exists already.", task.getId());
+        log.warn("Request to assign task[%s] ignored because it exists already.", task.getId());
         return;
       }
 
       try {
-        FileUtils.writeAtomically(new File(getAssignedTaskDir(), task.getId()), getTmpTaskDir(),
+        FileUtils.writeAtomically(
+            new File(getAssignedTaskDir(), task.getId()),
+            getTmpTaskDir(),
             os -> {
-            jsonMapper.writeValue(os, task);
-            return null;
-          }
+              jsonMapper.writeValue(os, task);
+              return null;
+            }
         );
         assignedTasks.put(task.getId(), task);
       }
@@ -326,7 +330,7 @@ public abstract class WorkerTaskManager
   {
     File assignedTaskDir = getAssignedTaskDir();
 
-    log.info("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
+    log.debug("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
 
     assignedTaskDir.mkdirs();
 
@@ -340,14 +344,22 @@ public abstract class WorkerTaskManager
         Task task = jsonMapper.readValue(taskFile, Task.class);
         if (taskId.equals(task.getId())) {
           assignedTasks.put(taskId, task);
-          log.info("Found assigned task[%s].", taskId);
         } else {
           throw new ISE("WTF! Corrupted assigned task on disk[%s].", taskFile.getAbsoluteFile());
         }
       }
       catch (IOException ex) {
-        log.error(ex, "Failed to read assigned task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
+        log.noStackTrace()
+           .error(ex, "Failed to read assigned task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
       }
+    }
+
+    if (!assignedTasks.isEmpty()) {
+      log.info(
+          "Found %,d running tasks from previous run: %s",
+          assignedTasks.size(),
+          assignedTasks.values().stream().map(Task::getId).collect(Collectors.joining(", "))
+      );
     }
 
     for (Task task : assignedTasks.values()) {
@@ -426,11 +438,12 @@ public abstract class WorkerTaskManager
       completedTasks.put(taskId, taskAnnouncement);
 
       try {
-        FileUtils.writeAtomically(new File(getCompletedTaskDir(), taskId), getTmpTaskDir(),
+        FileUtils.writeAtomically(
+            new File(getCompletedTaskDir(), taskId), getTmpTaskDir(),
             os -> {
-            jsonMapper.writeValue(os, taskAnnouncement);
-            return null;
-          }
+              jsonMapper.writeValue(os, taskAnnouncement);
+              return null;
+            }
         );
       }
       catch (IOException ex) {
@@ -443,7 +456,7 @@ public abstract class WorkerTaskManager
   private void initCompletedTasks()
   {
     File completedTaskDir = getCompletedTaskDir();
-    log.info("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
+    log.debug("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
 
     completedTaskDir.mkdirs();
 
@@ -457,7 +470,6 @@ public abstract class WorkerTaskManager
         TaskAnnouncement taskAnnouncement = jsonMapper.readValue(taskFile, TaskAnnouncement.class);
         if (taskId.equals(taskAnnouncement.getTaskId())) {
           completedTasks.put(taskId, taskAnnouncement);
-          log.info("Found completed task[%s] with status[%s].", taskId, taskAnnouncement.getStatus());
         } else {
           throw new ISE("WTF! Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
         }
@@ -465,6 +477,17 @@ public abstract class WorkerTaskManager
       catch (IOException ex) {
         log.error(ex, "Failed to read completed task from disk at [%s]. Ignored.", taskFile.getAbsoluteFile());
       }
+    }
+
+    if (!completedTasks.isEmpty()) {
+      log.info(
+          "Found %,d complete tasks from previous run: %s",
+          completedTasks.size(),
+          completedTasks.values().stream().map(
+              taskAnnouncement ->
+                  StringUtils.format("%s (%s)", taskAnnouncement.getTaskId(), taskAnnouncement.getStatus())
+          ).collect(Collectors.joining(", "))
+      );
     }
   }
 
@@ -526,7 +549,7 @@ public abstract class WorkerTaskManager
               TaskStatus status = taskStatusesFromOverlord.get(taskId);
               if (status == null || status.isComplete()) {
 
-                log.info(
+                log.debug(
                     "Deleting completed task[%s] information, overlord task status[%s].",
                     taskId,
                     status == null ? "unknown" : status.getStatusCode()
@@ -696,7 +719,7 @@ public abstract class WorkerTaskManager
         changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
         taskAnnouncementChanged(latest);
         log.info(
-            "Job's finished. Completed [%s] with status [%s]",
+            "Task [%s] completed with status [%s].",
             task.getId(),
             status.getStatusCode()
         );

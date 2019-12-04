@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.epinephelinae.GrouperBufferComparatorUtils;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
@@ -89,5 +91,15 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     // rows from a double column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
+  {
+    return GrouperBufferComparatorUtils.makeBufferComparatorForDouble(
+        keyBufferPosition,
+        true,
+        stringComparator
+    );
   }
 }

@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.yahoo.sketches.hll.HllSketch;
-import com.yahoo.sketches.hll.TgtHllType;
-import com.yahoo.sketches.hll.Union;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.TgtHllType;
+import org.apache.datasketches.hll.Union;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
@@ -40,6 +40,7 @@ import java.util.Objects;
  */
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
+  public static final boolean DEFAULT_ROUND = false;
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 

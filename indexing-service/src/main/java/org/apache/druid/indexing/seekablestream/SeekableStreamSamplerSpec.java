@@ -20,188 +20,195 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.ByteBufferInputRowParser;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.indexing.overlord.sampler.FirehoseSampler;
+import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
-import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse;
 import org.apache.druid.indexing.overlord.sampler.SamplerSpec;
-import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.stream.Stream;
 
 public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetType> implements SamplerSpec
 {
-  private static final int POLL_TIMEOUT_MS = 100;
+  static final long POLL_TIMEOUT_MS = 100;
 
+  @Nullable
   private final DataSchema dataSchema;
-  private final FirehoseSampler firehoseSampler;
+  private final InputSourceSampler inputSourceSampler;
 
   protected final SeekableStreamSupervisorIOConfig ioConfig;
+  @Nullable
   protected final SeekableStreamSupervisorTuningConfig tuningConfig;
   protected final SamplerConfig samplerConfig;
 
   public SeekableStreamSamplerSpec(
       final SeekableStreamSupervisorSpec ingestionSpec,
-      final SamplerConfig samplerConfig,
-      final FirehoseSampler firehoseSampler
+      @Nullable final SamplerConfig samplerConfig,
+      final InputSourceSampler inputSourceSampler
   )
   {
     this.dataSchema = Preconditions.checkNotNull(ingestionSpec, "[spec] is required").getDataSchema();
     this.ioConfig = Preconditions.checkNotNull(ingestionSpec.getIoConfig(), "[spec.ioConfig] is required");
     this.tuningConfig = ingestionSpec.getTuningConfig();
-    this.samplerConfig = samplerConfig;
-    this.firehoseSampler = firehoseSampler;
+    this.samplerConfig = samplerConfig == null ? SamplerConfig.empty() : samplerConfig;
+    this.inputSourceSampler = inputSourceSampler;
   }
 
   @Override
   public SamplerResponse sample()
   {
-    return firehoseSampler.sample(
-        new FirehoseFactory()
-        {
-          @Override
-          public Firehose connect(InputRowParser parser, @Nullable File temporaryDirectory)
-          {
-            return getFirehose(parser);
-          }
-        },
-        dataSchema,
-        samplerConfig
-    );
+    final InputSource inputSource;
+    final InputFormat inputFormat;
+    if (dataSchema.getParser() != null) {
+      inputSource = new FirehoseFactoryToInputSourceAdaptor(
+          new SeekableStreamSamplerFirehoseFactory(),
+          dataSchema.getParser()
+      );
+      inputFormat = null;
+    } else {
+      inputSource = new RecordSupplierInputSource<>(
+          ioConfig.getStream(),
+          createRecordSupplier(),
+          ioConfig.isUseEarliestSequenceNumber()
+      );
+      inputFormat = Preconditions.checkNotNull(
+          ioConfig.getInputFormat(null),
+          "[spec.ioConfig.inputFormat] is required"
+      );
+    }
+
+    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
 
-  protected abstract Firehose getFirehose(InputRowParser parser);
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> createRecordSupplier();
 
-  protected abstract class SeekableStreamSamplerFirehose implements Firehose
+  private class SeekableStreamSamplerFirehoseFactory implements FiniteFirehoseFactory<ByteBufferInputRowParser, Object>
+  {
+    @Override
+    public Firehose connect(ByteBufferInputRowParser parser, @Nullable File temporaryDirectory)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Firehose connectForSampler(ByteBufferInputRowParser parser, @Nullable File temporaryDirectory)
+    {
+      return new SeekableStreamSamplerFirehose(parser);
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public Stream<InputSplit<Object>> getSplits(@Nullable SplitHintSpec splitHintSpec)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FiniteFirehoseFactory withSplit(InputSplit split)
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  private class SeekableStreamSamplerFirehose implements Firehose
   {
     private final InputRowParser parser;
-    private final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
-
-    private Iterator<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> recordIterator;
-    private Iterator<byte[]> recordDataIterator;
-
-    private volatile boolean closed = false;
+    private final CloseableIterator<InputEntity> entityIterator;
 
     protected SeekableStreamSamplerFirehose(InputRowParser parser)
     {
       this.parser = parser;
-
       if (parser instanceof StringInputRowParser) {
         ((StringInputRowParser) parser).startFileFromBeginning();
       }
 
-      this.recordSupplier = getRecordSupplier();
-
-      try {
-        assignAndSeek();
-      }
-      catch (InterruptedException e) {
-        throw new SamplerException(e, "Exception while seeking to partitions");
-      }
+      RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> inputSource = new RecordSupplierInputSource<>(
+          ioConfig.getStream(),
+          createRecordSupplier(),
+          ioConfig.isUseEarliestSequenceNumber()
+      );
+      this.entityIterator = inputSource.createEntityIterator();
     }
 
     @Override
     public boolean hasMore()
     {
-      return !closed;
+      return entityIterator.hasNext();
     }
 
-    @Nullable
     @Override
     public InputRow nextRow()
     {
-      InputRowPlusRaw row = nextRowWithRaw();
-      if (row.getParseException() != null) {
-        throw row.getParseException();
-      }
-
-      return row.getInputRow();
+      throw new UnsupportedOperationException();
     }
 
     @Override
-    public InputRowPlusRaw nextRowWithRaw()
+    public InputRowListPlusRawValues nextRowWithRaw()
     {
-      if (recordDataIterator == null || !recordDataIterator.hasNext()) {
-        if (recordIterator == null || !recordIterator.hasNext()) {
-          recordIterator = recordSupplier.poll(POLL_TIMEOUT_MS).iterator();
+      final ByteBuffer bb = ((ByteEntity) entityIterator.next()).getBuffer();
 
-          if (!recordIterator.hasNext()) {
-            return InputRowPlusRaw.of((InputRow) null, null);
-          }
-        }
-
-        recordDataIterator = recordIterator.next().getData().iterator();
-
-        if (!recordDataIterator.hasNext()) {
-          return InputRowPlusRaw.of((InputRow) null, null);
-        }
-      }
-
-      byte[] raw = recordDataIterator.next();
-
+      final Map<String, Object> rawColumns;
       try {
-        List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(raw));
-        return InputRowPlusRaw.of(rows.isEmpty() ? null : rows.get(0), raw);
+        if (parser instanceof StringInputRowParser) {
+          rawColumns = ((StringInputRowParser) parser).buildStringKeyMap(bb);
+        } else {
+          rawColumns = null;
+        }
       }
       catch (ParseException e) {
-        return InputRowPlusRaw.of(raw, e);
+        return InputRowListPlusRawValues.of(null, e);
+      }
+
+      try {
+        final List<InputRow> rows = parser.parseBatch(bb);
+        return InputRowListPlusRawValues.of(rows.isEmpty() ? null : rows, rawColumns);
+      }
+      catch (ParseException e) {
+        return InputRowListPlusRawValues.of(rawColumns, e);
       }
     }
 
     @Override
-    public Runnable commit()
+    public void close() throws IOException
     {
-      return Runnables.getNoopRunnable();
+      entityIterator.close();
     }
-
-    @Override
-    public void close()
-    {
-      if (closed) {
-        return;
-      }
-
-      closed = true;
-      recordSupplier.close();
-    }
-
-    private void assignAndSeek() throws InterruptedException
-    {
-      final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
-          .getPartitionIds(ioConfig.getStream())
-          .stream()
-          .map(x -> StreamPartition.of(ioConfig.getStream(), x))
-          .collect(Collectors.toSet());
-
-      recordSupplier.assign(partitions);
-
-      if (ioConfig.isUseEarliestSequenceNumber()) {
-        recordSupplier.seekToEarliest(partitions);
-      } else {
-        recordSupplier.seekToLatest(partitions);
-      }
-    }
-
-    protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> getRecordSupplier();
   }
 }

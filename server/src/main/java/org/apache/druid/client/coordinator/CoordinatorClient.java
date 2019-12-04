@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
+import java.util.Collection;
 import java.util.List;
 
 public class CoordinatorClient
@@ -126,7 +127,7 @@ public class CoordinatorClient
     }
   }
 
-  public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+  public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
   {
     try {
       StringFullResponseHolder response = druidLeaderClient.go(

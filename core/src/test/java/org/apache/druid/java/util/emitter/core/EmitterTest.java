@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
+import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
@@ -50,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -115,6 +118,7 @@ public class EmitterTest
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(timeInMillis)
+        .setFlushTimeout(TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS))
         .setFlushCount(Integer.MAX_VALUE)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(
@@ -130,6 +134,7 @@ public class EmitterTest
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
+        .setFlushTimeout(TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS))
         .setFlushCount(size)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(
@@ -175,7 +180,7 @@ public class EmitterTest
     return emitter;
   }
 
-  private HttpPostEmitter manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating(String authentication)
+  private HttpPostEmitter manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating(PasswordProvider authentication)
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
@@ -439,7 +444,7 @@ public class EmitterTest
         new UnitEvent("test", 1),
         new UnitEvent("test", 2)
     );
-    emitter = manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating("foo:bar");
+    emitter = manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating(new DefaultPasswordProvider("foo:bar"));
 
     httpClient.setGoHandler(
         new GoHandler()

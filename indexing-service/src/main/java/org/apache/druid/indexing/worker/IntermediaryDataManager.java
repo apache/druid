@@ -205,11 +205,14 @@ public class IntermediaryDataManager
           );
         }
       }
-      LOG.info(
-          "Discovered partitions for [%s] new supervisor tasks under location[%s]",
-          numDiscovered.getValue(),
-          location.getPath()
-      );
+
+      if (numDiscovered.getValue() > 0) {
+        LOG.info(
+            "Discovered partitions for [%s] new supervisor tasks under location[%s]",
+            numDiscovered.getValue(),
+            location.getPath()
+        );
+      }
     }
   }
 
@@ -232,7 +235,9 @@ public class IntermediaryDataManager
       }
     }
 
-    LOG.info("Found [%s] expired supervisor tasks", expiredSupervisorTasks.size());
+    if (!expiredSupervisorTasks.isEmpty()) {
+      LOG.info("Found [%s] expired supervisor tasks", expiredSupervisorTasks.size());
+    }
 
     if (!expiredSupervisorTasks.isEmpty()) {
       final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);

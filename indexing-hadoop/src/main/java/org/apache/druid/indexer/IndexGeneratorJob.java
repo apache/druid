@@ -30,13 +30,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.guava.ThreadRenamingRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.indexer.hadoop.SegmentInputRow;
 import org.apache.druid.indexer.path.DatasourcePathSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -77,6 +77,7 @@ import org.joda.time.Interval;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -117,7 +118,7 @@ public class IndexGeneratorJob implements Jobby
       FileSystem fs = descriptorInfoDir.getFileSystem(conf);
 
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
+        final DataSegment segment = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegment.class);
         publishedSegmentsBuilder.add(segment);
         log.info("Adding segment %s to the list of published segments", segment.getId());
       }
@@ -294,8 +295,8 @@ public class IndexGeneratorJob implements Jobby
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(theBucket.time.getMillis())
-        .withTimestampSpec(config.getSchema().getDataSchema().getParser().getParseSpec().getTimestampSpec())
-        .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+        .withTimestampSpec(config.getSchema().getDataSchema().getTimestampSpec())
+        .withDimensionsSpec(config.getSchema().getDataSchema().getDimensionsSpec())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
@@ -341,11 +342,7 @@ public class IndexGeneratorJob implements Jobby
           aggsForSerializingSegmentInputRow[i] = aggregators[i].getCombiningFactory();
         }
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getDimensionsSpec());
     }
 
     @Override
@@ -431,11 +428,7 @@ public class IndexGeneratorJob implements Jobby
       for (int i = 0; i < aggregators.length; ++i) {
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getDimensionsSpec());
     }
 
     @Override
@@ -631,11 +624,7 @@ public class IndexGeneratorJob implements Jobby
         metricNames.add(aggregators[i].getName());
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getDimensionsSpec());
     }
 
     @Override
@@ -821,7 +810,7 @@ public class IndexGeneratorJob implements Jobby
             metricNames,
             shardSpecForPublishing,
             -1,
-            -1
+            0
         );
 
         final DataSegment segment = JobHelper.serializeOutIndex(

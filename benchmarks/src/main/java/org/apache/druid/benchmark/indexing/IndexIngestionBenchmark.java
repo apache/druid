@@ -22,6 +22,7 @@ package org.apache.druid.benchmark.indexing;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -62,6 +63,10 @@ public class IndexIngestionBenchmark
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;

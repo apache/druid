@@ -22,12 +22,14 @@ package org.apache.druid.segment.realtime.plumber;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Committer;
-import org.apache.druid.data.input.Firehose;
+
+import javax.annotation.Nullable;
 
 public class Committers
 {
   private static final Committer NIL = new Committer()
   {
+    @Nullable
     @Override
     public Object getMetadata()
     {
@@ -40,54 +42,15 @@ public class Committers
       // Do nothing
     }
   };
-
-  public static Supplier<Committer> supplierFromRunnable(final Runnable runnable)
-  {
-    final Committer committer = new Committer()
-    {
-      @Override
-      public Object getMetadata()
-      {
-        return null;
-      }
-
-      @Override
-      public void run()
-      {
-        runnable.run();
-      }
-    };
-    return Suppliers.ofInstance(committer);
-  }
-
-  public static Supplier<Committer> supplierFromFirehose(final Firehose firehose)
-  {
-    return new Supplier<Committer>()
-    {
-      @Override
-      public Committer get()
-      {
-        final Runnable commitRunnable = firehose.commit();
-        return new Committer()
-        {
-          @Override
-          public Object getMetadata()
-          {
-            return null;
-          }
-
-          @Override
-          public void run()
-          {
-            commitRunnable.run();
-          }
-        };
-      }
-    };
-  }
+  private static final Supplier<Committer> NIL_SUPPLIER = Suppliers.ofInstance(NIL);
 
   public static Committer nil()
   {
     return NIL;
+  }
+
+  public static Supplier<Committer> nilSupplier()
+  {
+    return NIL_SUPPLIER;
   }
 }

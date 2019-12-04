@@ -177,4 +177,9 @@ public class StorageLocation
   {
     return maxSizeBytes - currSizeBytes;
   }
+
+  public synchronized long currSizeBytes()
+  {
+    return currSizeBytes;
+  }
 }

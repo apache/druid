@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice;
 
-import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
@@ -69,8 +68,7 @@ public class FirehoseModuleTest
   {
     Class parentClass = FirehoseFactory.class;
     MapperConfig config = objectMapper.getDeserializationConfig();
-    AnnotationIntrospector annotationIntrospector = config.getAnnotationIntrospector();
-    AnnotatedClass ac = AnnotatedClass.constructWithoutSuperTypes(parentClass, annotationIntrospector, config);
+    AnnotatedClass ac = AnnotatedClass.constructWithoutSuperTypes(parentClass, config);
     Collection<NamedType> subtypes = objectMapper.getSubtypeResolver().collectAndResolveSubtypesByClass(config, ac);
     Assert.assertNotNull(subtypes);
     return subtypes.stream()

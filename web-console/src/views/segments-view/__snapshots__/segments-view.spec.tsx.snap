@@ -5,10 +5,10 @@ exports[`segments-view matches snapshot 1`] = `
   <div
     className="segments-view app-view"
   >
-    <ViewControlBar
+    <Memo(ViewControlBar)
       label="Segments"
     >
-      <RefreshButton
+      <Memo(RefreshButton)
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
@@ -29,44 +29,18 @@ exports[`segments-view matches snapshot 1`] = `
           Interval
         </Blueprint3.Button>
       </Blueprint3.ButtonGroup>
-      <Blueprint3.Popover
-        boundary="scrollParent"
-        captureDismiss={false}
-        content={
-          <Blueprint3.Menu>
-            <Blueprint3.MenuItem
-              disabled={true}
-              icon="application"
-              multiline={false}
-              onClick={[Function]}
-              popoverProps={Object {}}
-              shouldDismissPopover={true}
-              text="View SQL query for table"
-            />
-          </Blueprint3.Menu>
-        }
-        defaultIsOpen={false}
-        disabled={false}
-        fill={false}
-        hasBackdrop={false}
-        hoverCloseDelay={300}
-        hoverOpenDelay={150}
-        inheritDarkTheme={true}
-        interactionKind="click"
-        minimal={false}
-        modifiers={Object {}}
-        openOnTargetFocus={true}
-        position="bottom-left"
-        targetTagName="span"
-        transitionDuration={300}
-        usePortal={true}
-        wrapperTagName="span"
-      >
-        <Blueprint3.Button
-          icon="more"
+      <Memo(MoreButton)>
+        <Blueprint3.MenuItem
+          disabled={true}
+          icon="application"
+          multiline={false}
+          onClick={[Function]}
+          popoverProps={Object {}}
+          shouldDismissPopover={true}
+          text="View SQL query for table"
         />
-      </Blueprint3.Popover>
-      <TableColumnSelector
+      </Memo(MoreButton)>
+      <Memo(TableColumnSelector)
         columns={
           Array [
             "Segment ID",
@@ -88,7 +62,7 @@ exports[`segments-view matches snapshot 1`] = `
         onChange={[Function]}
         tableColumnsHidden={Array []}
       />
-    </ViewControlBar>
+    </Memo(ViewControlBar)>
     <ReactTable
       AggregatedComponent={[Function]}
       ExpanderComponent={[Function]}

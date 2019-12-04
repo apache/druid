@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -45,7 +46,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -183,11 +183,7 @@ public class CompressedColumnarIntsSerializerTest
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
-        "CompressedIntsIndexedWriterTest_%d",
-        chunkFactor
-    )).toFile();
-
+    File tmpDirectory = FileUtils.createTempDir(StringUtils.format("CompressedIntsIndexedWriterTest_%d", chunkFactor));
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
     CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(

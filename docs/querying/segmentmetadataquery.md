@@ -87,20 +87,20 @@ Timestamp column will have type `LONG`.
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.
 
-Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+Only columns which are dimensions (i.e., have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
 
-### intervals
+## intervals
 
 If an interval is not specified, the query will use a default interval that spans a configurable period before the end time of the most recent segment.
 
 The length of this default time period is set in the Broker configuration via:
   druid.query.segmentMetadata.defaultHistory
 
-### toInclude
+## toInclude
 
 There are 3 types of toInclude objects.
 
-#### All
+### All
 
 The grammar is as follows:
 
@@ -108,7 +108,7 @@ The grammar is as follows:
 "toInclude": { "type": "all"}
 ```
 
-#### None
+### None
 
 The grammar is as follows:
 
@@ -116,7 +116,7 @@ The grammar is as follows:
 "toInclude": { "type": "none"}
 ```
 
-#### List
+### List
 
 The grammar is as follows:
 
@@ -124,7 +124,7 @@ The grammar is as follows:
 "toInclude": { "type": "list", "columns": [<string list of column names>]}
 ```
 
-### analysisTypes
+## analysisTypes
 
 This is a list of properties that determines the amount of information returned about the columns, i.e. analyses to be performed on the columns.
 
@@ -135,32 +135,32 @@ The default analysis types can be set in the Broker configuration via:
 
 Types of column analyses are described below:
 
-#### cardinality
+### cardinality
 
 * `cardinality` in the result will return the estimated floor of cardinality for each column. Only relevant for
 dimension columns.
 
-#### minmax
+### minmax
 
 * Estimated min/max values for each column. Only relevant for dimension columns.
 
-#### size
+### size
 
 * `size` in the result will contain the estimated total segment byte size as if the data were stored in text format
 
-#### interval
+### interval
 
 * `intervals` in the result will contain the list of intervals associated with the queried segments.
 
-#### timestampSpec
+### timestampSpec
 
 * `timestampSpec` in the result will contain timestampSpec of data stored in segments. this can be null if timestampSpec of segments was unknown or unmergeable (if merging is enabled).
 
-#### queryGranularity
+### queryGranularity
 
 * `queryGranularity` in the result will contain query granularity of data stored in segments. this can be null if query granularity of segments was unknown or unmergeable (if merging is enabled).
 
-#### aggregators
+### aggregators
 
 * `aggregators` in the result will contain the list of aggregators usable for querying metric columns. This may be
 null if the aggregators are unknown or unmergeable (if merging is enabled).
@@ -169,12 +169,12 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 
 * The form of the result is a map of column name to aggregator.
 
-#### rollup
+### rollup
 
 * `rollup` in the result is true/false/null.
 * When merging is enabled, if some are rollup, others are not, result is null.
 
-### lenientAggregatorMerge
+## lenientAggregatorMerge
 
 Conflicts between aggregator metadata across segments can occur if some segments have unknown aggregators, or if
 two segments use incompatible aggregators for the same column (e.g. longSum changed to doubleSum).
@@ -184,5 +184,5 @@ with unknown aggregators, or any conflicts of any kind, the merged aggregators l
 merging, segments with unknown aggregators will be ignored, and conflicts between aggregators will only null out
 the aggregator for that particular column.
 
-In particular, with lenient merging, it is possible for an invidiual column's aggregator to be `null`. This will not
+In particular, with lenient merging, it is possible for an individual column's aggregator to be `null`. This will not
 occur with strict merging.

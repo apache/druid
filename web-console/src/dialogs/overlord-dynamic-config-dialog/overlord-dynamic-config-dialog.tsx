@@ -24,6 +24,7 @@ import React from 'react';
 import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
+import { DRUID_DOCS_VERSION } from '../../variables';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
 import './overlord-dynamic-config-dialog.scss';
@@ -34,7 +35,6 @@ export interface OverlordDynamicConfigDialogProps {
 
 export interface OverlordDynamicConfigDialogState {
   dynamicConfig?: Record<string, any>;
-  allJSONValid: boolean;
   historyRecords: any[];
 }
 
@@ -47,7 +47,6 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
   constructor(props: OverlordDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      allJSONValid: true,
       historyRecords: [],
     };
 
@@ -115,7 +114,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
 
   render(): JSX.Element {
     const { onClose } = this.props;
-    const { dynamicConfig, allJSONValid, historyRecords } = this.state;
+    const { dynamicConfig, historyRecords } = this.state;
 
     return (
       <SnitchDialog
@@ -123,13 +122,14 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
         onSave={this.saveConfig}
         onClose={onClose}
         title="Overlord dynamic config"
-        saveDisabled={!allJSONValid}
         historyRecords={historyRecords}
       >
         <p>
           Edit the overlord dynamic configuration on the fly. For more information please refer to
           the{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#overlord-dynamic-configuration">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/configuration/index.html#overlord-dynamic-configuration`}
+          >
             documentation
           </ExternalLink>
           .
@@ -147,7 +147,6 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
           ]}
           model={dynamicConfig}
           onChange={m => this.setState({ dynamicConfig: m })}
-          updateJSONValidity={e => this.setState({ allJSONValid: e })}
         />
       </SnitchDialog>
     );

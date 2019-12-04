@@ -18,20 +18,58 @@
 
 const replace = require('replace-in-file');
 
-if (process.argv.length !== 3) {
-  console.log('Usage: node fix-path.js 0.16.0');
+if (process.argv.length !== 4) {
+  console.log('Usage: node fix-path.js latest 0.16.0-incubating');
   process.exit(1);
 }
 
-var version = process.argv[2];
+var urlVersion = process.argv[2];
+var druidVersion = process.argv[3];
 
 try {
+  // Fix doc paths
   replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',
-    from: /\/docs\//g,
-    to: '/docs/' + version + '/',
+    from: /"\/docs\//g,
+    to: `"/docs/${urlVersion}/`,
   });
+
+  // Interpolate {{DRUIDVERSION}}
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /\{\{DRUIDVERSION\}\}/g,
+    to: druidVersion,
+  });
+
+  // Add canonical header
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /<meta name="generator" content="Docusaurus"\/>/g,
+    to: (match, fullText, b, filename) => {
+      const path = filename.replace('./build/ApacheDruid/docs/', '');
+      return `<link rel="canonical" href="https://druid.apache.org/docs/${urlVersion}/${path}"/><meta name="generator" content="Docusaurus"/>`;
+    },
+  });
+
+  // Add docusearch version meta
+  // ref: https://community.algolia.com/docsearch/required-configuration.html#introduces-global-information-as-meta-tags
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /<meta name="docsearch:language"[^>]+\/>/g,
+    to: (match, fullText) => {
+      return match + `<meta name="docsearch:version" content="${druidVersion}" />`;
+    },
+  });
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /"version:druidVersion"/g,
+    to: (match, fullText) => {
+      return `"version:${druidVersion}"`;
+    },
+  });
+
   console.log('Fixed versions');
+
 } catch (error) {
   console.error('Error occurred:', error);
   process.exit(1);

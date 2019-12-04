@@ -111,11 +111,17 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
    * function is used in the default {@link ResultMergeQueryRunner} provided by
-   * {@link QueryToolChest#mergeResults(QueryRunner)} and can be used in additional future merge implementations
+   * {@link QueryToolChest#mergeResults(QueryRunner)} and also used in
+   * {@link org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence} by 'CachingClusteredClient' if it
+   * does not return null.
+   *
+   * Returning null from this function means that a query does not support result merging, at
+   * least via the mechanisms that utilize this function.
    */
+  @Nullable
   public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't provide a merge function", query.getClass().getName());
+    return null;
   }
 
   /**

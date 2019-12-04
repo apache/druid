@@ -143,7 +143,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new Duration(COORDINATOR_PERIOD),
         null,
         10,
-        null,
         new Duration("PT0s")
     );
     pathChildrenCache = new PathChildrenCache(
@@ -214,7 +213,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        null
     );
   }
 
@@ -328,6 +328,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getAllRules())
+            .andReturn(ImmutableMap.of(dataSource, ImmutableList.of(foreverLoadRule))).atLeastOnce();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -481,6 +483,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(hotTier, coldTier)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getAllRules())
+            .andReturn(ImmutableMap.of(dataSource, ImmutableList.of(hotTier, coldTier))).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer))

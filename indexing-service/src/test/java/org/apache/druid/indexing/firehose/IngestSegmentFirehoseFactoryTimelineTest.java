@@ -22,9 +22,8 @@ package org.apache.druid.indexing.firehose;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
@@ -41,6 +40,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -163,11 +163,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private void testSplit() throws Exception
   {
     Assert.assertTrue(factory.isSplittable());
-    final int numSplits = factory.getNumSplits();
+    final int numSplits = factory.getNumSplits(null);
     // We set maxInputSegmentBytesPerSplit to 2 so each segment should become a byte.
     Assert.assertEquals(segmentCount, numSplits);
     final List<InputSplit<List<WindowedSegmentId>>> splits =
-        factory.getSplits().collect(Collectors.toList());
+        factory.getSplits(null).collect(Collectors.toList());
     Assert.assertEquals(numSplits, splits.size());
 
     int count = 0;
@@ -203,7 +203,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       DataSegmentMaker... segmentMakers
   )
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = FileUtils.createTempDir();
     final Set<DataSegment> segments = new HashSet<>();
     for (DataSegmentMaker segmentMaker : segmentMakers) {
       segments.add(segmentMaker.make(tmpDir));
@@ -321,11 +321,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final CoordinatorClient cc = new CoordinatorClient(null, null)
       {
         @Override
-        public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+        public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
         {
           // Expect the interval we asked for
           if (intervals.equals(ImmutableList.of(testCase.interval))) {
-            return ImmutableList.copyOf(testCase.segments);
+            return ImmutableSet.copyOf(testCase.segments);
           } else {
             throw new IllegalArgumentException("WTF");
           }

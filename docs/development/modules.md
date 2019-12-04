@@ -164,7 +164,7 @@ public List<? extends Module> getJacksonModules()
 }
 ```
 
-This is registering the FirehoseFactory with Jackson's polymorphic serde layer.  More concretely, having this will mean that if you specify a `"firehose": { "type": "static-s3", ... }` in your realtime config, then the system will load this FirehoseFactory for your firehose.
+This is registering the FirehoseFactory with Jackson's polymorphic serialization/deserialization layer.  More concretely, having this will mean that if you specify a `"firehose": { "type": "static-s3", ... }` in your realtime config, then the system will load this FirehoseFactory for your firehose.
 
 Note that inside of Druid, we have made the @JacksonInject annotation for Jackson deserialized objects actually use the base Guice injector to resolve the object to be injected.  So, if your FirehoseFactory needs access to some object, you can add a @JacksonInject annotation on a setter and it will get set on instantiation.
 
@@ -174,7 +174,7 @@ Adding AggregatorFactory objects is very similar to Firehose objects.  They oper
 
 ### Adding Complex Metrics
 
-Adding ComplexMetrics is a little ugly in the current version.  The method of getting at complex metrics is through registration with the `ComplexMetrics.registerSerde()` method.  There is no special Guice stuff to get this working, just in your `configure(Binder)` method register the serde.
+Adding ComplexMetrics is a little ugly in the current version.  The method of getting at complex metrics is through registration with the `ComplexMetrics.registerSerde()` method.  There is no special Guice stuff to get this working, just in your `configure(Binder)` method register the serialization/deserialization.
 
 ### Adding new Query types
 

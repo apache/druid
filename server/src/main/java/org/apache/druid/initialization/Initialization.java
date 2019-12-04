@@ -75,6 +75,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -84,8 +85,10 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class Initialization
 {
@@ -173,12 +176,21 @@ public class Initialization
     private void addAllFromFileSystem()
     {
       for (File extension : getExtensionFilesToLoad(extensionsConfig)) {
-        log.info("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
+        log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
           final URLClassLoader loader = getClassLoaderForExtension(
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
+
+          log.info(
+              "Loading extension [%s], jars: %s",
+              extension.getName(),
+              Arrays.stream(loader.getURLs())
+                    .map(u -> new File(u.getPath()).getName())
+                    .collect(Collectors.joining(", "))
+          );
+
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
@@ -197,7 +209,7 @@ public class Initialization
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
-        log.info(
+        log.debug(
             "Adding implementation [%s] for class [%s] from %s extension",
             serviceImplName,
             serviceClass,
@@ -310,7 +322,7 @@ public class Initialization
       int i = 0;
       for (File jar : jars) {
         final URL url = jar.toURI().toURL();
-        log.info("added URL[%s] for extension[%s]", url, extension.getName());
+        log.debug("added URL[%s] for extension[%s]", url, extension.getName());
         urls[i++] = url;
       }
     }

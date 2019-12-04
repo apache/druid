@@ -17,8 +17,10 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import React from 'react';
+import React, { useState } from 'react';
 import AceEditor from 'react-ace';
+
+import { validJson } from '../../utils';
 
 import './spec-dialog.scss';
 
@@ -29,78 +31,52 @@ export interface SpecDialogProps {
   initSpec?: any;
 }
 
-export interface SpecDialogState {
-  spec: string;
-}
+export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps) {
+  const { onClose, onSubmit, title, initSpec } = props;
+  const [spec, setSpec] = useState(() => (initSpec ? JSON.stringify(initSpec, null, 2) : '{\n\n}'));
 
-export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogState> {
-  static validJson(json: string): boolean {
-    try {
-      JSON.parse(json);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  constructor(props: SpecDialogProps) {
-    super(props);
-    this.state = {
-      spec: props.initSpec ? JSON.stringify(props.initSpec, null, 2) : '{\n\n}',
-    };
-  }
-
-  private postSpec(): void {
-    const { onClose, onSubmit } = this.props;
-    const { spec } = this.state;
-    if (!SpecDialog.validJson(spec)) return;
+  function postSpec(): void {
+    if (!validJson(spec)) return;
     onSubmit(JSON.parse(spec));
     onClose();
   }
 
-  render(): JSX.Element {
-    const { onClose, title } = this.props;
-    const { spec } = this.state;
-
-    return (
-      <Dialog
-        className="spec-dialog"
-        isOpen
-        onClose={onClose}
-        title={title}
-        canOutsideClickClose={false}
-      >
-        <AceEditor
-          mode="json"
-          theme="solarized_dark"
-          className="spec-dialog-textarea"
-          onChange={e => {
-            this.setState({ spec: e });
-          }}
-          fontSize={12}
-          showPrintMargin={false}
-          showGutter
-          highlightActiveLine
-          value={spec}
-          width="100%"
-          setOptions={{
-            showLineNumbers: true,
-            tabSize: 2,
-          }}
-          style={{}}
-        />
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" onClick={onClose} />
-            <Button
-              text="Submit"
-              intent={Intent.PRIMARY}
-              onClick={() => this.postSpec()}
-              disabled={!SpecDialog.validJson(spec)}
-            />
-          </div>
+  return (
+    <Dialog
+      className="spec-dialog"
+      isOpen
+      onClose={onClose}
+      title={title}
+      canOutsideClickClose={false}
+    >
+      <AceEditor
+        mode="hjson"
+        theme="solarized_dark"
+        className="spec-dialog-textarea"
+        onChange={setSpec}
+        fontSize={12}
+        showPrintMargin={false}
+        showGutter
+        highlightActiveLine
+        value={spec}
+        width="100%"
+        setOptions={{
+          showLineNumbers: true,
+          tabSize: 2,
+        }}
+        style={{}}
+      />
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button text="Close" onClick={onClose} />
+          <Button
+            text="Submit"
+            intent={Intent.PRIMARY}
+            onClick={postSpec}
+            disabled={!validJson(spec)}
+          />
         </div>
-      </Dialog>
-    );
-  }
-}
+      </div>
+    </Dialog>
+  );
+});

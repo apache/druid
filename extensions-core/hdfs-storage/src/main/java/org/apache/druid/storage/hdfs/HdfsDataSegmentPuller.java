@@ -49,10 +49,29 @@ import java.io.Writer;
 import java.net.URI;
 
 /**
+ *
  */
 public class HdfsDataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
+
+  public static final Predicate<Throwable> RETRY_PREDICATE = new Predicate<Throwable>()
+  {
+    @Override
+    public boolean apply(Throwable input)
+    {
+      if (input == null) {
+        return false;
+      }
+      if (input instanceof HdfsIOException) {
+        return true;
+      }
+      if (input instanceof IOException) {
+        return true;
+      }
+      return apply(input.getCause());
+    }
+  };
 
   /**
    * FileObject.getLastModified and FileObject.delete don't throw IOException. This allows us to wrap those calls
@@ -310,22 +329,6 @@ public class HdfsDataSegmentPuller implements URIDataPuller
   @Override
   public Predicate<Throwable> shouldRetryPredicate()
   {
-    return new Predicate<Throwable>()
-    {
-      @Override
-      public boolean apply(Throwable input)
-      {
-        if (input == null) {
-          return false;
-        }
-        if (input instanceof HdfsIOException) {
-          return true;
-        }
-        if (input instanceof IOException) {
-          return true;
-        }
-        return apply(input.getCause());
-      }
-    };
+    return RETRY_PREDICATE;
   }
 }

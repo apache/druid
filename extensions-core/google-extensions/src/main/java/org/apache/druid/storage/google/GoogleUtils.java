@@ -20,12 +20,12 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpResponseException;
+import com.google.common.base.Predicate;
 
 import java.io.IOException;
 
 public class GoogleUtils
 {
-
   public static boolean isRetryable(Throwable t)
   {
     if (t instanceof HttpResponseException) {
@@ -34,4 +34,6 @@ public class GoogleUtils
     }
     return t instanceof IOException;
   }
+
+  public static final Predicate<Throwable> GOOGLE_RETRY = e -> isRetryable(e);
 }

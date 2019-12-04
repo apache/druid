@@ -26,12 +26,51 @@ title: "Apache Parquet Extension"
 This Apache Druid (incubating) module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
 Apache Parquet files.
 
-Note: `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
+Note: If using the `parquet-avro` parser for Apache Hadoop based indexing, `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
  [include  both](../../development/extensions.md#loading-extensions).
 
+## Parquet and Native Batch
+This extension provides a `parquet` input format which can be used with Druid [native batch ingestion](../../ingestion/native-batch.md).
+
+### Parquet InputFormat
+|Field | Type | Description | Required|
+|---|---|---|---|
+|type| String| This should be set to `parquet` to read Parquet file| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](../../ingestion/index.md#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default == false) |
+
+### Example
+
+```json
+    ...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "/some/path/to/file/",
+        "filter": "file.parquet"
+      },
+      "inputFormat": {
+        "type": "parquet"
+        "flattenSpec": {
+          "useFieldDiscovery": true,
+          "fields": [
+            {
+              "type": "path",
+              "name": "nested",
+              "expr": "$.path.to.nested"
+            }
+          ]
+        }
+        "binaryAsString": false
+      },
+      ...
+    }
+    ...
+```
 ## Parquet Hadoop Parser
 
-This extension provides two ways to parse Parquet files:
+For Hadoop, this extension provides two parser implementations for reading Parquet files:
 
 * `parquet` - using a simple conversion contained within this extension
 * `parquet-avro` - conversion to avro records with the `parquet-avro` library and using the `druid-avro-extensions`
@@ -47,12 +86,12 @@ the `ioConfig`:
 Both parse options support auto field discovery and flattening if provided with a
 [`flattenSpec`](../../ingestion/index.md#flattenspec) with `parquet` or `avro` as the format. Parquet nested list and map
 [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) _should_ operate correctly with
-json path expressions for all supported types. `parquet-avro` sets a hadoop job property
+JSON path expressions for all supported types. `parquet-avro` sets a hadoop job property
 `parquet.avro.add-list-element-records` to `false` (which normally defaults to `true`), in order to 'unwrap' primitive
 list elements into multi-value dimensions.
 
 The `parquet` parser supports `int96` Parquet values, while `parquet-avro` does not. There may also be some subtle
-differences in the behavior of json path expression evaluation of `flattenSpec`.
+differences in the behavior of JSON path expression evaluation of `flattenSpec`.
 
 We suggest using `parquet` over `parquet-avro` to allow ingesting data beyond the schema constraints of Avro conversion.
 However, `parquet-avro` was the original basis for this extension, and as such it is a bit more mature.
@@ -62,7 +101,7 @@ However, `parquet-avro` was the original basis for this extension, and as such i
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 | type      | String      | Choose `parquet` or `parquet-avro` to determine how Parquet files are parsed | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Valid parseSpec formats are `timeAndDims`, `parquet`, `avro` (if used with avro conversion). | yes |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be converted to strings anyway. | no(default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default == false) |
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md), a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) is required.
 

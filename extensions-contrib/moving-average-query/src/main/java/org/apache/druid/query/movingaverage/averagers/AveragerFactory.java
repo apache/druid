@@ -36,10 +36,12 @@ import java.util.List;
     @JsonSubTypes.Type(name = "constant", value = ConstantAveragerFactory.class),
     @JsonSubTypes.Type(name = "doubleMean", value = DoubleMeanAveragerFactory.class),
     @JsonSubTypes.Type(name = "doubleMeanNoNulls", value = DoubleMeanNoNullAveragerFactory.class),
+    @JsonSubTypes.Type(name = "doubleSum", value = DoubleSumAveragerFactory.class),
     @JsonSubTypes.Type(name = "doubleMax", value = DoubleMaxAveragerFactory.class),
     @JsonSubTypes.Type(name = "doubleMin", value = DoubleMinAveragerFactory.class),
     @JsonSubTypes.Type(name = "longMean", value = LongMeanAveragerFactory.class),
     @JsonSubTypes.Type(name = "longMeanNoNulls", value = LongMeanNoNullAveragerFactory.class),
+    @JsonSubTypes.Type(name = "longSum", value = LongSumAveragerFactory.class),
     @JsonSubTypes.Type(name = "longMax", value = LongMaxAveragerFactory.class),
     @JsonSubTypes.Type(name = "longMin", value = LongMinAveragerFactory.class)
 })

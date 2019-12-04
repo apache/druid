@@ -30,5 +30,5 @@ public interface BasicAuthenticatorCacheNotifier
    * @param updatedAuthenticatorPrefix Name of authenticator being updated
    * @param updatedUserMap User map state
    */
-  void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
+  void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
 }

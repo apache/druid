@@ -94,7 +94,7 @@ To pull it all together, the above query would return 2 data points, one for eac
 ]
 ```
 
-#### Grand totals
+## Grand totals
 
 Druid can include an extra "grand totals" row as the last row of a timeseries result set. To enable this, add
 `"grandTotal" : true` to your query context. For example:
@@ -119,7 +119,7 @@ The grand totals row will appear as the last row in the result array, and will h
 row even if the query is run in "descending" mode. Post-aggregations in the grand totals row will be computed based
 upon the grand total aggregations.
 
-#### Zero-filling
+## Zero-filling
 
 Timeseries queries normally fill empty interior time buckets with zeroes. For example, if you issue a "day" granularity
 timeseries query for the interval 2012-01-01/2012-01-04, and no data exists for 2012-01-02, you will receive:

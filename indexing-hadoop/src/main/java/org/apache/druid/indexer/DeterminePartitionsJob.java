@@ -103,7 +103,7 @@ public class DeterminePartitionsJob implements Jobby
 
   private String failureCause;
 
-  public DeterminePartitionsJob(
+  DeterminePartitionsJob(
       HadoopDruidIndexerConfig config
   )
   {
@@ -168,7 +168,7 @@ public class DeterminePartitionsJob implements Jobby
         try {
           if (!groupByJob.waitForCompletion(true)) {
             log.error("Job failed: %s", groupByJob.getJobID());
-            failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+            failureCause = Utils.getFailureMessage(groupByJob, HadoopDruidIndexerConfig.JSON_MAPPER);
             return false;
           }
         }
@@ -238,7 +238,7 @@ public class DeterminePartitionsJob implements Jobby
       try {
         if (!dimSelectionJob.waitForCompletion(true)) {
           log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
-          failureCause = Utils.getFailureMessage(dimSelectionJob, config.JSON_MAPPER);
+          failureCause = Utils.getFailureMessage(dimSelectionJob, HadoopDruidIndexerConfig.JSON_MAPPER);
           return false;
         }
       }
@@ -262,7 +262,7 @@ public class DeterminePartitionsJob implements Jobby
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
         }
         if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
-          List<ShardSpec> specs = config.JSON_MAPPER.readValue(
+          List<ShardSpec> specs = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
               Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
               {
               }
@@ -298,14 +298,13 @@ public class DeterminePartitionsJob implements Jobby
     try {
       Counters jobCounters = groupByJob.getCounters();
 
-      Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
+      return TaskMetricsUtils.makeIngestionRowMetrics(
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
-          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER)
+                     .getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
       );
-
-      return metrics;
     }
     catch (IllegalStateException ise) {
       log.debug("Couldn't get counters due to job state");
@@ -326,6 +325,7 @@ public class DeterminePartitionsJob implements Jobby
 
   public static class DeterminePartitionsGroupByMapper extends HadoopDruidIndexerMapper<BytesWritable, NullWritable>
   {
+    @Nullable
     private Granularity rollupGranularity = null;
 
     @Override
@@ -375,6 +375,7 @@ public class DeterminePartitionsJob implements Jobby
   public static class DeterminePartitionsDimSelectionPostGroupByMapper
       extends Mapper<BytesWritable, NullWritable, BytesWritable, Text>
   {
+    @Nullable
     private DeterminePartitionsDimSelectionMapperHelper helper;
 
     @Override
@@ -433,13 +434,13 @@ public class DeterminePartitionsJob implements Jobby
    * Since we have two slightly different DimSelectionMappers, this class encapsulates the shared logic for
    * emitting dimension value counts.
    */
-  public static class DeterminePartitionsDimSelectionMapperHelper
+  static class DeterminePartitionsDimSelectionMapperHelper
   {
     private final HadoopDruidIndexerConfig config;
     private final String partitionDimension;
     private final Map<Long, Integer> intervalIndexes;
 
-    public DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config, String partitionDimension)
+    DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config, String partitionDimension)
     {
       this.config = config;
       this.partitionDimension = partitionDimension;
@@ -454,7 +455,7 @@ public class DeterminePartitionsJob implements Jobby
       this.intervalIndexes = timeIndexBuilder.build();
     }
 
-    public void emitDimValueCounts(
+    void emitDimValueCounts(
         TaskInputOutputContext<?, ?, BytesWritable, Text> context,
         DateTime timestamp,
         Map<String, Iterable<String>> dims
@@ -538,6 +539,7 @@ public class DeterminePartitionsJob implements Jobby
   private abstract static class DeterminePartitionsDimSelectionBaseReducer
       extends Reducer<BytesWritable, Text, BytesWritable, Text>
   {
+    @Nullable
     protected volatile HadoopDruidIndexerConfig config = null;
 
     @Override
@@ -568,7 +570,7 @@ public class DeterminePartitionsJob implements Jobby
         Iterable<DimValueCount> combinedIterable
     ) throws IOException, InterruptedException;
 
-    private Iterable<DimValueCount> combineRows(Iterable<Text> input)
+    private static Iterable<DimValueCount> combineRows(Iterable<Text> input)
     {
       return new CombiningIterable<>(
           Iterables.transform(
@@ -659,7 +661,7 @@ public class DeterminePartitionsJob implements Jobby
         }
 
         // See if we need to cut a new partition ending immediately before this dimension value
-        if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows >= config.getTargetPartitionSize()) {
+        if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows > config.getTargetPartitionSize()) {
           final ShardSpec shardSpec = new SingleDimensionShardSpec(
               currentDimPartitions.dim,
               currentDimPartitionStart,
@@ -771,7 +773,7 @@ public class DeterminePartitionsJob implements Jobby
         final SingleDimensionPartitionsSpec partitionsSpec =
             (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
         for (final DimPartition partition : dimPartitions.partitions) {
-          if (partition.rows > partitionsSpec.getMaxPartitionSize()) {
+          if (partition.rows > partitionsSpec.getMaxRowsPerSegment()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dim, partition.shardSpec);
             oversized = true;
           }
@@ -857,7 +859,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     public void checkOutputSpecs(JobContext job) throws IOException
     {
-      Path outDir = getOutputPath(job);
+      Path outDir = FileOutputFormat.getOutputPath(job);
       if (outDir == null) {
         throw new InvalidJobConfException("Output directory not set.");
       }
@@ -874,7 +876,7 @@ public class DeterminePartitionsJob implements Jobby
       this.dim = dim;
     }
 
-    public int getCardinality()
+    int getCardinality()
     {
       int sum = 0;
       for (final DimPartition dimPartition : partitions) {
@@ -883,7 +885,7 @@ public class DeterminePartitionsJob implements Jobby
       return sum;
     }
 
-    public long getDistanceSquaredFromTarget(long target)
+    long getDistanceSquaredFromTarget(long target)
     {
       long distance = 0;
       for (final DimPartition dimPartition : partitions) {
@@ -906,8 +908,9 @@ public class DeterminePartitionsJob implements Jobby
 
   private static class DimPartition
   {
+    @Nullable
     public ShardSpec shardSpec = null;
-    public int cardinality = 0;
+    int cardinality = 0;
     public long rows = 0;
   }
 
@@ -924,12 +927,12 @@ public class DeterminePartitionsJob implements Jobby
       this.numRows = numRows;
     }
 
-    public Text toText()
+    Text toText()
     {
       return new Text(TAB_JOINER.join(dim, String.valueOf(numRows), value));
     }
 
-    public static DimValueCount fromText(Text text)
+    static DimValueCount fromText(Text text)
     {
       final Iterator<String> splits = TAB_SPLITTER.limit(3).split(text.toString()).iterator();
       final String dim = splits.next();

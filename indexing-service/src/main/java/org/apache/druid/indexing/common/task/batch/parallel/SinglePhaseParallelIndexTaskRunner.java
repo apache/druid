@@ -21,8 +21,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 
 import java.io.IOException;
@@ -40,7 +42,7 @@ class SinglePhaseParallelIndexTaskRunner
     extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
+  private final SplittableInputSource<?> baseInputSource;
 
   SinglePhaseParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -60,7 +62,9 @@ class SinglePhaseParallelIndexTaskRunner
         indexingServiceClient
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseFirehoseFactory = (FiniteFirehoseFactory) ingestionSchema.getIOConfig().getFirehoseFactory();
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(
+        ingestionSchema.getDataSchema().getParser()
+    );
   }
 
   @Override
@@ -79,18 +83,33 @@ class SinglePhaseParallelIndexTaskRunner
   @Override
   Iterator<SubTaskSpec<SinglePhaseSubTask>> subTaskSpecIterator() throws IOException
   {
-    return baseFirehoseFactory.getSplits().map(this::newTaskSpec).iterator();
+    return baseInputSource.createSplits(
+        ingestionSchema.getIOConfig().getInputFormat(),
+        getTuningConfig().getSplitHintSpec()
+    ).map(this::newTaskSpec).iterator();
   }
 
   @Override
-  int getTotalNumSubTasks() throws IOException
+  int estimateTotalNumSubTasks() throws IOException
   {
-    return baseFirehoseFactory.getNumSplits();
+    return baseInputSource.estimateNumSplits(
+        ingestionSchema.getIOConfig().getInputFormat(),
+        getTuningConfig().getSplitHintSpec()
+    );
   }
 
   @VisibleForTesting
   SubTaskSpec<SinglePhaseSubTask> newTaskSpec(InputSplit split)
   {
+    final FirehoseFactory firehoseFactory;
+    final SplittableInputSource inputSource;
+    if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
+      firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
+      inputSource = null;
+    } else {
+      firehoseFactory = null;
+      inputSource = baseInputSource.withSplit(split);
+    }
     return new SinglePhaseSubTaskSpec(
         getTaskId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
@@ -98,7 +117,9 @@ class SinglePhaseParallelIndexTaskRunner
         new ParallelIndexIngestionSpec(
             ingestionSchema.getDataSchema(),
             new ParallelIndexIOConfig(
-                baseFirehoseFactory.withSplit(split),
+                firehoseFactory,
+                inputSource,
+                ingestionSchema.getIOConfig().getInputFormat(),
                 ingestionSchema.getIOConfig().isAppendToExisting()
             ),
             ingestionSchema.getTuningConfig()

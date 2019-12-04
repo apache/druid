@@ -35,14 +35,14 @@
   </parent>
 
   <properties>
-    <datasketches.core.version>0.13.4</datasketches.core.version>
-    <datasketches.memory.version>0.12.2</datasketches.memory.version>
+    <datasketches.core.version>1.1.0-incubating</datasketches.core.version>
+    <datasketches.memory.version>1.2.0-incubating</datasketches.memory.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>sketches-core</artifactId>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-java</artifactId>
       <version>${datasketches.core.version}</version>
       <exclusions>
         <exclusion>
@@ -52,9 +52,14 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>memory</artifactId>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-memory</artifactId>
       <version>${datasketches.memory.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.calcite</groupId>
+      <artifactId>calcite-core</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -63,6 +68,12 @@
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-core</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -78,53 +89,70 @@
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>fastutil</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-guava</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-joda</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-smile</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.jaxrs</groupId>
       <artifactId>jackson-jaxrs-json-provider</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.jaxrs</groupId>
       <artifactId>jackson-jaxrs-smile-provider</artifactId>
-      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
 

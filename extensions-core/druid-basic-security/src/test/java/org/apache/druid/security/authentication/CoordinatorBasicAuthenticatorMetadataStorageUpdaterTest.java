@@ -45,14 +45,13 @@ import java.util.Map;
 public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
 {
   private static final String AUTHENTICATOR_NAME = "test";
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater updater;
   private ObjectMapper objectMapper;
 
@@ -60,10 +59,9 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   public void setUp()
   {
     objectMapper = new ObjectMapper(new SmileFactory());
-    connector = derbyConnectorRule.getConnector();
-    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
-
     updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
         new AuthenticatorMapper(
             ImmutableMap.of(
@@ -76,6 +74,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
                     null,
                     null,
                     null,
+                    null,
+                    false,
                     null
                 )
             )
@@ -100,15 +100,23 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   @Test
   public void createUser()
   {
-    updater.createUser(AUTHENTICATOR_NAME, "druid");
     Map<String, BasicAuthenticatorUser> expectedUserMap = ImmutableMap.of(
         "druid", new BasicAuthenticatorUser("druid", null)
     );
+    byte[] expectedSerializeUserMap = BasicAuthUtils.serializeAuthenticatorUserMap(objectMapper, expectedUserMap);
+
+    updater.createUser(AUTHENTICATOR_NAME, "druid");
+    Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME));
+
     Map<String, BasicAuthenticatorUser> actualUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
         objectMapper,
         updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME)
     );
     Assert.assertEquals(expectedUserMap, actualUserMap);
+
+    // Validate cache user map methods
+    Assert.assertEquals(expectedUserMap, updater.getCachedUserMap(AUTHENTICATOR_NAME));
+    Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCachedSerializedUserMap(AUTHENTICATOR_NAME));
 
     // create duplicate should fail
     expectedException.expect(BasicSecurityDBResourceException.class);
@@ -119,14 +127,23 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   @Test
   public void deleteUser()
   {
+    Map<String, BasicAuthenticatorUser> expectedUserMap = ImmutableMap.of();
+    byte[] expectedSerializeUserMap = BasicAuthUtils.serializeAuthenticatorUserMap(objectMapper, expectedUserMap);
+
     updater.createUser(AUTHENTICATOR_NAME, "druid");
     updater.deleteUser(AUTHENTICATOR_NAME, "druid");
-    Map<String, BasicAuthenticatorUser> expectedUserMap = ImmutableMap.of();
+
+    Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME));
+
     Map<String, BasicAuthenticatorUser> actualUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(
         objectMapper,
         updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME)
     );
     Assert.assertEquals(expectedUserMap, actualUserMap);
+
+    // Validate cache user map methods
+    Assert.assertEquals(expectedUserMap, updater.getCachedUserMap(AUTHENTICATOR_NAME));
+    Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCachedSerializedUserMap(AUTHENTICATOR_NAME));
 
     // delete non-existent user should fail
     expectedException.expect(BasicSecurityDBResourceException.class);
@@ -153,6 +170,14 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     );
 
     Assert.assertArrayEquals(credentials.getHash(), recalculatedHash);
-  }
 
+    // Validate cache user map methods
+    Map<String, BasicAuthenticatorUser> expectedUserMap = ImmutableMap.of(
+        "druid", new BasicAuthenticatorUser("druid", credentials)
+    );
+    byte[] expectedSerializeUserMap = BasicAuthUtils.serializeAuthenticatorUserMap(objectMapper, expectedUserMap);
+    Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCurrentUserMapBytes(AUTHENTICATOR_NAME));
+    Assert.assertEquals(expectedUserMap, updater.getCachedUserMap(AUTHENTICATOR_NAME));
+    Assert.assertArrayEquals(expectedSerializeUserMap, updater.getCachedSerializedUserMap(AUTHENTICATOR_NAME));
+  }
 }

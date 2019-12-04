@@ -42,7 +42,7 @@ import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
 {
-  private static final Logger LOG = new Logger(GoogleDataSegmentPusher.class);
+  private static final Logger log = new Logger(GoogleDataSegmentPusher.class);
 
   private final GoogleStorage storage;
   private final GoogleAccountConfig config;
@@ -55,8 +55,6 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   {
     this.storage = storage;
     this.config = config;
-
-    LOG.info("Configured Google as deep storage");
   }
 
   @Deprecated
@@ -81,7 +79,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public void insert(final File file, final String contentType, final String path)
       throws IOException
   {
-    LOG.info("Inserting [%s] to [%s]", file, path);
+    log.debug("Inserting [%s] to [%s]", file, path);
     try {
       RetryUtils.retry(
           (RetryUtils.Task<Void>) () -> {
@@ -105,7 +103,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
-    LOG.info("Uploading [%s] to Google.", indexFilesDir);
+    log.debug("Uploading [%s] to Google.", indexFilesDir);
 
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
     File indexFile = null;
@@ -130,7 +128,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     }
     finally {
       if (indexFile != null) {
-        LOG.info("Deleting file [%s]", indexFile);
+        log.debug("Deleting file [%s]", indexFile);
         indexFile.delete();
       }
     }

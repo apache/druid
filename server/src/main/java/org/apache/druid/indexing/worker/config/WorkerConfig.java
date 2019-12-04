@@ -25,11 +25,14 @@ import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 /**
  */
 public class WorkerConfig
 {
+  public static final String DEFAULT_CATEGORY = "_default_worker_category";
+
   @JsonProperty
   private String ip = DruidNode.getDefaultHost();
 
@@ -41,6 +44,9 @@ public class WorkerConfig
   private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
   @JsonProperty
+  @NotNull
+  private String category = DEFAULT_CATEGORY;
+
   private long intermediaryPartitionDiscoveryPeriodSec = 60L;
 
   @JsonProperty
@@ -68,6 +74,11 @@ public class WorkerConfig
   public int getCapacity()
   {
     return capacity;
+  }
+
+  public String getCategory()
+  {
+    return category;
   }
 
   public long getIntermediaryPartitionDiscoveryPeriodSec()

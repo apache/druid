@@ -21,6 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
 import { caseInsensitiveContains, filterMap, parseJson } from '../../../utils';
 import { FlattenField } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
@@ -34,80 +35,77 @@ export interface ParseDataTableProps {
   flattenedColumnsOnly: boolean;
   flattenFields: FlattenField[];
   onFlattenFieldSelect: (field: FlattenField, index: number) => void;
-  openModal: (str: string) => void;
 }
 
-export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
-  render(): JSX.Element {
-    const {
-      sampleData,
-      columnFilter,
-      canFlatten,
-      flattenedColumnsOnly,
-      flattenFields,
-      onFlattenFieldSelect,
-    } = this.props;
+export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDataTableProps) {
+  const {
+    sampleData,
+    columnFilter,
+    canFlatten,
+    flattenedColumnsOnly,
+    flattenFields,
+    onFlattenFieldSelect,
+  } = props;
 
-    return (
-      <ReactTable
-        className="parse-data-table -striped -highlight"
-        data={sampleData.rows}
-        columns={filterMap(sampleData.header, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return;
-          const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
-          if (flattenFieldIndex === -1 && flattenedColumnsOnly) return;
-          const flattenField = flattenFields[flattenFieldIndex];
-          return {
-            Header: (
-              <div
-                className={classNames({ clickable: flattenField })}
-                onClick={() => {
-                  if (!flattenField) return;
-                  onFlattenFieldSelect(flattenField, flattenFieldIndex);
-                }}
-              >
-                <div className="column-name">{columnName}</div>
-                <div className="column-detail">
-                  {flattenField ? `${flattenField.type}: ${flattenField.expr}` : ''}&nbsp;
-                </div>
+  return (
+    <ReactTable
+      className="parse-data-table -striped -highlight"
+      data={sampleData.rows}
+      columns={filterMap(sampleData.header, (columnName, i) => {
+        if (!caseInsensitiveContains(columnName, columnFilter)) return;
+        const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
+        if (flattenFieldIndex === -1 && flattenedColumnsOnly) return;
+        const flattenField = flattenFields[flattenFieldIndex];
+        return {
+          Header: (
+            <div
+              className={classNames({ clickable: flattenField })}
+              onClick={() => {
+                if (!flattenField) return;
+                onFlattenFieldSelect(flattenField, flattenFieldIndex);
+              }}
+            >
+              <div className="column-name">{columnName}</div>
+              <div className="column-detail">
+                {flattenField ? `${flattenField.type}: ${flattenField.expr}` : ''}&nbsp;
               </div>
-            ),
-            id: String(i),
-            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => {
-              if (row.original.unparseable) {
-                return <TableCell unparseable />;
-              }
-              return <TableCell value={row.value} openModal={str => this.props.openModal(str)} />;
-            },
-            headerClassName: classNames({
-              flattened: flattenField,
-            }),
-          };
-        })}
-        SubComponent={rowInfo => {
-          const { raw, error } = rowInfo.original;
-          const parsedJson: any = parseJson(raw);
+            </div>
+          ),
+          id: String(i),
+          accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+          Cell: row => {
+            if (row.original.unparseable) {
+              return <TableCellUnparseable />;
+            }
+            return <TableCell value={row.value} />;
+          },
+          headerClassName: classNames({
+            flattened: flattenField,
+          }),
+        };
+      })}
+      SubComponent={rowInfo => {
+        const { raw, error } = rowInfo.original;
+        const parsedJson: any = parseJson(raw);
 
-          if (!error && parsedJson && canFlatten) {
-            return (
-              <pre className="parse-detail">
-                {'Original row: ' + JSON.stringify(parsedJson, null, 2)}
-              </pre>
-            );
-          } else {
-            return (
-              <div className="parse-detail">
-                {error && <div className="parse-error">{error}</div>}
-                <div>{'Original row: ' + rowInfo.original.raw}</div>
-              </div>
-            );
-          }
-        }}
-        defaultPageSize={50}
-        showPagination={false}
-        sortable={false}
-      />
-    );
-  }
-}
+        if (!error && parsedJson && canFlatten) {
+          return (
+            <pre className="parse-detail">
+              {'Original row: ' + JSON.stringify(parsedJson, null, 2)}
+            </pre>
+          );
+        } else {
+          return (
+            <div className="parse-detail">
+              {error && <div className="parse-error">{error}</div>}
+              <div>{'Original row: ' + rowInfo.original.raw}</div>
+            </div>
+          );
+        }
+      }}
+      defaultPageSize={50}
+      showPagination={false}
+      sortable={false}
+    />
+  );
+});

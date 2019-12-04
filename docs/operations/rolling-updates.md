@@ -28,7 +28,7 @@ following order:
 
 1. Historical
 2. \*Overlord (if any)
-3. \*Middle Manager (if any)
+3. \*Middle Manager/Indexers (if any)
 4. Standalone Real-time (if any)
 5. Broker
 6. Coordinator ( or merged Coordinator+Overlord )
@@ -47,9 +47,9 @@ update the entire Historical cluster.
 
 Overlord processes can be updated one at a time in a rolling fashion.
 
-## Middle Managers
+## Middle Managers/Indexers
 
-Middle Managers run both batch and real-time indexing tasks. Generally you want to update Middle
+Middle Managers or Indexer nodes run both batch and real-time indexing tasks. Generally you want to update Middle
 Managers in such a way that real-time indexing tasks do not fail. There are three strategies for
 doing that.
 

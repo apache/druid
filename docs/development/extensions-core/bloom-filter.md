@@ -27,13 +27,13 @@ This Apache Druid (incubating) extension adds the ability to both construct bloo
 against a bloom filter. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-bloom-filter` as an
 extension.
 
-A BloomFilter is a probabilistic data structure for performing a set membership check. A bloom filter is a good candidate
+A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom filter is a good candidate
 to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query against a set of millions of
  values.
 
-Following are some characteristics of BloomFilters:
+Following are some characteristics of Bloom filters:
 
-- BloomFilters are highly space efficient when compared to using a HashSet.
+- Bloom filters are highly space efficient when compared to using a HashSet.
 - Because of the probabilistic nature of bloom filters, false positive results are possible (element was not actually
 inserted into a bloom filter during construction, but `test()` says true)
 - False negatives are not possible (if element is present then `test()` will never say false).
@@ -57,7 +57,7 @@ BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
 String base64Serialized = Base64.encodeBase64String(byteArrayOutputStream.toByteArray());
 ```
 
-This string can then be used in the native or sql Druid query.
+This string can then be used in the native or SQL Druid query.
 
 ## Filtering queries with a Bloom Filter
 
@@ -110,7 +110,7 @@ bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 
 Input for a `bloomKFilter` can also be created from a druid query with the `bloom` aggregator. Note that it is very
 important to set a reasonable value for the `maxNumEntries` parameter, which is the maximum number of distinct entries
-that the bloom filter can represent without increasing the false postive rate. It may be worth performing a query using
+that the bloom filter can represent without increasing the false positive rate. It may be worth performing a query using
 one of the unique count sketches to calculate the value for this parameter in order to build a bloom filter appropriate
 for the query.
 
@@ -175,5 +175,5 @@ Bloom filters can be computed in SQL expressions with the `bloom_filter` aggrega
 SELECT BLOOM_FILTER(<expression>, <max number of entries>) FROM druid.foo WHERE dim2 = 'abc'
 ```
 
-but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in an SQL
+but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in a SQL
  response are serialized into a base64 string, which can then be used in subsequent queries as a filter.

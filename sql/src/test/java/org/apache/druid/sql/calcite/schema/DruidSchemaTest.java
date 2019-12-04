@@ -53,6 +53,7 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -151,6 +152,7 @@ public class DruidSchemaTest extends CalciteTestBase
                    .interval(Intervals.of("2000/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index1
     ).add(
@@ -159,6 +161,7 @@ public class DruidSchemaTest extends CalciteTestBase
                    .interval(Intervals.of("2001/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     ).add(
@@ -167,6 +170,7 @@ public class DruidSchemaTest extends CalciteTestBase
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     );
@@ -178,9 +182,10 @@ public class DruidSchemaTest extends CalciteTestBase
         ImmutableList.of("dim1", "dim2"),
         ImmutableList.of("met1", "met2"),
         new NumberedShardSpec(2, 3),
+        null,
         1,
         100L,
-        DataSegment.PruneLoadSpecHolder.DEFAULT
+        PruneSpecsHolder.DEFAULT
     );
     final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
     final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);

@@ -68,7 +68,7 @@ The format of the result is:
 ```json
 [
   {
-    "timestamp": "2012-01-01T00:00:00.000Z",
+    "timestamp": "2013-01-01T00:00:00.000Z",
     "result": [
       {
         "dimension": "dim1",
@@ -83,7 +83,7 @@ The format of the result is:
     ]
   },
   {
-    "timestamp": "2012-01-02T00:00:00.000Z",
+    "timestamp": "2013-01-02T00:00:00.000Z",
     "result": [
       {
         "dimension": "dim1",
@@ -124,7 +124,7 @@ only the rows which satisfy those filters, thereby saving I/O cost. However, it 
 and cursor-based execution plans, and chooses the optimal one. Currently, it is not enabled by default due to the overhead
 of cost estimation.
 
-#### Server configuration
+## Server configuration
 
 The following runtime properties apply:
 
@@ -132,7 +132,7 @@ The following runtime properties apply:
 |--------|-----------|-------|
 |`druid.query.search.searchStrategy`|Default search query strategy.|useIndexes|
 
-#### Query context
+## Query context
 
 The following query context parameters apply:
 

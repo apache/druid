@@ -43,6 +43,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -89,6 +90,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
+  private final Supplier<QueryConfig> queryConfigSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
@@ -98,6 +100,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByStrategyV2(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
+      Supplier<QueryConfig> queryConfigSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
       @Smile ObjectMapper spillMapper,
@@ -106,6 +109,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     this.processingConfig = processingConfig;
     this.configSupplier = configSupplier;
+    this.queryConfigSupplier = queryConfigSupplier;
     this.bufferPool = bufferPool;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
@@ -582,7 +586,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter)
   {
-    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get().withOverrides(query));
+    return GroupByQueryEngineV2.process(
+        query,
+        storageAdapter,
+        bufferPool,
+        configSupplier.get().withOverrides(query),
+        queryConfigSupplier.get().withOverrides(query)
+    );
   }
 
   @Override

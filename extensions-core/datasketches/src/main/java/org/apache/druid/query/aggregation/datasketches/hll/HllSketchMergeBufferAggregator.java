@@ -20,10 +20,10 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.google.common.util.concurrent.Striped;
-import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.hll.HllSketch;
-import com.yahoo.sketches.hll.TgtHllType;
-import com.yahoo.sketches.hll.Union;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.TgtHllType;
+import org.apache.datasketches.hll.Union;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;

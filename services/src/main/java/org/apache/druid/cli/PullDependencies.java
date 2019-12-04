@@ -19,8 +19,11 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -29,9 +32,9 @@ import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.guice.RepositorySystemSessionProvider;
 import io.tesla.aether.internal.DefaultTeslaAether;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +43,6 @@ import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.graph.Dependency;
-import org.eclipse.aether.graph.DependencyFilter;
 import org.eclipse.aether.graph.DependencyNode;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.Proxy;
@@ -58,7 +60,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -72,9 +73,18 @@ public class PullDependencies implements Runnable
 {
   private static final Logger log = new Logger(PullDependencies.class);
 
-  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-  private static final Set<String> EXCLUSIONS = new HashSet<>(
-      /*
+  private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
+      "https://repo1.maven.org/maven2/"
+  );
+
+  private static final Dependencies PROVIDED_BY_CORE_DEPENDENCIES =
+      Dependencies.builder()
+                  .put("com.squareup.okhttp", "okhttp")
+                  .put("commons-beanutils", "commons-beanutils")
+                  .put("org.apache.commons", "commons-compress")
+                  .put("org.apache.zookeeper", "zookeeper")
+                  .build();
+   /*
 
       // It is possible that extensions will pull down a lot of jars that are either
       // duplicates OR conflict with druid jars. In that case, there are two problems that arise
@@ -107,7 +117,7 @@ public class PullDependencies implements Runnable
       // Here is a list of dependencies extensions should probably exclude.
       //
       // Conflicts can be discovered using the following command on the distribution tarball:
-      //    `find lib -iname *.jar | cut -d / -f 2 | sed -e 's/-[0-9]\.[0-9]/@/' | cut -f 1 -d @ | sort | uniq | xargs -I {} find extensions -name "*{}*.jar" | sort`
+      //    `find lib -iname "*.jar" | cut -d / -f 2 | sed -e 's/-[0-9]\.[0-9]/@/' | cut -f 1 -d @ | sort | uniq | xargs -I {} find extensions -name "*{}*.jar" | sort`
 
       "org.apache.druid",
       "com.metamx.druid",
@@ -141,11 +151,13 @@ public class PullDependencies implements Runnable
       "org.roaringbitmap",
       "net.java.dev.jets3t"
       */
-  );
 
-  private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
-      "https://repo1.maven.org/maven2/"
-  );
+  private static final Dependencies SECURITY_VULNERABILITY_EXCLUSIONS =
+      Dependencies.builder()
+                  .put("commons-beanutils", "commons-beanutils-core")
+                  .build();
+
+  private final Dependencies hadoopExclusions;
 
   private TeslaAether aether;
 
@@ -155,107 +167,104 @@ public class PullDependencies implements Runnable
   @Option(
       name = {"-c", "--coordinate"},
       title = "coordinate",
-      description = "Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apache.druid.extensions:mysql-metadata-storage",
-      required = false)
+      description = "Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apache.druid.extensions:mysql-metadata-storage"
+  )
   public List<String> coordinates = new ArrayList<>();
 
   @Option(
       name = {"-h", "--hadoop-coordinate"},
       title = "hadoop coordinate",
-      description = "Hadoop dependency to pull down, followed by a maven coordinate, e.g. org.apache.hadoop:hadoop-client:2.4.0",
-      required = false)
+      description = "Hadoop dependency to pull down, followed by a maven coordinate, e.g. org.apache.hadoop:hadoop-client:2.4.0"
+  )
   public List<String> hadoopCoordinates = new ArrayList<>();
 
   @Option(
       name = "--no-default-hadoop",
-      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client:2.8.3. If `-h` option is supplied, then default hadoop coordinate will not be downloaded.",
-      required = false)
+      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client:2.8.5. If `-h` option is supplied, then default hadoop coordinate will not be downloaded."
+  )
   public boolean noDefaultHadoop = false;
 
   @Option(
       name = "--clean",
-      title = "Remove exisiting extension and hadoop dependencies directories before pulling down dependencies.",
-      required = false)
+      title = "Remove exisiting extension and hadoop dependencies directories before pulling down dependencies."
+  )
   public boolean clean = false;
 
   @Option(
       name = {"-l", "--localRepository"},
-      title = "A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.",
-      required = false
+      title = "A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed."
   )
   public String localRepository = StringUtils.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
 
   @Option(
       name = {"-r", "--remoteRepository"},
-      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/",
-      required = false
+      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/"
   )
   List<String> remoteRepositories = new ArrayList<>();
 
   @Option(
       name = "--no-default-remote-repositories",
-      description = "Don't use the default remote repositories, only use the repositories provided directly via --remoteRepository",
-      required = false)
+      description = "Don't use the default remote repositories, only use the repositories provided directly via --remoteRepository"
+  )
   public boolean noDefaultRemoteRepositories = false;
 
   @Option(
       name = {"-d", "--defaultVersion"},
-      title = "Version to use for extension artifacts without version information.",
-      required = false
+      title = "Version to use for extension artifacts without version information."
   )
   public String defaultVersion = PullDependencies.class.getPackage().getImplementationVersion();
 
   @Option(
       name = {"--use-proxy"},
-      title = "Use http/https proxy to pull dependencies.",
-      required = false
+      title = "Use http/https proxy to pull dependencies."
   )
   public boolean useProxy = false;
 
   @Option(
       name = {"--proxy-type"},
-      title = "The proxy type, should be either http or https",
-      required = false
+      title = "The proxy type, should be either http or https"
   )
   public String proxyType = "https";
 
   @Option(
       name = {"--proxy-host"},
-      title = "The proxy host",
-      required = false
+      title = "The proxy host"
   )
   public String proxyHost = "";
 
   @Option(
       name = {"--proxy-port"},
-      title = "The proxy port",
-      required = false
+      title = "The proxy port"
   )
   public int proxyPort = -1;
 
   @Option(
       name = {"--proxy-username"},
-      title = "The proxy username",
-      required = false
+      title = "The proxy username"
   )
   public String proxyUsername = "";
 
   @Option(
       name = {"--proxy-password"},
-      title = "The proxy password",
-      required = false
+      title = "The proxy password"
   )
   public String proxyPassword = "";
 
+  @SuppressWarnings("unused")  // used by io.airlift:airline
   public PullDependencies()
   {
+    hadoopExclusions = Dependencies.builder()
+                                   .putAll(PROVIDED_BY_CORE_DEPENDENCIES)
+                                   .putAll(SECURITY_VULNERABILITY_EXCLUSIONS)
+                                   .build();
   }
 
   // Used for testing only
-  PullDependencies(TeslaAether aether, ExtensionsConfig extensionsConfig)
+  PullDependencies(TeslaAether aether, ExtensionsConfig extensionsConfig, Dependencies hadoopExclusions)
   {
     this.aether = aether;
     this.extensionsConfig = extensionsConfig;
+    this.hadoopExclusions = hadoopExclusions;
   }
 
   @Override
@@ -273,8 +282,8 @@ public class PullDependencies implements Runnable
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
-      FileUtils.forceMkdir(extensionsDir);
-      FileUtils.forceMkdir(hadoopDependenciesDir);
+      org.apache.commons.io.FileUtils.forceMkdir(extensionsDir);
+      org.apache.commons.io.FileUtils.forceMkdir(hadoopDependenciesDir);
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
@@ -315,7 +324,7 @@ public class PullDependencies implements Runnable
         currExtensionDir = new File(currExtensionDir, versionedArtifact.getVersion());
         createExtensionDirectory(hadoopCoordinate, currExtensionDir);
 
-        downloadExtension(versionedArtifact, currExtensionDir);
+        downloadExtension(versionedArtifact, currExtensionDir, hadoopExclusions);
       }
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
     }
@@ -350,47 +359,42 @@ public class PullDependencies implements Runnable
    */
   private void downloadExtension(Artifact versionedArtifact, File toLocation)
   {
+    downloadExtension(versionedArtifact, toLocation, PROVIDED_BY_CORE_DEPENDENCIES);
+  }
+
+  private void downloadExtension(Artifact versionedArtifact, File toLocation, Dependencies exclusions)
+  {
     final CollectRequest collectRequest = new CollectRequest();
     collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
     final DependencyRequest dependencyRequest = new DependencyRequest(
         collectRequest,
         DependencyFilterUtils.andFilter(
             DependencyFilterUtils.classpathFilter(JavaScopes.RUNTIME),
-            new DependencyFilter()
-            {
-              @Override
-              public boolean accept(DependencyNode node, List<DependencyNode> parents)
-              {
-                String scope = node.getDependency().getScope();
-                if (scope != null) {
-                  scope = StringUtils.toLowerCase(scope);
-                  if ("provided".equals(scope)) {
-                    return false;
-                  }
-                  if ("test".equals(scope)) {
-                    return false;
-                  }
-                  if ("system".equals(scope)) {
-                    return false;
-                  }
-                }
-                if (accept(node.getArtifact())) {
+            (node, parents) -> {
+              String scope = node.getDependency().getScope();
+              if (scope != null) {
+                scope = StringUtils.toLowerCase(scope);
+                if ("provided".equals(scope)) {
                   return false;
                 }
-
-                for (DependencyNode parent : parents) {
-                  if (accept(parent.getArtifact())) {
-                    return false;
-                  }
+                if ("test".equals(scope)) {
+                  return false;
                 }
-
-                return true;
+                if ("system".equals(scope)) {
+                  return false;
+                }
+              }
+              if (exclusions.contain(node.getArtifact())) {
+                return false;
               }
 
-              private boolean accept(final Artifact artifact)
-              {
-                return EXCLUSIONS.contains(artifact.getGroupId());
+              for (DependencyNode parent : parents) {
+                if (exclusions.contain(parent.getArtifact())) {
+                  return false;
+                }
               }
+
+              return true;
             }
         )
     );
@@ -400,11 +404,11 @@ public class PullDependencies implements Runnable
       final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
 
       for (Artifact artifact : artifacts) {
-        if (!EXCLUSIONS.contains(artifact.getGroupId())) {
-          log.info("Adding file [%s] at [%s]", artifact.getFile().getName(), toLocation.getAbsolutePath());
-          FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
-        } else {
+        if (exclusions.contain(artifact)) {
           log.debug("Skipped Artifact[%s]", artifact);
+        } else {
+          log.info("Adding file [%s] at [%s]", artifact.getFile().getName(), toLocation.getAbsolutePath());
+          org.apache.commons.io.FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
         }
       }
     }
@@ -514,15 +518,19 @@ public class PullDependencies implements Runnable
       );
     }
 
-    if (!StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTP) && !StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTPS)) {
+    if (!StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTP) &&
+        !StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTPS)) {
       throw new IllegalArgumentException("invalid proxy type: " + proxyType);
     }
 
-    RepositorySystemSession repositorySystemSession = new RepositorySystemSessionProvider(new File(localRepository)).get();
+    RepositorySystemSession repositorySystemSession =
+        new RepositorySystemSessionProvider(new File(localRepository)).get();
     List<RemoteRepository> rl = remoteRepositories.stream().map(r -> {
       RemoteRepository.Builder builder = new RemoteRepository.Builder(r.getId(), "default", r.getUrl());
       if (r.getUsername() != null && r.getPassword() != null) {
-        Authentication auth = new AuthenticationBuilder().addUsername(r.getUsername()).addPassword(r.getPassword()).build();
+        Authentication auth = new AuthenticationBuilder().addUsername(r.getUsername())
+                                                         .addPassword(r.getPassword())
+                                                         .build();
         builder.setAuthentication(auth);
       }
 
@@ -555,6 +563,62 @@ public class PullDependencies implements Runnable
           atLocation.getAbsolutePath(),
           coordinate
       );
+    }
+  }
+
+  @VisibleForTesting
+  static class Dependencies
+  {
+    private static final String ANY_ARTIFACT_ID = "*";
+
+    private final SetMultimap<String, String> groupIdToArtifactIds;
+
+    private Dependencies(Builder builder)
+    {
+      groupIdToArtifactIds = builder.groupIdToArtifactIdsBuilder.build();
+    }
+
+    boolean contain(Artifact artifact)
+    {
+      Set<String> artifactIds = groupIdToArtifactIds.get(artifact.getGroupId());
+      return artifactIds.contains(ANY_ARTIFACT_ID) || artifactIds.contains(artifact.getArtifactId());
+    }
+
+    static Builder builder()
+    {
+      return new Builder();
+    }
+
+    static final class Builder
+    {
+      private final ImmutableSetMultimap.Builder<String, String> groupIdToArtifactIdsBuilder =
+          ImmutableSetMultimap.builder();
+
+      private Builder()
+      {
+      }
+
+      Builder putAll(Dependencies dependencies)
+      {
+        groupIdToArtifactIdsBuilder.putAll(dependencies.groupIdToArtifactIds);
+        return this;
+      }
+
+      Builder put(String groupId)
+      {
+        return put(groupId, ANY_ARTIFACT_ID);
+      }
+
+      Builder put(String groupId, String artifactId)
+      {
+        groupIdToArtifactIdsBuilder.put(groupId, artifactId);
+        return this;
+      }
+
+      Dependencies build()
+      {
+        return new Dependencies(this);
+      }
     }
   }
 }

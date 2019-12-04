@@ -21,13 +21,14 @@ package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<ColumnValueSelector<ByteBuffer>>
+public final class BloomFilterMergeAggregator
+    extends BaseBloomFilterAggregator<BaseObjectColumnValueSelector<ByteBuffer>>
 {
-  BloomFilterMergeAggregator(ColumnValueSelector<ByteBuffer> selector, int maxNumEntries, boolean onHeap)
+  BloomFilterMergeAggregator(BaseObjectColumnValueSelector<ByteBuffer> selector, int maxNumEntries, boolean onHeap)
   {
     super(selector, maxNumEntries, onHeap);
   }

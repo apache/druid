@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -50,8 +49,10 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -141,13 +142,11 @@ public class IngestSegmentFirehoseFactoryTest
       private final Set<DataSegment> published = new HashSet<>();
 
       @Override
-      public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
-      {
-        return ImmutableList.copyOf(SEGMENT_SET);
-      }
-
-      @Override
-      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
+      public List<DataSegment> getUsedSegmentsForIntervals(
+          String dataSource,
+          List<Interval> interval,
+          Segments visibility
+      )
       {
         return ImmutableList.copyOf(SEGMENT_SET);
       }
@@ -212,9 +211,9 @@ public class IngestSegmentFirehoseFactoryTest
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
       {
-        return ImmutableList.copyOf(SEGMENT_SET);
+        return ImmutableSet.copyOf(SEGMENT_SET);
       }
     };
 
@@ -345,7 +344,7 @@ public class IngestSegmentFirehoseFactoryTest
   private static final String TIME_COLUMN = "ts";
   private static final Integer MAX_SHARD_NUMBER = 10;
   private static final Integer MAX_ROWS = 10;
-  private static final File TMP_DIR = Files.createTempDir();
+  private static final File TMP_DIR = FileUtils.createTempDir();
   private static final File PERSIST_DIR = Paths.get(TMP_DIR.getAbsolutePath(), "indexTestMerger").toFile();
   private static final List<DataSegment> SEGMENT_SET = new ArrayList<>(MAX_SHARD_NUMBER);
 

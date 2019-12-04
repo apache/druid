@@ -30,21 +30,26 @@ import java.util.Objects;
  */
 public class DynamicPartitionsSpec implements PartitionsSpec
 {
+  /**
+   * Default maxTotalRows for most task types except compaction task.
+   */
   public static final long DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
+  static final String NAME = "dynamic";
 
   private final int maxRowsPerSegment;
-  private final long maxTotalRows;
+  @Nullable
+  private final Long maxTotalRows;
 
   @JsonCreator
   public DynamicPartitionsSpec(
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows
   )
   {
     this.maxRowsPerSegment = PartitionsSpec.isEffectivelyNull(maxRowsPerSegment)
                              ? DEFAULT_MAX_ROWS_PER_SEGMENT
                              : maxRowsPerSegment;
-    this.maxTotalRows = PartitionsSpec.isEffectivelyNull(maxTotalRows) ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
+    this.maxTotalRows = maxTotalRows;
   }
 
   @Override
@@ -54,16 +59,32 @@ public class DynamicPartitionsSpec implements PartitionsSpec
     return maxRowsPerSegment;
   }
 
+  @Nullable
   @JsonProperty
-  public long getMaxTotalRows()
+  public Long getMaxTotalRows()
   {
     return maxTotalRows;
+  }
+
+  /**
+   * Get the given maxTotalRows or the default.
+   * The default can be different depending on the caller.
+   */
+  public long getMaxTotalRowsOr(long defaultMaxTotalRows)
+  {
+    return PartitionsSpec.isEffectivelyNull(maxTotalRows) ? defaultMaxTotalRows : maxTotalRows;
   }
 
   @Override
   public boolean needsDeterminePartitions(boolean useForHadoopTask)
   {
     return false;
+  }
+
+  @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return NAME + " partitions unsupported";
   }
 
   @Override
@@ -77,7 +98,7 @@ public class DynamicPartitionsSpec implements PartitionsSpec
     }
     DynamicPartitionsSpec that = (DynamicPartitionsSpec) o;
     return maxRowsPerSegment == that.maxRowsPerSegment &&
-           maxTotalRows == that.maxTotalRows;
+           Objects.equals(maxTotalRows, that.maxTotalRows);
   }
 
   @Override

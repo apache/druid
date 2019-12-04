@@ -27,25 +27,18 @@ public class SamplerConfig
 {
   private static final int DEFAULT_NUM_ROWS = 200;
   private static final int MAX_NUM_ROWS = 5000;
-  private static final boolean DEFAULT_SKIP_CACHE = false;
   private static final int DEFAULT_TIMEOUT_MS = 10000;
 
   private final int numRows;
-  private final String cacheKey;
-  private final boolean skipCache;
   private final int timeoutMs;
 
   @JsonCreator
   public SamplerConfig(
       @JsonProperty("numRows") Integer numRows,
-      @JsonProperty("cacheKey") String cacheKey,
-      @JsonProperty("skipCache") Boolean skipCache,
       @JsonProperty("timeoutMs") Integer timeoutMs
   )
   {
     this.numRows = numRows != null ? numRows : DEFAULT_NUM_ROWS;
-    this.cacheKey = cacheKey;
-    this.skipCache = skipCache != null ? skipCache : DEFAULT_SKIP_CACHE;
     this.timeoutMs = timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS;
 
     Preconditions.checkArgument(this.numRows <= MAX_NUM_ROWS, "numRows must be <= %s", MAX_NUM_ROWS);
@@ -54,8 +47,6 @@ public class SamplerConfig
   /**
    * The maximum number of rows to return in a response. The actual number of returned rows may be less if:
    *   - The sampled source contains less data.
-   *   - We are reading from the cache ({@link SamplerConfig#cacheKey} is set and {@link SamplerConfig#isSkipCache()}
-   *     is false) and the cache contains less data.
    *   - {@link SamplerConfig#timeoutMs} elapses before this value is reached.
    *   - {@link org.apache.druid.segment.indexing.granularity.GranularitySpec#isRollup()} is true and input rows get
    *     rolled-up into fewer indexed rows.
@@ -65,37 +56,6 @@ public class SamplerConfig
   public int getNumRows()
   {
     return numRows;
-  }
-
-  /**
-   * The sampler uses a best-effort system to attempt to cache the raw data so that future requests to the sampler
-   * can be answered without reading again from the source. In addition to responsiveness benefits, this also provides a
-   * better user experience for sources such as streams, where repeated calls to the sampler (which would happen as the
-   * user tweaks data schema configurations) would otherwise return a different set of sampled data every time. For the
-   * caching system to work, 1) the sampler must have access to the raw data (e.g. for {@link FirehoseSampler},
-   * {@link org.apache.druid.data.input.InputRowPlusRaw#getRaw()} must be non-null) and 2) the parser must be an
-   * implementation of {@link org.apache.druid.data.input.ByteBufferInputRowParser} since the data is cached as a byte
-   * array. If these conditions are not satisfied, the cache returns a miss and the sampler would read from source.
-   * <p>
-   * {@link SamplerResponse} returns a {@link SamplerResponse#cacheKey} which should be supplied here in
-   * {@link SamplerConfig} for future requests to prefer the cache if available. This field is ignored if
-   * {@link SamplerConfig#skipCache} is true.
-   *
-   * @return key to use for locating previously cached raw data
-   */
-  public String getCacheKey()
-  {
-    return cacheKey;
-  }
-
-  /**
-   * Whether to read/write to the cache. See cache description in {@link SamplerConfig#getCacheKey()}.
-   *
-   * @return true if cache reads and writes should be skipped
-   */
-  public boolean isSkipCache()
-  {
-    return skipCache;
   }
 
   /**
@@ -112,6 +72,6 @@ public class SamplerConfig
 
   public static SamplerConfig empty()
   {
-    return new SamplerConfig(null, null, null, null);
+    return new SamplerConfig(null, null);
   }
 }

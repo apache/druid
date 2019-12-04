@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ import java.util.Set;
 /**
  *
  */
-public class ParserTest
+public class ParserTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSimple()
