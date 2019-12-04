@@ -1127,7 +1127,7 @@ EC2's autoscaler properties are:
 |`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
 |`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
 
-For GCE's properties, please refer to the [gce-extensions](../extensions-contrib/gce-extensions.md).
+For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
 ## Data Server
 
