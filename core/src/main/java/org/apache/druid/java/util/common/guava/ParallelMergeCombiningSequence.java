@@ -119,7 +119,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
 
     final BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
-    final MergeCombineMetricsAccumlator metricsAccumlator = new MergeCombineMetricsAccumlator(inputSequences.size());
+    final MergeCombineMetricsAccumulator metricsAccumulator = new MergeCombineMetricsAccumulator(inputSequences.size());
     MergeCombinePartitioningAction<T> mergeCombineAction = new MergeCombinePartitioningAction<>(
         inputSequences,
         orderingFn,
@@ -132,7 +132,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         targetTimeNanos,
         hasTimeout,
         timeoutAtNanos,
-        metricsAccumlator,
+        metricsAccumulator,
         cancellationGizmo
     );
     workerPool.execute(mergeCombineAction);
@@ -143,7 +143,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         cancellationGizmo
     ).withBaggage(() -> {
       if (metricsReporter != null) {
-        metricsReporter.accept(metricsAccumlator.build());
+        metricsReporter.accept(metricsAccumulator.build());
       }
     });
     return finalOutSequence.toYielder(initValue, accumulator);
@@ -263,7 +263,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final long targetTimeNanos;
     private final boolean hasTimeout;
     private final long timeoutAt;
-    private final MergeCombineMetricsAccumlator metricsAccumlator;
+    private final MergeCombineMetricsAccumulator metricsAccumulator;
     private final CancellationGizmo cancellationGizmo;
 
     private MergeCombinePartitioningAction(
@@ -278,7 +278,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         long targetTimeNanos,
         boolean hasTimeout,
         long timeoutAt,
-        MergeCombineMetricsAccumlator metricsAccumlator,
+        MergeCombineMetricsAccumulator metricsAccumulator,
         CancellationGizmo cancellationGizmo
     )
     {
@@ -293,7 +293,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.targetTimeNanos = targetTimeNanos;
       this.hasTimeout = hasTimeout;
       this.timeoutAt = timeoutAt;
-      this.metricsAccumlator = metricsAccumlator;
+      this.metricsAccumulator = metricsAccumulator;
       this.cancellationGizmo = cancellationGizmo;
     }
 
@@ -320,8 +320,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             sequenceCursors.add(new YielderBatchedResultsCursor<>(new SequenceBatcher<>(s, batchSize), orderingFn));
           }
           MergeCombineActionMetricsAccumulator soloAccumulator = new MergeCombineActionMetricsAccumulator();
-          metricsAccumlator.setPartitions(Collections.emptyList());
-          metricsAccumlator.setMergeMetrics(soloAccumulator);
+          metricsAccumulator.setPartitions(Collections.emptyList());
+          metricsAccumulator.setMergeMetrics(soloAccumulator);
           PrepareMergeCombineInputsAction<T> blockForInputsAction = new PrepareMergeCombineInputsAction<>(
               sequenceCursors,
               resultsPusher,
@@ -365,7 +365,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         for (Sequence<T> s : partition) {
           partitionCursors.add(new YielderBatchedResultsCursor<>(new SequenceBatcher<>(s, batchSize), orderingFn));
         }
-        MergeCombineActionMetricsAccumulator partitionAccumlator = new MergeCombineActionMetricsAccumulator();
+        MergeCombineActionMetricsAccumulator partitionAccumulator = new MergeCombineActionMetricsAccumulator();
         PrepareMergeCombineInputsAction<T> blockForInputsAction = new PrepareMergeCombineInputsAction<>(
             partitionCursors,
             pusher,
@@ -374,14 +374,14 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             yieldAfter,
             batchSize,
             targetTimeNanos,
-            partitionAccumlator,
+            partitionAccumulator,
             cancellationGizmo
         );
         tasks.add(blockForInputsAction);
-        taskMetrics.add(partitionAccumlator);
+        taskMetrics.add(partitionAccumulator);
       }
 
-      metricsAccumlator.setPartitions(taskMetrics);
+      metricsAccumulator.setPartitions(taskMetrics);
 
       for (RecursiveAction task : tasks) {
         getPool().execute(task);
@@ -396,7 +396,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
       MergeCombineActionMetricsAccumulator finalMergeMetrics = new MergeCombineActionMetricsAccumulator();
 
-      metricsAccumlator.setMergeMetrics(finalMergeMetrics);
+      metricsAccumulator.setMergeMetrics(finalMergeMetrics);
       PrepareMergeCombineInputsAction<T> finalMergeAction = new PrepareMergeCombineInputsAction<>(
           intermediaryOutputsCursors,
           outputPusher,
@@ -1243,13 +1243,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * metrics in {@link #partitionMetrics} and final merge task metrics in {@link #mergeMetrics}, in order to compute
    * {@link MergeCombineMetrics} after the {@link ParallelMergeCombiningSequence} is completely consumed.
    */
-  static class MergeCombineMetricsAccumlator
+  static class MergeCombineMetricsAccumulator
   {
     List<MergeCombineActionMetricsAccumulator> partitionMetrics;
     MergeCombineActionMetricsAccumulator mergeMetrics;
     private final int inputSequences;
 
-    MergeCombineMetricsAccumlator(int inputSequences)
+    MergeCombineMetricsAccumulator(int inputSequences)
     {
       this.inputSequences = inputSequences;
     }
@@ -1268,7 +1268,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       long numInputRows = 0;
       long cpuTimeNanos = 0;
-      // 1 partition task, 1 layer 2 prepare merge inputs task, 1 layer 1 prepare merge inputs task for each partition
+      // 1 partition task, 1 layer two prepare merge inputs task, 1 layer one prepare merge inputs task for each
+      // partition
       long totalPoolTasks = 1 + 1 + partitionMetrics.size();
 
       // accumulate input row count, cpu time, and total number of tasks from each partition
