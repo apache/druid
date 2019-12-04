@@ -101,6 +101,9 @@
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
       },
+      "development/extensions-contrib/gce-extensions": {
+        "title": "GCE Extensions"
+      },
       "development/extensions-contrib/graphite": {
         "title": "Graphite Emitter"
       },
@@ -142,9 +145,6 @@
       },
       "development/extensions-contrib/time-min-max": {
         "title": "Timestamp Min/Max aggregators"
-      },
-      "development/extensions-contrib/gce-extensions": {
-        "title": "GCE Extensions"
       },
       "development/extensions-core/approximate-histograms": {
         "title": "Approximate Histogram aggregators"

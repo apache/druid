@@ -28,7 +28,7 @@ To use this Apache Druid (incubating) extension, make sure to [include](../../de
 At the moment, this extension enables only Druid to autoscale instances in GCE.
 
 The extension manages the instances to be scaled up and down through the use of the [Managed Instance Groups](https://cloud.google.com/compute/docs/instance-groups/creating-groups-of-managed-instances#resize_managed_group)
-of GCE (MIG from now on). This choice hs been made to ease the configuration of the machines and simplify their
+of GCE (MIG from now on). This choice has been made to ease the configuration of the machines and simplify their
 management.
 
 For this reason, in order to use this extension, the user must have created
@@ -78,7 +78,7 @@ A sample worker config spec is shown below:
 The configuration of the autoscaler is quite simple and it is made of two levels only.
 
 The external level specifies the `type`—always `gce` in this case— and two numeric values,
-the `maxNumWorkers` and `minNumWorkers` used to define the bounduaries in between which the
+the `maxNumWorkers` and `minNumWorkers` used to define the boundaries in between which the
 number of instances must be at any time.
 
 The internal level is the `envConfig` and it is used to specify
@@ -87,7 +87,7 @@ The internal level is the `envConfig` and it is used to specify
 request to provision more workers.  This is safe to be left to `1`
 - The `projectId` used to specify the name of the project in which the MIG resides
 - The `zoneName` used to identify in which zone of the worlds the MIG is
-- The `managedInstanceGroupName` used to specify the MIG cotaining the instances created or 
+- The `managedInstanceGroupName` used to specify the MIG containing the instances created or 
 removed
 
 Please refer to the Overlord Dynamic Configuration section in the main [documentation](../../configuration/index.md)
