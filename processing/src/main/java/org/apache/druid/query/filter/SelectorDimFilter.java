@@ -58,8 +58,6 @@ public class SelectorDimFilter implements DimFilter
   @Nullable
   private final FilterTuning filterTuning;
 
-  private final Object initLock = new Object();
-
   private volatile DruidLongPredicate longPredicate;
   private volatile DruidFloatPredicate floatPredicate;
   private volatile DruidDoublePredicate druidDoublePredicate;
