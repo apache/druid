@@ -184,7 +184,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final List<String> effectiveDimensions;
     if (dimensions == null) {
-      effectiveDimensions = getUniqueDimensions(timeline, null);
+      effectiveDimensions = getUniqueDimensions(timeline, inputRowSchema.getDimensionsSpec().getDimensionExclusions());
+    } else if (inputRowSchema.getDimensionsSpec().hasCustomDimensions()) {
+      effectiveDimensions = inputRowSchema.getDimensionsSpec().getDimensionNames();
     } else {
       effectiveDimensions = dimensions;
     }
