@@ -298,7 +298,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         retryPolicyFactory,
         dataSource,
         interval,
-        splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
+        splitHintSpec == null ? new SegmentsSplitHintSpec(maxInputSegmentBytesPerTask) : splitHintSpec
     );
   }
 

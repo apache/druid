@@ -63,6 +63,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -308,6 +309,7 @@ public class IngestSegmentFirehoseFactoryTest
                       public void configure(Binder binder)
                       {
                         binder.bind(LocalDataSegmentPuller.class);
+                        binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
                       }
                     }
                 )
