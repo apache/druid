@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
@@ -271,152 +272,92 @@ public class InDimFilter implements DimFilter
   {
     return Objects.hash(values, dimension, extractionFn, filterTuning);
   }
+  
+  private DruidLongPredicate createLongPredicate()
+  {
+    LongArrayList longs = new LongArrayList(values.size());
+    for (String value : values) {
+      final Long longValue = DimensionHandlerUtils.getExactLongFromDecimalString(value);
+      if (longValue != null) {
+        longs.add(longValue);
+      }
+    }
 
+    if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
+      final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
+
+      return input -> longHashSet.contains(input);
+    } else {
+      final long[] longArray = longs.toLongArray();
+      Arrays.sort(longArray);
+
+      return input -> Arrays.binarySearch(longArray, input) >= 0;
+    }
+  }
+  
   // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.
   // Pass in a common long predicate supplier to all filters created by .toFilter(), so that
   // we only compute the long hashset/array once per query.
   // This supplier must be thread-safe, since this DimFilter will be accessed in the query runners.
   private Supplier<DruidLongPredicate> getLongPredicateSupplier()
   {
-    return new Supplier<DruidLongPredicate>()
-    {
-      private final Object initLock = new Object();
-      private DruidLongPredicate predicate;
-
-
-      private void initLongValues()
-      {
-        if (predicate != null) {
-          return;
-        }
-
-        synchronized (initLock) {
-          if (predicate != null) {
-            return;
-          }
-
-          LongArrayList longs = new LongArrayList(values.size());
-          for (String value : values) {
-            final Long longValue = DimensionHandlerUtils.getExactLongFromDecimalString(value);
-            if (longValue != null) {
-              longs.add(longValue);
-            }
-          }
-
-          if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
-            final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
-
-            predicate = input -> longHashSet.contains(input);
-          } else {
-            final long[] longArray = longs.toLongArray();
-            Arrays.sort(longArray);
-
-            predicate = input -> Arrays.binarySearch(longArray, input) >= 0;
-          }
-        }
-      }
-
-      @Override
-      public DruidLongPredicate get()
-      {
-        initLongValues();
-        return predicate;
-      }
-    };
+    Supplier<DruidLongPredicate> longPredicate = () -> createLongPredicate();
+    return Suppliers.memoize(longPredicate);
   }
+  
+  private DruidFloatPredicate createFloatPredicate()
+  {
+    IntArrayList floatBits = new IntArrayList(values.size());
+    for (String value : values) {
+      Float floatValue = Floats.tryParse(value);
+      if (floatValue != null) {
+        floatBits.add(Float.floatToIntBits(floatValue));
+      }
+    }
 
+    if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
+      final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
+
+      return input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
+    } else {
+      final int[] floatBitsArray = floatBits.toIntArray();
+      Arrays.sort(floatBitsArray);
+
+      return input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
+    }
+  }
+  
   private Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
   {
-    return new Supplier<DruidFloatPredicate>()
-    {
-      private final Object initLock = new Object();
-      private DruidFloatPredicate predicate;
-
-      private void initFloatValues()
-      {
-        if (predicate != null) {
-          return;
-        }
-
-        synchronized (initLock) {
-          if (predicate != null) {
-            return;
-          }
-
-          IntArrayList floatBits = new IntArrayList(values.size());
-          for (String value : values) {
-            Float floatValue = Floats.tryParse(value);
-            if (floatValue != null) {
-              floatBits.add(Float.floatToIntBits(floatValue));
-            }
-          }
-
-          if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
-            final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
-
-            predicate = input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
-          } else {
-            final int[] floatBitsArray = floatBits.toIntArray();
-            Arrays.sort(floatBitsArray);
-
-            predicate = input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
-          }
-        }
+    Supplier<DruidFloatPredicate> floatPredicate = () -> createFloatPredicate();
+    return Suppliers.memoize(floatPredicate);
+  }
+  
+  private DruidDoublePredicate createDoublePredicate()
+  {
+    LongArrayList doubleBits = new LongArrayList(values.size());
+    for (String value : values) {
+      Double doubleValue = Doubles.tryParse(value);
+      if (doubleValue != null) {
+        doubleBits.add(Double.doubleToLongBits((doubleValue)));
       }
+    }
 
-      @Override
-      public DruidFloatPredicate get()
-      {
-        initFloatValues();
-        return predicate;
-      }
-    };
+    if (doubleBits.size() > NUMERIC_HASHING_THRESHOLD) {
+      final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
+
+      return input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
+    } else {
+      final long[] doubleBitsArray = doubleBits.toLongArray();
+      Arrays.sort(doubleBitsArray);
+
+      return input -> Arrays.binarySearch(doubleBitsArray, Double.doubleToLongBits(input)) >= 0;
+    }
   }
 
   private Supplier<DruidDoublePredicate> getDoublePredicateSupplier()
   {
-    return new Supplier<DruidDoublePredicate>()
-    {
-      private final Object initLock = new Object();
-      private DruidDoublePredicate predicate;
-
-      private void initDoubleValues()
-      {
-        if (predicate != null) {
-          return;
-        }
-
-        synchronized (initLock) {
-          if (predicate != null) {
-            return;
-          }
-
-          LongArrayList doubleBits = new LongArrayList(values.size());
-          for (String value : values) {
-            Double doubleValue = Doubles.tryParse(value);
-            if (doubleValue != null) {
-              doubleBits.add(Double.doubleToLongBits((doubleValue)));
-            }
-          }
-
-          if (doubleBits.size() > NUMERIC_HASHING_THRESHOLD) {
-            final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
-
-            predicate = input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
-          } else {
-            final long[] doubleBitsArray = doubleBits.toLongArray();
-            Arrays.sort(doubleBitsArray);
-
-            predicate = input -> Arrays.binarySearch(doubleBitsArray, Double.doubleToLongBits(input)) >= 0;
-          }
-        }
-      }
-      @Override
-      public DruidDoublePredicate get()
-      {
-        initDoubleValues();
-        return predicate;
-      }
-    };
+    Supplier<DruidDoublePredicate> doublePredicate = () -> createDoublePredicate();
+    return Suppliers.memoize(doublePredicate);
   }
 }
