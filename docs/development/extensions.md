@@ -59,6 +59,7 @@ Core extensions are maintained by Druid committers.
 |mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.md)|
 |postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.md)|
 |simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.md)|
+|druid-pac4j|OpenID Connect authentication for druid processes.|[link](../development/extensions-core/druid-pac4j.md)|
 
 ## Community extensions
 
