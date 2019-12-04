@@ -70,6 +70,7 @@ public class HttpEmitterTest
     final HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
         .setHttpTimeoutAllowanceFactor(timeoutAllowanceFactor)
+        .setFlushTimeout(5000)
         .build();
     final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
 
