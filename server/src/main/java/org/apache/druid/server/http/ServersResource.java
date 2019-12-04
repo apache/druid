@@ -59,6 +59,7 @@ public class ServersResource
         .put("priority", input.getPriority())
         .put("currSize", input.getCurrSize())
         .put("maxSize", input.getMaxSize())
+        .put("totalSegment", input.getTotalSegments())
         .build();
   }
 
@@ -72,6 +73,7 @@ public class ServersResource
         .put("priority", server.getPriority())
         .put("segments", createLazySegmentsMap(server))
         .put("currSize", server.getCurrSize())
+        .put("totalSegment", server.getTotalSegments())
         .build();
   }
 

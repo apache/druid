@@ -394,6 +394,7 @@ Returns a list of server data objects in which each object has the following key
 * `maxSize`: maximum storage size
 * `priority`
 * `tier`
+* `totalSegment`: total segments in a server
 
 ### Overlord
 
