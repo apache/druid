@@ -34,10 +34,12 @@ import java.net.URI;
 
 public class GoogleCloudStorageEntity extends RetryingInputEntity
 {
+  private final CloudObjectLocation location;
   private final GoogleByteSource byteSource;
 
   GoogleCloudStorageEntity(GoogleStorage storage, CloudObjectLocation location)
   {
+    this.location = location;
     this.byteSource = new GoogleByteSource(storage, location.getBucket(), location.getPath());
   }
 
@@ -45,7 +47,7 @@ public class GoogleCloudStorageEntity extends RetryingInputEntity
   @Override
   public URI getUri()
   {
-    return null;
+    return location.toUri(GoogleCloudStorageInputSource.SCHEME);
   }
 
   @Override

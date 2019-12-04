@@ -40,7 +40,7 @@ import java.util.stream.StreamSupport;
 
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource<GoogleCloudStorageEntity>
 {
-  private static final String SCHEME = "gs";
+  static final String SCHEME = "gs";
 
   private final GoogleStorage storage;
 

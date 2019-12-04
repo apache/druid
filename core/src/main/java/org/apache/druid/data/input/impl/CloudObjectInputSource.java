@@ -86,8 +86,15 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
     return objects;
   }
 
+  /**
+   * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}
+   */
   protected abstract T createEntity(InputSplit<CloudObjectLocation> split);
 
+  /**
+   * Create a stream of {@link CloudObjectLocation} splits by listing objects that appear under {@link #prefixes} using
+   * this input sources backend API
+   */
   protected abstract Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream();
 
   @Override
