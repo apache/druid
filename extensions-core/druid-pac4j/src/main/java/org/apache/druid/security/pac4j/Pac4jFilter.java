@@ -78,7 +78,7 @@ public class Pac4jFilter implements Filter
     HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
     J2EContext context = new J2EContext(httpServletRequest, httpServletResponse, sessionStore);
 
-    if (Pac4jCallbackResource.SELF_URL.equals(httpServletRequest.getServletPath())) {
+    if (Pac4jCallbackResource.SELF_URL.equals(httpServletRequest.getRequestURI())) {
       callbackLogic.perform(
           context,
           pac4jConfig,
