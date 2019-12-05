@@ -87,13 +87,16 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   }
 
   /**
-   * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}
+   * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}. This
+   * is called internally by {@link #formattableReader} and operates on the output of {@link #createSplits}.
    */
   protected abstract T createEntity(InputSplit<CloudObjectLocation> split);
 
   /**
    * Create a stream of {@link CloudObjectLocation} splits by listing objects that appear under {@link #prefixes} using
-   * this input sources backend API
+   * this input sources backend API. This is called internally by {@link #createSplits} and {@link #estimateNumSplits},
+   * only if {@link #prefixes} is set, otherwise the splits are created directly from {@link #uris} or {@link #objects}.
+   * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
    */
   protected abstract Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream();
 
