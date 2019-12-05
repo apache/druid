@@ -1156,7 +1156,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
           required: true,
-          defined: ioConfig => !deepGet(ioConfig, 'inputSource.prefixes'),
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
           info: (
             <>
               <p>
@@ -1173,7 +1174,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
           required: true,
-          defined: ioConfig => !deepGet(ioConfig, 'inputSource.uris'),
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
           info: (
             <>
               <p>A list of paths (with bucket) where your files are stored.</p>
@@ -1186,6 +1188,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 objects',
           type: 'json',
           required: true,
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.prefixes'),
           info: (
             <>
               <p>
@@ -1212,7 +1216,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder: 'gs://your-bucket/some-file1.ext, gs://your-bucket/some-file2.ext',
           required: true,
-          defined: ioConfig => !deepGet(ioConfig, 'inputSource.prefixes'),
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
           info: (
             <>
               <p>
@@ -1229,7 +1234,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder: 'gs://your-bucket/some-path1, gs://your-bucket/some-path2',
           required: true,
-          defined: ioConfig => !deepGet(ioConfig, 'inputSource.uris'),
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
           info: (
             <>
               <p>A list of paths (with bucket) where your files are stored.</p>
@@ -1242,6 +1248,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Google Cloud Storage objects',
           type: 'json',
           required: true,
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.prefixes'),
           info: (
             <>
               <p>
