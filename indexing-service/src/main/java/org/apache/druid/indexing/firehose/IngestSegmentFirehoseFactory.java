@@ -34,6 +34,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -50,7 +51,6 @@ import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
@@ -220,14 +220,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
       dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
     } else {
-      dims = VersionedIntervalTimeline.getUniqueDimensions(
+      dims = ReingestionTimelineUtils.getUniqueDimensions(
         timeLineSegments,
         inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
       );
     }
 
     final List<String> metricsList = metrics == null
-                                     ? VersionedIntervalTimeline.getUniqueMetrics(timeLineSegments)
+                                     ? ReingestionTimelineUtils.getUniqueMetrics(timeLineSegments)
                                      : metrics;
 
     final List<WindowedStorageAdapter> adapters = Lists.newArrayList(

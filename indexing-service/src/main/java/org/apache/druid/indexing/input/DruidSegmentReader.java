@@ -267,11 +267,5 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       cursor.advance();
       return theEvent;
     }
-
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException("Remove Not Supported");
-    }
   }
 }

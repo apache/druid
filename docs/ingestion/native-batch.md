@@ -904,9 +904,9 @@ This InputSource has a fixed InputFormat for reading from Druid segments; no Inp
 |--------|-----------|---------|
 |type|This should be "druid".|yes|
 |dataSource|A String defining the Druid datasource to fetch rows from|yes|
-|interval|A String representing the ISO-8601 interval, which defines the time range to fetch the data over.|yes|
+|interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
 |dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
-|metrics|The list of Strings containg the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
+|metrics|The list of Strings containing the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
 |filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
 
 A minimal example DruidInputSource spec is shown below:

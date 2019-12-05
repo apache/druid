@@ -36,6 +36,7 @@ import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -177,7 +178,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final List<String> effectiveDimensions;
     if (dimensions == null) {
-      effectiveDimensions = VersionedIntervalTimeline.getUniqueDimensions(
+      effectiveDimensions = ReingestionTimelineUtils.getUniqueDimensions(
           timeline,
           inputRowSchema.getDimensionsSpec().getDimensionExclusions()
       );
@@ -189,7 +190,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     List<String> effectiveMetrics;
     if (metrics == null) {
-      effectiveMetrics = VersionedIntervalTimeline.getUniqueMetrics(timeline);
+      effectiveMetrics = ReingestionTimelineUtils.getUniqueMetrics(timeline);
     } else {
       effectiveMetrics = metrics;
     }

@@ -41,6 +41,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -81,7 +82,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -601,11 +601,11 @@ public class IngestSegmentFirehoseFactoryTest
     };
     Assert.assertEquals(
         Arrays.asList(expectedDims),
-        VersionedIntervalTimeline.getUniqueDimensions(timelineSegments, null)
+        ReingestionTimelineUtils.getUniqueDimensions(timelineSegments, null)
     );
     Assert.assertEquals(
         Arrays.asList(expectedMetrics),
-        VersionedIntervalTimeline.getUniqueMetrics(timelineSegments)
+        ReingestionTimelineUtils.getUniqueMetrics(timelineSegments)
     );
   }
 
