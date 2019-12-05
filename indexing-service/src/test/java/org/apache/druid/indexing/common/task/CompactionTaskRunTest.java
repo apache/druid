@@ -111,7 +111,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   public static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       new TimestampSpec("ts", "auto", null),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
-      null,
+      "|",
       Arrays.asList("ts", "dim", "val"),
       false,
       0
@@ -129,6 +129,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
           "longs"
       )
   );
+
+  private static List<String> TEST_ROWS = new ArrayList<>();
+  {
+    TEST_ROWS.add("2014-01-01T00:00:10Z,a,1\n");
+    TEST_ROWS.add("2014-01-01T00:00:10Z,b,2\n");
+    TEST_ROWS.add("2014-01-01T00:00:10Z,c,3\n");
+    TEST_ROWS.add("2014-01-01T01:00:20Z,a,1\n");
+    TEST_ROWS.add("2014-01-01T01:00:20Z,b,2\n");
+    TEST_ROWS.add("2014-01-01T01:00:20Z,c,3\n");
+    TEST_ROWS.add("2014-01-01T02:00:30Z,a,1\n");
+    TEST_ROWS.add("2014-01-01T02:00:30Z,b,2\n");
+    TEST_ROWS.add("2014-01-01T02:00:30Z,c,3\n");
+    //TEST_ROWS.add("2014-01-01T02:00:30Z,c|d|e,3\n");
+  }
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -751,15 +765,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("2014-01-01T00:00:10Z,a,1\n");
-      writer.write("2014-01-01T00:00:10Z,b,2\n");
-      writer.write("2014-01-01T00:00:10Z,c,3\n");
-      writer.write("2014-01-01T01:00:20Z,a,1\n");
-      writer.write("2014-01-01T01:00:20Z,b,2\n");
-      writer.write("2014-01-01T01:00:20Z,c,3\n");
-      writer.write("2014-01-01T02:00:30Z,a,1\n");
-      writer.write("2014-01-01T02:00:30Z,b,2\n");
-      writer.write("2014-01-01T02:00:30Z,c,3\n");
+      for (String testRow : TEST_ROWS) {
+        writer.write(testRow);
+      }
     }
 
     IndexTask indexTask = new IndexTask(
