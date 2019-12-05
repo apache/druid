@@ -960,7 +960,7 @@ export interface InputSource {
   filter?: any;
   uris?: string[];
   prefixes?: string[];
-  blobs?: { bucket: string; path: string }[];
+  objects?: { bucket: string; path: string }[];
   fetchTimeout?: number;
 
   // druid
@@ -1163,7 +1163,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
                 The full S3 URI of your file. To ingest from multiple URIs, use commas to separate
                 each individual URI.
               </p>
-              <p>Either S3 URIs or S3 prefixes must be set.</p>
+              <p>Either S3 URIs or prefixes or objects must be set.</p>
             </>
           ),
         },
@@ -1177,7 +1177,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               <p>A list of paths (with bucket) where your files are stored.</p>
-              <p>Either S3 URIs or S3 prefixes must be set.</p>
+              <p>Either S3 URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.objects',
+          label: 'S3 objects',
+          type: 'json',
+          required: true,
+          info: (
+            <>
+              <p>
+                JSON array of{' '}
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/s3.html`}
+                >
+                  S3 Objects
+                </ExternalLink>
+                .
+              </p>
+              <p>Either S3 URIs or prefixes or objects must be set.</p>
             </>
           ),
         },
@@ -1187,8 +1207,39 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
       return [
         inputSourceType,
         {
-          name: 'inputSource.blobs',
-          label: 'Google blobs',
+          name: 'inputSource.uris',
+          label: 'Google Cloud Storage URIs',
+          type: 'string-array',
+          placeholder: 'gs://your-bucket/some-file1.ext, gs://your-bucket/some-file2.ext',
+          required: true,
+          defined: ioConfig => !deepGet(ioConfig, 'inputSource.prefixes'),
+          info: (
+            <>
+              <p>
+                The full Google Cloud Storage URI of your file. To ingest from multiple URIs, use
+                commas to separate each individual URI.
+              </p>
+              <p>Either Google Cloud Storage URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.prefixes',
+          label: 'Google Cloud Storage prefixes',
+          type: 'string-array',
+          placeholder: 'gs://your-bucket/some-path1, gs://your-bucket/some-path2',
+          required: true,
+          defined: ioConfig => !deepGet(ioConfig, 'inputSource.uris'),
+          info: (
+            <>
+              <p>A list of paths (with bucket) where your files are stored.</p>
+              <p>Either Google Cloud Storage URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.objects',
+          label: 'Google Cloud Storage objects',
           type: 'json',
           required: true,
           info: (
@@ -1196,12 +1247,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <p>
                 JSON array of{' '}
                 <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-contrib/google.html`}
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/google.html`}
                 >
-                  Google Blobs
+                  Google Cloud Storage Objects
                 </ExternalLink>
                 .
               </p>
+              <p>Either Google Cloud Storage URIs or prefixes or objects must be set.</p>
             </>
           ),
         },
@@ -1362,14 +1414,13 @@ function issueWithInputSource(inputSource: InputSource | undefined): string | un
       break;
 
     case 's3':
-      if (!nonEmptyArray(inputSource.uris) && !nonEmptyArray(inputSource.prefixes)) {
-        return 'must have at least one uri or prefix';
-      }
-      break;
-
     case 'google':
-      if (!nonEmptyArray(inputSource.blobs)) {
-        return 'must have at least one blob';
+      if (
+        !nonEmptyArray(inputSource.uris) &&
+        !nonEmptyArray(inputSource.prefixes) &&
+        !nonEmptyArray(inputSource.objects)
+      ) {
+        return 'must have at least one uri or prefix or object';
       }
       break;
 
@@ -1755,9 +1806,11 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
           }
 
         case 's3':
-          const s3Path =
+        case 'google':
+          const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
+          const uriPath =
             (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
-          return s3Path ? filenameFromPath(s3Path) : undefined;
+          return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
 
         case 'http':
           return Array.isArray(inputSource.uris)
@@ -2556,6 +2609,7 @@ export function upgradeSpec(spec: any): any {
 
       case 'static-google-blobstore':
         deepSet(spec, 'ioConfig.firehose.type', 'google');
+        deepMove(spec, 'ioConfig.firehose.blobs', 'ioConfig.firehose.objects');
         break;
     }
 
@@ -2593,6 +2647,7 @@ export function downgradeSpec(spec: any): any {
 
       case 'google':
         deepSet(spec, 'ioConfig.firehose.type', 'static-google-blobstore');
+        deepMove(spec, 'ioConfig.firehose.objects', 'ioConfig.firehose.blobs');
         break;
     }
   }
