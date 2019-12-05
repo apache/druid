@@ -34,7 +34,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -289,10 +288,8 @@ public class S3Utils
   {
     if (uri.getScheme().equalsIgnoreCase(S3StorageDruidModule.SCHEME_S3_ZIP)) {
       uri = URI.create(SCHEME + uri.toString().substring(S3StorageDruidModule.SCHEME_S3_ZIP.length()));
-    } else if (!SCHEME.equalsIgnoreCase(uri.getScheme())) {
-      throw new IAE("Invalid URI scheme [%s] must be [%s]", uri.toString(), SCHEME);
     }
-    return uri;
+    return CloudObjectLocation.validateUriScheme(SCHEME, uri);
   }
 
   // Copied from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder()

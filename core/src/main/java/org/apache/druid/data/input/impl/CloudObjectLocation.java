@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.net.URI;
@@ -45,6 +46,14 @@ import java.util.Objects;
  */
 public class CloudObjectLocation
 {
+  public static URI validateUriScheme(String scheme, URI uri)
+  {
+    if (!scheme.equalsIgnoreCase(uri.getScheme())) {
+      throw new IAE("Invalid URI scheme [%s] must be [%s]", uri.toString(), scheme);
+    }
+    return uri;
+  }
+
   private final String bucket;
   private final String path;
 
@@ -125,5 +134,4 @@ public class CloudObjectLocation
   {
     return Objects.hash(bucket, path);
   }
-
 }
