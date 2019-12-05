@@ -103,6 +103,9 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
     String[] uniquePartitions = partitions.stream().distinct().toArray(String[]::new);
     int numUniquePartition = uniquePartitions.length;
 
+    // First partition starts with null (see StringPartitionChunk.isStart())
+    uniquePartitions[0] = null;
+
     List<SegmentIdWithShardSpec> segmentIds =
         IntStream.range(0, numUniquePartition - 1)
                  .mapToObj(i -> createSegmentIdWithShardSpec(
@@ -132,6 +135,7 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
       int partitionNum
   )
   {
+    // Last partition ends with null (see StringPartitionChunk.isEnd())
     return createSegmentIdWithShardSpec(interval, version, partitionStart, null, partitionNum);
   }
 

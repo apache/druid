@@ -174,19 +174,36 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   @SuppressWarnings("SameParameterValue")
   private void testAllocate(InputRow row, Interval interval, int partitionNum)
   {
-    testAllocate(row, interval, partitionNum, INTERVAL_TO_PARTITONS.get(interval).get(partitionNum + 1));
+    String partitionEnd = getPartitionEnd(interval, partitionNum);
+    testAllocate(row, interval, partitionNum, partitionEnd);
+  }
+
+  @Nullable
+  private static String getPartitionEnd(Interval interval, int partitionNum)
+  {
+    Partitions partitions = INTERVAL_TO_PARTITONS.get(interval);
+    boolean isLastPartition = (partitionNum + 1) == partitions.size();
+    return isLastPartition ? null : partitions.get(partitionNum + 1);
   }
 
   private void testAllocate(InputRow row, Interval interval, int partitionNum, @Nullable String partitionEnd)
   {
-    testAllocate(row, interval, partitionNum, INTERVAL_TO_PARTITONS.get(interval).get(partitionNum), partitionEnd);
+    String partitionStart = getPartitionStart(interval, partitionNum);
+    testAllocate(row, interval, partitionNum, partitionStart, partitionEnd);
+  }
+
+  @Nullable
+  private static String getPartitionStart(Interval interval, int partitionNum)
+  {
+    boolean isFirstPartition = partitionNum == 0;
+    return isFirstPartition ? null : INTERVAL_TO_PARTITONS.get(interval).get(partitionNum);
   }
 
   private void testAllocate(
       InputRow row,
       Interval interval,
       int partitionNum,
-      String partitionStart,
+      @Nullable String partitionStart,
       @Nullable String partitionEnd
   )
   {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,5 +57,11 @@ public class PartitionsTest
     values[0] = "changed";
     Assert.assertEquals(Arrays.asList(originalValues), target);
     Assert.assertNotEquals(Arrays.asList(values), target);
+  }
+
+  @Test
+  public void serializesDeserializes()
+  {
+    TestHelper.testSerializesDeserializes(TestHelper.JSON_MAPPER, target);
   }
 }

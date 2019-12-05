@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,6 +31,13 @@ import java.util.List;
 public class Partitions extends ForwardingList<String> implements List<String>
 {
   private final List<String> delegate;
+
+  // For jackson
+  @SuppressWarnings("unused")
+  private Partitions()
+  {
+    delegate = new ArrayList<>();
+  }
 
   public Partitions(String... partitions)
   {

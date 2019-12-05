@@ -512,7 +512,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private boolean isParallelMode()
   {
-    return baseInputSource.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() > 1;
+    // Range partitioning is not implemented for runSequential() (but hash partitioning is)
+    int minRequiredNumConcurrentSubTasks = useRangePartitions() ? 1 : 2;
+
+    return baseInputSource.isSplittable()
+           && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
   }
 
   /**

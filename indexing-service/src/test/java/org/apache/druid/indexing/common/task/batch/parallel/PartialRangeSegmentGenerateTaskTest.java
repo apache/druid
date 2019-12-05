@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -27,6 +28,8 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.hamcrest.Matchers;
@@ -141,7 +144,7 @@ public class PartialRangeSegmentGenerateTaskTest
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          Collections.emptyMap(),
+          ImmutableMap.of(Intervals.ETERNITY, new Partitions("a")),
           ParallelIndexTestingFactory.INDEXING_SERVICE_CLIENT,
           taskClientFactory,
           ParallelIndexTestingFactory.APPENDERATORS_MANAGER
