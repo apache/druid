@@ -152,6 +152,7 @@ public class SegmentManager
    */
   public boolean loadSegment(final DataSegment segment) throws SegmentLoadingException
   {
+    log.info("SegmentManager about to call getAdapter() in load segment for segment " + segment.getId());
     final Segment adapter = getAdapter(segment);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();

@@ -124,6 +124,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
+    log.info("SegmentLoaderLocalCacheManager.getSegment - about to get a lock for segment " + segment.getId());
     final ReferenceCountingLock lock = createOrGetLock(segment);
     final File segmentFiles;
     synchronized (lock) {
@@ -154,6 +155,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   @Override
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
+    log.info("SegmentLoaderLocalCacheManager.getSegmentFiles - about to get a lock for segment " + segment.getId());
     final ReferenceCountingLock lock = createOrGetLock(segment);
     synchronized (lock) {
       try {
@@ -208,7 +210,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
     // the parent directories of the segment are removed
     final File downloadStartMarker = new File(storageDir, "downloadStartMarker");
+    log.info("SegmentLoaderLocalCacheManager - loadInLocationWithStartMarker trying to obtain directoryWriteRemoveLock for loading " + segment.getId());
     synchronized (directoryWriteRemoveLock) {
+      log.info("SegmentLoaderLocalCacheManager - loadInLocationWithStartMarker obtained directoryWriteRemoveLock for loading " + segment.getId());
       if (!storageDir.mkdirs()) {
         log.debug("Unable to make parent file[%s]", storageDir);
       }
@@ -233,6 +237,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     // LoadSpec isn't materialized until here so that any system can interpret Segment without having to have all the
     // LoadSpec dependencies.
     final LoadSpec loadSpec = jsonMapper.convertValue(segment.getLoadSpec(), LoadSpec.class);
+    log.info("SegmentLoaderLocalCacheManager - loadInLocation initating call to s3 to load " + segment.getId());
     final LoadSpec.LoadSpecResult result = loadSpec.loadSegment(storageDir);
     if (result.getSize() != segment.getSize()) {
       log.warn(

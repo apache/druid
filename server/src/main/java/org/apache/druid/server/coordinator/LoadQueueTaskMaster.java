@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
@@ -41,6 +42,7 @@ public class LoadQueueTaskMaster
   private final DruidCoordinatorConfig config;
   private final HttpClient httpClient;
   private final ZkPathsConfig zkPaths;
+  private static final EmittingLogger log = new EmittingLogger(LoadQueueTaskMaster.class);
 
   public LoadQueueTaskMaster(
       CuratorFramework curator,
@@ -59,6 +61,7 @@ public class LoadQueueTaskMaster
     this.config = config;
     this.httpClient = httpClient;
     this.zkPaths = zkPaths;
+    log.info("Creating loadqueue task master");
   }
 
   public LoadQueuePeon giveMePeon(ImmutableDruidServer server)
@@ -66,6 +69,7 @@ public class LoadQueueTaskMaster
     if ("http".equalsIgnoreCase(config.getLoadQueuePeonType())) {
       return new HttpLoadQueuePeon(server.getURL(), jsonMapper, httpClient, config, peonExec, callbackExec);
     } else {
+      log.info("CruatorLoadQueuePeon created for " + server.getHost());
       return new CuratorLoadQueuePeon(
           curator,
           ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName()),
