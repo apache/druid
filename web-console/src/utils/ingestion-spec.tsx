@@ -1187,6 +1187,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.objects',
           label: 'S3 objects',
           type: 'json',
+          placeholder: '{"bucket":"your-bucket", "path":"some-file.ext"}',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.prefixes'),
@@ -1247,6 +1248,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.objects',
           label: 'Google Cloud Storage objects',
           type: 'json',
+          placeholder: '{"bucket":"your-bucket", "path":"some-file.ext"}',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.prefixes'),
