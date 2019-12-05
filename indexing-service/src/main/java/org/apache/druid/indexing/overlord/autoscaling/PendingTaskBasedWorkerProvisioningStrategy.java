@@ -109,8 +109,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     private final Map<String, Set<String>> currentlyProvisioningMap = new HashMap<>();
     private final Map<String, Set<String>> currentlyTerminatingMap = new HashMap<>();
 
-    private final Map<String, DateTime> lastProvisionTimeMap = new HashMap<>();//DateTimes.nowUtc();
-    private final Map<String, DateTime> lastTerminateTimeMap = new HashMap<>();//lastProvisionTime;
+    private final Map<String, DateTime> lastProvisionTimeMap = new HashMap<>();
+    private final Map<String, DateTime> lastTerminateTimeMap = new HashMap<>();
 
     private PendingProvisioner(WorkerTaskRunner runner)
     {

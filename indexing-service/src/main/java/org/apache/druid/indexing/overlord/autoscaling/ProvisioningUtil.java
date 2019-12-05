@@ -162,11 +162,13 @@ public class ProvisioningUtil
            : autoScaler;
   }
 
-  public static Collection<Worker> getWorkersOfCategory(Collection<Worker> workers, String category) {
+  public static Collection<Worker> getWorkersOfCategory(Collection<Worker> workers, String category)
+  {
     return workers.stream().filter(worker -> category.equals(worker.getCategory())).collect(Collectors.toList());
   }
 
-  public static String getAutoscalerCategory(AutoScaler autoScaler) {
+  public static String getAutoscalerCategory(AutoScaler autoScaler)
+  {
     return autoScaler.getCategory() == null
            ? CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
            : autoScaler.getCategory();
