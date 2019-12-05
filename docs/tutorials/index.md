@@ -35,7 +35,7 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 You will need:
 
-* Java 8 (8u92+)
+* **Java 8 (8u92+)**
 * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
 
