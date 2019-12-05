@@ -46,10 +46,11 @@ public abstract class SeparateValueInputFormat implements InputFormat
   public enum Format
   {
     CSV(',', "comma"),
-    TSV('\t', "tab");
+    TSV('\t', "tab"),
+    CustomizeSV('|', "");
 
-    private final char delimiter;
-    private final String literal;
+    private char delimiter;
+    private String literal;
 
     Format(char delimiter, String literal)
     {
@@ -60,6 +61,12 @@ public abstract class SeparateValueInputFormat implements InputFormat
     public String getDelimiterAsString()
     {
       return String.valueOf(delimiter);
+    }
+
+    public void setDelimiter(char delimiter, String literal)
+    {
+      this.delimiter = delimiter;
+      this.literal = literal != null ? literal : "customize separator: " + delimiter;
     }
 
     public char getDelimiter()
@@ -151,23 +158,38 @@ public abstract class SeparateValueInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return this.format == Format.TSV ? new TsvReader(
-        inputRowSchema,
-        source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows
-    ) : new CsvReader(
-        inputRowSchema,
-        source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows
-    );
+    if (this.format == Format.TSV) {
+      return new TsvReader(
+          inputRowSchema,
+          source,
+          temporaryDirectory,
+          listDelimiter,
+          columns,
+          findColumnsFromHeader,
+          skipHeaderRows
+      );
+    } else if (this.format == Format.CSV) {
+      return new CsvReader(
+          inputRowSchema,
+          source,
+          temporaryDirectory,
+          listDelimiter,
+          columns,
+          findColumnsFromHeader,
+          skipHeaderRows
+      );
+    } else {
+      return new SeparateValueReader(
+          inputRowSchema,
+          source,
+          temporaryDirectory,
+          listDelimiter,
+          columns,
+          findColumnsFromHeader,
+          skipHeaderRows,
+          Format.CustomizeSV
+      );
+    }
   }
 
   @Override

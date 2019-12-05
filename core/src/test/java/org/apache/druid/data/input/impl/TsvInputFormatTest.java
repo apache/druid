@@ -38,7 +38,7 @@ public class TsvInputFormatTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final TsvInputFormat format = new TsvInputFormat(Collections.singletonList("a"), "|", null, true, 10);
+    final TsvInputFormat format = new TsvInputFormat(Collections.singletonList("a"), "|", null, null, true, 10);
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final TsvInputFormat fromJson = (TsvInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
@@ -49,6 +49,14 @@ public class TsvInputFormatTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a\t] has a tab, it cannot");
-    new TsvInputFormat(Collections.singletonList("a\t"), ",", null, false, 0);
+    new TsvInputFormat(Collections.singletonList("a\t"), ",", null, null, false, 0);
+  }
+
+  @Test
+  public void testCustomizeSeparator()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Column[a|] has a customize separator: |, it cannot");
+    new TsvInputFormat(Collections.singletonList("a|"), ",", "|", null, false, 0);
   }
 }

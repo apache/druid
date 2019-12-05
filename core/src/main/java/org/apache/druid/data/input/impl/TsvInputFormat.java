@@ -27,15 +27,34 @@ import java.util.List;
 
 public class TsvInputFormat extends SeparateValueInputFormat
 {
+
+  private static Format getFormat(String delimiter)
+  {
+    if (delimiter != null && delimiter.length() > 0) {
+      Format.CustomizeSV.setDelimiter(delimiter.charAt(0), null);
+      return Format.CustomizeSV;
+    } else {
+      return Format.TSV;
+    }
+  }
+
   @JsonCreator
   public TsvInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
       @JsonProperty("listDelimiter") @Nullable String listDelimiter,
+      @JsonProperty("delimiter") @Nullable String delimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.TSV);
+    super(
+        columns,
+        listDelimiter,
+        hasHeaderRow,
+        findColumnsFromHeader,
+        skipHeaderRows,
+        getFormat(delimiter)
+    );
   }
 }
