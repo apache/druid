@@ -31,7 +31,7 @@ public class TsvInputFormat extends SeparateValueInputFormat
   private static Format getFormat(String delimiter)
   {
     if (delimiter != null && delimiter.length() > 0) {
-      Format.CustomizeSV.setDelimiter(delimiter.charAt(0), null);
+      Format.CustomizeSV.setDelimiter(delimiter, null);
       return Format.CustomizeSV;
     } else {
       return Format.TSV;

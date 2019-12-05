@@ -63,9 +63,9 @@ public abstract class SeparateValueInputFormat implements InputFormat
       return String.valueOf(delimiter);
     }
 
-    public void setDelimiter(char delimiter, String literal)
+    public void setDelimiter(String delimiter, String literal)
     {
-      this.delimiter = delimiter;
+      this.delimiter = (delimiter != null && delimiter.length() > 0) ? delimiter.charAt(0) : '\t';
       this.literal = literal != null ? literal : "customize separator: " + delimiter;
     }
 
