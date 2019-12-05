@@ -136,6 +136,15 @@ source_paths:
 
 ---
 
+name: code adapted from KnoxSessionStore class
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - extensions-core/druid-pac4j/src/main/java/org/apache/druid/security/pac4j/Pac4jSessionStore.java
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
@@ -623,6 +632,16 @@ license_name: Apache License version 2.0
 version: 4.0.0
 libraries:
   - io.dropwizard.metrics: metrics-core
+
+---
+
+name: pac4j-oidc java security library
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.8.3
+libraries:
+  - org.pac4j: oidc
 
 ---
 
