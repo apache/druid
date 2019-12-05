@@ -48,10 +48,17 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -65,6 +72,7 @@ import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -130,19 +138,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
       )
   );
 
-  private static List<String> TEST_ROWS = new ArrayList<>();
-  {
-    TEST_ROWS.add("2014-01-01T00:00:10Z,a,1\n");
-    TEST_ROWS.add("2014-01-01T00:00:10Z,b,2\n");
-    TEST_ROWS.add("2014-01-01T00:00:10Z,c,3\n");
-    TEST_ROWS.add("2014-01-01T01:00:20Z,a,1\n");
-    TEST_ROWS.add("2014-01-01T01:00:20Z,b,2\n");
-    TEST_ROWS.add("2014-01-01T01:00:20Z,c,3\n");
-    TEST_ROWS.add("2014-01-01T02:00:30Z,a,1\n");
-    TEST_ROWS.add("2014-01-01T02:00:30Z,b,2\n");
-    TEST_ROWS.add("2014-01-01T02:00:30Z,c,3\n");
-    //TEST_ROWS.add("2014-01-01T02:00:30Z,c|d|e,3\n");
-  }
+  private static final List<String> TEST_ROWS = ImmutableList.of(
+      "2014-01-01T00:00:10Z,a,1\n",
+      "2014-01-01T00:00:10Z,b,2\n",
+      "2014-01-01T00:00:10Z,c,3\n",
+      "2014-01-01T01:00:20Z,a,1\n",
+      "2014-01-01T01:00:20Z,b,2\n",
+      "2014-01-01T01:00:20Z,c,3\n",
+      "2014-01-01T02:00:30Z,a,1\n",
+      "2014-01-01T02:00:30Z,b,2\n",
+      "2014-01-01T02:00:30Z,c,3\n",
+      "2014-01-01T02:00:30Z,c|d|e,3\n"
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -161,13 +168,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final LockGranularity lockGranularity;
   private final AppenderatorsManager appenderatorsManager;
+  private final TestUtils testUtils;
 
   private ExecutorService exec;
   private File localDeepStorage;
 
   public CompactionTaskRunTest(LockGranularity lockGranularity)
   {
-    TestUtils testUtils = new TestUtils();
+    testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
     indexingServiceClient = new NoopIndexingServiceClient();
     coordinatorClient = new CoordinatorClient(null, null)
@@ -241,6 +249,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
       }
     }
+
+    List<String> rowsFromSegment = getCSVFormatRowsFromSegments(segments);
+    Assert.assertEquals(TEST_ROWS, rowsFromSegment);
   }
 
   @Test
@@ -882,5 +893,72 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new NoopTestTaskReportFileWriter(),
         null
     );
+  }
+
+  private List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
+  {
+
+    final File cacheDir = temporaryFolder.newFolder();
+    final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(cacheDir);
+
+    List<Cursor> cursors = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      final File segmentFile = segmentLoader.getSegmentFiles(segment);
+
+      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+          segment.getInterval()
+      );
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+          null,
+          segment.getInterval(),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+      cursors.addAll(cursorSequence.toList());
+    }
+
+    List<String> rowsFromSegment = new ArrayList<>();
+    for (Cursor cursor : cursors) {
+      cursor.reset();
+      while (!cursor.isDone()) {
+        final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("ts", "ts"));
+        final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+        final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
+
+        Object dimObject = selector2.getObject();
+        String dimVal = null;
+        if (dimObject instanceof String) {
+          dimVal = (String) dimObject;
+        } else if (dimObject instanceof List) {
+          dimVal = String.join("|", (List<String>) dimObject);
+        }
+
+        rowsFromSegment.add(
+            makeCSVFormatRow(
+                selector1.getObject().toString(),
+                dimVal,
+                selector3.defaultGetObject().toString()
+            )
+        );
+
+        cursor.advance();
+      }
+    }
+    return rowsFromSegment;
+  }
+
+  private static String makeCSVFormatRow(
+      String ts,
+      String dim,
+      String val
+  )
+  {
+    return StringUtils.format("%s,%s,%s\n", ts, dim, val);
   }
 }

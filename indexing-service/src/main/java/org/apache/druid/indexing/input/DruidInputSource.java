@@ -290,7 +290,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   {
     final long maxInputSegmentBytesPerTask;
     if (!(splitHintSpec instanceof SegmentsSplitHintSpec)) {
-      LOG.warn("Given splitHintSpec[%s] is not a SegmentsSplitHintSpec. Ingoring it.", splitHintSpec);
+      LOG.warn("Given splitHintSpec[%s] is not a SegmentsSplitHintSpec. Ignoring it.", splitHintSpec);
       maxInputSegmentBytesPerTask = new SegmentsSplitHintSpec(null).getMaxInputSegmentBytesPerTask();
     } else {
       maxInputSegmentBytesPerTask = ((SegmentsSplitHintSpec) splitHintSpec).getMaxInputSegmentBytesPerTask();
