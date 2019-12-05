@@ -175,6 +175,7 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
+    configuration.setMaxConnections(500);
     final Protocol protocol = determineProtocol(clientConfig, endpointConfig);
     final AmazonS3ClientBuilder builder = AmazonS3Client
         .builder()
@@ -189,7 +190,7 @@ public class S3StorageDruidModule implements DruidModule
           new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
       );
     }
-
+    log.info("Max connections configured to " + builder.getClientConfiguration().getMaxConnections());
     return new ServerSideEncryptingAmazonS3(builder.build(), storageConfig.getServerSideEncryption());
   }
 }
