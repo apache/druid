@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { deepSet } from './object-change';
+import { deepMove, deepSet } from './object-change';
 
 export type RuleType =
   | 'loadForever'
@@ -117,11 +117,7 @@ export class RuleUtil {
   }
 
   static renameTieredReplicants(rule: Rule, oldTier: string, newTier: string): Rule {
-    const newRule = Object.assign({}, rule);
-    newRule.tieredReplicants = Object.assign({}, newRule.tieredReplicants);
-    newRule.tieredReplicants[newTier] = newRule.tieredReplicants[oldTier];
-    delete newRule.tieredReplicants[oldTier];
-    return newRule;
+    return deepMove(rule, `tieredReplicants.${oldTier}`, `tieredReplicants.${newTier}`);
   }
 
   static addTieredReplicant(rule: Rule, tier: string, replication: number): Rule {
