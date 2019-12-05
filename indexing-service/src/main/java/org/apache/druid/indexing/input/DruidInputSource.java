@@ -184,7 +184,10 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final List<String> effectiveDimensions;
     if (dimensions == null) {
-      effectiveDimensions = getUniqueDimensions(timeline, inputRowSchema.getDimensionsSpec().getDimensionExclusions());
+      effectiveDimensions = VersionedIntervalTimeline.getUniqueDimensions(
+          timeline,
+          inputRowSchema.getDimensionsSpec().getDimensionExclusions()
+      );
     } else if (inputRowSchema.getDimensionsSpec().hasCustomDimensions()) {
       effectiveDimensions = inputRowSchema.getDimensionsSpec().getDimensionNames();
     } else {
@@ -193,7 +196,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     List<String> effectiveMetrics;
     if (metrics == null) {
-      effectiveMetrics = getUniqueMetrics(timeline);
+      effectiveMetrics = VersionedIntervalTimeline.getUniqueMetrics(timeline);
     } else {
       effectiveMetrics = metrics;
     }
@@ -438,14 +441,12 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     // same interval).
     Interval lastInterval = null;
     for (Interval interval : timeline.keySet()) {
-      if (lastInterval != null) {
-        if (interval.overlaps(lastInterval)) {
-          throw new IAE(
-              "Distinct intervals in input segments may not overlap: [%s] vs [%s]",
-              lastInterval,
-              interval
-          );
-        }
+      if (lastInterval != null && interval.overlaps(lastInterval)) {
+        throw new IAE(
+            "Distinct intervals in input segments may not overlap: [%s] vs [%s]",
+            lastInterval,
+            interval
+        );
       }
       lastInterval = interval;
     }
@@ -458,67 +459,5 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
     long retval = input + (long) jitter;
     return retval < 0 ? 0 : retval;
-  }
-
-  @VisibleForTesting
-  private static List<String> getUniqueDimensions(
-      List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
-      @Nullable Set<String> excludeDimensions
-  )
-  {
-    final BiMap<String, Integer> uniqueDims = HashBiMap.create();
-
-    // Here, we try to retain the order of dimensions as they were specified since the order of dimensions may be
-    // optimized for performance.
-    // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
-    // frequently, and thus the performance should be optimized for recent ones rather than old ones.
-
-    // timelineSegments are sorted in order of interval
-    int index = 0;
-    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
-      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
-        for (String dimension : chunk.getObject().getDimensions()) {
-          if (!uniqueDims.containsKey(dimension) &&
-              (excludeDimensions == null || !excludeDimensions.contains(dimension))) {
-            uniqueDims.put(dimension, index++);
-          }
-        }
-      }
-    }
-
-    final BiMap<Integer, String> orderedDims = uniqueDims.inverse();
-    return IntStream.range(0, orderedDims.size())
-                    .mapToObj(orderedDims::get)
-                    .collect(Collectors.toList());
-  }
-
-  @VisibleForTesting
-  private static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
-  {
-    final BiMap<String, Integer> uniqueMetrics = HashBiMap.create();
-
-    // Here, we try to retain the order of metrics as they were specified. Metrics are extracted from the recent
-    // segments to olders.
-
-    // timelineSegments are sorted in order of interval
-    int[] index = {0};
-    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
-      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
-        for (String metric : chunk.getObject().getMetrics()) {
-          uniqueMetrics.computeIfAbsent(
-              metric,
-              k -> {
-                return index[0]++;
-              }
-          );
-        }
-      }
-    }
-
-    final BiMap<Integer, String> orderedMetrics = uniqueMetrics.inverse();
-    return IntStream.range(0, orderedMetrics.size())
-                    .mapToObj(orderedMetrics::get)
-                    .collect(Collectors.toList());
-
   }
 }

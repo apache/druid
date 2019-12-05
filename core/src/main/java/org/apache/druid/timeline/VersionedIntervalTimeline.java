@@ -22,7 +22,10 @@ package org.apache.druid.timeline;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
@@ -51,6 +54,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -751,6 +755,65 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
 
     return retVal;
+  }
+
+  @VisibleForTesting
+  public static List<String> getUniqueDimensions(
+      List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
+      @Nullable Set<String> excludeDimensions
+  )
+  {
+    final BiMap<String, Integer> uniqueDims = HashBiMap.create();
+
+    // Here, we try to retain the order of dimensions as they were specified since the order of dimensions may be
+    // optimized for performance.
+    // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
+    // frequently, and thus the performance should be optimized for recent ones rather than old ones.
+
+    // timelineSegments are sorted in order of interval
+    int index = 0;
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String dimension : chunk.getObject().getDimensions()) {
+          if (!uniqueDims.containsKey(dimension) &&
+              (excludeDimensions == null || !excludeDimensions.contains(dimension))) {
+            uniqueDims.put(dimension, index++);
+          }
+        }
+      }
+    }
+
+    final BiMap<Integer, String> orderedDims = uniqueDims.inverse();
+    return IntStream.range(0, orderedDims.size())
+                    .mapToObj(orderedDims::get)
+                    .collect(Collectors.toList());
+  }
+
+  @VisibleForTesting
+  public static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
+  {
+    final BiMap<String, Integer> uniqueMetrics = HashBiMap.create();
+
+    // Here, we try to retain the order of metrics as they were specified. Metrics are extracted from the recent
+    // segments to olders.
+
+    // timelineSegments are sorted in order of interval
+    int[] index = {0};
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String metric : chunk.getObject().getMetrics()) {
+          uniqueMetrics.computeIfAbsent(metric, k -> {
+                                          return index[0]++;
+                                        }
+          );
+        }
+      }
+    }
+
+    final BiMap<Integer, String> orderedMetrics = uniqueMetrics.inverse();
+    return IntStream.range(0, orderedMetrics.size())
+                    .mapToObj(orderedMetrics::get)
+                    .collect(Collectors.toList());
   }
 
   public class TimelineEntry

@@ -39,6 +39,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -58,6 +59,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
@@ -96,94 +98,67 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         ),
         source.getIntervalFilter()
     );
+
+    final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
+        Filters.toFilter(dimFilter),
+        storageAdapter.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
     final Sequence<Map<String, Object>> sequence = Sequences.concat(
         Sequences.map(
-            storageAdapter.getAdapter().makeCursors(
-                Filters.toFilter(dimFilter),
-                storageAdapter.getInterval(),
-                VirtualColumns.EMPTY,
-                Granularities.ALL,
-                false,
-                null
-            ),
-            cursor -> {
-              final BaseLongColumnValueSelector timestampColumnSelector =
-                  cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
-
-              final Map<String, DimensionSelector> dimSelectors = new HashMap<>();
-              for (String dim : dimensions) {
-                final DimensionSelector dimSelector = cursor
-                    .getColumnSelectorFactory()
-                    .makeDimensionSelector(new DefaultDimensionSpec(dim, dim));
-                // dimSelector is null if the dimension is not present
-                if (dimSelector != null) {
-                  dimSelectors.put(dim, dimSelector);
-                }
-              }
-
-              final Map<String, BaseObjectColumnValueSelector> metSelectors = new HashMap<>();
-              for (String metric : metrics) {
-                final BaseObjectColumnValueSelector metricSelector =
-                    cursor.getColumnSelectorFactory().makeColumnValueSelector(metric);
-                metSelectors.put(metric, metricSelector);
-              }
-
-              return Sequences.simple(
-                  () -> new Iterator<Map<String, Object>>()
-                  {
-                    @Override
-                    public boolean hasNext()
-                    {
-                      return !cursor.isDone();
-                    }
-
-                    @Override
-                    public Map<String, Object> next()
-                    {
-                      final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-                      final long timestamp = timestampColumnSelector.getLong();
-                      theEvent.put(TimestampSpec.DEFAULT_COLUMN, DateTimes.utc(timestamp));
-
-                      for (Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
-                        final String dim = dimSelector.getKey();
-                        final DimensionSelector selector = dimSelector.getValue();
-                        final IndexedInts vals = selector.getRow();
-
-                        int valsSize = vals.size();
-                        if (valsSize == 1) {
-                          final String dimVal = selector.lookupName(vals.get(0));
-                          theEvent.put(dim, dimVal);
-                        } else if (valsSize > 1) {
-                          List<String> dimVals = new ArrayList<>(valsSize);
-                          for (int i = 0; i < valsSize; ++i) {
-                            dimVals.add(selector.lookupName(vals.get(i)));
-                          }
-                          theEvent.put(dim, dimVals);
-                        }
-                      }
-
-                      for (Entry<String, BaseObjectColumnValueSelector> metSelector : metSelectors.entrySet()) {
-                        final String metric = metSelector.getKey();
-                        final BaseObjectColumnValueSelector selector = metSelector.getValue();
-                        Object value = selector.getObject();
-                        if (value != null) {
-                          theEvent.put(metric, value);
-                        }
-                      }
-                      cursor.advance();
-                      return theEvent;
-                    }
-
-                    @Override
-                    public void remove()
-                    {
-                      throw new UnsupportedOperationException("Remove Not Supported");
-                    }
-                  }
-              );
-            }
+            cursors,
+            this::cursorToSequence
         )
     );
+
+    return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
+  }
+
+  @Override
+  protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
+  {
+    final DateTime timestamp = (DateTime) intermediateRow.get(TimestampSpec.DEFAULT_COLUMN);
+    return Collections.singletonList(new MapBasedInputRow(timestamp.getMillis(), dimensions, intermediateRow));
+  }
+
+  @Override
+  protected Map<String, Object> toMap(Map<String, Object> intermediateRow)
+  {
+    return intermediateRow;
+  }
+
+  /**
+   * Given a {@link Cursor} create a {@link Sequence} that returns the rows of the cursor as
+   * Map<String, Object> intermediate rows, selecting the dimensions and metrics of this segment reader.
+   *
+   * @param cursor A cursor
+   * @return A sequence of intermediate rows
+   */
+  private Sequence<Map<String, Object>> cursorToSequence(
+      final Cursor cursor
+  )
+  {
+    return Sequences.simple(
+        () -> new IntermediateRowFromCursorIterator(cursor, dimensions, metrics)
+    );
+  }
+
+  /**
+   * @param sequence A sequence of intermediate rows generated from a sequence of
+   *                 cursors in {@link #intermediateRowIterator()}
+   * @param segmentFile The underlying segment file containing the row data
+   * @return A CloseableIterator from a sequence of intermediate rows, closing the underlying segment file
+   *         when the iterator is closed.
+   */
+  private static CloseableIterator<Map<String, Object>> makeCloseableIteratorFromSequenceAndSegmentFile(
+      final Sequence<Map<String, Object>> sequence,
+      final CleanableFile segmentFile
+  )
+  {
     return new CloseableIterator<Map<String, Object>>()
     {
       Yielder<Map<String, Object>> rowYielder = Yielders.each(sequence);
@@ -210,16 +185,94 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     };
   }
 
-  @Override
-  protected List<InputRow> parseInputRows(Map<String, Object> intermediateRow) throws ParseException
+  /**
+   * Given a {@link Cursor}, a list of dimension names, and a list of metric names, this iterator
+   * returns the rows of the cursor as Map<String, Object> intermediate rows.
+   */
+  private static class IntermediateRowFromCursorIterator implements Iterator<Map<String, Object>>
   {
-    final DateTime timestamp = (DateTime) intermediateRow.get(TimestampSpec.DEFAULT_COLUMN);
-    return Collections.singletonList(new MapBasedInputRow(timestamp.getMillis(), dimensions, intermediateRow));
-  }
+    private final Cursor cursor;
+    private final BaseLongColumnValueSelector timestampColumnSelector;
+    private final Map<String, DimensionSelector> dimSelectors;
+    private final Map<String, BaseObjectColumnValueSelector> metSelectors;
 
-  @Override
-  protected Map<String, Object> toMap(Map<String, Object> intermediateRow)
-  {
-    return intermediateRow;
+    public IntermediateRowFromCursorIterator(
+        Cursor cursor,
+        List<String> dimensionNames,
+        List<String> metricNames
+    )
+    {
+      this.cursor = cursor;
+
+      timestampColumnSelector =
+          cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+
+      dimSelectors = new HashMap<>();
+      for (String dim : dimensionNames) {
+        final DimensionSelector dimSelector = cursor
+            .getColumnSelectorFactory()
+            .makeDimensionSelector(new DefaultDimensionSpec(dim, dim));
+        // dimSelector is null if the dimension is not present
+        if (dimSelector != null) {
+          dimSelectors.put(dim, dimSelector);
+        }
+      }
+
+      metSelectors = new HashMap<>();
+      for (String metric : metricNames) {
+        final BaseObjectColumnValueSelector metricSelector =
+            cursor.getColumnSelectorFactory().makeColumnValueSelector(metric);
+        metSelectors.put(metric, metricSelector);
+      }
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return !cursor.isDone();
+    }
+
+    @Override
+    public Map<String, Object> next()
+    {
+      final Map<String, Object> theEvent = Maps.newLinkedHashMap();
+      final long timestamp = timestampColumnSelector.getLong();
+      theEvent.put(TimestampSpec.DEFAULT_COLUMN, DateTimes.utc(timestamp));
+
+      for (Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
+        final String dim = dimSelector.getKey();
+        final DimensionSelector selector = dimSelector.getValue();
+        final IndexedInts vals = selector.getRow();
+
+        int valsSize = vals.size();
+        if (valsSize == 1) {
+          final String dimVal = selector.lookupName(vals.get(0));
+          theEvent.put(dim, dimVal);
+        } else if (valsSize > 1) {
+          List<String> dimVals = new ArrayList<>(valsSize);
+          for (int i = 0; i < valsSize; ++i) {
+            dimVals.add(selector.lookupName(vals.get(i)));
+          }
+          theEvent.put(dim, dimVals);
+        }
+      }
+
+      for (Entry<String, BaseObjectColumnValueSelector> metSelector : metSelectors.entrySet()) {
+        final String metric = metSelector.getKey();
+        final BaseObjectColumnValueSelector selector = metSelector.getValue();
+        Object value = selector.getObject();
+        if (value != null) {
+          theEvent.put(metric, value);
+        }
+      }
+      cursor.advance();
+      return theEvent;
+    }
+
+    @Override
+    public void remove()
+    {
+      throw new UnsupportedOperationException("Remove Not Supported");
+    }
   }
 }

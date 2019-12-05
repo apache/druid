@@ -900,7 +900,16 @@ This InputSource can be used to read data from existing Druid segments, potentia
 This InputSource is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
 This InputSource has a fixed InputFormat for reading from Druid segments; no InputFormat needs to be specified in the ingestion spec when using this InputSource.
 
-A sample DruidInputSource spec is shown below:
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "druid".|yes|
+|dataSource|A String defining the Druid datasource to fetch rows from|yes|
+|interval|A String representing the ISO-8601 interval, which defines the time range to fetch the data over.|yes|
+|dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
+|metrics|The list of Strings containg the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
+|filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
+
+A minimal example DruidInputSource spec is shown below:
 
 ```json
 {
@@ -910,11 +919,28 @@ A sample DruidInputSource spec is shown below:
 }
 ```
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "druid".|yes|
-|dataSource|A String defining the data source to fetch rows from, very similar to a table in a relational database|yes|
-|interval|A String representing the ISO-8601 interval. This defines the time range to fetch the data over.|yes|
-|dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
-|metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
-|filter| See [Filters](../querying/filters.md)|no|
+The spec above will read all existing dimension and metric columns from the `wikipedia` datasource, including all rows with a timestamp (the `__time` column) within the interval `2013-01-01/2013-01-02`.
+
+A spec that applies a filter and reads a subset of the original datasource's columns is shown below.
+
+```json
+{
+    "type": "druid",
+    "dataSource": "wikipedia",
+    "interval": "2013-01-01/2013-01-02",
+    "dimensions": [
+      "page",
+      "user"
+    ],
+    "metrics": [
+      "added"
+    ],
+    "filter": {
+      "type": "selector",
+      "dimension": "page",
+      "value": "Druid"
+    }
+}
+```
+
+This spec above will only return the `page`, `user` dimensions and `added` metric. Only rows where `page` = `Druid` will be returned.

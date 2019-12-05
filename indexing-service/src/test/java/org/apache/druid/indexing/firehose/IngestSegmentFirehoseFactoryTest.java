@@ -81,6 +81,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -600,11 +601,11 @@ public class IngestSegmentFirehoseFactoryTest
     };
     Assert.assertEquals(
         Arrays.asList(expectedDims),
-        IngestSegmentFirehoseFactory.getUniqueDimensions(timelineSegments, null)
+        VersionedIntervalTimeline.getUniqueDimensions(timelineSegments, null)
     );
     Assert.assertEquals(
         Arrays.asList(expectedMetrics),
-        IngestSegmentFirehoseFactory.getUniqueMetrics(timelineSegments)
+        VersionedIntervalTimeline.getUniqueMetrics(timelineSegments)
     );
   }
 
