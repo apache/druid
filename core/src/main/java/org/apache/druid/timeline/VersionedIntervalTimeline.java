@@ -802,9 +802,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String metric : chunk.getObject().getMetrics()) {
-          uniqueMetrics.computeIfAbsent(metric, k -> {
-                                          return index[0]++;
-                                        }
+          uniqueMetrics.computeIfAbsent(
+              metric,
+              k -> {
+                return index[0]++;
+              }
           );
         }
       }
