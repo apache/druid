@@ -36,11 +36,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * SeparateValueInputFormat abstracts the (Comma/Tab) Separate Value format of input data.
- * It implements the common logic between {@link CsvInputFormat} and {@link TsvInputFormat}
- * Should never be instantiated
+ * InputFormat for customized Delimitor Separate Value format of input data(default is TSV).
  */
-public abstract class SeparateValueInputFormat implements InputFormat
+public class DelimitedInputFormat implements InputFormat
 {
 
   public enum Format
@@ -86,13 +84,13 @@ public abstract class SeparateValueInputFormat implements InputFormat
   private final int skipHeaderRows;
   private final Format format;
 
-  protected SeparateValueInputFormat(
-      @Nullable List<String> columns,
-      @Nullable String listDelimiter,
-      @Nullable Boolean hasHeaderRow,
-      @Nullable Boolean findColumnsFromHeader,
-      int skipHeaderRows,
-      Format format
+  public DelimitedInputFormat(
+      @JsonProperty("columns") @Nullable List<String> columns,
+      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
+      @JsonProperty("delimiter") @Nullable String delimiter,
+      @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
+      @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
+      @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
     this.listDelimiter = listDelimiter;
@@ -105,7 +103,7 @@ public abstract class SeparateValueInputFormat implements InputFormat
         )
     ).getValue();
     this.skipHeaderRows = skipHeaderRows;
-    this.format = format;
+    this.format = getFormat(delimiter);
 
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
@@ -121,6 +119,18 @@ public abstract class SeparateValueInputFormat implements InputFormat
           "If columns field is not set, the first row of your data must have your header"
           + " and hasHeaderRow must be set to true."
       );
+    }
+  }
+
+  private static Format getFormat(String delimiter)
+  {
+    if (",".equals(delimiter)) {
+      return Format.CSV;
+    } else if (delimiter != null && delimiter.length() > 0) {
+      Format.CustomizeSV.setDelimiter(delimiter, null);
+      return Format.CustomizeSV;
+    } else {
+      return Format.TSV;
     }
   }
 
@@ -158,38 +168,16 @@ public abstract class SeparateValueInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    if (this.format == Format.TSV) {
-      return new TsvReader(
-          inputRowSchema,
-          source,
-          temporaryDirectory,
-          listDelimiter,
-          columns,
-          findColumnsFromHeader,
-          skipHeaderRows
-      );
-    } else if (this.format == Format.CSV) {
-      return new CsvReader(
-          inputRowSchema,
-          source,
-          temporaryDirectory,
-          listDelimiter,
-          columns,
-          findColumnsFromHeader,
-          skipHeaderRows
-      );
-    } else {
-      return new SeparateValueReader(
-          inputRowSchema,
-          source,
-          temporaryDirectory,
-          listDelimiter,
-          columns,
-          findColumnsFromHeader,
-          skipHeaderRows,
-          Format.CustomizeSV
-      );
-    }
+    return new DelimitedValueReader(
+        inputRowSchema,
+        source,
+        temporaryDirectory,
+        listDelimiter,
+        columns,
+        findColumnsFromHeader,
+        skipHeaderRows,
+        this.format
+    );
   }
 
   @Override
@@ -201,7 +189,7 @@ public abstract class SeparateValueInputFormat implements InputFormat
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SeparateValueInputFormat format = (SeparateValueInputFormat) o;
+    DelimitedInputFormat format = (DelimitedInputFormat) o;
     return findColumnsFromHeader == format.findColumnsFromHeader &&
            skipHeaderRows == format.skipHeaderRows &&
            Objects.equals(listDelimiter, format.listDelimiter) &&

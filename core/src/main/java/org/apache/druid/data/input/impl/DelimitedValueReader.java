@@ -45,15 +45,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-
-public class SeparateValueReader extends TextReader
+/**
+ * DelimitedValueReader is the reader for Delimitor Separate Value format input data(CSV/TSV).
+ */
+public class DelimitedValueReader extends TextReader
 {
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Function<String, Object> multiValueFunction;
   @Nullable
   private List<String> columns;
-  private final SeparateValueInputFormat.Format format;
+  private final DelimitedInputFormat.Format format;
   private final RFC4180Parser parser;
 
   public static RFC4180Parser createOpenCsvParser(char separator)
@@ -68,7 +70,7 @@ public class SeparateValueReader extends TextReader
                                        .build();
   }
 
-  SeparateValueReader(
+  DelimitedValueReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
@@ -76,7 +78,7 @@ public class SeparateValueReader extends TextReader
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows,
-      SeparateValueInputFormat.Format format
+      DelimitedInputFormat.Format format
   )
   {
     super(inputRowSchema, source, temporaryDirectory);

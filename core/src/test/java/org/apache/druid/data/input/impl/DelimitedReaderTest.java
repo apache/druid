@@ -42,7 +42,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class TsvReaderTest
+public class DelimitedReaderTest
 {
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec("ts", "auto", null),
@@ -66,7 +66,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(
+    final DelimitedInputFormat format = new DelimitedInputFormat(
         ImmutableList.of("ts", "name", "score"),
         null,
         null,
@@ -88,7 +88,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), null, null, null, true, 0);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), null, null, null, true, 0);
     assertResult(source, format);
   }
 
@@ -103,7 +103,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(
+    final DelimitedInputFormat format = new DelimitedInputFormat(
         ImmutableList.of("ts", "name", "score"),
         null,
         null,
@@ -126,7 +126,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), null, null, null, true, 1);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), null, null, null, true, 1);
     assertResult(source, format);
   }
 
@@ -141,7 +141,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15|3"
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), "|", null, null, true, 0);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "|", null, null, true, 0);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -176,7 +176,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:30Z|name_3|15\t3"
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(ImmutableList.of(), "\t", "|", null, true, 0);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "\t", "|", null, true, 0);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -267,7 +267,7 @@ public class TsvReaderTest
             ImmutableMap.of("Value", "65", "Comment", "Here I write \\n slash n", "Timestamp", "2018-05-09T10:00:00Z")
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(
+    final DelimitedInputFormat format = new DelimitedInputFormat(
         ImmutableList.of("Value", "Comment", "Timestamp"),
         null,
         null,
@@ -302,7 +302,7 @@ public class TsvReaderTest
             "2019-01-01T00:00:10Z\tname_1\t\"Как говорится: \\\"\"всё течет\t всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
         )
     );
-    final TsvInputFormat format = new TsvInputFormat(
+    final DelimitedInputFormat format = new DelimitedInputFormat(
         ImmutableList.of("ts", "name", "Comment"),
         null,
         null,
@@ -338,7 +338,7 @@ public class TsvReaderTest
     return new ByteEntity(outputStream.toByteArray());
   }
 
-  private void assertResult(ByteEntity source, TsvInputFormat format) throws IOException
+  private void assertResult(ByteEntity source, DelimitedInputFormat format) throws IOException
   {
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;

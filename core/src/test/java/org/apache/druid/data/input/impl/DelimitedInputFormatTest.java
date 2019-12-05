@@ -29,7 +29,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.util.Collections;
 
-public class TsvInputFormatTest
+public class DelimitedInputFormatTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -38,9 +38,16 @@ public class TsvInputFormatTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final TsvInputFormat format = new TsvInputFormat(Collections.singletonList("a"), "|", null, null, true, 10);
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        Collections.singletonList("a"),
+        "|",
+        null,
+        null,
+        true,
+        10
+    );
     final byte[] bytes = mapper.writeValueAsBytes(format);
-    final TsvInputFormat fromJson = (TsvInputFormat) mapper.readValue(bytes, InputFormat.class);
+    final DelimitedInputFormat fromJson = (DelimitedInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
   }
 
@@ -49,7 +56,7 @@ public class TsvInputFormatTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a\t] has a tab, it cannot");
-    new TsvInputFormat(Collections.singletonList("a\t"), ",", null, null, false, 0);
+    new DelimitedInputFormat(Collections.singletonList("a\t"), ",", null, null, false, 0);
   }
 
   @Test
@@ -57,6 +64,6 @@ public class TsvInputFormatTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a|] has a customize separator: |, it cannot");
-    new TsvInputFormat(Collections.singletonList("a|"), ",", "|", null, false, 0);
+    new DelimitedInputFormat(Collections.singletonList("a|"), ",", "|", null, false, 0);
   }
 }
