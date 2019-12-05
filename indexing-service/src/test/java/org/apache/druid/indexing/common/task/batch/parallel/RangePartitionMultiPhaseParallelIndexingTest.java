@@ -236,11 +236,13 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   {
     SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
     String start = shardSpec.getStart();
-    Assert.assertNotNull(start);
     String end = shardSpec.getEnd();
+    Assert.assertTrue(shardSpec.toString(), start != null || end != null);
 
     for (String value : values) {
-      Assert.assertThat(value.compareTo(start), Matchers.greaterThanOrEqualTo(0));
+      if (start != null) {
+        Assert.assertThat(value.compareTo(start), Matchers.greaterThanOrEqualTo(0));
+      }
 
       if (end != null) {
         Assert.assertThat(value.compareTo(end), Matchers.lessThan(0));
