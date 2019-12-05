@@ -40,6 +40,9 @@ public class Pac4jCallbackResource
   @GET
   public Response callback()
   {
+    /*
+    This endpoint is to be handled by the pac4j filter to redirect users, request should never reach here.
+     */
     return Response.serverError().build();
   }
 }
