@@ -129,7 +129,7 @@ public class SegmentManagerThreadSafetyTest
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment)))
+        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false)))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
@@ -154,7 +154,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment);
+              segmentManager.loadSegment(segment, false);
             }
             catch (SegmentLoadingException e) {
               throw new RuntimeException(e);
@@ -222,7 +222,7 @@ public class SegmentManagerThreadSafetyTest
   private static class TestSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir)
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy)
     {
       return new Segment()
       {

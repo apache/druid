@@ -275,7 +275,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     final SegmentLoader loader = new SegmentLoaderFactory(getIndexIO(), getObjectMapper())
         .manufacturate(tempSegmentDir);
     try {
-      return loader.getSegment(dataSegment);
+      return loader.getSegment(dataSegment, false);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

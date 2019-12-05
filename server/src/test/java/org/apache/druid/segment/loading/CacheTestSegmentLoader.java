@@ -47,7 +47,7 @@ public class CacheTestSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(final DataSegment segment)
+  public Segment getSegment(final DataSegment segment, boolean lazy)
   {
     return new AbstractSegment()
     {

@@ -214,6 +214,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   // Matches QUERY_CONTEXT_LOS_ANGELES
   public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = new HashMap<>();
 
+  public static final Map<String, Object> OUTER_LIMIT_CONTEXT = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+
   public static QueryRunnerFactoryConglomerate conglomerate;
   public static Closer resourceCloser;
 
@@ -236,6 +238,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put("skipEmptyBuckets", true);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+
+    OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
   }
 
   // Generate timestamps for expected results
