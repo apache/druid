@@ -185,7 +185,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       log.error("Cached result set is null");
     }
     final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache(true);
-    final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
+    final TypeReference<T> cacheObjectClazz = strategy.getCacheObjectClazz();
     //Skip the resultsetID and its length bytes
     Sequence<T> cachedSequence = Sequences.simple(() -> {
       try {
