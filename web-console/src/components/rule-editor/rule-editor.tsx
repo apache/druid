@@ -49,9 +49,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
   const [isOpen, setIsOpen] = useState(true);
   if (!rule) return null;
 
-  const ruleLoadType = RuleUtil.getLoadType(rule);
-  const ruleTimeType = RuleUtil.getTimeType(rule);
-
   function removeTier(key: string) {
     const newTierReplicants = Object.assign({}, rule.tieredReplicants);
     delete newTierReplicants[key];
@@ -72,14 +69,12 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       }
     }
 
-    onChange(RuleUtil.changeTierReplication(rule, newTierName, 1));
+    onChange(RuleUtil.addTieredReplicant(rule, newTierName, 1));
   }
 
   function renderTiers() {
-    if (RuleUtil.getLoadType(rule) !== 'load') return null;
-
     const tieredReplicants = rule.tieredReplicants;
-    if (!tieredReplicants) return null;
+    if (!tieredReplicants) return;
 
     const ruleTiers = Object.keys(tieredReplicants).sort();
     return ruleTiers.map(tier => {
@@ -92,7 +87,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
             value={tieredReplicants[tier]}
             onValueChange={(v: number) => {
               if (isNaN(v)) return;
-              onChange(RuleUtil.changeTierReplication(rule, tier, v));
+              onChange(RuleUtil.addTieredReplicant(rule, tier, v));
             }}
             min={1}
             max={256}
@@ -103,7 +98,9 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
           <HTMLSelect
             fill
             value={tier}
-            onChange={(e: any) => onChange(RuleUtil.changeTier(rule, tier, e.target.value))}
+            onChange={(e: any) =>
+              onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
+            }
           >
             {tiers
               .filter(t => t === tier || !tieredReplicants[t])
@@ -127,7 +124,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
   function renderTierAdder() {
     const { rule, tiers } = props;
-    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return null;
+    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return;
 
     return (
       <FormGroup className="right">
@@ -138,18 +135,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
     );
   }
 
-  function renderColocatedDataSources() {
-    const { rule, onChange } = props;
-    return (
-      <FormGroup label="Colocated datasources:">
-        <TagInput
-          values={rule.colocatedDataSources || []}
-          onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
-          fill
-        />
-      </FormGroup>
-    );
-  }
   return (
     <div className="rule-editor">
       <div className="title">
@@ -172,52 +157,39 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
           <FormGroup>
             <ControlGroup>
               <HTMLSelect
-                value={ruleLoadType}
+                value={rule.type}
                 onChange={(e: any) =>
-                  onChange(RuleUtil.changeLoadType(rule, e.target.value as any))
+                  onChange(RuleUtil.changeRuleType(rule, e.target.value as any))
                 }
               >
-                <option value="load">Load</option>
-                <option value="drop">Drop</option>
-                <option value="broadcast">Broadcast</option>
+                {RuleUtil.TYPES.map(type => {
+                  return (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  );
+                })}
               </HTMLSelect>
-              <HTMLSelect
-                value={ruleTimeType}
-                onChange={(e: any) =>
-                  onChange(RuleUtil.changeTimeType(rule, e.target.value as any))
-                }
-              >
-                <option value="Forever">forever</option>
-                <option value="ByPeriod">by period</option>
-                <option value="ByInterval">by interval</option>
-              </HTMLSelect>
-              {ruleTimeType === 'ByPeriod' && (
-                <div className={`by-period`}>
-                  <InputGroup
-                    value={rule.period || ''}
-                    onChange={(e: any) =>
-                      onChange(RuleUtil.changePeriod(rule, e.target.value as any))
-                    }
-                    placeholder="P1D"
-                  />
-                  <Switch
-                    large
-                    checked={rule.includeFuture !== undefined ? rule.includeFuture : true}
-                    label={`Include future`}
-                    onChange={() => {
-                      onChange(
-                        RuleUtil.changeIncludeFuture(
-                          rule,
-                          rule.includeFuture !== undefined
-                            ? (!rule.includeFuture as boolean)
-                            : false,
-                        ),
-                      );
-                    }}
-                  />
-                </div>
+              {RuleUtil.hasPeriod(rule) && (
+                <InputGroup
+                  value={rule.period || ''}
+                  onChange={(e: any) =>
+                    onChange(RuleUtil.changePeriod(rule, e.target.value as any))
+                  }
+                  placeholder="P1D"
+                />
               )}
-              {ruleTimeType === 'ByInterval' && (
+              {RuleUtil.hasIncludeFuture(rule) && (
+                <Switch
+                  className="include-future"
+                  checked={rule.includeFuture || false}
+                  label="Include future"
+                  onChange={() => {
+                    onChange(RuleUtil.changeIncludeFuture(rule, !rule.includeFuture));
+                  }}
+                />
+              )}
+              {RuleUtil.hasInterval(rule) && (
                 <InputGroup
                   value={rule.interval || ''}
                   onChange={(e: any) =>
@@ -228,13 +200,21 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               )}
             </ControlGroup>
           </FormGroup>
-          {ruleLoadType === 'load' && (
+          {RuleUtil.hasTieredReplicants(rule) && (
             <FormGroup>
               {renderTiers()}
               {renderTierAdder()}
             </FormGroup>
           )}
-          {ruleLoadType === 'broadcast' && <FormGroup>{renderColocatedDataSources()}</FormGroup>}
+          {RuleUtil.hasColocatedDataSources(rule) && (
+            <FormGroup label="Colocated datasources">
+              <TagInput
+                values={rule.colocatedDataSources || []}
+                onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
+                fill
+              />
+            </FormGroup>
+          )}
         </Card>
       </Collapse>
     </div>
