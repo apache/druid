@@ -219,6 +219,7 @@ public class TaskQueue
       tasks.clear();
       taskFutures.clear();
       active = false;
+      statusHandler.shutdownNow();
       managerExec.shutdownNow();
       storageSyncExec.shutdownNow();
       managementMayBeNecessary.signalAll();

@@ -350,6 +350,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return;
     }
     try {
+      monitorSyncHandler.shutdown();
       provisioningService.close();
 
       Closer closer = Closer.create();
