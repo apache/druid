@@ -30,6 +30,7 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -42,12 +43,23 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
+import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -60,6 +72,7 @@ import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -88,6 +101,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -105,7 +119,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   public static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       new TimestampSpec("ts", "auto", null),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
-      null,
+      "|",
       Arrays.asList("ts", "dim", "val"),
       false,
       0
@@ -122,6 +136,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
           "longEncoding",
           "longs"
       )
+  );
+
+  private static final List<String> TEST_ROWS = ImmutableList.of(
+      "2014-01-01T00:00:10Z,a,1\n",
+      "2014-01-01T00:00:10Z,b,2\n",
+      "2014-01-01T00:00:10Z,c,3\n",
+      "2014-01-01T01:00:20Z,a,1\n",
+      "2014-01-01T01:00:20Z,b,2\n",
+      "2014-01-01T01:00:20Z,c,3\n",
+      "2014-01-01T02:00:30Z,a,1\n",
+      "2014-01-01T02:00:30Z,b,2\n",
+      "2014-01-01T02:00:30Z,c,3\n",
+      "2014-01-01T02:00:30Z,c|d|e,3\n"
   );
 
   @Parameterized.Parameters(name = "{0}")
@@ -141,13 +168,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final LockGranularity lockGranularity;
   private final AppenderatorsManager appenderatorsManager;
+  private final TestUtils testUtils;
 
   private ExecutorService exec;
   private File localDeepStorage;
 
   public CompactionTaskRunTest(LockGranularity lockGranularity)
   {
-    TestUtils testUtils = new TestUtils();
+    testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
     indexingServiceClient = new NoopIndexingServiceClient();
     coordinatorClient = new CoordinatorClient(null, null)
@@ -221,6 +249,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
       }
     }
+
+    List<String> rowsFromSegment = getCSVFormatRowsFromSegments(segments);
+    Assert.assertEquals(TEST_ROWS, rowsFromSegment);
   }
 
   @Test
@@ -638,6 +669,93 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, compactionResult.lhs.getStatusCode());
   }
 
+  /**
+   * Run a regular index task that's equivalent to the compaction task in {@link #testRun()}, using
+   * {@link IngestSegmentFirehoseFactory}.
+   *
+   * This is not entirely CompactionTask related, but it's similar conceptually and it requires
+   * similar setup to what this test suite already has.
+   *
+   * It could be moved to a separate test class if needed.
+   */
+  @Test
+  public void testRunRegularIndexTaskWithIngestSegmentFirehose() throws Exception
+  {
+    runIndexTask();
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "test",
+                getObjectMapper().convertValue(
+                    new StringInputRowParser(
+                        DEFAULT_PARSE_SPEC,
+                        null
+                    ),
+                    Map.class
+                ),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("val", "val")
+                },
+                new UniformGranularitySpec(
+                    Granularities.HOUR,
+                    Granularities.MINUTE,
+                    null
+                ),
+                null,
+                getObjectMapper()
+            ),
+            new IndexTask.IndexIOConfig(
+                new IngestSegmentFirehoseFactory(
+                    DATA_SOURCE,
+                    Intervals.of("2014-01-01/2014-01-02"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    getIndexIO(),
+                    coordinatorClient,
+                    segmentLoaderFactory,
+                    RETRY_POLICY_FACTORY
+                ),
+                false
+            ),
+            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, null, false, true)
+        ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        rowIngestionMetersFactory,
+        appenderatorsManager
+    );
+
+    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(indexTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    final List<DataSegment> segments = resultPair.rhs;
+    Assert.assertEquals(3, segments.size());
+
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      }
+    }
+  }
+
   private Pair<TaskStatus, List<DataSegment>> runIndexTask() throws Exception
   {
     return runIndexTask(null, null, false);
@@ -658,15 +776,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("2014-01-01T00:00:10Z,a,1\n");
-      writer.write("2014-01-01T00:00:10Z,b,2\n");
-      writer.write("2014-01-01T00:00:10Z,c,3\n");
-      writer.write("2014-01-01T01:00:20Z,a,1\n");
-      writer.write("2014-01-01T01:00:20Z,b,2\n");
-      writer.write("2014-01-01T01:00:20Z,c,3\n");
-      writer.write("2014-01-01T02:00:30Z,a,1\n");
-      writer.write("2014-01-01T02:00:30Z,b,2\n");
-      writer.write("2014-01-01T02:00:30Z,c,3\n");
+      for (String testRow : TEST_ROWS) {
+        writer.write(testRow);
+      }
     }
 
     IndexTask indexTask = new IndexTask(
@@ -781,5 +893,72 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new NoopTestTaskReportFileWriter(),
         null
     );
+  }
+
+  private List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
+  {
+
+    final File cacheDir = temporaryFolder.newFolder();
+    final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(cacheDir);
+
+    List<Cursor> cursors = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      final File segmentFile = segmentLoader.getSegmentFiles(segment);
+
+      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+          segment.getInterval()
+      );
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+          null,
+          segment.getInterval(),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+      cursors.addAll(cursorSequence.toList());
+    }
+
+    List<String> rowsFromSegment = new ArrayList<>();
+    for (Cursor cursor : cursors) {
+      cursor.reset();
+      while (!cursor.isDone()) {
+        final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("ts", "ts"));
+        final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+        final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
+
+        Object dimObject = selector2.getObject();
+        String dimVal = null;
+        if (dimObject instanceof String) {
+          dimVal = (String) dimObject;
+        } else if (dimObject instanceof List) {
+          dimVal = String.join("|", (List<String>) dimObject);
+        }
+
+        rowsFromSegment.add(
+            makeCSVFormatRow(
+                selector1.getObject().toString(),
+                dimVal,
+                selector3.defaultGetObject().toString()
+            )
+        );
+
+        cursor.advance();
+      }
+    }
+    return rowsFromSegment;
+  }
+
+  private static String makeCSVFormatRow(
+      String ts,
+      String dim,
+      String val
+  )
+  {
+    return StringUtils.format("%s,%s,%s\n", ts, dim, val);
   }
 }
