@@ -29,7 +29,7 @@ import {
   DATETIME_TIME_FORMATS,
   OTHER_TIME_FORMATS,
 } from './druid-time';
-import { deepGet, deepSet } from './object-change';
+import { deepDelete, deepGet, deepMove, deepSet } from './object-change';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
 
@@ -41,8 +41,8 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
   type?: IngestionType;
-  dataSchema: DataSchema;
   ioConfig: IoConfig;
+  dataSchema: DataSchema;
   tuningConfig?: TuningConfig;
 }
 
@@ -50,33 +50,36 @@ export function isEmptyIngestionSpec(spec: IngestionSpec) {
   return Object.keys(spec).length === 0;
 }
 
-export type IngestionType = 'kafka' | 'kinesis' | 'index_hadoop' | 'index' | 'index_parallel';
+export type IngestionType = 'kafka' | 'kinesis' | 'index_parallel';
 
-// A combination of IngestionType and firehose
+// A combination of IngestionType and inputSourceType
 export type IngestionComboType =
   | 'kafka'
   | 'kinesis'
-  | 'index:http'
-  | 'index:local'
-  | 'index:ingestSegment'
-  | 'index:inline'
-  | 'index:static-s3'
-  | 'index:static-google-blobstore'
-  | 'index:hdfs';
+  | 'index_parallel:http'
+  | 'index_parallel:local'
+  | 'index_parallel:druid'
+  | 'index_parallel:inline'
+  | 'index_parallel:s3'
+  | 'index_parallel:google'
+  | 'index_parallel:hdfs';
 
 // Some extra values that can be selected in the initial screen
 export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
+
+export function adjustIngestionSpec(spec: IngestionSpec) {
+  if (spec.tuningConfig) {
+    spec = deepSet(spec, 'tuningConfig', adjustTuningConfig(spec.tuningConfig));
+  }
+  return spec;
+}
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
     case 'kafka':
     case 'kinesis':
-    case 'index':
     case 'index_parallel':
       return ingestionType;
-
-    case 'index_hadoop':
-      return 'hadoop';
 
     default:
       throw new Error(`unknown type '${ingestionType}'`);
@@ -91,18 +94,17 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
     case 'kinesis':
       return ioConfig.type;
 
-    case 'index':
     case 'index_parallel':
-      const firehose = deepGet(spec, 'ioConfig.firehose') || EMPTY_OBJECT;
-      switch (firehose.type) {
+      const inputSource = deepGet(spec, 'ioConfig.inputSource') || EMPTY_OBJECT;
+      switch (inputSource.type) {
         case 'local':
         case 'http':
-        case 'ingestSegment':
+        case 'druid':
         case 'inline':
-        case 'static-s3':
-        case 'static-google-blobstore':
+        case 's3':
+        case 'google':
         case 'hdfs':
-          return `index:${firehose.type}` as IngestionComboType;
+          return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
       }
   }
 
@@ -111,25 +113,25 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
 
 export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
   switch (ingestionType) {
-    case 'index:local':
+    case 'index_parallel:local':
       return 'Local disk';
 
-    case 'index:http':
+    case 'index_parallel:http':
       return 'HTTP(s)';
 
-    case 'index:ingestSegment':
+    case 'index_parallel:druid':
       return 'Reindex from Druid';
 
-    case 'index:inline':
+    case 'index_parallel:inline':
       return 'Paste data';
 
-    case 'index:static-s3':
+    case 'index_parallel:s3':
       return 'Amazon S3';
 
-    case 'index:static-google-blobstore':
+    case 'index_parallel:google':
       return 'Google Cloud Storage';
 
-    case 'index:hdfs':
+    case 'index_parallel:hdfs':
       return 'HDFS';
 
     case 'kafka':
@@ -175,13 +177,13 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
-    case 'index:static-s3':
+    case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
-    case 'index:static-google-blobstore':
+    case 'index_parallel:google':
       return 'druid-google-extensions';
 
-    case 'index:hdfs':
+    case 'index_parallel:hdfs':
       return 'druid-hdfs-storage';
 
     case 'kafka':
@@ -199,46 +201,28 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
 
 export interface DataSchema {
   dataSource: string;
-  parser: Parser;
+  timestampSpec: TimestampSpec;
   transformSpec?: TransformSpec;
   granularitySpec?: GranularitySpec;
+  dimensionsSpec: DimensionsSpec;
   metricsSpec?: MetricSpec[];
 }
 
-export interface Parser {
-  type?: string;
-  parseSpec: ParseSpec;
-}
-
-export interface ParseSpec {
-  format: string;
-  hasHeaderRow?: boolean;
+export interface InputFormat {
+  type: string;
+  findColumnsFromHeader?: boolean;
   skipHeaderRows?: number;
   columns?: string[];
   listDelimiter?: string;
   pattern?: string;
   function?: string;
-
-  timestampSpec: TimestampSpec;
-  dimensionsSpec: DimensionsSpec;
   flattenSpec?: FlattenSpec;
-}
-
-export function hasParallelAbility(spec: IngestionSpec): boolean {
-  const specType = getSpecType(spec);
-  return specType === 'index' || specType === 'index_parallel';
-}
-
-export function isParallel(spec: IngestionSpec): boolean {
-  const specType = getSpecType(spec);
-  return specType === 'index_parallel';
 }
 
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
-  const dimensions =
-    deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions') || EMPTY_ARRAY;
+  const dimensions = deepGet(spec, 'dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
@@ -247,9 +231,12 @@ export function getRollup(spec: IngestionSpec): boolean {
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
 
-export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undefined {
+export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   return (
-    deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type')
+    deepGet(spec, 'type') ||
+    deepGet(spec, 'ioConfig.type') ||
+    deepGet(spec, 'tuningConfig.type') ||
+    'index_parallel'
   );
 }
 
@@ -261,18 +248,8 @@ export function isTask(spec: IngestionSpec) {
   );
 }
 
-export function isIngestSegment(spec: IngestionSpec): boolean {
-  return deepGet(spec, 'ioConfig.firehose.type') === 'ingestSegment';
-}
-
-export function changeParallel(spec: IngestionSpec, parallel: boolean): IngestionSpec {
-  if (!hasParallelAbility(spec)) return spec;
-  const newType = parallel ? 'index_parallel' : 'index';
-  let newSpec = spec;
-  newSpec = deepSet(newSpec, 'type', newType);
-  newSpec = deepSet(newSpec, 'ioConfig.type', newType);
-  newSpec = deepSet(newSpec, 'tuningConfig.type', newType);
-  return newSpec;
+export function isDruidSource(spec: IngestionSpec): boolean {
+  return deepGet(spec, 'ioConfig.inputSource.type') === 'druid';
 }
 
 /**
@@ -296,12 +273,12 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   return spec as IngestionSpec;
 }
 
-const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
+const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
   {
-    name: 'format',
-    label: 'Parser to use',
+    name: 'type',
+    label: 'Input format',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc'],
     info: (
       <>
         <p>The parser used to parse the data.</p>
@@ -321,25 +298,25 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
     name: 'pattern',
     type: 'string',
     required: true,
-    defined: (p: ParseSpec) => p.format === 'regex',
+    defined: (p: InputFormat) => p.type === 'regex',
   },
   {
     name: 'function',
     type: 'string',
     required: true,
-    defined: (p: ParseSpec) => p.format === 'javascript',
+    defined: (p: InputFormat) => p.type === 'javascript',
   },
   {
-    name: 'hasHeaderRow',
+    name: 'findColumnsFromHeader',
     type: 'boolean',
-    defaultValue: false,
-    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    required: true,
+    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
   },
   {
     name: 'skipHeaderRows',
     type: 'number',
     defaultValue: 0,
-    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv',
     min: 0,
     info: (
       <>
@@ -352,51 +329,60 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
-    required: (p: ParseSpec) =>
-      ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
-    defined: (p: ParseSpec) =>
-      ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
+    required: (p: InputFormat) =>
+      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
+    defined: (p: InputFormat) =>
+      ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
   },
-  {
-    name: 'delimiter',
-    type: 'string',
-    defaultValue: '\t',
-    defined: (p: ParseSpec) => p.format === 'tsv',
-    info: <>A custom delimiter for data values.</>,
-  },
+  // {
+  //   name: 'delimiter',
+  //   type: 'string',
+  //   defaultValue: '\t',
+  //   defined: (p: InputFormat) => p.type === 'tsv',
+  //   info: <>A custom delimiter for data values.</>,
+  // },
   {
     name: 'listDelimiter',
     type: 'string',
-    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: InputFormat) => p.type === 'csv' || p.type === 'tsv' || p.type === 'regex',
     info: <>A custom delimiter for multi-value dimensions.</>,
+  },
+  {
+    name: 'binaryAsString',
+    type: 'boolean',
+    defaultValue: false,
+    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc',
+    info: (
+      <>
+        Specifies if the bytes parquet column which is not logically marked as a string or enum type
+        should be treated as a UTF-8 encoded string.
+      </>
+    ),
   },
 ];
 
-export function getParseSpecFormFields() {
-  return PARSE_SPEC_FORM_FIELDS;
+export function getInputFormatFormFields() {
+  return INPUT_FORMAT_FORM_FIELDS;
 }
 
-export function issueWithParser(parser: Parser | undefined): string | undefined {
-  if (!parser) return 'no parser';
-  if (parser.type === 'map') return;
-
-  const { parseSpec } = parser;
-  if (!parseSpec) return 'no parse spec';
-  if (!parseSpec.format) return 'missing a format';
-  switch (parseSpec.format) {
+export function issueWithInputFormat(inputFormat: InputFormat | undefined): string | undefined {
+  if (!inputFormat) return 'no input format';
+  if (!inputFormat.type) return 'missing a type';
+  switch (inputFormat.type) {
     case 'regex':
-      if (!parseSpec.pattern) return "must have a 'pattern'";
+      if (!inputFormat.pattern) return "must have a 'pattern'";
       break;
 
     case 'javascript':
-      if (!parseSpec['function']) return "must have a 'function'";
+      if (!inputFormat['function']) return "must have a 'function'";
       break;
   }
   return;
 }
 
-export function parseSpecHasFlatten(parseSpec: ParseSpec): boolean {
-  return parseSpec.format === 'json';
+export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
+  const inputFormatType = inputFormat.type;
+  return inputFormatType === 'json' || inputFormatType === 'parquet' || inputFormatType === 'orc';
 }
 
 export interface TimestampSpec {
@@ -412,13 +398,22 @@ export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
 
 const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
 
-const EMPTY_TIMESTAMP_SPEC: TimestampSpec = {
+const DUMMY_TIMESTAMP_SPEC: TimestampSpec = {
+  column: NO_SUCH_COLUMN,
+  missingValue: '1970-01-01T00:00:00Z',
+};
+
+export function getDummyTimestampSpec() {
+  return DUMMY_TIMESTAMP_SPEC;
+}
+
+const CONSTANT_TIMESTAMP_SPEC: TimestampSpec = {
   column: NO_SUCH_COLUMN,
   missingValue: '2010-01-01T00:00:00Z',
 };
 
-export function getEmptyTimestampSpec() {
-  return EMPTY_TIMESTAMP_SPEC;
+export function getConstantTimestampSpec() {
+  return CONSTANT_TIMESTAMP_SPEC;
 }
 
 export function isColumnTimestampSpec(timestampSpec: TimestampSpec) {
@@ -936,7 +931,8 @@ export function getMetricSpecName(metricSpec: MetricSpec): string {
 
 export interface IoConfig {
   type: string;
-  firehose?: Firehose;
+  inputSource?: InputSource;
+  inputFormat?: InputFormat;
   appendToExisting?: boolean;
   topic?: string;
   consumerProperties?: any;
@@ -958,7 +954,7 @@ export function invalidIoConfig(ioConfig: IoConfig): boolean {
   );
 }
 
-export interface Firehose {
+export interface InputSource {
   type: string;
   baseDir?: string;
   filter?: any;
@@ -967,7 +963,7 @@ export interface Firehose {
   blobs?: { bucket: string; path: string }[];
   fetchTimeout?: number;
 
-  // ingestSegment
+  // druid
   dataSource?: string;
   interval?: string;
   dimensions?: string[];
@@ -982,30 +978,30 @@ export interface Firehose {
 }
 
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
-  const firehoseType: Field<IoConfig> = {
-    name: 'firehose.type',
-    label: 'Firehose type',
+  const inputSourceType: Field<IoConfig> = {
+    name: 'inputSource.type',
+    label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 's3', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
         <ExternalLink
           href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html`}
         >
-          firehoses
+          inputSources
         </ExternalLink>
-        . You can change your selected firehose here.
+        . You can change your selected inputSource here.
       </p>
     ),
   };
 
   switch (ingestionComboType) {
-    case 'index:http':
+    case 'index_parallel:http':
       return [
-        firehoseType,
+        inputSourceType,
         {
-          name: 'firehose.uris',
+          name: 'inputSource.uris',
           label: 'URIs',
           type: 'string-array',
           placeholder:
@@ -1019,14 +1015,14 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'firehose.httpAuthenticationUsername',
+          name: 'inputSource.httpAuthenticationUsername',
           label: 'HTTP auth username',
           type: 'string',
           placeholder: '(optional)',
           info: <p>Username to use for authentication with specified URIs</p>,
         },
         {
-          name: 'firehose.httpAuthenticationPassword',
+          name: 'inputSource.httpAuthenticationPassword',
           label: 'HTTP auth password',
           type: 'string',
           placeholder: '(optional)',
@@ -1034,11 +1030,11 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:local':
+    case 'index_parallel:local':
       return [
-        firehoseType,
+        inputSourceType,
         {
-          name: 'firehose.baseDir',
+          name: 'inputSource.baseDir',
           label: 'Base directory',
           type: 'string',
           placeholder: '/path/to/files/',
@@ -1048,24 +1044,24 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
               >
-                firehose.baseDir
+                inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
             </>
           ),
         },
         {
-          name: 'firehose.filter',
+          name: 'inputSource.filter',
           label: 'File filter',
           type: 'string',
           required: true,
-          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
+          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet', '*.orc'],
           info: (
             <>
               <ExternalLink
                 href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
               >
-                firehose.filter
+                inputSource.filter
               </ExternalLink>
               <p>
                 A wildcard filter for files. See{' '}
@@ -1079,18 +1075,18 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:ingestSegment':
+    case 'index_parallel:druid':
       return [
-        firehoseType,
+        inputSourceType,
         {
-          name: 'firehose.dataSource',
+          name: 'inputSource.dataSource',
           label: 'Datasource',
           type: 'string',
           required: true,
           info: <p>The datasource to fetch rows from.</p>,
         },
         {
-          name: 'firehose.interval',
+          name: 'inputSource.interval',
           label: 'Interval',
           type: 'interval',
           placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
@@ -1103,7 +1099,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'firehose.dimensions',
+          name: 'inputSource.dimensions',
           label: 'Dimensions',
           type: 'string-array',
           placeholder: '(optional)',
@@ -1115,7 +1111,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'firehose.metrics',
+          name: 'inputSource.metrics',
           label: 'Metrics',
           type: 'string-array',
           placeholder: '(optional)',
@@ -1127,7 +1123,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'firehose.filter',
+          name: 'inputSource.filter',
           label: 'Filter',
           type: 'json',
           placeholder: '(optional)',
@@ -1145,22 +1141,22 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:inline':
+    case 'index_parallel:inline':
       return [
-        firehoseType,
+        inputSourceType,
         // do not add 'data' here as it has special handling in the load-data view
       ];
 
-    case 'index:static-s3':
+    case 'index_parallel:s3':
       return [
-        firehoseType,
+        inputSourceType,
         {
-          name: 'firehose.uris',
+          name: 'inputSource.uris',
           label: 'S3 URIs',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
           required: true,
-          defined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
+          defined: ioConfig => !deepGet(ioConfig, 'inputSource.prefixes'),
           info: (
             <>
               <p>
@@ -1172,12 +1168,12 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'firehose.prefixes',
+          name: 'inputSource.prefixes',
           label: 'S3 prefixes',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
           required: true,
-          defined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
+          defined: ioConfig => !deepGet(ioConfig, 'inputSource.uris'),
           info: (
             <>
               <p>A list of paths (with bucket) where your files are stored.</p>
@@ -1187,11 +1183,11 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:static-google-blobstore':
+    case 'index_parallel:google':
       return [
-        firehoseType,
+        inputSourceType,
         {
-          name: 'firehose.blobs',
+          name: 'inputSource.blobs',
           label: 'Google blobs',
           type: 'json',
           required: true,
@@ -1211,11 +1207,11 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index:hdfs':
+    case 'index_parallel:hdfs':
       return [
-        firehoseType,
+        inputSourceType,
         {
-          name: 'firehose.paths',
+          name: 'inputSource.paths',
           label: 'Paths',
           type: 'string',
           placeholder: '/path/to/file.ext',
@@ -1341,44 +1337,44 @@ function nonEmptyArray(a: any) {
   return Array.isArray(a) && Boolean(a.length);
 }
 
-function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
-  if (!firehose) return 'does not exist';
-  if (!firehose.type) return 'missing a type';
-  switch (firehose.type) {
+function issueWithInputSource(inputSource: InputSource | undefined): string | undefined {
+  if (!inputSource) return 'does not exist';
+  if (!inputSource.type) return 'missing a type';
+  switch (inputSource.type) {
     case 'local':
-      if (!firehose.baseDir) return `must have a 'baseDir'`;
-      if (!firehose.filter) return `must have a 'filter'`;
+      if (!inputSource.baseDir) return `must have a 'baseDir'`;
+      if (!inputSource.filter) return `must have a 'filter'`;
       break;
 
     case 'http':
-      if (!nonEmptyArray(firehose.uris)) {
+      if (!nonEmptyArray(inputSource.uris)) {
         return 'must have at least one uri';
       }
       break;
 
-    case 'ingestSegment':
-      if (!firehose.dataSource) return `must have a 'dataSource'`;
-      if (!firehose.interval) return `must have an 'interval'`;
+    case 'druid':
+      if (!inputSource.dataSource) return `must have a 'dataSource'`;
+      if (!inputSource.interval) return `must have an 'interval'`;
       break;
 
     case 'inline':
-      if (!firehose.data) return `must have 'data'`;
+      if (!inputSource.data) return `must have 'data'`;
       break;
 
-    case 'static-s3':
-      if (!nonEmptyArray(firehose.uris) && !nonEmptyArray(firehose.prefixes)) {
+    case 's3':
+      if (!nonEmptyArray(inputSource.uris) && !nonEmptyArray(inputSource.prefixes)) {
         return 'must have at least one uri or prefix';
       }
       break;
 
-    case 'static-google-blobstore':
-      if (!nonEmptyArray(firehose.blobs)) {
+    case 'google':
+      if (!nonEmptyArray(inputSource.blobs)) {
         return 'must have at least one blob';
       }
       break;
 
     case 'hdfs':
-      if (!firehose.paths) {
+      if (!inputSource.paths) {
         return 'must have paths';
       }
       break;
@@ -1386,14 +1382,17 @@ function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
   return;
 }
 
-export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | undefined {
+export function issueWithIoConfig(
+  ioConfig: IoConfig | undefined,
+  ignoreInputFormat = false,
+): string | undefined {
   if (!ioConfig) return 'does not exist';
   if (!ioConfig.type) return 'missing a type';
   switch (ioConfig.type) {
     case 'index':
     case 'index_parallel':
-      if (issueWithFirehose(ioConfig.firehose)) {
-        return `firehose: '${issueWithFirehose(ioConfig.firehose)}'`;
+      if (issueWithInputSource(ioConfig.inputSource)) {
+        return `inputSource: '${issueWithInputSource(ioConfig.inputSource)}'`;
       }
       break;
 
@@ -1406,6 +1405,10 @@ export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | unde
       break;
   }
 
+  if (!ignoreInputFormat && issueWithInputFormat(ioConfig.inputFormat)) {
+    return `inputFormat: '${issueWithInputFormat(ioConfig.inputFormat)}'`;
+  }
+
   return;
 }
 
@@ -1413,13 +1416,13 @@ export function getIoConfigTuningFormFields(
   ingestionComboType: IngestionComboType,
 ): Field<IoConfig>[] {
   switch (ingestionComboType) {
-    case 'index:http':
-    case 'index:static-s3':
-    case 'index:static-google-blobstore':
-    case 'index:hdfs':
+    case 'index_parallel:http':
+    case 'index_parallel:s3':
+    case 'index_parallel:google':
+    case 'index_parallel:hdfs':
       return [
         {
-          name: 'firehose.fetchTimeout',
+          name: 'inputSource.fetchTimeout',
           label: 'Fetch timeout',
           type: 'number',
           defaultValue: 60000,
@@ -1430,7 +1433,7 @@ export function getIoConfigTuningFormFields(
           ),
         },
         {
-          name: 'firehose.maxFetchRetry',
+          name: 'inputSource.maxFetchRetry',
           label: 'Max fetch retry',
           type: 'number',
           defaultValue: 3,
@@ -1441,7 +1444,7 @@ export function getIoConfigTuningFormFields(
           ),
         },
         {
-          name: 'firehose.maxCacheCapacityBytes',
+          name: 'inputSource.maxCacheCapacityBytes',
           label: 'Max cache capacity bytes',
           type: 'number',
           defaultValue: 1073741824,
@@ -1455,7 +1458,7 @@ export function getIoConfigTuningFormFields(
           ),
         },
         {
-          name: 'firehose.maxFetchCapacityBytes',
+          name: 'inputSource.maxFetchCapacityBytes',
           label: 'Max fetch capacity bytes',
           type: 'number',
           defaultValue: 1073741824,
@@ -1469,7 +1472,7 @@ export function getIoConfigTuningFormFields(
           ),
         },
         {
-          name: 'firehose.prefetchTriggerBytes',
+          name: 'inputSource.prefetchTriggerBytes',
           label: 'Prefetch trigger bytes',
           type: 'number',
           placeholder: 'maxFetchCapacityBytes / 2',
@@ -1481,14 +1484,14 @@ export function getIoConfigTuningFormFields(
         },
       ];
 
-    case 'index:local':
-    case 'index:inline':
+    case 'index_parallel:local':
+    case 'index_parallel:inline':
       return [];
 
-    case 'index:ingestSegment':
+    case 'index_parallel:druid':
       return [
         {
-          name: 'firehose.maxFetchCapacityBytes',
+          name: 'inputSource.maxFetchCapacityBytes',
           label: 'Max fetch capacity bytes',
           type: 'number',
           defaultValue: 157286400,
@@ -1738,28 +1741,31 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
   switch (ioConfig.type) {
     case 'index':
     case 'index_parallel':
-      const firehose = ioConfig.firehose;
-      if (!firehose) return;
+      const inputSource = ioConfig.inputSource;
+      if (!inputSource) return;
 
-      switch (firehose.type) {
+      switch (inputSource.type) {
         case 'local':
-          if (firehose.filter && filterIsFilename(firehose.filter)) {
-            return basenameFromFilename(firehose.filter);
-          } else if (firehose.baseDir) {
-            return filenameFromPath(firehose.baseDir);
+          if (inputSource.filter && filterIsFilename(inputSource.filter)) {
+            return basenameFromFilename(inputSource.filter);
+          } else if (inputSource.baseDir) {
+            return filenameFromPath(inputSource.baseDir);
           } else {
             return;
           }
 
-        case 'static-s3':
-          const s3Path = (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0];
+        case 's3':
+          const s3Path =
+            (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
           return s3Path ? filenameFromPath(s3Path) : undefined;
 
         case 'http':
-          return Array.isArray(firehose.uris) ? filenameFromPath(firehose.uris[0]) : undefined;
+          return Array.isArray(inputSource.uris)
+            ? filenameFromPath(inputSource.uris[0])
+            : undefined;
 
-        case 'ingestSegment':
-          return firehose.dataSource;
+        case 'druid':
+          return inputSource.dataSource;
 
         case 'inline':
           return 'inline_data';
@@ -1784,8 +1790,7 @@ export interface TuningConfig {
   type: string;
   maxRowsInMemory?: number;
   maxBytesInMemory?: number;
-  maxTotalRows?: number;
-  numShards?: number;
+  partitionsSpec?: PartitionsSpec;
   maxPendingPersists?: number;
   indexSpec?: IndexSpec;
   forceExtendableShardSpecs?: boolean;
@@ -1811,19 +1816,66 @@ export interface TuningConfig {
   fetchThreads?: number;
 }
 
+export interface PartitionsSpec {
+  type: 'string';
+
+  // For type: dynamic
+  maxTotalRows?: number;
+
+  // For type: hashed
+  numShards?: number;
+  partitionDimensions?: string[];
+
+  // For type: single_dim
+  targetRowsPerSegment?: number;
+  maxRowsPerSegment?: number;
+  partitionDimension?: string;
+  assumeGrouped?: boolean;
+}
+
+export function adjustTuningConfig(tuningConfig: TuningConfig) {
+  const tuningConfigType = deepGet(tuningConfig, 'type');
+  if (tuningConfigType !== 'index_parallel') return tuningConfig;
+
+  const partitionsSpecType = deepGet(tuningConfig, 'partitionsSpec.type');
+  if (tuningConfig.forceGuaranteedRollup) {
+    if (partitionsSpecType !== 'hashed' && partitionsSpecType !== 'single_dim') {
+      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'hashed' });
+    }
+  } else {
+    if (partitionsSpecType !== 'dynamic') {
+      tuningConfig = deepSet(tuningConfig, 'partitionsSpec', { type: 'dynamic' });
+    }
+  }
+  return tuningConfig;
+}
+
 export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
-  return Boolean(
-    tuningConfig.type === 'index_parallel' &&
-      tuningConfig.forceGuaranteedRollup &&
-      (!tuningConfig.numShards || !intervals),
-  );
+  if (tuningConfig.type !== 'index_parallel' || !tuningConfig.forceGuaranteedRollup) return false;
+
+  if (!intervals) return true;
+  switch (deepGet(tuningConfig, 'partitionsSpec.type')) {
+    case 'hashed':
+      if (!deepGet(tuningConfig, 'partitionsSpec.numShards')) return true;
+      break;
+
+    case 'single_dim':
+      if (!deepGet(tuningConfig, 'partitionsSpec.partitionDimension')) return true;
+      if (
+        !deepGet(tuningConfig, 'partitionsSpec.targetRowsPerSegment') &&
+        !deepGet(tuningConfig, 'partitionsSpec.maxRowsPerSegment')
+      ) {
+        return true;
+      }
+  }
+
+  return false;
 }
 
 export function getPartitionRelatedTuningSpecFormFields(
   specType: IngestionType,
 ): Field<TuningConfig>[] {
   switch (specType) {
-    case 'index':
     case 'index_parallel':
       return [
         {
@@ -1831,23 +1883,53 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'boolean',
           defaultValue: false,
           info: (
-            <>
-              <p>
-                Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size
-                of generated segments and querying time while indexing time will be increased. If
-                this is set to true, the index task will read the entire input data twice: one for
-                finding the optimal number of partitions per time chunk and one for generating
-                segments.
-              </p>
-            </>
+            <p>
+              Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size of
+              generated segments and querying time while indexing time will be increased. If this is
+              set to true, the index task will read the entire input data twice: one for finding the
+              optimal number of partitions per time chunk and one for generating segments.
+            </p>
           ),
+          adjustment: adjustTuningConfig,
         },
         {
-          name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
+          name: 'partitionsSpec.type',
+          label: 'Partitioning type',
+          type: 'string',
+          suggestions: (t: TuningConfig) =>
+            t.forceGuaranteedRollup ? ['hashed', 'single_dim'] : ['dynamic'],
+          info: (
+            <p>
+              For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
+              the hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a
+              single dimension. For best-effort rollup, you should use dynamic.
+            </p>
+          ),
+        },
+        // partitionsSpec type: dynamic
+        {
+          name: 'partitionsSpec.maxRowsPerSegment',
+          label: 'Max rows per segment',
           type: 'number',
-          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
-          required: (t: TuningConfig) =>
-            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+          defaultValue: 5000000,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          info: <>Determines how many rows are in each segment.</>,
+        },
+        {
+          name: 'partitionsSpec.maxTotalRows',
+          label: 'Max total rows',
+          type: 'number',
+          defaultValue: 20000000,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'dynamic',
+          info: <>Total number of rows in segments waiting for being pushed.</>,
+        },
+        // partitionsSpec type: hashed
+        {
+          name: 'partitionsSpec.numShards',
+          label: 'Num shards',
+          type: 'number',
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          required: true,
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -1858,32 +1940,60 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionDimensions',
+          name: 'partitionsSpec.partitionDimensions',
+          label: 'Partition dimensions',
           type: 'string-array',
-          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'hashed',
+          info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
+        },
+        // partitionsSpec type: single_dim
+        {
+          name: 'partitionsSpec.partitionDimension',
+          label: 'Partition dimension',
+          type: 'string',
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          required: true,
+          info: <p>The dimension to partition on.</p>,
+        },
+        {
+          name: 'partitionsSpec.targetRowsPerSegment',
+          label: 'Target rows per segment',
+          type: 'number',
+          zeroMeansUndefined: true,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          required: (t: TuningConfig) =>
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
           info: (
-            <>
-              <p>Does not currently work with parallel ingestion</p>
-              <p>
-                The dimensions to partition on. Leave blank to select all dimensions. Only used with
-                forceGuaranteedRollup = true, will be ignored otherwise.
-              </p>
-            </>
+            <p>
+              Target number of rows to include in a partition, should be a number that targets
+              segments of 500MB~1GB.
+            </p>
           ),
         },
         {
-          name: 'maxRowsPerSegment',
+          name: 'partitionsSpec.maxRowsPerSegment',
+          label: 'Max rows per segment',
           type: 'number',
-          defaultValue: 5000000,
-          defined: (t: TuningConfig) => !t.forceGuaranteedRollup && t.numShards == null, // Can not be set if numShards is specified
-          info: <>Determines how many rows are in each segment.</>,
+          zeroMeansUndefined: true,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          required: (t: TuningConfig) =>
+            !deepGet(t, 'partitionsSpec.targetRowsPerSegment') &&
+            !deepGet(t, 'partitionsSpec.maxRowsPerSegment'),
+          info: <p>Maximum number of rows to include in a partition.</p>,
         },
         {
-          name: 'maxTotalRows',
-          type: 'number',
-          defaultValue: 20000000,
-          defined: (t: TuningConfig) => !t.forceGuaranteedRollup,
-          info: <>Total number of rows in segments waiting for being pushed.</>,
+          name: 'partitionsSpec.assumeGrouped',
+          label: 'Assume grouped',
+          type: 'boolean',
+          defaultValue: false,
+          defined: (t: TuningConfig) => deepGet(t, 'partitionsSpec.type') === 'single_dim',
+          info: (
+            <p>
+              Assume that input data has already been grouped on time and dimensions. Ingestion will
+              run faster, but may choose sub-optimal partitions if this assumption is violated.
+            </p>
+          ),
         },
       ];
 
@@ -1913,6 +2023,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,
+    min: 1,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: (
       <>
@@ -2237,8 +2348,7 @@ export function updateIngestionType(
   spec: IngestionSpec,
   comboType: IngestionComboType,
 ): IngestionSpec {
-  let [ingestionType, firehoseType] = comboType.split(':');
-  if (ingestionType === 'index') ingestionType = 'index_parallel';
+  const [ingestionType, inputSourceType] = comboType.split(':');
   const ioAndTuningConfigType = ingestionTypeToIoAndTuningConfigType(
     ingestionType as IngestionType,
   );
@@ -2248,11 +2358,11 @@ export function updateIngestionType(
   newSpec = deepSet(newSpec, 'ioConfig.type', ioAndTuningConfigType);
   newSpec = deepSet(newSpec, 'tuningConfig.type', ioAndTuningConfigType);
 
-  if (firehoseType) {
-    newSpec = deepSet(newSpec, 'ioConfig.firehose', { type: firehoseType });
+  if (inputSourceType) {
+    newSpec = deepSet(newSpec, 'ioConfig.inputSource', { type: inputSourceType });
 
-    if (firehoseType === 'local') {
-      newSpec = deepSet(newSpec, 'ioConfig.firehose.filter', '*');
+    if (inputSourceType === 'local') {
+      newSpec = deepSet(newSpec, 'ioConfig.inputSource.filter', '*');
     }
   }
 
@@ -2272,65 +2382,64 @@ export function updateIngestionType(
     newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
   }
 
+  if (!deepGet(spec, 'dataSchema.timestampSpec')) {
+    newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', getDummyTimestampSpec());
+  }
+
+  if (!deepGet(spec, 'dataSchema.dimensionsSpec')) {
+    newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec', {});
+  }
+
   return newSpec;
 }
 
-export function fillParser(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
-  const firehoseType = deepGet(spec, 'ioConfig.firehose.type');
+export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
+  const inputFormat = guessInputFormat(sampleData);
+  if (!inputFormat) return spec;
 
-  if (firehoseType === 'sql') {
-    return deepSet(spec, 'dataSchema.parser', { type: 'map' });
-  }
-
-  if (firehoseType === 'ingestSegment') {
-    return deepSet(spec, 'dataSchema.parser', {
-      type: 'string',
-      parseSpec: { format: 'timeAndDims' },
-    });
-  }
-
-  const parseSpec = guessParseSpec(sampleData);
-  if (!parseSpec) return spec;
-
-  return deepSet(spec, 'dataSchema.parser', { type: 'string', parseSpec });
+  return deepSet(spec, 'ioConfig.inputFormat', inputFormat);
 }
 
-function guessParseSpec(sampleData: string[]): ParseSpec | undefined {
+function guessInputFormat(sampleData: string[]): InputFormat | undefined {
   const sampleDatum = sampleData[0];
   if (!sampleDatum) return;
 
   if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-    return parseSpecFromFormat('json');
+    return inputFormatFromType('json');
   }
 
   if (sampleDatum.split('\t').length > 3) {
-    return parseSpecFromFormat('tsv', !/\t\d+\t/.test(sampleDatum));
+    return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
   }
 
   if (sampleDatum.split(',').length > 3) {
-    return parseSpecFromFormat('csv', !/,\d+,/.test(sampleDatum));
+    return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
   }
 
-  return parseSpecFromFormat('regex');
+  if (sampleDatum.startsWith('PAR1')) {
+    return inputFormatFromType('parquet');
+  }
+
+  if (sampleDatum.startsWith('ORC')) {
+    return inputFormatFromType('orc');
+  }
+
+  return inputFormatFromType('regex');
 }
 
-function parseSpecFromFormat(format: string, hasHeaderRow?: boolean): ParseSpec {
-  const parseSpec: ParseSpec = {
-    format,
-    timestampSpec: {},
-    dimensionsSpec: {},
-  };
+function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): InputFormat {
+  const inputFormat: InputFormat = { type };
 
-  if (format === 'regex') {
-    parseSpec.pattern = '(.*)';
-    parseSpec.columns = ['column1'];
+  if (type === 'regex') {
+    inputFormat.pattern = '(.*)';
+    inputFormat.columns = ['column1'];
   }
 
-  if (typeof hasHeaderRow === 'boolean') {
-    parseSpec.hasHeaderRow = hasHeaderRow;
+  if (typeof findColumnsFromHeader === 'boolean') {
+    inputFormat.findColumnsFromHeader = findColumnsFromHeader;
   }
 
-  return parseSpec;
+  return inputFormat;
 }
 
 export type DruidFilter = Record<string, any>;
@@ -2436,4 +2545,56 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
 
 export function getFilterFormFields() {
   return FILTER_FORM_FIELDS;
+}
+
+export function upgradeSpec(spec: any): any {
+  if (deepGet(spec, 'ioConfig.firehose')) {
+    switch (deepGet(spec, 'ioConfig.firehose.type')) {
+      case 'static-s3':
+        deepSet(spec, 'ioConfig.firehose.type', 's3');
+        break;
+
+      case 'static-google-blobstore':
+        deepSet(spec, 'ioConfig.firehose.type', 'google');
+        break;
+    }
+
+    spec = deepMove(spec, 'ioConfig.firehose', 'ioConfig.inputSource');
+    spec = deepMove(spec, 'dataSchema.parser.parseSpec.timestampSpec', 'dataSchema.timestampSpec');
+    spec = deepMove(
+      spec,
+      'dataSchema.parser.parseSpec.dimensionsSpec',
+      'dataSchema.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'dataSchema.parser.parseSpec', 'ioConfig.inputFormat');
+    spec = deepDelete(spec, 'dataSchema.parser');
+    spec = deepMove(spec, 'ioConfig.inputFormat.format', 'ioConfig.inputFormat.type');
+  }
+  return spec;
+}
+
+export function downgradeSpec(spec: any): any {
+  if (deepGet(spec, 'ioConfig.inputSource')) {
+    spec = deepMove(spec, 'ioConfig.inputFormat.type', 'ioConfig.inputFormat.format');
+    spec = deepSet(spec, 'dataSchema.parser', { type: 'string' });
+    spec = deepMove(spec, 'ioConfig.inputFormat', 'dataSchema.parser.parseSpec');
+    spec = deepMove(
+      spec,
+      'dataSchema.dimensionsSpec',
+      'dataSchema.parser.parseSpec.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'dataSchema.timestampSpec', 'dataSchema.parser.parseSpec.timestampSpec');
+    spec = deepMove(spec, 'ioConfig.inputSource', 'ioConfig.firehose');
+
+    switch (deepGet(spec, 'ioConfig.firehose.type')) {
+      case 's3':
+        deepSet(spec, 'ioConfig.firehose.type', 'static-s3');
+        break;
+
+      case 'google':
+        deepSet(spec, 'ioConfig.firehose.type', 'static-google-blobstore');
+        break;
+    }
+  }
+  return spec;
 }

@@ -38,7 +38,6 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -99,7 +98,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   private final RetryQueryRunnerConfig retryConfig;
   private final ServerConfig serverConfig;
 
-  private final List<Row> groupByResults = new ArrayList<>();
+  private final List<ResultRow> groupByResults = new ArrayList<>();
   private final List<Result<TimeseriesResultValue>> timeseriesResults = new ArrayList<>();
 
   private final TestConfig config;
@@ -222,9 +221,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     return MovingAverageQuery.class;
   }
 
-  private TypeReference<?> getExpectedResultType()
+  private TypeReference<List<MapBasedRow>> getExpectedResultType()
   {
-    return new TypeReference<List<Row>>()
+    return new TypeReference<List<MapBasedRow>>()
     {
     };
   }

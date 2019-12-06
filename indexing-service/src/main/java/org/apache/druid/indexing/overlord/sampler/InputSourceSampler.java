@@ -187,7 +187,7 @@ public class InputSourceSampler
       SamplerConfig samplerConfig,
       DataSchema dataSchema,
       InputSource inputSource,
-      InputFormat inputFormat,
+      @Nullable InputFormat inputFormat,
       File tempDir
   )
   {

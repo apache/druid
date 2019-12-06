@@ -230,23 +230,21 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         testSampledData = await postToSampler(
           {
-            type: 'index',
+            type: 'index_parallel',
             spec: {
-              type: 'index',
-              ioConfig: { type: 'index', firehose: { type: 'inline', data: '{"test":"Data"}' } },
+              type: 'index_parallel',
+              ioConfig: {
+                type: 'index_parallel',
+                inputSource: { type: 'inline', data: '{"test":"Data"}' },
+                inputFormat: { type: 'json' },
+              },
               dataSchema: {
                 dataSource: 'sample',
-                parser: {
-                  type: 'string',
-                  parseSpec: {
-                    format: 'json',
-                    timestampSpec: {
-                      column: '!!!_no_such_column_!!!',
-                      missingValue: '2010-01-01T00:00:00Z',
-                    },
-                    dimensionsSpec: { dimensions: ['test'] },
-                  },
+                timestampSpec: {
+                  column: '!!!_no_such_column_!!!',
+                  missingValue: '2010-01-01T00:00:00Z',
                 },
+                dimensionsSpec: { dimensions: ['test'] },
                 transformSpec: {},
                 metricsSpec: [],
                 granularitySpec: { queryGranularity: 'NONE' },

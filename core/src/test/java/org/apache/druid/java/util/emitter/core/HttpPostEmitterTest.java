@@ -68,6 +68,7 @@ public class HttpPostEmitterTest
     HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setFlushMillis(100)
         .setFlushCount(4)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
         .setMaxBatchSize(1024 * 1024)
         .setBatchQueueSizeLimit(1000)
@@ -94,5 +95,4 @@ public class HttpPostEmitterTest
 
     Assert.assertEquals(2, emitter.getTotalEmittedEvents());
   }
-
 }

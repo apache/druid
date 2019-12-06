@@ -23,66 +23,271 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.guice.ObjectMapperModule;
+import com.google.api.services.storage.Storage;
+import com.google.api.services.storage.model.Objects;
+import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.utils.CompressionUtils;
+import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class GoogleCloudStorageInputSourceTest
+public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTest
 {
-  private static final GoogleStorage STORAGE = new GoogleStorage(null);
+  private static final GoogleStorage STORAGE = EasyMock.createMock(GoogleStorage.class);
+
+  private static final List<URI> EXPECTED_URIS = Arrays.asList(
+      URI.create("gs://foo/bar/file.csv"),
+      URI.create("gs://bar/foo/file2.csv")
+  );
+
+  private static final List<URI> EXPECTED_COMPRESSED_URIS = Arrays.asList(
+      URI.create("gs://foo/bar/file.csv.gz"),
+      URI.create("gs://bar/foo/file2.csv.gz")
+  );
+
+  private static final List<CloudObjectLocation> EXPECTED_OBJECTS =
+      EXPECTED_URIS.stream().map(CloudObjectLocation::new).collect(Collectors.toList());
+
+  private static final List<URI> PREFIXES = Arrays.asList(
+      URI.create("gs://foo/bar"),
+      URI.create("gs://bar/foo")
+  );
+
+  private static final List<CloudObjectLocation> EXPECTED_LOCATION =
+      ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
+
+  private static final DateTime NOW = DateTimes.nowUtc();
+  private static final byte[] CONTENT =
+      StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
 
   @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
-
-    final List<URI> uris = Arrays.asList(
-        new URI("gs://foo/bar/file.gz"),
-        new URI("gs://bar/foo/file2.gz")
-    );
-
-    final List<URI> prefixes = Arrays.asList(
-        new URI("gs://foo/bar"),
-        new URI("gs://bar/foo")
-    );
-
-    final GoogleCloudStorageInputSource withUris = new GoogleCloudStorageInputSource(STORAGE, uris);
+    final GoogleCloudStorageInputSource withUris =
+        new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
     final GoogleCloudStorageInputSource serdeWithUris =
         mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
 
   @Test
+  public void testSerdePrefixes() throws Exception
+  {
+    final ObjectMapper mapper = createGoogleObjectMapper();
+    final GoogleCloudStorageInputSource withPrefixes =
+        new GoogleCloudStorageInputSource(STORAGE, ImmutableList.of(), PREFIXES, null);
+    final GoogleCloudStorageInputSource serdeWithPrefixes =
+        mapper.readValue(mapper.writeValueAsString(withPrefixes), GoogleCloudStorageInputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+  }
+
+  @Test
+  public void testSerdeObjects() throws Exception
+  {
+    final ObjectMapper mapper = createGoogleObjectMapper();
+    final GoogleCloudStorageInputSource withObjects =
+        new GoogleCloudStorageInputSource(
+            STORAGE,
+            null,
+            null,
+            ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz"))
+        );
+    final GoogleCloudStorageInputSource serdeWithObjects =
+        mapper.readValue(mapper.writeValueAsString(withObjects), GoogleCloudStorageInputSource.class);
+    Assert.assertEquals(withObjects, serdeWithObjects);
+  }
+
+  @Test
   public void testWithUrisSplit()
   {
-    final List<URI> uris = Arrays.asList(
-        URI.create("gs://foo/bar/file.gz"),
-        URI.create("gs://bar/foo/file2.gz")
-    );
 
-    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(STORAGE, uris);
+    GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
 
-    Stream<InputSplit<URI>> splits = inputSource.createSplits(
+    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
-    Assert.assertEquals(uris, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testWithPrefixesSplit() throws IOException
+  {
+    EasyMock.reset(STORAGE);
+    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
+    addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
+    EasyMock.replay(STORAGE);
+
+    GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, null, PREFIXES, null);
+
+    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        null
+    );
+
+    Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testReader() throws IOException
+  {
+    EasyMock.reset(STORAGE);
+    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
+    addExpectedGetObjectMock(EXPECTED_URIS.get(0));
+    addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
+    addExpectedGetObjectMock(EXPECTED_URIS.get(1));
+    EasyMock.replay(STORAGE);
+
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
+        STORAGE,
+        null,
+        PREFIXES,
+        null
+    );
+
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ImmutableList.of("count")
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        null
+    );
+
+    CloseableIterator<InputRow> iterator = reader.read();
+
+    while (iterator.hasNext()) {
+      InputRow nextRow = iterator.next();
+      Assert.assertEquals(NOW, nextRow.getTimestamp());
+      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+    }
+  }
+
+  @Test
+  public void testCompressedReader() throws IOException
+  {
+    EasyMock.reset(STORAGE);
+    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(0)));
+    addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(0));
+    addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(1)));
+    addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(1));
+    EasyMock.replay(STORAGE);
+
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
+        STORAGE,
+        null,
+        PREFIXES,
+        null
+    );
+
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ImmutableList.of("count")
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        null
+    );
+
+    CloseableIterator<InputRow> iterator = reader.read();
+
+    while (iterator.hasNext()) {
+      InputRow nextRow = iterator.next();
+      Assert.assertEquals(NOW, nextRow.getTimestamp());
+      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+    }
+  }
+
+  private static void addExpectedPrefixObjects(URI prefix, List<URI> uris) throws IOException
+  {
+    final String bucket = prefix.getAuthority();
+
+    Storage.Objects.List listRequest = EasyMock.createMock(Storage.Objects.List.class);
+    EasyMock.expect(STORAGE.list(EasyMock.eq(bucket))).andReturn(listRequest).once();
+    EasyMock.expect(listRequest.setPageToken(EasyMock.anyString())).andReturn(listRequest).once();
+    EasyMock.expect(listRequest.setMaxResults(EasyMock.anyLong())).andReturn(listRequest).once();
+    EasyMock.expect(listRequest.setPrefix(EasyMock.eq(StringUtils.maybeRemoveLeadingSlash(prefix.getPath()))))
+            .andReturn(listRequest)
+            .once();
+
+    List<StorageObject> mockObjects = new ArrayList<>();
+    for (URI uri : uris) {
+      StorageObject s = new StorageObject();
+      s.setBucket(bucket);
+      s.setName(uri.getPath());
+      mockObjects.add(s);
+    }
+    Objects response = new Objects();
+    response.setItems(mockObjects);
+    EasyMock.expect(listRequest.execute()).andReturn(response).once();
+    EasyMock.expect(response.getItems()).andReturn(mockObjects).once();
+
+    EasyMock.replay(listRequest);
+  }
+
+  private static void addExpectedGetObjectMock(URI uri) throws IOException
+  {
+    CloudObjectLocation location = new CloudObjectLocation(uri);
+
+    EasyMock.expect(
+        STORAGE.get(EasyMock.eq(location.getBucket()), EasyMock.eq(location.getPath()), EasyMock.eq(0L))
+    ).andReturn(new ByteArrayInputStream(CONTENT)).once();
+  }
+
+  private static void addExpectedGetCompressedObjectMock(URI uri) throws IOException
+  {
+    CloudObjectLocation location = new CloudObjectLocation(uri);
+
+    ByteArrayOutputStream gzipped = new ByteArrayOutputStream();
+    CompressionUtils.gzip(new ByteArrayInputStream(CONTENT), gzipped);
+
+    EasyMock.expect(
+        STORAGE.get(EasyMock.eq(location.getBucket()), EasyMock.eq(location.getPath()), EasyMock.eq(0L))
+    ).andReturn(new ByteArrayInputStream(gzipped.toByteArray())).once();
   }
 
   public static ObjectMapper createGoogleObjectMapper()
