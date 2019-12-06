@@ -107,17 +107,8 @@ public class BrokerServerView implements TimelineServerView
     this.timelines = new HashMap<>();
 
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
-      if (segmentWatcherConfig.getWatchedTiers() != null
-          && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
-        return false;
-      }
-
-      if (segmentWatcherConfig.getWatchedDataSources() != null
-          && !segmentWatcherConfig.getWatchedDataSources().contains(metadataAndSegment.rhs.getDataSource())) {
-        return false;
-      }
-
-      return true;
+      return (segmentWatcherConfig.getWatchedTiers() == null || segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) &&
+            (segmentWatcherConfig.getWatchedDataSources() == null || segmentWatcherConfig.getWatchedDataSources().contains(metadataAndSegment.rhs.getDataSource()));
     };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
