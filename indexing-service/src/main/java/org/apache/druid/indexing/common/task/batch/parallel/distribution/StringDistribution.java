@@ -50,17 +50,17 @@ public interface StringDistribution
    * Split the distribution in the fewest number of evenly-sized partitions while honoring a max
    * partition size.
    *
-   * @return Array of elements that correspond to the endpoints of evenly-sized partitions of the
+   * @return List of elements that correspond to the endpoints of evenly-sized partitions of the
    * sorted elements.
    */
-  Partitions getEvenPartitionsByMaxSize(int maxSize);
+  PartitionBoundaries getEvenPartitionsByMaxSize(int maxSize);
 
   /**
    * Split the distribution in the fewest number of evenly-sized partitions while honoring a target
    * partition size (actual partition sizes may be slightly lower or higher).
    *
-   * @return Array of elements that correspond to the endpoints of evenly-sized partitions of the
+   * @return List of elements that correspond to the endpoints of evenly-sized partitions of the
    * sorted elements.
    */
-  Partitions getEvenPartitionsByTargetSize(int targetSize);
+  PartitionBoundaries getEvenPartitionsByTargetSize(int targetSize);
 }

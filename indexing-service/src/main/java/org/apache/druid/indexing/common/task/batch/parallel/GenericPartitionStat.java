@@ -28,12 +28,12 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Partition description ({@link ShardSpec}) and statistics created by {@link PartialSegmentGenerateTask}. Each
+ * Generic partition description ({@link ShardSpec}) and statistics created by {@link PartialSegmentGenerateTask}. Each
  * partition is a set of data of the same time chunk (primary partition key) and the same {@link ShardSpec} (secondary
  * partition key). The {@link ShardSpec} is later used by {@link PartialGenericSegmentMergeTask} to merge the partial
  * segments.
  */
-public class PartitionMetadata extends PartitionStat<ShardSpec>
+public class GenericPartitionStat extends PartitionStat<ShardSpec>
 {
   private static final String PROP_SHARD_SPEC = "shardSpec";
 
@@ -41,7 +41,7 @@ public class PartitionMetadata extends PartitionStat<ShardSpec>
   private final ShardSpec shardSpec;
 
   @JsonCreator
-  public PartitionMetadata(
+  public GenericPartitionStat(
       @JsonProperty("taskExecutorHost") String taskExecutorHost,
       @JsonProperty("taskExecutorPort") int taskExecutorPort,
       @JsonProperty("useHttps") boolean useHttps,
@@ -80,7 +80,7 @@ public class PartitionMetadata extends PartitionStat<ShardSpec>
     if (!super.equals(o)) {
       return false;
     }
-    PartitionMetadata that = (PartitionMetadata) o;
+    GenericPartitionStat that = (GenericPartitionStat) o;
     return Objects.equals(shardSpec, that.shardSpec);
   }
 

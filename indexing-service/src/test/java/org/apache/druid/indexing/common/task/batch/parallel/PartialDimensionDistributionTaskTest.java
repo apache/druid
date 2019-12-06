@@ -33,7 +33,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
@@ -274,11 +274,10 @@ public class PartialDimensionDistributionTaskTest
       Map<Interval, StringDistribution> intervalToDistribution = report.getIntervalToDistribution();
       StringDistribution distribution = Iterables.getOnlyElement(intervalToDistribution.values());
       Assert.assertNotNull(distribution);
-      Partitions partitions = distribution.getEvenPartitionsByMaxSize(1);
-      Assert.assertEquals(3, partitions.size());
-      Assert.assertEquals(dimensionValue, partitions.get(0));
-      Assert.assertEquals(dimensionValue, partitions.get(1));
-      Assert.assertEquals(dimensionValue, partitions.get(2));
+      PartitionBoundaries partitions = distribution.getEvenPartitionsByMaxSize(1);
+      Assert.assertEquals(2, partitions.size());
+      Assert.assertNull(partitions.get(0));
+      Assert.assertNull(partitions.get(1));
     }
 
     @Test
@@ -305,10 +304,10 @@ public class PartialDimensionDistributionTaskTest
       Map<Interval, StringDistribution> intervalToDistribution = report.getIntervalToDistribution();
       StringDistribution distribution = Iterables.getOnlyElement(intervalToDistribution.values());
       Assert.assertNotNull(distribution);
-      Partitions partitions = distribution.getEvenPartitionsByMaxSize(1);
+      PartitionBoundaries partitions = distribution.getEvenPartitionsByMaxSize(1);
       Assert.assertEquals(2, partitions.size());
-      Assert.assertEquals(dimensionValue, partitions.get(0));
-      Assert.assertEquals(dimensionValue, partitions.get(1));
+      Assert.assertNull(partitions.get(0));
+      Assert.assertNull(partitions.get(1));
     }
 
     @Test
@@ -323,8 +322,6 @@ public class PartialDimensionDistributionTaskTest
       List<String> dimensionValues = IntStream.range(0, minBloomFilterBits * 10)
                                               .mapToObj(i -> StringUtils.format("%010d", i))
                                               .collect(Collectors.toCollection(ArrayList::new));
-      String minDimensionValue = dimensionValues.get(0);
-      String maxDimensionValue = dimensionValues.get(dimensionValues.size() - 1);
       List<String> rows = dimensionValues.stream()
                                          .map(d -> ParallelIndexTestingFactory.createRow(timestamp, d))
                                          .collect(Collectors.toList());
@@ -360,10 +357,16 @@ public class PartialDimensionDistributionTaskTest
       Map<Interval, StringDistribution> intervalToDistribution = report.getIntervalToDistribution();
       StringDistribution distribution = Iterables.getOnlyElement(intervalToDistribution.values());
       Assert.assertNotNull(distribution);
-      Partitions partitions = distribution.getEvenPartitionsByMaxSize(1);
+      PartitionBoundaries partitions = distribution.getEvenPartitionsByMaxSize(1);
       Assert.assertEquals(minBloomFilterBits + 3, partitions.size()); // 3 = min + max + exclusive endpoint
-      Assert.assertEquals(minDimensionValue, partitions.get(0));
-      Assert.assertEquals(maxDimensionValue, partitions.get(partitions.size() - 1));
+
+      // Min
+      Assert.assertNull(partitions.get(0));
+      Assert.assertEquals(dimensionValues.get(1), partitions.get(1));
+
+      // Max
+      Assert.assertNull(partitions.get(partitions.size() - 1));
+      Assert.assertEquals(dimensionValues.get(dimensionValues.size() - 1), partitions.get(partitions.size() - 2));
     }
 
     @Test

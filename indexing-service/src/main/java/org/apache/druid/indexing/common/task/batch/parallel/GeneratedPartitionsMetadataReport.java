@@ -25,19 +25,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
- * Report containing the {@link PartitionMetadata}s created by a {@link PartialSegmentGenerateTask}. This report is
+ * Report containing the {@link GenericPartitionStat}s created by a {@link PartialSegmentGenerateTask}. This report is
  * collected by {@link ParallelIndexSupervisorTask} and used to generate {@link PartialGenericSegmentMergeIOConfig}.
  */
-class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport<PartitionMetadata> implements SubTaskReport
+class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport<GenericPartitionStat> implements SubTaskReport
 {
   public static final String TYPE = "generated_partitions_metadata";
 
   @JsonCreator
   GeneratedPartitionsMetadataReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("partitionStats") List<PartitionMetadata> partitionMetadata
+      @JsonProperty("partitionStats") List<GenericPartitionStat> partitionStats
   )
   {
-    super(taskId, partitionMetadata);
+    super(taskId, partitionStats);
   }
 }

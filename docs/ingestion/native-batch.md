@@ -244,10 +244,13 @@ Currently only one splitHintSpec, i.e., `segments`, is available.
 PartitionsSpec is used to describe the secondary partitioning method.
 You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
 For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
-`single_dim` (based on ranges of a single dimension. For best-effort rollup, you should use `dynamic`.
+`single_dim` (based on ranges of a single dimension). For best-effort rollup, you should use `dynamic`.
 
-For perfect rollup, `hashed` partitioning is recommended in most cases, as it will improve indexing
-performance and create more uniformly sized data segments relative to single-dimension partitioning.
+The three `partitionsSpec` types have different pros and cons:
+- `dynamic`: Fastest ingestion speed. Guarantees a well-balanced distribution in segment size. Only best-effort rollup.
+- `hashed`: Moderate ingestion speed. Creates a well-balanced distribution in segment size. Allows perfect rollup. 
+- `single_dim`: Slowest ingestion speed. Segment sizes may be skewed depending on the partition key, but the broker can
+   use the partition information to efficiently prune segments early to speed up queries. Allows perfect rollup.
 
 #### Hash-based partitioning
 
@@ -261,7 +264,10 @@ performance and create more uniformly sized data segments relative to single-dim
 
 > Single-dimension range partitioning currently requires the
 > [druid-datasketches](../development/extensions-core/datasketches-extension.md)
-> extension to be added to the classpath.
+> extension to be [loaded from the classpath](..development/extension.md#loading-extensions-from-the-classpath).
+
+> Because single-range partitioning makes two passes over the input, the index task may fail if the input changes
+> in between the two passes. 
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|

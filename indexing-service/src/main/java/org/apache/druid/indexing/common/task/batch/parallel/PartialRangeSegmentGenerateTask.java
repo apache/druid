@@ -32,7 +32,7 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
 import org.apache.druid.indexing.common.task.RangePartitionCachingLocalSegmentAllocator;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -58,7 +58,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   private final String supervisorTaskId;
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final Map<Interval, Partitions> intervalToPartitions;
+  private final Map<Interval, PartitionBoundaries> intervalToPartitions;
 
   @JsonCreator
   public PartialRangeSegmentGenerateTask(
@@ -70,7 +70,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
       @JsonProperty("numAttempts") int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("intervalToPartitions") Map<Interval, Partitions> intervalToPartitions,
+      @JsonProperty("intervalToPartitions") Map<Interval, PartitionBoundaries> intervalToPartitions,
       @JacksonInject IndexingServiceClient indexingServiceClient,
       @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
       @JacksonInject AppenderatorsManager appenderatorsManager
@@ -130,7 +130,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @JsonProperty
-  public Map<Interval, Partitions> getIntervalToPartitions()
+  public Map<Interval, PartitionBoundaries> getIntervalToPartitions()
   {
     return intervalToPartitions;
   }
@@ -163,15 +163,15 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   @Override
   GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
   {
-    List<PartitionMetadata> partitionsMetadata = segments.stream()
-                                                         .map(segment -> createPartitionStat(toolbox, segment))
-                                                         .collect(Collectors.toList());
-    return new GeneratedPartitionsMetadataReport(getId(), partitionsMetadata);
+    List<GenericPartitionStat> partitionStats = segments.stream()
+                                                        .map(segment -> createPartitionStat(toolbox, segment))
+                                                        .collect(Collectors.toList());
+    return new GeneratedPartitionsMetadataReport(getId(), partitionStats);
   }
 
-  private PartitionMetadata createPartitionStat(TaskToolbox toolbox, DataSegment segment)
+  private GenericPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
   {
-    return new PartitionMetadata(
+    return new GenericPartitionStat(
         toolbox.getTaskExecutorNode().getHost(),
         toolbox.getTaskExecutorNode().getPortToUse(),
         toolbox.getTaskExecutorNode().isEnableTlsPort(),

@@ -20,28 +20,48 @@
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import com.google.common.collect.ForwardingList;
-import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Convenience wrapper to make code more readable.
+ * List of range partition boundaries.
  */
-public class Partitions extends ForwardingList<String> implements List<String>
+public class PartitionBoundaries extends ForwardingList<String> implements List<String>
 {
   private final List<String> delegate;
 
   // For jackson
   @SuppressWarnings("unused")
-  private Partitions()
+  private PartitionBoundaries()
   {
     delegate = new ArrayList<>();
   }
 
-  public Partitions(String... partitions)
+  /**
+   * @param partitions Elements corresponding to evenly-spaced fractional ranks of the distribution
+   */
+  public PartitionBoundaries(String... partitions)
   {
-    delegate = ImmutableList.copyOf(partitions);
+    if (partitions.length == 0) {
+      delegate = Collections.emptyList();
+      return;
+    }
+
+    List<String> partitionBoundaries = Arrays.stream(partitions)
+                                             .distinct()
+                                             .collect(Collectors.toCollection(ArrayList::new));
+
+    // First partition starts with null (see StringPartitionChunk.isStart())
+    partitionBoundaries.set(0, null);
+
+    // Last partition ends with null (see StringPartitionChunk.isEnd())
+    partitionBoundaries.add(null);
+
+    delegate = Collections.unmodifiableList(partitionBoundaries);
   }
 
   @Override

@@ -28,7 +28,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -144,7 +144,7 @@ public class PartialRangeSegmentGenerateTaskTest
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          ImmutableMap.of(Intervals.ETERNITY, new Partitions("a")),
+          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries("a")),
           ParallelIndexTestingFactory.INDEXING_SERVICE_CLIENT,
           taskClientFactory,
           ParallelIndexTestingFactory.APPENDERATORS_MANAGER

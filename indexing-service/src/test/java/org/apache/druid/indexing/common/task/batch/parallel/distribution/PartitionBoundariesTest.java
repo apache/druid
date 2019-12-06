@@ -25,23 +25,27 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-public class PartitionsTest
+public class PartitionBoundariesTest
 {
-  private Partitions target;
+  private PartitionBoundaries target;
   private String[] values;
+  private List<String> expected;
 
   @Before
   public void setup()
   {
-    values = new String[]{"a", "b"};
-    target = new Partitions(values);
+    values = new String[]{"a", "dup", "dup", "z"};
+    expected = Arrays.asList(null, "dup", "z", null);
+    target = new PartitionBoundaries(values);
   }
 
   @Test
   public void hasCorrectValues()
   {
-    Assert.assertEquals(Arrays.asList(values), target);
+    Assert.assertEquals(expected, target);
   }
 
   @Test(expected = UnsupportedOperationException.class)
@@ -53,10 +57,20 @@ public class PartitionsTest
   @Test
   public void cannotBeIndirectlyModified()
   {
-    String[] originalValues = Arrays.copyOf(values, values.length);
-    values[0] = "changed";
-    Assert.assertEquals(Arrays.asList(originalValues), target);
-    Assert.assertNotEquals(Arrays.asList(values), target);
+    values[1] = "changed";
+    Assert.assertEquals(expected, target);
+  }
+
+  @Test
+  public void handlesNoValues()
+  {
+    Assert.assertEquals(Collections.emptyList(), new PartitionBoundaries());
+  }
+
+  @Test
+  public void handlesRepeatedValue()
+  {
+    Assert.assertEquals(Arrays.asList(null, null), new PartitionBoundaries("a", "a", "a"));
   }
 
   @Test

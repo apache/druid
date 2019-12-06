@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -56,40 +56,26 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   private static final Interval INTERVAL_EMPTY = Intervals.utc(0, 1000);
   private static final Interval INTERVAL_SINGLETON = Intervals.utc(1000, 2000);
   private static final Interval INTERVAL_NORMAL = Intervals.utc(2000, 3000);
-  private static final Interval INTERVAL_FREQUENT_MID = Intervals.utc(3000, 4000);
-  private static final Interval INTERVAL_FREQUENT_MAX = Intervals.utc(5000, 6000);
   private static final Map<Interval, String> INTERVAL_TO_VERSION = ImmutableMap.of(
       INTERVAL_EMPTY, "version-empty",
       INTERVAL_SINGLETON, "version-singleton",
-      INTERVAL_NORMAL, "version-normal",
-      INTERVAL_FREQUENT_MID, "version-frequent-mid",
-      INTERVAL_FREQUENT_MAX, "version-frequent-max"
+      INTERVAL_NORMAL, "version-normal"
   );
   private static final String PARTITION0 = "0";
   private static final String PARTITION5 = "5";
   private static final String PARTITION9 = "9";
-  private static final Partitions EMPTY_PARTITIONS = new Partitions();
-  private static final Partitions SINGLETON_PARTITIONS = new Partitions(PARTITION0, PARTITION0);
-  private static final Partitions NORMAL_PARTITIONS = new Partitions(PARTITION0, PARTITION5, PARTITION9);
-  private static final Partitions FREQUENT_MID_PARTITIONS = new Partitions(
+  private static final PartitionBoundaries EMPTY_PARTITIONS = new PartitionBoundaries();
+  private static final PartitionBoundaries SINGLETON_PARTITIONS = new PartitionBoundaries(PARTITION0, PARTITION0);
+  private static final PartitionBoundaries NORMAL_PARTITIONS = new PartitionBoundaries(
       PARTITION0,
       PARTITION5,
-      PARTITION5,
-      PARTITION9
-  );
-  private static final Partitions FREQUENT_MAX_PARTITIONS = new Partitions(
-      PARTITION0,
-      PARTITION5,
-      PARTITION9,
       PARTITION9
   );
 
-  private static final Map<Interval, Partitions> INTERVAL_TO_PARTITONS = ImmutableMap.of(
+  private static final Map<Interval, PartitionBoundaries> INTERVAL_TO_PARTITONS = ImmutableMap.of(
       INTERVAL_EMPTY, EMPTY_PARTITIONS,
       INTERVAL_SINGLETON, SINGLETON_PARTITIONS,
-      INTERVAL_NORMAL, NORMAL_PARTITIONS,
-      INTERVAL_FREQUENT_MID, FREQUENT_MID_PARTITIONS,
-      INTERVAL_FREQUENT_MAX, FREQUENT_MAX_PARTITIONS
+      INTERVAL_NORMAL, NORMAL_PARTITIONS
   );
 
   private RangePartitionCachingLocalSegmentAllocator target;
@@ -147,28 +133,12 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   }
 
   @Test
-  public void allocatesCorrectShardSpecsForLastPartitionWithoutFrequentValue()
+  public void allocatesCorrectShardSpecsForLastPartition()
   {
     Interval interval = INTERVAL_NORMAL;
     InputRow row = createInputRow(interval, PARTITION9);
-    testAllocate(row, interval, INTERVAL_TO_PARTITONS.get(interval).size() - 1, null);
-  }
-
-  @Test
-  public void allocatesCorrectShardSpecsForLastPartitionWithFrequentMid()
-  {
-    Interval interval = INTERVAL_FREQUENT_MID;
-    InputRow row = createInputRow(interval, PARTITION9);
-    Partitions partitions = INTERVAL_TO_PARTITONS.get(interval);
-    testAllocate(row, interval, partitions.size() - 2, partitions.get(partitions.size() - 1), null);
-  }
-
-  @Test
-  public void allocatesCorrectShardSpecsForLastPartitionWithFrequentMax()
-  {
-    Interval interval = INTERVAL_FREQUENT_MAX;
-    InputRow row = createInputRow(interval, PARTITION9);
-    testAllocate(row, interval, INTERVAL_TO_PARTITONS.get(interval).size() - 2, null);
+    int partitionNum = INTERVAL_TO_PARTITONS.get(interval).size() - 2;  // -2 = -1 0-based + -1 skip null tail
+    testAllocate(row, interval, partitionNum, null);
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -181,7 +151,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   @Nullable
   private static String getPartitionEnd(Interval interval, int partitionNum)
   {
-    Partitions partitions = INTERVAL_TO_PARTITONS.get(interval);
+    PartitionBoundaries partitions = INTERVAL_TO_PARTITONS.get(interval);
     boolean isLastPartition = (partitionNum + 1) == partitions.size();
     return isLastPartition ? null : partitions.get(partitionNum + 1);
   }

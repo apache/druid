@@ -86,7 +86,7 @@ public class StringSketch implements StringDistribution
   }
 
   @Override
-  public Partitions getEvenPartitionsByMaxSize(int maxSize)
+  public PartitionBoundaries getEvenPartitionsByMaxSize(int maxSize)
   {
     Preconditions.checkArgument(maxSize > 0, "maxSize must be positive but is %s", maxSize);
     long n = delegate.getN();
@@ -97,7 +97,7 @@ public class StringSketch implements StringDistribution
   }
 
   @Override
-  public Partitions getEvenPartitionsByTargetSize(int targetSize)
+  public PartitionBoundaries getEvenPartitionsByTargetSize(int targetSize)
   {
     Preconditions.checkArgument(targetSize > 0, "targetSize must be positive but is %s", targetSize);
     long n = delegate.getN();
@@ -105,7 +105,7 @@ public class StringSketch implements StringDistribution
     return getEvenPartitionsByCount(evenPartitionCount);
   }
 
-  private Partitions getEvenPartitionsByCount(int evenPartitionCount)
+  private PartitionBoundaries getEvenPartitionsByCount(int evenPartitionCount)
   {
     Preconditions.checkArgument(
         evenPartitionCount > 0,
@@ -113,7 +113,7 @@ public class StringSketch implements StringDistribution
         evenPartitionCount
     );
     String[] partitions = delegate.getQuantiles(evenPartitionCount + 1); // add 1 since this returns endpoints
-    return new Partitions((partitions == null) ? new String[0] : partitions);
+    return new PartitionBoundaries((partitions == null) ? new String[0] : partitions);
   }
 
   @Override

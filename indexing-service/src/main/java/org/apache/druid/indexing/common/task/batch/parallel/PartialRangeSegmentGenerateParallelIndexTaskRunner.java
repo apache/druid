@@ -24,7 +24,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.Partitions;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.joda.time.Interval;
 
@@ -36,11 +36,11 @@ import java.util.Map;
  * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialRangeSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<PartitionMetadata>>
+    extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
 {
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
   private final AppenderatorsManager appenderatorsManager;
-  private final Map<Interval, Partitions> intervalToPartitions;
+  private final Map<Interval, PartitionBoundaries> intervalToPartitions;
 
   PartialRangeSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -49,7 +49,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       IndexingServiceClient indexingServiceClient,
-      Map<Interval, Partitions> intervalToPartitions
+      Map<Interval, PartitionBoundaries> intervalToPartitions
   )
   {
     this(
@@ -73,7 +73,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       IndexingServiceClient indexingServiceClient,
-      Map<Interval, Partitions> intervalToPartitions,
+      Map<Interval, PartitionBoundaries> intervalToPartitions,
       IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
       AppenderatorsManager appenderatorsManager
   )

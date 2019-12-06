@@ -192,9 +192,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
 
     SingleDimensionPartitionsSpec partitionsSpec = (SingleDimensionPartitionsSpec) tuningConfig.getPartitionsSpec();
-    Preconditions.checkNotNull(partitionsSpec);
+    Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
     String partitionDimension = partitionsSpec.getPartitionDimension();
-    Preconditions.checkNotNull(partitionDimension, "partitionDimension required");
+    Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
@@ -294,7 +294,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       }
     }
 
-    // UngroupedDimValueFilter may not accept the min/max dimensionValue. If needed, add the min/max
+    // DedupRowDimensionValueFilter may not accept the min/max dimensionValue. If needed, add the min/max
     // values to the distributions so they have an accurate min/max.
     dimValueFilter.getIntervalToMinDimensionValue()
                   .forEach((interval, min) -> intervalToDistribution.get(interval).putIfNewMin(min));
