@@ -24,6 +24,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -88,16 +89,15 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       // the task will run for 3 minutes and then shutdown itself
       String task = setShutOffTime(
           getResourceAsString(getTaskResource()),
-          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(10))
       );
       task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
 
       LOG.info("indexerSpec: [%s]\n", task);
       String taskID = indexer.submitTask(task);
 
-
       // sleep for a while to let peons finish starting up
-      TimeUnit.SECONDS.sleep(5);
+      TimeUnit.SECONDS.sleep(60);
 
       // this posts 22 events, one every 4 seconds
       // each event contains the current time as its timestamp except
@@ -106,7 +106,14 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       postEvents();
 
       // sleep for a while to let the events be ingested
-      TimeUnit.SECONDS.sleep(5);
+      ITRetryUtil.retryUntilTrue(
+          () -> {
+            final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
+            // one row will be rolled up and the expected number of rows is 21.
+            return countRows == 21;
+          },
+          "Waiting all events are ingested"
+      );
 
       // put the timestamps into the query structure
       String query_response_template;
