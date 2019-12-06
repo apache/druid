@@ -1189,8 +1189,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'json',
           placeholder: '{"bucket":"your-bucket", "path":"some-file.ext"}',
           required: true,
-          defined: ioConfig =>
-            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.prefixes'),
+          defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
           info: (
             <>
               <p>
@@ -1250,8 +1249,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'json',
           placeholder: '{"bucket":"your-bucket", "path":"some-file.ext"}',
           required: true,
-          defined: ioConfig =>
-            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.prefixes'),
+          defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
           info: (
             <>
               <p>
