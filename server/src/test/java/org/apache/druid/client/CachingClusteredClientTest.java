@@ -2500,6 +2500,13 @@ public class CachingClusteredClientTest
           {
             return null;
           }
+
+          @Override
+          public int getMergePoolParallelism()
+          {
+            // fixed so same behavior across all test environments
+            return 4;
+          }
         },
         ForkJoinPool.commonPool()
     );
