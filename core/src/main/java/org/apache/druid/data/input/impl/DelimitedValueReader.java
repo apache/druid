@@ -55,7 +55,6 @@ public class DelimitedValueReader extends TextReader
   private final Function<String, Object> multiValueFunction;
   @Nullable
   private List<String> columns;
-  private final DelimitedInputFormat.Format format;
   private final RFC4180Parser parser;
 
   public static RFC4180Parser createOpenCsvParser(char separator)
@@ -87,7 +86,6 @@ public class DelimitedValueReader extends TextReader
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
-    this.format = format;
     this.parser = createOpenCsvParser(format.getDelimiter());
 
     if (this.columns != null) {

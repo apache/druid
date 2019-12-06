@@ -61,7 +61,7 @@ public class DelimitedInputFormat implements InputFormat
       return String.valueOf(delimiter);
     }
 
-    public void setDelimiter(String delimiter, String literal)
+    private void setDelimiter(String delimiter, String literal)
     {
       this.delimiter = (delimiter != null && delimiter.length() > 0) ? delimiter.charAt(0) : '\t';
       this.literal = literal != null ? literal : "customize separator: " + delimiter;

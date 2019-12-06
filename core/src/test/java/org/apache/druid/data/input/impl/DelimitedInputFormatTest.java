@@ -32,7 +32,7 @@ import java.util.Collections;
 public class DelimitedInputFormatTest
 {
   @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  public final ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws IOException
