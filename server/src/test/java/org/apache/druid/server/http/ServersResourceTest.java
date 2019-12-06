@@ -74,7 +74,8 @@ public class ServersResourceTest
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
                       + "{\"dataSource\":\"dataSource\",\"interval\":\"2016-03-22T14:00:00.000Z/2016-03-22T15:00:00.000Z\",\"version\":\"v0\",\"loadSpec\":{},\"dimensions\":\"\",\"metrics\":\"\","
                       + "\"shardSpec\":{\"type\":\"numbered\",\"partitionNum\":0,\"partitions\":1},\"binaryVersion\":null,\"size\":1,\"identifier\":\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\"}},"
-                      + "\"currSize\":1}]";
+                      + "\"currSize\":1,"
+                      + "\"totalSegment\":1}]";
     Assert.assertEquals(expected, result);
   }
 
@@ -83,7 +84,7 @@ public class ServersResourceTest
   {
     Response res = serversResource.getClusterServers(null, "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
+    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234,\"totalSegment\":1}]";
     Assert.assertEquals(expected, result);
   }
 
@@ -100,7 +101,8 @@ public class ServersResourceTest
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
                       + "{\"dataSource\":\"dataSource\",\"interval\":\"2016-03-22T14:00:00.000Z/2016-03-22T15:00:00.000Z\",\"version\":\"v0\",\"loadSpec\":{},\"dimensions\":\"\",\"metrics\":\"\","
                       + "\"shardSpec\":{\"type\":\"numbered\",\"partitionNum\":0,\"partitions\":1},\"binaryVersion\":null,\"size\":1,\"identifier\":\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\"}},"
-                      + "\"currSize\":1}";
+                      + "\"currSize\":1,"
+                      + "\"totalSegment\":1}";
     Assert.assertEquals(expected, result);
   }
 
@@ -109,7 +111,7 @@ public class ServersResourceTest
   {
     Response res = serversResource.getServer(server.getName(), "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
+    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"historical\",\"priority\":0,\"currSize\":1,\"maxSize\":1234,\"totalSegment\":1}";
     Assert.assertEquals(expected, result);
   }
 
