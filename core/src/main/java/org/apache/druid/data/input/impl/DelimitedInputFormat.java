@@ -110,6 +110,11 @@ public class DelimitedInputFormat implements InputFormat
         this.delimiter.length() == 1,
         "The delimiter should be a single character"
     );
+    Preconditions.checkArgument(
+        !this.delimiter.equals(listDelimiter),
+        "Cannot have same delimiter and list delimiter of [%s]",
+        this.delimiter
+    );
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
