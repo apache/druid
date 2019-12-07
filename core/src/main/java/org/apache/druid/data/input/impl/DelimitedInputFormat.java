@@ -83,6 +83,7 @@ public class DelimitedInputFormat implements InputFormat
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Format format;
+  private final String delimiter;
 
   public DelimitedInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
@@ -103,9 +104,10 @@ public class DelimitedInputFormat implements InputFormat
         )
     ).getValue();
     this.skipHeaderRows = skipHeaderRows;
-    this.format = getFormat(delimiter);
+    this.delimiter = delimiter == null ? "\t" : delimiter;
+    this.format = getFormat(this.delimiter);
     Preconditions.checkArgument(
-        delimiter == null || delimiter.length() == 1,
+        this.delimiter.length() == 1,
         "The delimiter should be a single character"
     );
     if (!this.columns.isEmpty()) {
@@ -129,7 +131,7 @@ public class DelimitedInputFormat implements InputFormat
   {
     if (",".equals(delimiter)) {
       return Format.CSV;
-    } else if ("\t".equals(delimiter) || delimiter == null) {
+    } else if ("\t".equals(delimiter)) {
       return Format.TSV;
     } else {
       Format.CustomizeSV.setDelimiter(delimiter, null);
