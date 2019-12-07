@@ -290,6 +290,13 @@ jobs:
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
 
+    - &integration_parallel_batch_index
+      name: "parallel batch index integration test"
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=parallel-batch-index'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
     - &integration_kafka_index
       name: "kafka index integration test"
       services: *integration_test_services

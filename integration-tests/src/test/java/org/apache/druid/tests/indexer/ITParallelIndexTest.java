@@ -34,7 +34,7 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = TestNGGroup.PARALLEL_BATCH_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITParallelIndexTest extends AbstractITBatchIndexTest
 {
