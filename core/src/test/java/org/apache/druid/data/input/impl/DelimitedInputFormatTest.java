@@ -60,11 +60,19 @@ public class DelimitedInputFormatTest
   }
 
   @Test
-  public void testDelimiter()
+  public void testDelimiterLength()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("The delimiter should be a single character");
     new DelimitedInputFormat(Collections.singletonList("a\t"), ",", "null", null, false, 0);
+  }
+
+  @Test
+  public void testDelimiterAndListDelimiter()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot have same delimiter and list delimiter of [,]");
+    new DelimitedInputFormat(Collections.singletonList("a\t"), ",", ",", null, false, 0);
   }
 
   @Test
