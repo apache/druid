@@ -139,4 +139,10 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
   {
     return REALTIME_QUERIES_RESOURCE;
   }
+
+  @Override
+  int getNumExpectedRowsIngested()
+  {
+    return 22;
+  }
 }

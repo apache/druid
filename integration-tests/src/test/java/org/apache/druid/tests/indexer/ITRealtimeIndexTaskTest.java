@@ -71,6 +71,13 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
   }
 
   @Override
+  int getNumExpectedRowsIngested()
+  {
+    // one row will be rolled up and the expected number of rows is 21.
+    return 21;
+  }
+
+  @Override
   void postEvents() throws Exception
   {
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);

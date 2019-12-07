@@ -109,8 +109,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       ITRetryUtil.retryUntilTrue(
           () -> {
             final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
-            // one row will be rolled up and the expected number of rows is 21.
-            return countRows == 21;
+            return countRows == getNumExpectedRowsIngested();
           },
           "Waiting all events are ingested"
       );
@@ -183,4 +182,6 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   abstract String getQueriesResource();
 
   abstract void postEvents() throws Exception;
+
+  abstract int getNumExpectedRowsIngested();
 }
