@@ -105,7 +105,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       //   the timestamp for the 18th event is 2 seconds earlier than the 17th
       postEvents();
 
-      // sleep for a while to let the events be ingested
+      // wait for a while to let the events be ingested
       ITRetryUtil.retryUntilTrue(
           () -> {
             final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
