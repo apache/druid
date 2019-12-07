@@ -264,7 +264,7 @@ The three `partitionsSpec` types have different pros and cons:
 
 > Single-dimension range partitioning currently requires the
 > [druid-datasketches](../development/extensions-core/datasketches-extension.md)
-> extension to be [loaded from the classpath](..development/extension.md#loading-extensions-from-the-classpath).
+> extension to be [loaded from the classpath](../development/extensions.md#loading-extensions-from-the-classpath).
 
 > Because single-range partitioning makes two passes over the input, the index task may fail if the input changes
 > in between the two passes. 
