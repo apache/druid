@@ -321,6 +321,6 @@ jobs:
     - &integration_tests
       name: "other integration test"
       services: *integration_test_services
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,kafka-index,query,realtime-index'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,parallel-batch-index,kafka-index,query,realtime-index'
       script: *run_integration_test
       after_failure: *integration_test_diags
