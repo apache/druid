@@ -729,7 +729,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 ingestionSchema.getDataSchema().getDimensionsSpec(),
                 metricsNames
             ),
-            getInputFormat(ingestionSchema),
+            inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
             tmpDir
         )
     );
@@ -919,7 +919,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           driver,
           partitionsSpec,
           inputSource,
-          getInputFormat(ingestionSchema),
+          inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
           tmpDir,
           segmentAllocator
       );
@@ -1037,14 +1037,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     {
       super(dataSchema, ioConfig, tuningConfig);
 
-      Checks.checkOneNotNullOrEmpty(
-          ImmutableList.of(
-              new Property<>("parser", dataSchema.getParserMap()),
-              new Property<>("inputFormat", ioConfig.getInputFormat())
-          )
-      );
       if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
+      }
+      if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
+        Checks.checkOneNotNullOrEmpty(
+            ImmutableList.of(
+                new Property<>("parser", dataSchema.getParserMap()),
+                new Property<>("inputFormat", ioConfig.getInputFormat())
+            )
+        );
       }
 
       this.dataSchema = dataSchema;

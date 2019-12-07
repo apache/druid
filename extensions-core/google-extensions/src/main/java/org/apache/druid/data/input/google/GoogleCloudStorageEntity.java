@@ -21,6 +21,7 @@ package org.apache.druid.data.input.google;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
@@ -33,36 +34,33 @@ import java.net.URI;
 
 public class GoogleCloudStorageEntity extends RetryingInputEntity
 {
-  private final GoogleStorage storage;
-  private final URI uri;
+  private final CloudObjectLocation location;
+  private final GoogleByteSource byteSource;
 
-  GoogleCloudStorageEntity(GoogleStorage storage, URI uri)
+  GoogleCloudStorageEntity(GoogleStorage storage, CloudObjectLocation location)
   {
-    this.storage = storage;
-    this.uri = uri;
+    this.location = location;
+    this.byteSource = new GoogleByteSource(storage, location.getBucket(), location.getPath());
   }
 
   @Nullable
   @Override
   public URI getUri()
   {
-    return uri;
+    return location.toUri(GoogleCloudStorageInputSource.SCHEME);
   }
 
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
     // Get data of the given object and open an input stream
-    final String bucket = uri.getAuthority();
-    final String key = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
-    final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, key);
     return byteSource.openStream(offset);
   }
 
   @Override
   protected String getPath()
   {
-    return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
+    return StringUtils.maybeRemoveLeadingSlash(byteSource.getPath());
   }
 
   @Override
