@@ -104,7 +104,10 @@ public class DelimitedInputFormat implements InputFormat
     ).getValue();
     this.skipHeaderRows = skipHeaderRows;
     this.format = getFormat(delimiter);
-
+    Preconditions.checkArgument(
+        delimiter == null || delimiter.length() == 1,
+        "The delimiter should be a single character"
+    );
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
@@ -126,11 +129,11 @@ public class DelimitedInputFormat implements InputFormat
   {
     if (",".equals(delimiter)) {
       return Format.CSV;
-    } else if (delimiter != null && delimiter.length() > 0) {
+    } else if ("\t".equals(delimiter) || delimiter == null) {
+      return Format.TSV;
+    } else {
       Format.CustomizeSV.setDelimiter(delimiter, null);
       return Format.CustomizeSV;
-    } else {
-      return Format.TSV;
     }
   }
 

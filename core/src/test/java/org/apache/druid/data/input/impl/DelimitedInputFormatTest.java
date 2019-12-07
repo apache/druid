@@ -60,6 +60,14 @@ public class DelimitedInputFormatTest
   }
 
   @Test
+  public void testDelimiter()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("The delimiter should be a single character");
+    new DelimitedInputFormat(Collections.singletonList("a\t"), ",", "null", null, false, 0);
+  }
+
+  @Test
   public void testCustomizeSeparator()
   {
     expectedException.expect(IllegalArgumentException.class);
