@@ -226,7 +226,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       );
     }
 
-    // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
+    // IT*ParallelIndexTest do a second round of ingestion to replace segements in an existing
     // data source. For that second round we need to make sure the coordinator actually learned
     // about the new segments befor waiting for it to report that all segments are loaded; otherwise
     // this method could return too early because the coordinator is merely reporting that all the
