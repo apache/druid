@@ -333,34 +333,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         segmentGranularity,
         appendToExisting,
         splittableInputSource,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING
     );
   }
 
@@ -472,7 +445,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     TestSinglePhaseRunner(
         TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
-        @Nullable IndexingServiceClient indexingServiceClient
+        IndexingServiceClient indexingServiceClient
     )
     {
       super(

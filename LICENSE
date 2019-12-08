@@ -314,3 +314,14 @@ SOURCE/JAVA-CORE
     This product uses a smear function adapted from MurmurHash3, written by Austin Appleby who has placed
      MurmurHash3 in the public domain (https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp).
       * processing/src/main/java/org/apache/druid/query/groupby/epinephelinae/Groupers.java
+
+
+Creative Commons Attribution-ShareAlike 3.0 Unported License
+================================
+
+SOURCE/JAVA-CORE:
+    This product contains example data collected from the Wikipedia edit stream API (this content is NOT part of the source
+     code and is only used for example and tutorial purposes), copyright Wikipedia editors and contributors for the text
+     content which is available under Creative Commons Attribution-ShareAlike 3.0 Unported License. For details, see
+     licenses/src/CC-BY-SA.txt.
+      * examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz

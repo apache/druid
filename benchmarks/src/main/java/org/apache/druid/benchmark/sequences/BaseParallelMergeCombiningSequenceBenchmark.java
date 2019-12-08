@@ -135,7 +135,8 @@ public class BaseParallelMergeCombiningSequenceBenchmark
         parallelism,
         yieldAfter,
         batchSize,
-        targetTaskTimeMillis
+        targetTaskTimeMillis,
+        null
     );
   }
 

@@ -94,7 +94,7 @@ public class InputSourceProcessor
       BatchAppenderatorDriver driver,
       PartitionsSpec partitionsSpec,
       InputSource inputSource,
-      InputFormat inputFormat,
+      @Nullable InputFormat inputFormat,
       File tmpDir,
       IndexTaskSegmentAllocator segmentAllocator
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException

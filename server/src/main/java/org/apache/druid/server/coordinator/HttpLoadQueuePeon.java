@@ -67,13 +67,15 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class HttpLoadQueuePeon extends LoadQueuePeon
 {
-  public static final TypeReference REQUEST_ENTITY_TYPE_REF = new TypeReference<List<DataSegmentChangeRequest>>()
-  {
-  };
+  public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
+      new TypeReference<List<DataSegmentChangeRequest>>()
+      {
+      };
 
-  public static final TypeReference RESPONSE_ENTITY_TYPE_REF = new TypeReference<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>>()
-  {
-  };
+  public static final TypeReference<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> RESPONSE_ENTITY_TYPE_REF =
+      new TypeReference<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>>()
+      {
+      };
 
   private static final EmittingLogger log = new EmittingLogger(HttpLoadQueuePeon.class);
 

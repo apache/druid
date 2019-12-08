@@ -21,8 +21,6 @@ package org.apache.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -31,6 +29,7 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -95,7 +94,7 @@ public class SegmentGenerator implements Closeable
         log.warn("No cache directory provided; benchmark data caching is disabled. "
                  + "Set the 'druid.benchmark.cacheDir' property or 'DRUID_BENCHMARK_CACHE_DIR' environment variable "
                  + "to use caching.");
-        this.cacheDir = Files.createTempDir();
+        this.cacheDir = FileUtils.createTempDir();
         this.cleanupCacheDir = true;
       }
     }

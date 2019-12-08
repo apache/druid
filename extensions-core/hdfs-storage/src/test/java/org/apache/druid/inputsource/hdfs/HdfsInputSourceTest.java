@@ -255,7 +255,7 @@ public class HdfsInputSourceTest
     @Test
     public void hasCorrectNumberOfSplits() throws IOException
     {
-      int numSplits = target.getNumSplits(null, null);
+      int numSplits = target.estimateNumSplits(null, null);
       Assert.assertEquals(NUM_FILE, numSplits);
     }
   }
@@ -295,7 +295,7 @@ public class HdfsInputSourceTest
     @Test
     public void hasCorrectNumberOfSplits() throws IOException
     {
-      int numSplits = target.getNumSplits(null, null);
+      int numSplits = target.estimateNumSplits(null, null);
       Assert.assertEquals(0, numSplits);
     }
   }

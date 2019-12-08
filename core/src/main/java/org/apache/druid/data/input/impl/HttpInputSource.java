@@ -86,7 +86,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     return uris.size();
   }

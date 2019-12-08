@@ -33,6 +33,12 @@ It accumulates druid metrics as dropwizard metrics, and emits them to various si
 Currently supported dropwizard metrics types counter, gauge, meter, timer and histogram. 
 These metrics can be emitted using either Console or JMX reporter. 
 
+To use this emitter, set
+
+```
+druid.emitter=dropwizard
+```
+
 ## Configuration
 
 All the configuration parameters for Dropwizard emitter are under `druid.emitter.dropwizard`.
@@ -71,7 +77,7 @@ For most use-cases, the default mapping is sufficient.
 Used to report druid metrics via JMX.
 ```
 
-druid.emitter.dropwizard.reporters={"type":"jmx"}
+druid.emitter.dropwizard.reporters=[{"type":"jmx"}]
 
 ```
 
@@ -80,7 +86,7 @@ Used to print Druid Metrics to console logs.
 
 ```
 
-druid.emitter.dropwizard.reporters={"type":"console","emitIntervalInSecs":30}"}
+druid.emitter.dropwizard.reporters=[{"type":"console","emitIntervalInSecs":30}"}]
 
 ```
 

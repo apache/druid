@@ -168,7 +168,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   )
   {
     final TestInputSource inputSource = (TestInputSource) ioConfig.getInputSource();
-    final int numTotalSubTasks = inputSource.getNumSplits(new NoopInputFormat(), null);
+    final int numTotalSubTasks = inputSource.estimateNumSplits(new NoopInputFormat(), null);
     // set up ingestion spec
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
@@ -264,7 +264,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       return splits.size();
     }

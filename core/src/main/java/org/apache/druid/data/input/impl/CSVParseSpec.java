@@ -100,7 +100,7 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public InputFormat toInputFormat()
   {
-    return new CsvInputFormat(columns, listDelimiter, hasHeaderRow, skipHeaderRows);
+    return new CsvInputFormat(columns, listDelimiter, null, hasHeaderRow, skipHeaderRows);
   }
 
   @Override

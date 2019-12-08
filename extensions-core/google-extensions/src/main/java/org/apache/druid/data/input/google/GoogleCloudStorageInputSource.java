@@ -22,101 +22,78 @@ package org.apache.druid.data.input.google;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.data.input.impl.InputEntityIteratingReader;
+import org.apache.druid.data.input.impl.CloudObjectInputSource;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.net.URI;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-public class GoogleCloudStorageInputSource extends AbstractInputSource implements SplittableInputSource<URI>
+public class GoogleCloudStorageInputSource extends CloudObjectInputSource<GoogleCloudStorageEntity>
 {
+  static final String SCHEME = "gs";
+
   private final GoogleStorage storage;
-  private final List<URI> uris;
 
   @JsonCreator
   public GoogleCloudStorageInputSource(
       @JacksonInject GoogleStorage storage,
-      @JsonProperty("uris") List<URI> uris
+      @JsonProperty("uris") @Nullable List<URI> uris,
+      @JsonProperty("prefixes") @Nullable List<URI> prefixes,
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
+    super(SCHEME, uris, prefixes, objects);
     this.storage = storage;
-    this.uris = uris;
-  }
-
-  @JsonProperty("uris")
-  public List<URI> getUris()
-  {
-    return uris;
-  }
-
-
-  @Override
-  public Stream<InputSplit<URI>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
-  {
-    return uris.stream().map(InputSplit::new);
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  protected GoogleCloudStorageEntity createEntity(InputSplit<CloudObjectLocation> split)
   {
-    return uris.size();
+    return new GoogleCloudStorageEntity(storage, split.get());
   }
 
   @Override
-  public SplittableInputSource<URI> withSplit(InputSplit<URI> split)
+  protected Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream()
   {
-    return new GoogleCloudStorageInputSource(storage, ImmutableList.of(split.get()));
+    return StreamSupport.stream(storageObjectIterable().spliterator(), false)
+                        .map(this::byteSourceFromStorageObject)
+                        .map(InputSplit::new);
   }
 
   @Override
-  public boolean needsFormat()
+  public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return true;
+    return new GoogleCloudStorageInputSource(storage, null, null, ImmutableList.of(split.get()));
+  }
+
+  private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
+  {
+    return new CloudObjectLocation(storageObject.getBucket(), storageObject.getName());
+  }
+
+  private Iterable<StorageObject> storageObjectIterable()
+  {
+    return () ->
+        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), RetryUtils.DEFAULT_MAX_TRIES);
   }
 
   @Override
-  protected InputSourceReader formattableReader(
-      InputRowSchema inputRowSchema,
-      InputFormat inputFormat,
-      @Nullable File temporaryDirectory
-  )
+  public String toString()
   {
-    return new InputEntityIteratingReader(
-        inputRowSchema,
-        inputFormat,
-        createSplits(inputFormat, null).map(split -> new GoogleCloudStorageEntity(storage, split.get())),
-        temporaryDirectory
-    );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    GoogleCloudStorageInputSource that = (GoogleCloudStorageInputSource) o;
-    return Objects.equals(uris, that.uris);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(uris);
+    return "GoogleCloudStorageInputSource{" +
+           "uris=" + getUris() +
+           ", prefixes=" + getPrefixes() +
+           ", objects=" + getObjects() +
+           '}';
   }
 }

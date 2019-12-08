@@ -19,13 +19,14 @@
 
 package org.apache.druid.data.input;
 
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -39,25 +40,60 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
-    return intermediateRowIterator().flatMap(row -> {
-      try {
-        // since parseInputRows() returns a list, the below line always iterates over the list,
-        // which means it calls Iterator.hasNext() and Iterator.next() at least once per row.
-        // This could be unnecessary if the row wouldn't be exploded into multiple inputRows.
-        // If this line turned out to be a performance bottleneck, perhaps parseInputRows() interface might not be a
-        // good idea. Subclasses could implement read() with some duplicate codes to avoid unnecessary iteration on
-        // a singleton list.
-        return CloseableIterators.withEmptyBaggage(parseInputRows(row).iterator());
+    final CloseableIterator<T> intermediateRowIterator = intermediateRowIterator();
+
+    return new CloseableIterator<InputRow>()
+    {
+      // since parseInputRows() returns a list, the below line always iterates over the list,
+      // which means it calls Iterator.hasNext() and Iterator.next() at least once per row.
+      // This could be unnecessary if the row wouldn't be exploded into multiple inputRows.
+      // If this line turned out to be a performance bottleneck, perhaps parseInputRows() interface might not be a
+      // good idea. Subclasses could implement read() with some duplicate codes to avoid unnecessary iteration on
+      // a singleton list.
+      Iterator<InputRow> rows = null;
+
+      @Override
+      public boolean hasNext()
+      {
+        if (rows == null || !rows.hasNext()) {
+          if (!intermediateRowIterator.hasNext()) {
+            return false;
+          }
+          final T row = intermediateRowIterator.next();
+          try {
+            rows = parseInputRows(row).iterator();
+          }
+          catch (IOException e) {
+            rows = new ExceptionThrowingIterator(new ParseException(e, "Unable to parse row [%s]", row));
+          }
+          catch (ParseException e) {
+            rows = new ExceptionThrowingIterator(e);
+          }
+        }
+
+        return true;
       }
-      catch (IOException e) {
-        throw new ParseException(e, "Unable to parse row [%s]", row);
+
+      @Override
+      public InputRow next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+
+        return rows.next();
       }
-    });
+
+      @Override
+      public void close() throws IOException
+      {
+        intermediateRowIterator.close();
+      }
+    };
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusRawValues> sample()
-      throws IOException
+  public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
     return intermediateRowIterator().map(row -> {
       final Map<String, Object> rawColumns;
@@ -87,6 +123,9 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
 
   /**
    * Parses the given intermediate row into a list of {@link InputRow}s.
+   * This should return a non-empty list.
+   *
+   * @throws ParseException if it cannot parse the given intermediateRow properly
    */
   protected abstract List<InputRow> parseInputRows(T intermediateRow) throws IOException, ParseException;
 
@@ -95,4 +134,39 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * Implementations can use any method to convert the given row into a Map.
    */
   protected abstract Map<String, Object> toMap(T intermediateRow) throws IOException;
+
+  private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
+  {
+    private final Exception exception;
+
+    private boolean thrown = false;
+
+    private ExceptionThrowingIterator(Exception exception)
+    {
+      this.exception = exception;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return !thrown;
+    }
+
+    @Override
+    public InputRow next()
+    {
+      thrown = true;
+      if (exception instanceof RuntimeException) {
+        throw (RuntimeException) exception;
+      } else {
+        throw new RuntimeException(exception);
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      // do nothing
+    }
+  }
 }

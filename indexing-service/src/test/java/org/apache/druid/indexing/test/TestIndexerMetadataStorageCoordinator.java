@@ -129,6 +129,16 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public SegmentPublishResult commitMetadataOnly(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    throw new UnsupportedOperationException("Not implemented, no test uses this currently.");
+  }
+
+  @Override
   public SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
       String sequenceName,

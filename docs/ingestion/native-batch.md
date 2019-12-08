@@ -274,7 +274,7 @@ Returns the name of the current phase if the task running in the parallel mode.
 
 * `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/progress`
 
-Returns the current progress if the supervisor task is running in the parallel mode.
+Returns the estimated progress of the current phase if the supervisor task is running in the parallel mode.
 
 An example of the result is
 
@@ -285,7 +285,7 @@ An example of the result is
   "failed":0,
   "complete":0,
   "total":10,
-  "expectedSucceeded":10
+  "estimatedExpectedSucceeded":10
 }
 ```
 
@@ -890,3 +890,57 @@ This Firehose can be used to combine and merge data from a list of different Fir
 |--------|-----------|---------|
 |type|This should be "combining"|yes|
 |delegates|List of Firehoses to combine data from|yes|
+
+
+## Input Sources
+
+### DruidInputSource
+
+This InputSource can be used to read data from existing Druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
+This InputSource is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
+This InputSource has a fixed InputFormat for reading from Druid segments; no InputFormat needs to be specified in the ingestion spec when using this InputSource.
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "druid".|yes|
+|dataSource|A String defining the Druid datasource to fetch rows from|yes|
+|interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
+|dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
+|metrics|The list of Strings containing the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
+|filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
+
+A minimal example DruidInputSource spec is shown below:
+
+```json
+{
+    "type": "druid",
+    "dataSource": "wikipedia",
+    "interval": "2013-01-01/2013-01-02"
+}
+```
+
+The spec above will read all existing dimension and metric columns from the `wikipedia` datasource, including all rows with a timestamp (the `__time` column) within the interval `2013-01-01/2013-01-02`.
+
+A spec that applies a filter and reads a subset of the original datasource's columns is shown below.
+
+```json
+{
+    "type": "druid",
+    "dataSource": "wikipedia",
+    "interval": "2013-01-01/2013-01-02",
+    "dimensions": [
+      "page",
+      "user"
+    ],
+    "metrics": [
+      "added"
+    ],
+    "filter": {
+      "type": "selector",
+      "dimension": "page",
+      "value": "Druid"
+    }
+}
+```
+
+This spec above will only return the `page`, `user` dimensions and `added` metric. Only rows where `page` = `Druid` will be returned.

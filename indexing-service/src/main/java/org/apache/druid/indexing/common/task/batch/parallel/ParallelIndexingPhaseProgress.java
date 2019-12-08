@@ -23,9 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Represents the current progress of {@link SinglePhaseParallelIndexTaskRunner}.
+ * Represents the current progress of a single phase in parallel indexing.
+ * All subclasses of {@link ParallelIndexPhaseRunner} can use this class to indicate their progress.
  */
-class SinglePhaseParallelIndexingProgress implements ParallelIndexingProgress
+class ParallelIndexingPhaseProgress
 {
   /**
    * Number of running tasks.
@@ -53,23 +54,24 @@ class SinglePhaseParallelIndexingProgress implements ParallelIndexingProgress
   private final int total;
 
   /**
-   * Number of succeeded tasks for {@link SinglePhaseParallelIndexTaskRunner} to succeed.
+   * Estimated number of succeeded tasks for {@link SinglePhaseParallelIndexTaskRunner} to succeed.
+   * This can be different from the actual number of tasks to succeed.
    */
-  private final int expectedSucceeded;
+  private final int estimatedExpectedSucceeded;
 
-  static SinglePhaseParallelIndexingProgress notRunning()
+  static ParallelIndexingPhaseProgress notRunning()
   {
-    return new SinglePhaseParallelIndexingProgress(0, 0, 0, 0, 0, -1);
+    return new ParallelIndexingPhaseProgress(0, 0, 0, 0, 0, -1);
   }
 
   @JsonCreator
-  SinglePhaseParallelIndexingProgress(
+  ParallelIndexingPhaseProgress(
       @JsonProperty("running") int running,
       @JsonProperty("succeeded") int succeeded,
       @JsonProperty("failed") int failed,
       @JsonProperty("complete") int complete,
       @JsonProperty("total") int total,
-      @JsonProperty("expectedSucceeded") int expectedSucceeded
+      @JsonProperty("estimatedExpectedSucceeded") int estimatedExpectedSucceeded
   )
   {
     this.running = running;
@@ -77,7 +79,7 @@ class SinglePhaseParallelIndexingProgress implements ParallelIndexingProgress
     this.failed = failed;
     this.complete = complete;
     this.total = total;
-    this.expectedSucceeded = expectedSucceeded;
+    this.estimatedExpectedSucceeded = estimatedExpectedSucceeded;
   }
 
   @JsonProperty
@@ -111,8 +113,8 @@ class SinglePhaseParallelIndexingProgress implements ParallelIndexingProgress
   }
 
   @JsonProperty
-  public int getExpectedSucceeded()
+  public int getEstimatedExpectedSucceeded()
   {
-    return expectedSucceeded;
+    return estimatedExpectedSucceeded;
   }
 }

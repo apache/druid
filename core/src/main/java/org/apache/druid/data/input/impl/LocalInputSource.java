@@ -77,7 +77,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Override
-  public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     return Iterators.size(getFileIterator());
   }

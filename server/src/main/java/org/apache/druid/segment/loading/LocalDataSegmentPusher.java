@@ -21,7 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
@@ -83,7 +83,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
     final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
     log.debug("Creating intermediate directory[%s] for segment[%s].", tmpOutDir.toString(), segment.getId());
-    FileUtils.forceMkdir(tmpOutDir);
+    org.apache.commons.io.FileUtils.forceMkdir(tmpOutDir);
 
     try {
       final File tmpIndexFile = new File(tmpOutDir, INDEX_FILENAME);
@@ -93,7 +93,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
                                        .withSize(size)
                                        .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
 
-      FileUtils.forceMkdir(outDir);
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
 
       if (!tmpIndexFile.renameTo(indexFileTarget)) {

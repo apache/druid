@@ -88,17 +88,13 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
-    newSpec = deepSet(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions', []);
+    newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec.dimensions', []);
   } else {
-    newSpec = deepDelete(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensionExclusions');
+    newSpec = deepDelete(newSpec, 'dataSchema.dimensionsSpec.dimensionExclusions');
 
     const dimensions = getDimensionSpecs(headerAndRows, rollup);
     if (dimensions) {
-      newSpec = deepSet(
-        newSpec,
-        'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
-        dimensions,
-      );
+      newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec.dimensions', dimensions);
     }
   }
 

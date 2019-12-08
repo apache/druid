@@ -193,7 +193,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           driver,
           partitionsSpec,
           inputSource,
-          ParallelIndexSupervisorTask.getInputFormat(ingestionSchema),
+          inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
           tmpDir,
           segmentAllocator
       );

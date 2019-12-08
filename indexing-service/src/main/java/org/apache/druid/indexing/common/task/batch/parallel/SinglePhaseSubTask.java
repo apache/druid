@@ -431,7 +431,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
                 ingestionSchema.getDataSchema().getDimensionsSpec(),
                 metricsNames
             ),
-            ParallelIndexSupervisorTask.getInputFormat(ingestionSchema),
+            inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
             tmpDir
         )
     );

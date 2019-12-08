@@ -22,6 +22,7 @@ package org.apache.druid.storage.google;
 import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.URIDataPuller;
@@ -64,7 +65,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
     }
     catch (Exception e) {
       try {
-        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+        FileUtils.deleteDirectory(outDir);
       }
       catch (IOException ioe) {
         LOG.warn(
@@ -81,20 +82,14 @@ public class GoogleDataSegmentPuller implements URIDataPuller
   @Override
   public InputStream getInputStream(URI uri) throws IOException
   {
-    String path = uri.getPath();
-    if (path.startsWith("/")) {
-      path = path.substring(1);
-    }
+    String path = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
     return storage.get(uri.getHost(), path);
   }
 
   @Override
   public String getVersion(URI uri) throws IOException
   {
-    String path = uri.getPath();
-    if (path.startsWith("/")) {
-      path = path.substring(1);
-    }
+    String path = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
     return storage.version(uri.getHost(), path);
   }
 

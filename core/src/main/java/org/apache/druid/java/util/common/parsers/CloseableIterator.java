@@ -80,14 +80,8 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
               throw new UncheckedIOException(e);
             }
           }
-          try {
-            iterator = function.apply(delegate.next());
-            if (iterator.hasNext()) {
-              return iterator;
-            }
-          }
-          catch (Exception e) {
-            iterator = new ExceptionThrowingIterator<>(e);
+          iterator = function.apply(delegate.next());
+          if (iterator.hasNext()) {
             return iterator;
           }
         }
@@ -120,40 +114,5 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
         delegate.close();
       }
     };
-  }
-
-  class ExceptionThrowingIterator<T> implements CloseableIterator<T>
-  {
-    private final Exception exception;
-
-    private boolean thrown = false;
-
-    private ExceptionThrowingIterator(Exception exception)
-    {
-      this.exception = exception;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return !thrown;
-    }
-
-    @Override
-    public T next()
-    {
-      thrown = true;
-      if (exception instanceof RuntimeException) {
-        throw (RuntimeException) exception;
-      } else {
-        throw new RuntimeException(exception);
-      }
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      // do nothing
-    }
   }
 }

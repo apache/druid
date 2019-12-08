@@ -55,6 +55,7 @@ import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -316,7 +317,19 @@ public class CachingClusteredClient implements QuerySegmentWalker
             QueryContexts.getParallelMergeParallelism(query, processingConfig.getMergePoolDefaultMaxQueryParallelism()),
             QueryContexts.getParallelMergeInitialYieldRows(query, processingConfig.getMergePoolTaskInitialYieldRows()),
             QueryContexts.getParallelMergeSmallBatchRows(query, processingConfig.getMergePoolSmallBatchRows()),
-            processingConfig.getMergePoolTargetTaskRunTimeMillis()
+            processingConfig.getMergePoolTargetTaskRunTimeMillis(),
+            reportMetrics -> {
+              QueryMetrics<?> queryMetrics = queryPlus.getQueryMetrics();
+              if (queryMetrics != null) {
+                queryMetrics.parallelMergeParallelism(reportMetrics.getParallelism());
+                queryMetrics.reportParallelMergeParallelism(reportMetrics.getParallelism());
+                queryMetrics.reportParallelMergeInputSequences(reportMetrics.getInputSequences());
+                queryMetrics.reportParallelMergeInputRows(reportMetrics.getInputRows());
+                queryMetrics.reportParallelMergeOutputRows(reportMetrics.getOutputRows());
+                queryMetrics.reportParallelMergeTaskCount(reportMetrics.getTaskCount());
+                queryMetrics.reportParallelMergeTotalCpuTime(reportMetrics.getTotalCpuTime());
+              }
+            }
         );
       } else {
         return Sequences

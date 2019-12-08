@@ -152,12 +152,13 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource              dataSource for which to allocate a segment
    * @param sequenceName            name of the group of ingestion tasks producing a segment series
-   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first segment
+   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first
+   *                                segment
    * @param interval                interval for which to allocate a segment
    * @param shardSpecFactory        shardSpecFactory containing all necessary information to create a shardSpec for the
    *                                new segmentId
-   * @param maxVersion              use this version if we have no better version to use. The returned segment identifier may
-   *                                have a version lower than this one, but will not have one higher.
+   * @param maxVersion              use this version if we have no better version to use. The returned segment
+   *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
    *
@@ -178,8 +179,8 @@ public interface IndexerMetadataStorageCoordinator
    * table. The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
    *
    * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interva
-   * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the interval
-   * is about the time column value in rows belonging to the segment).
+   * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the
+   * interval is about the time column value in rows belonging to the segment).
    *
    * @param dataSource     dataSource
    * @param deleteInterval interval to check the {@code created_date} of pendingSegments
@@ -259,6 +260,33 @@ public interface IndexerMetadataStorageCoordinator
    * @return true if the entry was inserted, false otherwise
    */
   boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
+
+  /**
+   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * the case where the task ingested no records and created no segments, but still needs to update the metadata
+   * with the progress that the task made.
+   *
+   * The metadata should undergo the same validation checks as performed by {@link #announceHistoricalSegments}.
+   *
+   *
+   * @param dataSource the datasource
+   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
+   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}.
+   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
+   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}.
+   *
+   * @return segment publish result indicating transaction success or failure.
+   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
+   * it must throw an exception instead.
+   *
+   * @throws IllegalArgumentException if either startMetadata and endMetadata are null
+   * @throws RuntimeException         if the state of metadata storage after this call is unknown
+   */
+  SegmentPublishResult commitMetadataOnly(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
 
   void updateSegmentMetadata(Set<DataSegment> segments);
 

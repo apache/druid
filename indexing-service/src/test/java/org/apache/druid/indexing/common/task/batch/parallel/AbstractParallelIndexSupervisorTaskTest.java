@@ -94,6 +94,34 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       0
   );
   static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
+  static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING = new ParallelIndexTuningConfig(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      2,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+  );
 
   protected TestLocalTaskActionClient actionClient;
   protected LocalIndexingServiceClient indexingServiceClient;

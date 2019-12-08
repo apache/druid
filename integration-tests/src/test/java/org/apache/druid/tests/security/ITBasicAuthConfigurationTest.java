@@ -45,7 +45,7 @@ import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -74,12 +74,12 @@ public class ITBasicAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
 
-  private static final TypeReference LOAD_STATUS_TYPE_REFERENCE =
+  private static final TypeReference<Map<String, Boolean>> LOAD_STATUS_TYPE_REFERENCE =
       new TypeReference<Map<String, Boolean>>()
       {
       };
 
-  private static final TypeReference SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
+  private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
       new TypeReference<List<Map<String, Object>>>()
       {
       };
@@ -123,7 +123,7 @@ public class ITBasicAuthConfigurationTest
   public void before()
   {
     // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
     );
   }

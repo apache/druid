@@ -71,9 +71,9 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
   Map<String, SubTaskReportType> getReports();
 
   /**
-   * Returns the current {@link ParallelIndexingProgress}.
+   * Returns the current {@link ParallelIndexingPhaseProgress}.
    */
-  ParallelIndexingProgress getProgress();
+  ParallelIndexingPhaseProgress getProgress();
 
   /**
    * Returns the IDs of current running tasks.
