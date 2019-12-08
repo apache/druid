@@ -51,6 +51,7 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
       return;
     }
 
+    // Future improvement: Handle skewed partitions better (e.g., many values are repeated).
     List<String> partitionBoundaries = Arrays.stream(partitions)
                                              .distinct()
                                              .collect(Collectors.toCollection(ArrayList::new));
@@ -59,7 +60,11 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
     partitionBoundaries.set(0, null);
 
     // Last partition ends with null (see StringPartitionChunk.isEnd())
-    partitionBoundaries.add(null);
+    if (partitionBoundaries.size() == 1) {
+      partitionBoundaries.add(null);
+    } else {
+      partitionBoundaries.set(partitionBoundaries.size() - 1, null);
+    }
 
     delegate = Collections.unmodifiableList(partitionBoundaries);
   }

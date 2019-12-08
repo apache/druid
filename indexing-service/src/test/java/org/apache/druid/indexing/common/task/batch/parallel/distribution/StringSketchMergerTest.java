@@ -71,10 +71,9 @@ public class StringSketchMergerTest
     StringDistribution merged = target.getResult();
 
     PartitionBoundaries partitions = merged.getEvenPartitionsByMaxSize(1);
-    Assert.assertEquals(4, partitions.size());
+    Assert.assertEquals(3, partitions.size());
     Assert.assertNull(partitions.get(0));
     Assert.assertEquals(string2, partitions.get(1));
-    Assert.assertEquals(string3, partitions.get(2));
-    Assert.assertNull(partitions.get(3));
+    Assert.assertNull(partitions.get(2));
   }
 }

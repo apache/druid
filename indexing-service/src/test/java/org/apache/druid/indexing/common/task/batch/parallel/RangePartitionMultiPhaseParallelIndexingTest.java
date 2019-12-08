@@ -218,7 +218,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       expectedNumPartition -= 1;
     }
     expectedNumPartition *= NUM_DAY;
-    expectedNumPartition += 1;  // max dimension value has its own partition
     Assert.assertEquals(expectedNumPartition, segments.size());
   }
 

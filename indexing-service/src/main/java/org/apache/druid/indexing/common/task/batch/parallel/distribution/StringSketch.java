@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.ArrayOfStringsSerDe;
 import org.apache.datasketches.memory.Memory;
@@ -103,6 +104,18 @@ public class StringSketch implements StringDistribution
     long n = delegate.getN();
     int evenPartitionCount = Math.max(1, (int) Math.round((double) n / targetSize));
     return getEvenPartitionsByCount(evenPartitionCount);
+  }
+
+  @VisibleForTesting
+  public String getMin()
+  {
+    return delegate.getMinValue();
+  }
+
+  @VisibleForTesting
+  public String getMax()
+  {
+    return delegate.getMaxValue();
   }
 
   private PartitionBoundaries getEvenPartitionsByCount(int evenPartitionCount)

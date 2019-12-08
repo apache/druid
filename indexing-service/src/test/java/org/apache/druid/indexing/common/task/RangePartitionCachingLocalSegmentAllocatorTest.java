@@ -137,7 +137,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   {
     Interval interval = INTERVAL_NORMAL;
     InputRow row = createInputRow(interval, PARTITION9);
-    int partitionNum = INTERVAL_TO_PARTITONS.get(interval).size() - 2;  // -2 = -1 0-based + -1 skip null tail
+    int partitionNum = INTERVAL_TO_PARTITONS.get(interval).size() - 2;
     testAllocate(row, interval, partitionNum, null);
   }
 

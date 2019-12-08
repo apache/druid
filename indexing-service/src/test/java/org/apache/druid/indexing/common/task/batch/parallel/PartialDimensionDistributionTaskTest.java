@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
+import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -358,15 +359,13 @@ public class PartialDimensionDistributionTaskTest
       StringDistribution distribution = Iterables.getOnlyElement(intervalToDistribution.values());
       Assert.assertNotNull(distribution);
       PartitionBoundaries partitions = distribution.getEvenPartitionsByMaxSize(1);
-      Assert.assertEquals(minBloomFilterBits + 3, partitions.size()); // 3 = min + max + exclusive endpoint
+      Assert.assertEquals(minBloomFilterBits + 2, partitions.size()); // 2 = min + max
 
-      // Min
-      Assert.assertNull(partitions.get(0));
-      Assert.assertEquals(dimensionValues.get(1), partitions.get(1));
+      String minDimensionValue = dimensionValues.get(0);
+      Assert.assertEquals(minDimensionValue, ((StringSketch) distribution).getMin());
 
-      // Max
-      Assert.assertNull(partitions.get(partitions.size() - 1));
-      Assert.assertEquals(dimensionValues.get(dimensionValues.size() - 1), partitions.get(partitions.size() - 2));
+      String maxDimensionValue = dimensionValues.get(dimensionValues.size() - 1);
+      Assert.assertEquals(maxDimensionValue, ((StringSketch) distribution).getMax());
     }
 
     @Test

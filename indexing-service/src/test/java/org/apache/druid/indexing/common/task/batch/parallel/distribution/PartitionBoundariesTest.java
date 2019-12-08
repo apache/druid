@@ -38,7 +38,7 @@ public class PartitionBoundariesTest
   public void setup()
   {
     values = new String[]{"a", "dup", "dup", "z"};
-    expected = Arrays.asList(null, "dup", "z", null);
+    expected = Arrays.asList(null, "dup", null);
     target = new PartitionBoundaries(values);
   }
 
