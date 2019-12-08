@@ -471,7 +471,7 @@ public class NamespaceLookupExtractorFactoryTest
         namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
-    final Map<String, Object> map = new HashMap<>(mapper.<Map<String, Object>>readValue(
+    final Map<String, Object> map = new HashMap<>(mapper.readValue(
         str,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     ));

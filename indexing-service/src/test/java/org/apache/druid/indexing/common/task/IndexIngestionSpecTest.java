@@ -45,7 +45,7 @@ public class IndexIngestionSpecTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
-        "At most one of [Property{name='parser', value={fake=parser map}}, Property{name='inputFormat',"
+        "Cannot use parser and inputSource together. Try using inputFormat instead of parser."
     );
     final IndexIngestionSpec spec = new IndexIngestionSpec(
         new DataSchema(

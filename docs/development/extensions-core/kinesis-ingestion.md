@@ -440,3 +440,14 @@ compatible with Apache projects.
 
 To enable this feature, add the `amazon-kinesis-client` (tested on version `1.9.2`) jar file ([link](https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client/1.9.2)) under `dist/druid/extensions/druid-kinesis-indexing-service/`.
 Then when submitting a supervisor-spec, set `deaggregate` to true.
+
+## Resharding
+
+When changing the shard count for a Kinesis stream, there will be a window of time around the resharding operation with early shutdown of Kinesis ingestion tasks.
+This occurs because the supervisor will update the shard -> task group mappings as shards are closed and fully read, to ensure that tasks are not running 
+with an assignment of closed shards that have been fully read and to ensure a balanced distribution of active shards across tasks. 
+
+This window with early task shutdowns will conclude when:
+- All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage
+- Any remaining tasks that had inactive shards in the assignment have been shutdown (these tasks would have been created before the closed shards were completely drained)
+

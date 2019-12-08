@@ -32,7 +32,7 @@ public class FileEntity implements InputEntity
 {
   private final File file;
 
-  FileEntity(File file)
+  public FileEntity(File file)
   {
     this.file = file;
   }

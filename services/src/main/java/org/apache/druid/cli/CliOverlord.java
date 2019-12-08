@@ -40,6 +40,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.JacksonConfigProvider;
@@ -344,6 +345,7 @@ public class CliOverlord extends ServerRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
+        new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new SupervisorModule(),
         new LookupSerdeModule(),

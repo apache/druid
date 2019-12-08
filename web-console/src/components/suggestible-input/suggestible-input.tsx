@@ -35,10 +35,12 @@ export interface SuggestionGroup {
   suggestions: string[];
 }
 
+export type Suggestion = string | SuggestionGroup;
+
 export interface SuggestibleInputProps extends HTMLInputProps {
   onValueChange: (newValue: string) => void;
   onFinalize?: () => void;
-  suggestions?: (string | SuggestionGroup)[];
+  suggestions?: Suggestion[];
   large?: boolean;
   intent?: Intent;
 }

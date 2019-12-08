@@ -20,7 +20,7 @@
 package org.apache.druid.storage.hdfs;
 
 import com.google.common.io.ByteStreams;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -111,12 +111,12 @@ public class HdfsDataSegmentPullerTest
   @Test
   public void testZip() throws IOException, SegmentLoadingException
   {
-    final File tmpDir = com.google.common.io.Files.createTempDir();
+    final File tmpDir = FileUtils.createTempDir();
     final File tmpFile = File.createTempFile("zipContents", ".txt", tmpDir);
 
     final Path zipPath = new Path("/tmp/testZip.zip");
 
-    final File outTmpDir = com.google.common.io.Files.createTempDir();
+    final File outTmpDir = FileUtils.createTempDir();
 
     final URI uri = URI.create(uriBase.toString() + zipPath);
 
@@ -159,7 +159,7 @@ public class HdfsDataSegmentPullerTest
   {
     final Path zipPath = new Path("/tmp/testZip.gz");
 
-    final File outTmpDir = com.google.common.io.Files.createTempDir();
+    final File outTmpDir = FileUtils.createTempDir();
     final File outFile = new File(outTmpDir, "testZip");
     outFile.delete();
 
@@ -193,7 +193,7 @@ public class HdfsDataSegmentPullerTest
 
     final Path zipPath = new Path(perTestPath, "test.txt");
 
-    final File outTmpDir = com.google.common.io.Files.createTempDir();
+    final File outTmpDir = FileUtils.createTempDir();
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 

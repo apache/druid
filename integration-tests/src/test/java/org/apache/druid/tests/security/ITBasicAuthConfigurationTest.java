@@ -71,7 +71,7 @@ public class ITBasicAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
 
-  private static final TypeReference SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
+  private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
       new TypeReference<List<Map<String, Object>>>()
       {
       };

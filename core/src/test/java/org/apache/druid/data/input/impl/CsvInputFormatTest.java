@@ -38,7 +38,7 @@ public class CsvInputFormatTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), "|", true, 10);
+    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), "|", null, true, 10);
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final CsvInputFormat fromJson = (CsvInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
@@ -49,6 +49,6 @@ public class CsvInputFormatTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a,] has a comma, it cannot");
-    new CsvInputFormat(Collections.singletonList("a,"), ",", false, 0);
+    new CsvInputFormat(Collections.singletonList("a,"), ",", null, false, 0);
   }
 }

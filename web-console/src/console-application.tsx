@@ -70,6 +70,7 @@ export class ConsoleApplication extends React.PureComponent<
 
   private supervisorId?: string;
   private taskId?: string;
+  private taskGroupId?: string;
   private openDialog?: string;
   private datasource?: string;
   private onlyUnavailable?: boolean;
@@ -109,6 +110,7 @@ export class ConsoleApplication extends React.PureComponent<
   private resetInitialsWithDelay() {
     setTimeout(() => {
       this.taskId = undefined;
+      this.taskGroupId = undefined;
       this.supervisorId = undefined;
       this.openDialog = undefined;
       this.datasource = undefined;
@@ -138,8 +140,8 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToIngestionWithTaskId = (taskId?: string, openDialog?: string) => {
-    this.taskId = taskId;
+  private goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
+    this.taskGroupId = taskGroupId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
@@ -193,7 +195,7 @@ export class ConsoleApplication extends React.PureComponent<
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
         exampleManifestsUrl={exampleManifestsUrl}
-        goToTask={this.goToIngestionWithTaskId}
+        goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',
     );
@@ -235,7 +237,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'ingestion',
       <IngestionView
-        taskId={this.taskId}
+        taskGroupId={this.taskGroupId}
         datasourceId={this.datasource}
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
@@ -254,7 +256,7 @@ export class ConsoleApplication extends React.PureComponent<
       <ServicesView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
-        goToTask={this.goToIngestionWithTaskId}
+        goToTask={this.goToIngestionWithTaskGroupId}
         capabilities={capabilities}
       />,
     );

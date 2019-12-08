@@ -73,8 +73,8 @@ public class InputEntityIteratingReader implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
-      final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
       try {
+        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
         return reader.read();
       }
       catch (IOException e) {
@@ -88,8 +88,8 @@ public class InputEntityIteratingReader implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
-      final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
       try {
+        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
         return reader.sample();
       }
       catch (IOException e) {

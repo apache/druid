@@ -74,9 +74,9 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
   }
 
   @Override
-  final int getTotalNumSubTasks() throws IOException
+  final int estimateTotalNumSubTasks() throws IOException
   {
-    return baseInputSource.getNumSplits(
+    return baseInputSource.estimateNumSplits(
         ingestionSchema.getIOConfig().getInputFormat(),
         getTuningConfig().getSplitHintSpec()
     );

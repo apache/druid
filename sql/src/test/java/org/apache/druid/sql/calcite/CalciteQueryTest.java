@@ -786,13 +786,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1"}
         )
     );
+  }
 
-    // The outer limit wrapping behavior that was used in the query above can be applied with a context flag instead
-    Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
+  @Test
+  public void testSelectLimitWrapping() throws Exception
+  {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC",
-        outerLimitContext,
+        OUTER_LIMIT_CONTEXT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -801,13 +802,145 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .limit(2)
                 .order(ScanQuery.Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(outerLimitContext)
+                .context(OUTER_LIMIT_CONTEXT)
                 .build()
         ),
         ImmutableList.of(
             new Object[]{"abc"},
             new Object[]{"def"}
         )
+    );
+  }
+
+  @Test
+  public void testTopNLimitWrapping() throws Exception
+  {
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"", 1L},
+          new Object[]{"def", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"def", 1L},
+          new Object[]{"abc", 1L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("dim1", "d0", ValueType.STRING))
+                .threshold(2)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)
+                    )
+                )
+                .context(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+
+  @Test
+  public void testTopNLimitWrappingOrderByAgg() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 2 DESC",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("dim1", "d0", ValueType.STRING))
+                .threshold(2)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric("a0")
+                .context(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"", 1L}, new Object[]{"1", 1L})
+    );
+  }
+
+  @Test
+  public void testGroupByLimitWrapping() throws Exception
+  {
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"def", "abc", 1L},
+          new Object[]{"abc", "", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"def", "abc", 1L},
+          new Object[]{"abc", null, 1L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, dim2, COUNT(*) FROM druid.foo GROUP BY dim1, dim2 ORDER BY dim1 DESC",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    new DefaultDimensionSpec("dim1", "d0", ValueType.STRING),
+                    new DefaultDimensionSpec("dim2", "d1", ValueType.STRING)
+                )
+                .setLimitSpec(
+                    new DefaultLimitSpec(
+                        ImmutableList.of(
+                            new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.LEXICOGRAPHIC)),
+                        2
+                    )
+                )
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testGroupByLimitWrappingOrderByAgg() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, dim2, COUNT(*) FROM druid.foo GROUP BY 1, 2 ORDER BY 3 DESC",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    new DefaultDimensionSpec("dim1", "d0", ValueType.STRING),
+                    new DefaultDimensionSpec("dim2", "d1", ValueType.STRING)
+                )
+                .setLimitSpec(
+                    new DefaultLimitSpec(
+                        ImmutableList.of(
+                            new OrderByColumnSpec("a0", Direction.DESCENDING, StringComparators.NUMERIC)
+                        ),
+                        2
+                    )
+                )
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"", "a", 1L}, new Object[]{"def", "abc", 1L})
     );
   }
 
