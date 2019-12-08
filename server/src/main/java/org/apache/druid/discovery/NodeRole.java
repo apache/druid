@@ -22,13 +22,16 @@ package org.apache.druid.discovery;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- *
  * This is a historical occasion that this enum is different from {@link
- * org.apache.druid.server.coordination.ServerType} because they are essentially the same abstraction, but merging them
- * could only increase the complexity and drop the code safety, because they name the same types differently ("peon" -
- * "indexer-executor" and "middleManager" - "realtime") and both expose them via JSON APIs.
+ * org.apache.druid.server.coordination.ServerType} (also called "node type" in various places) because they are
+ * essentially the same abstraction, but merging them could only increase the complexity and drop the code safety,
+ * because they name the same types differently ("peon" - "indexer-executor" and "middleManager" - "realtime") and both
+ * expose them via JSON APIs.
+ *
+ * These abstractions can probably be merged when Druid updates to Jackson 2.9 that supports JsonAliases, see
+ * see https://github.com/apache/incubator-druid/issues/7152.
  */
-public enum NodeType
+public enum NodeRole
 {
   COORDINATOR("coordinator"),
   HISTORICAL("historical"),
@@ -41,7 +44,7 @@ public enum NodeType
 
   private final String jsonName;
 
-  NodeType(String jsonName)
+  NodeRole(String jsonName)
   {
     this.jsonName = jsonName;
   }

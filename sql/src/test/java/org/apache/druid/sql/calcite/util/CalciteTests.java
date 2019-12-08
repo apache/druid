@@ -44,7 +44,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
@@ -780,7 +780,7 @@ public class CalciteTests
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         EasyMock.createMock(HttpClient.class),
         EasyMock.createMock(DruidNodeDiscoveryProvider.class),
-        NodeType.COORDINATOR,
+        NodeRole.COORDINATOR,
         "/simple/leader",
         new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
     )

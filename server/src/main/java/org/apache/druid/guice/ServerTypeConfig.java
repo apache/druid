@@ -23,19 +23,19 @@ import org.apache.druid.server.coordination.ServerType;
 
 /**
  */
-public class NodeTypeConfig
+public class ServerTypeConfig
 {
-  private final ServerType nodeType;
+  private final ServerType serverType;
 
-  public NodeTypeConfig(
-      ServerType nodeType
+  public ServerTypeConfig(
+      ServerType serverType
   )
   {
-    this.nodeType = nodeType;
+    this.serverType = serverType;
   }
 
-  public ServerType getNodeType()
+  public ServerType getServerType()
   {
-    return nodeType;
+    return serverType;
   }
 }

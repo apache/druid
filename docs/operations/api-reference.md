@@ -45,9 +45,29 @@ An endpoint that always returns a boolean "true" value with a 200 OK response, u
 
 Returns the current configuration properties of the process.
 
+* `/status/selfDiscoveredStatus`
+
+Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation
+from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
+cluster. It is recommended to not consider a Druid node "healthy" or "ready" in automated deployment/container
+management systems until it returns `{"selfDiscovered": true}` from this endpoint. This is because a node may be
+isolated from the rest of the cluster due to network issues and it doesn't make sense to consider nodes "healthy" in
+this case. Also, when nodes such as Brokers use ZooKeeper segment discovery for building their view of the Druid cluster
+(as opposed to HTTP segment discovery), they may be unusable until the ZooKeeper client is fully initialized and starts
+to receive data from the ZooKeeper cluster. `{"selfDiscovered": true}` is a proxy event indicating that the ZooKeeper
+client on the node has started to receive data from the ZooKeeper cluster and it's expected that all segments and other
+nodes will be discovered by this node timely from this point.
+
+* `/status/selfDiscovered`
+
+Similar to `/status/selfDiscoveredStatus`, but returns 200 OK response with empty body if the node has discovered itself
+and 503 SERVICE UNAVAILABLE if the node hasn't discovered itself yet. This endpoint might be useful because some
+monitoring checks such as AWS load balancer health checks are not able to look at the response body.
+
 ## Master Server
 
-This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords)
+in the suggested [three-server configuration](../design/processes.html#server-types).
 
 ### Coordinator
 

@@ -38,7 +38,7 @@ import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -52,6 +52,7 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
@@ -104,6 +105,7 @@ import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -246,11 +248,16 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
+            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.OVERLORD);
+
             bindAnnouncer(
                 binder,
                 IndexingService.class,
-                DiscoverySideEffectsProvider.builder(NodeType.OVERLORD).build()
+                DiscoverySideEffectsProvider.builder(NodeRole.OVERLORD).build()
             );
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           private void configureTaskStorage(Binder binder)
