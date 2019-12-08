@@ -44,7 +44,6 @@ import java.util.function.BooleanSupplier;
  * DI configuration phase.
  */
 @Singleton
-@ResourceFilters(StateResourceFilter.class)
 public class SelfDiscoveryResource
 {
   private BooleanSupplier selfDiscovered;
@@ -80,6 +79,7 @@ public class SelfDiscoveryResource
   @GET
   @Path("/status/selfDiscoveredStatus")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response getSelfDiscoveredStatus()
   {
     return Response.ok(Collections.singletonMap("selfDiscovered", selfDiscovered.getAsBoolean())).build();
