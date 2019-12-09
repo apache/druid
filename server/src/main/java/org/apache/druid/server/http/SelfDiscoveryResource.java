@@ -36,6 +36,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -51,28 +52,32 @@ public class SelfDiscoveryResource
   @Inject
   public SelfDiscoveryResource(
       @Self DruidNode thisDruidNode,
-      @Self NodeRole thisNodeRole,
+      @Self Set<NodeRole> thisNodeRoles,
       DruidNodeDiscoveryProvider nodeDiscoveryProvider,
       Lifecycle lifecycle
   )
   {
-    Lifecycle.Handler selfDiscoveryListenerRegistrator = new Lifecycle.Handler()
-    {
-      @Override
-      public void start()
-      {
-        selfDiscovered = nodeDiscoveryProvider.getForNode(thisDruidNode, thisNodeRole);
-      }
+    thisNodeRoles.forEach(
+        thisNodeRole -> {
+          Lifecycle.Handler selfDiscoveryListenerRegistrator = new Lifecycle.Handler()
+          {
+            @Override
+            public void start()
+            {
+              selfDiscovered = nodeDiscoveryProvider.getForNode(thisDruidNode, thisNodeRole);
+            }
 
-      @Override
-      public void stop()
-      {
-        // do nothing
-      }
-    };
-    // Using Lifecycle.Stage.SERVER because DruidNodeDiscoveryProvider should be already started when
-    // selfDiscoveryListenerRegistrator.start() is called.
-    lifecycle.addHandler(selfDiscoveryListenerRegistrator, Lifecycle.Stage.SERVER);
+            @Override
+            public void stop()
+            {
+              // do nothing
+            }
+          };
+          // Using Lifecycle.Stage.SERVER because DruidNodeDiscoveryProvider should be already started when
+          // selfDiscoveryListenerRegistrator.start() is called.
+          lifecycle.addHandler(selfDiscoveryListenerRegistrator, Lifecycle.Stage.SERVER);
+        }
+    );
   }
 
   /** See the description of this endpoint in api-reference.md. */

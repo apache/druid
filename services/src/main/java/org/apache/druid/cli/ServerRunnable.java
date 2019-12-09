@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -42,6 +43,7 @@ import java.lang.annotation.Annotation;
 import java.util.List;
 
 /**
+ *
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
@@ -64,7 +66,34 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
-  public static void bindAnnouncer(
+  public static void bindNodeRoleAndAnnouncer(Binder binder, DiscoverySideEffectsProvider discoverySideEffectsProvider)
+  {
+    Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+    selfBinder.addBinding().toInstance(discoverySideEffectsProvider.nodeRole);
+
+    bindAnnouncer(
+        binder,
+        discoverySideEffectsProvider
+    );
+  }
+
+  public static void bindNodeRoleAndAnnouncer(
+      Binder binder,
+      Class<? extends Annotation> annotation,
+      DiscoverySideEffectsProvider discoverySideEffectsProvider
+  )
+  {
+    Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+    selfBinder.addBinding().toInstance(discoverySideEffectsProvider.nodeRole);
+
+    bindAnnouncer(
+        binder,
+        annotation,
+        discoverySideEffectsProvider
+    );
+  }
+
+  private static void bindAnnouncer(
       final Binder binder,
       final DiscoverySideEffectsProvider provider
   )
@@ -76,7 +105,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
   }
 
-  public static void bindAnnouncer(
+  private static void bindAnnouncer(
       final Binder binder,
       final Class<? extends Annotation> annotation,
       final DiscoverySideEffectsProvider provider

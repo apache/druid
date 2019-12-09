@@ -149,7 +149,7 @@ public class CliIndexer extends ServerRunnable
 
             binder.bind(SegmentLoadDropHandler.class).toProvider(Providers.of(null));
 
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
                 DiscoverySideEffectsProvider
                     .builder(NodeRole.INDEXER)
