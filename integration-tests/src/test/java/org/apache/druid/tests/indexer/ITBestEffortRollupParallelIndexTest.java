@@ -35,7 +35,7 @@ import java.util.function.Function;
 
 @Test(groups = TestNGGroup.BATCH_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITImperfectRollupParallelIndexTest extends AbstractITBatchIndexTest
+public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
