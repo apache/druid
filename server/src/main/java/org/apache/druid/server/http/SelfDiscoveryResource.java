@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -36,6 +37,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
@@ -45,9 +47,10 @@ import java.util.function.BooleanSupplier;
  * DI configuration phase.
  */
 @Singleton
+@Path("/status/selfDiscovered")
 public class SelfDiscoveryResource
 {
-  private BooleanSupplier selfDiscovered;
+  private final List<BooleanSupplier> selfDiscoveredRoles;
 
   @Inject
   public SelfDiscoveryResource(
@@ -57,6 +60,7 @@ public class SelfDiscoveryResource
       Lifecycle lifecycle
   )
   {
+    selfDiscoveredRoles = Lists.newArrayListWithExpectedSize(thisNodeRoles.size());
     thisNodeRoles.forEach(
         thisNodeRole -> {
           Lifecycle.Handler selfDiscoveryListenerRegistrator = new Lifecycle.Handler()
@@ -64,7 +68,7 @@ public class SelfDiscoveryResource
             @Override
             public void start()
             {
-              selfDiscovered = nodeDiscoveryProvider.getForNode(thisDruidNode, thisNodeRole);
+              selfDiscoveredRoles.add(nodeDiscoveryProvider.getForNode(thisDruidNode, thisNodeRole));
             }
 
             @Override
@@ -82,25 +86,29 @@ public class SelfDiscoveryResource
 
   /** See the description of this endpoint in api-reference.md. */
   @GET
-  @Path("/status/selfDiscoveredStatus")
+  @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
   public Response getSelfDiscoveredStatus()
   {
-    return Response.ok(Collections.singletonMap("selfDiscovered", selfDiscovered.getAsBoolean())).build();
+    return Response.ok(Collections.singletonMap("selfDiscovered", isDiscoveredAllRoles())).build();
   }
 
   /** See the description of this endpoint in api-reference.md. */
   @GET
-  @Path("/status/selfDiscovered")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
   public Response getSelfDiscovered()
   {
-    if (selfDiscovered.getAsBoolean()) {
+    if (isDiscoveredAllRoles()) {
       return Response.ok().build();
     } else {
       return Response.status(HttpStatus.SERVICE_UNAVAILABLE_503).build();
     }
+  }
+
+  private boolean isDiscoveredAllRoles()
+  {
+    return selfDiscoveredRoles.stream().allMatch(BooleanSupplier::getAsBoolean);
   }
 }
