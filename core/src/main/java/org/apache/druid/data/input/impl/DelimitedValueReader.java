@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -45,29 +46,30 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * SeparateValueReader abstracts the reader for (Comma/Tab) Separate Value format input data.
- * It implements the common logic between {@link CsvReader} and {@link TsvReader}
- * Should never be instantiated
+ * DelimitedValueReader is the reader for Delimitor Separate Value format input data(CSV/TSV).
  */
-public abstract class SeparateValueReader extends TextReader
+public class DelimitedValueReader extends TextReader
 {
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Function<String, Object> multiValueFunction;
   @Nullable
   private List<String> columns;
-  private final SeparateValueInputFormat.Format format;
   private final RFC4180Parser parser;
 
   public static RFC4180Parser createOpenCsvParser(char separator)
   {
-    return new RFC4180ParserBuilder().withFieldAsNull(
+    return NullHandling.replaceWithDefault()
+           ? new RFC4180ParserBuilder()
+               .withSeparator(separator)
+               .build()
+           : new RFC4180ParserBuilder().withFieldAsNull(
                CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
                                        .withSeparator(separator)
                                        .build();
   }
 
-  SeparateValueReader(
+  DelimitedValueReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
@@ -75,7 +77,7 @@ public abstract class SeparateValueReader extends TextReader
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows,
-      SeparateValueInputFormat.Format format
+      DelimitedInputFormat.Format format
   )
   {
     super(inputRowSchema, source, temporaryDirectory);
@@ -84,7 +86,6 @@ public abstract class SeparateValueReader extends TextReader
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
-    this.format = format;
     this.parser = createOpenCsvParser(format.getDelimiter());
 
     if (this.columns != null) {

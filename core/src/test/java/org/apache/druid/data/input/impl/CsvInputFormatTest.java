@@ -49,6 +49,14 @@ public class CsvInputFormatTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a,] has a comma, it cannot");
-    new CsvInputFormat(Collections.singletonList("a,"), ",", null, false, 0);
+    new CsvInputFormat(Collections.singletonList("a,"), "|", null, false, 0);
+  }
+
+  @Test
+  public void testDelimiter()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot have same delimiter and list delimiter of [,]");
+    new CsvInputFormat(Collections.singletonList("a\t"), ",", null, false, 0);
   }
 }

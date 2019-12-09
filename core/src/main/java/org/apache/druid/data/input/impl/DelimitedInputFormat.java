@@ -36,20 +36,19 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * SeparateValueInputFormat abstracts the (Comma/Tab) Separate Value format of input data.
- * It implements the common logic between {@link CsvInputFormat} and {@link TsvInputFormat}
- * Should never be instantiated
+ * InputFormat for customized Delimitor Separate Value format of input data(default is TSV).
  */
-public abstract class SeparateValueInputFormat implements InputFormat
+public class DelimitedInputFormat implements InputFormat
 {
 
   public enum Format
   {
     CSV(',', "comma"),
-    TSV('\t', "tab");
+    TSV('\t', "tab"),
+    CustomizeSV('|', "");
 
-    private final char delimiter;
-    private final String literal;
+    private char delimiter;
+    private String literal;
 
     Format(char delimiter, String literal)
     {
@@ -60,6 +59,12 @@ public abstract class SeparateValueInputFormat implements InputFormat
     public String getDelimiterAsString()
     {
       return String.valueOf(delimiter);
+    }
+
+    private void setDelimiter(String delimiter, String literal)
+    {
+      this.delimiter = (delimiter != null && delimiter.length() > 0) ? delimiter.charAt(0) : '\t';
+      this.literal = literal != null ? literal : "customize separator: " + delimiter;
     }
 
     public char getDelimiter()
@@ -78,14 +83,15 @@ public abstract class SeparateValueInputFormat implements InputFormat
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Format format;
+  private final String delimiter;
 
-  protected SeparateValueInputFormat(
-      @Nullable List<String> columns,
-      @Nullable String listDelimiter,
-      @Nullable Boolean hasHeaderRow,
-      @Nullable Boolean findColumnsFromHeader,
-      int skipHeaderRows,
-      Format format
+  public DelimitedInputFormat(
+      @JsonProperty("columns") @Nullable List<String> columns,
+      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
+      @JsonProperty("delimiter") @Nullable String delimiter,
+      @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
+      @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
+      @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
     this.listDelimiter = listDelimiter;
@@ -98,8 +104,17 @@ public abstract class SeparateValueInputFormat implements InputFormat
         )
     ).getValue();
     this.skipHeaderRows = skipHeaderRows;
-    this.format = format;
-
+    this.delimiter = delimiter == null ? "\t" : delimiter;
+    this.format = getFormat(this.delimiter);
+    Preconditions.checkArgument(
+        this.delimiter.length() == 1,
+        "The delimiter should be a single character"
+    );
+    Preconditions.checkArgument(
+        !this.delimiter.equals(listDelimiter),
+        "Cannot have same delimiter and list delimiter of [%s]",
+        this.delimiter
+    );
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
@@ -114,6 +129,18 @@ public abstract class SeparateValueInputFormat implements InputFormat
           "If columns field is not set, the first row of your data must have your header"
           + " and hasHeaderRow must be set to true."
       );
+    }
+  }
+
+  private static Format getFormat(String delimiter)
+  {
+    if (",".equals(delimiter)) {
+      return Format.CSV;
+    } else if ("\t".equals(delimiter)) {
+      return Format.TSV;
+    } else {
+      Format.CustomizeSV.setDelimiter(delimiter, null);
+      return Format.CustomizeSV;
     }
   }
 
@@ -151,22 +178,15 @@ public abstract class SeparateValueInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return this.format == Format.TSV ? new TsvReader(
+    return new DelimitedValueReader(
         inputRowSchema,
         source,
         temporaryDirectory,
         listDelimiter,
         columns,
         findColumnsFromHeader,
-        skipHeaderRows
-    ) : new CsvReader(
-        inputRowSchema,
-        source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows
+        skipHeaderRows,
+        this.format
     );
   }
 
@@ -179,7 +199,7 @@ public abstract class SeparateValueInputFormat implements InputFormat
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SeparateValueInputFormat format = (SeparateValueInputFormat) o;
+    DelimitedInputFormat format = (DelimitedInputFormat) o;
     return findColumnsFromHeader == format.findColumnsFromHeader &&
            skipHeaderRows == format.skipHeaderRows &&
            Objects.equals(listDelimiter, format.listDelimiter) &&
