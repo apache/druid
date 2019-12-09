@@ -20,13 +20,14 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -34,9 +35,10 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.NodeTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
@@ -47,6 +49,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.timeline.PruneLastCompactionState;
@@ -89,7 +92,7 @@ public class CliHistorical extends ServerRunnable
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
-          binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
+          binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
           binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
           Jerseys.addResource(binder, QueryResource.class);
@@ -101,12 +104,18 @@ public class CliHistorical extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
 
+          binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.HISTORICAL);
+
           bindAnnouncer(
               binder,
-              DiscoverySideEffectsProvider.builder(NodeType.HISTORICAL)
-                                          .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
-                                          .build()
+              DiscoverySideEffectsProvider
+                  .builder(NodeRole.HISTORICAL)
+                  .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
+                  .build()
           );
+
+          Jerseys.addResource(binder, SelfDiscoveryResource.class);
+          LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
         new LookupModule()
     );

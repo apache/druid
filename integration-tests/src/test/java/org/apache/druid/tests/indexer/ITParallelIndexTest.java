@@ -44,6 +44,8 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
   private static final String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
   private static final String INDEX_INGEST_SEGMENT_DATASOURCE = "wikipedia_parallel_ingest_segment_index_test";
   private static final String INDEX_INGEST_SEGMENT_TASK = "/indexer/wikipedia_parallel_ingest_segment_index_task.json";
+  private static final String INDEX_DRUID_INPUT_SOURCE_DATASOURCE = "wikipedia_parallel_druid_input_source_index_test";
+  private static final String INDEX_DRUID_INPUT_SOURCE_TASK = "/indexer/wikipedia_parallel_druid_input_source_index_task.json";
 
   @DataProvider
   public static Object[][] resources()
@@ -58,7 +60,8 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
   public void testIndexData(PartitionsSpec partitionsSpec) throws Exception
   {
     try (final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-         final Closeable ignored2 = unloader(INDEX_INGEST_SEGMENT_DATASOURCE + config.getExtraDatasourceNameSuffix())
+         final Closeable ignored2 = unloader(INDEX_INGEST_SEGMENT_DATASOURCE + config.getExtraDatasourceNameSuffix());
+         final Closeable ignored3 = unloader(INDEX_DRUID_INPUT_SOURCE_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
       boolean forceGuaranteedRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
 
@@ -107,12 +110,30 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
             INDEX_INGEST_SEGMENT_TASK,
             REINDEX_QUERIES_RESOURCE
         );
+
+        // with DruidInputSource instead of IngestSegmentFirehose
+        doReindexTest(
+            INDEX_DATASOURCE,
+            INDEX_DRUID_INPUT_SOURCE_DATASOURCE,
+            rollupTransform,
+            INDEX_DRUID_INPUT_SOURCE_TASK,
+            REINDEX_QUERIES_RESOURCE
+        );
       } else {
         doReindexTest(
             INDEX_DATASOURCE,
             INDEX_INGEST_SEGMENT_DATASOURCE,
             rollupTransform,
             INDEX_INGEST_SEGMENT_TASK,
+            INDEX_QUERIES_RESOURCE
+        );
+
+        // with DruidInputSource instead of IngestSegmentFirehose
+        doReindexTest(
+            INDEX_DATASOURCE,
+            INDEX_DRUID_INPUT_SOURCE_DATASOURCE,
+            rollupTransform,
+            INDEX_DRUID_INPUT_SOURCE_TASK,
             INDEX_QUERIES_RESOURCE
         );
       }

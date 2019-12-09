@@ -17,36 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.guice;
 
-import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.server.coordination.ServerType;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.util.List;
-
-public class TsvReader extends SeparateValueReader
+/**
+ */
+public class ServerTypeConfig
 {
-  TsvReader(
-      InputRowSchema inputRowSchema,
-      InputEntity source,
-      File temporaryDirectory,
-      @Nullable String listDelimiter,
-      @Nullable List<String> columns,
-      boolean findColumnsFromHeader,
-      int skipHeaderRows
+  private final ServerType serverType;
+
+  public ServerTypeConfig(
+      ServerType serverType
   )
   {
-    super(
-        inputRowSchema,
-        source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows,
-        SeparateValueInputFormat.Format.TSV
-    );
+    this.serverType = serverType;
+  }
+
+  public ServerType getServerType()
+  {
+    return serverType;
   }
 }

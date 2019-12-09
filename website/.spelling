@@ -940,6 +940,8 @@ forceGuaranteedRollup
 httpAuthenticationPassword
 httpAuthenticationUsername
 ingestSegment
+InputSource
+DruidInputSource
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge

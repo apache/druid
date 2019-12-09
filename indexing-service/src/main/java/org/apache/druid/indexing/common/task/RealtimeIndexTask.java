@@ -32,7 +32,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -359,7 +359,7 @@ public class RealtimeIndexTask extends AbstractTask
                                           new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        NodeType.PEON,
+        NodeRole.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService

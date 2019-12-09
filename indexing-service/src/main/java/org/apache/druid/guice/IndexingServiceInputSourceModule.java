@@ -17,25 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.initialization.DruidModule;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
-public class TsvInputFormat extends SeparateValueInputFormat
+public class IndexingServiceInputSourceModule implements DruidModule
 {
-  @JsonCreator
-  public TsvInputFormat(
-      @JsonProperty("columns") @Nullable List<String> columns,
-      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
-      @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
-      @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
-  )
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    super(columns, listDelimiter, hasHeaderRow, findColumnsFromHeader, skipHeaderRows, Format.TSV);
+    return ImmutableList.<Module>of(
+        new SimpleModule("IndexingServiceInputSourceModule")
+            .registerSubtypes(
+                new NamedType(DruidInputSource.class, "druid")
+            )
+    );
+  }
+
+  @Override
+  public void configure(Binder binder)
+  {
   }
 }

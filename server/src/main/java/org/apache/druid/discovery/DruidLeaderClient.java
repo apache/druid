@@ -68,7 +68,7 @@ public class DruidLeaderClient
 
   private final HttpClient httpClient;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private final NodeType nodeTypeToWatch;
+  private final NodeRole nodeRoleToWatch;
 
   private final String leaderRequestPath;
 
@@ -82,14 +82,14 @@ public class DruidLeaderClient
   public DruidLeaderClient(
       HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      NodeType nodeTypeToWatch,
+      NodeRole nodeRoleToWatch,
       String leaderRequestPath,
       ServerDiscoverySelector serverDiscoverySelector
   )
   {
     this.httpClient = httpClient;
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
-    this.nodeTypeToWatch = nodeTypeToWatch;
+    this.nodeRoleToWatch = nodeRoleToWatch;
     this.leaderRequestPath = leaderRequestPath;
     this.serverDiscoverySelector = serverDiscoverySelector;
   }
@@ -102,7 +102,7 @@ public class DruidLeaderClient
     }
 
     try {
-      druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(nodeTypeToWatch);
+      druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeRole(nodeRoleToWatch);
       lifecycleLock.started();
       log.debug("Started.");
     }

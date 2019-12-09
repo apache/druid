@@ -41,6 +41,7 @@ import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -129,6 +130,7 @@ public class DruidJsonValidator extends GuiceRunnable
                 new FirehoseModule(),
                 new IndexingHadoopModule(),
                 new IndexingServiceFirehoseModule(),
+                new IndexingServiceInputSourceModule(),
                 new LocalDataStorageDruidModule()
             )
         )

@@ -17,36 +17,58 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.indexing.input;
 
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.IndexIO;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
-public class CsvReader extends SeparateValueReader
+public class DruidSegmentInputFormat implements InputFormat
 {
-  CsvReader(
-      InputRowSchema inputRowSchema,
-      InputEntity source,
-      File temporaryDirectory,
-      @Nullable String listDelimiter,
-      @Nullable List<String> columns,
-      boolean findColumnsFromHeader,
-      int skipHeaderRows
+  private final IndexIO indexIO;
+  private final DimFilter dimFilter;
+  private List<String> dimensions;
+  private List<String> metrics;
+
+  DruidSegmentInputFormat(
+      IndexIO indexIO,
+      DimFilter dimFilter,
+      List<String> dimensions,
+      List<String> metrics
   )
   {
-    super(
-        inputRowSchema,
+    this.indexIO = indexIO;
+    this.dimFilter = dimFilter;
+    this.dimensions = dimensions;
+    this.metrics = metrics;
+  }
+
+  @Override
+  public boolean isSplittable()
+  {
+    return false;
+  }
+
+  @Override
+  public InputEntityReader createReader(
+      InputRowSchema inputRowSchema,
+      InputEntity source,
+      File temporaryDirectory
+  )
+  {
+    return new DruidSegmentReader(
         source,
-        temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows,
-        SeparateValueInputFormat.Format.CSV
+        indexIO,
+        dimensions,
+        metrics,
+        dimFilter,
+        temporaryDirectory
     );
   }
 }

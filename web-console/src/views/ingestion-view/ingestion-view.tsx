@@ -102,7 +102,7 @@ interface TaskQueryResultRow {
 }
 
 export interface IngestionViewProps {
-  taskId: string | undefined;
+  taskGroupId: string | undefined;
   datasourceId: string | undefined;
   openDialog: string | undefined;
   goToDatasource: (datasource: string) => void;
@@ -216,7 +216,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     super(props, context);
 
     const taskFilter: Filter[] = [];
-    if (props.taskId) taskFilter.push({ id: 'task_id', value: props.taskId });
+    if (props.taskGroupId) taskFilter.push({ id: 'group_id', value: props.taskGroupId });
     if (props.datasourceId) taskFilter.push({ id: 'datasource', value: props.datasourceId });
 
     const supervisorFilter: Filter[] = [];
