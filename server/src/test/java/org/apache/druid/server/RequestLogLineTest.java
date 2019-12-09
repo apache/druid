@@ -22,10 +22,10 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +62,7 @@ public class RequestLogLineTest
   {
     RequestLogLine requestLogLine = RequestLogLine.forNative(
         query,
-        new DateTime(),
+        DateTimes.nowUtc(),
         "",
         null
     );
@@ -73,7 +73,7 @@ public class RequestLogLineTest
   {
     RequestLogLine requestLogLine = RequestLogLine.forNative(
         query,
-        new DateTime(),
+        DateTimes.nowUtc(),
         null,
         new QueryStats(ImmutableMap.of())
     );
@@ -81,7 +81,7 @@ public class RequestLogLineTest
     requestLogLine.getNativeQueryLine(new ObjectMapper()); // call should not throw exception
 
     requestLogLine = RequestLogLine.forSql(
-        "", null, new DateTime(), null, new QueryStats(ImmutableMap.of())
+        "", null, DateTimes.nowUtc(), null, new QueryStats(ImmutableMap.of())
     );
     Assert.assertEquals("", requestLogLine.getRemoteAddr());
     Assert.assertEquals(ImmutableMap.<String, Object>of(), requestLogLine.getSqlQueryContext());
