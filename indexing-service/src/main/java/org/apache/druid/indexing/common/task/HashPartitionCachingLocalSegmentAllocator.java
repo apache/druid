@@ -39,7 +39,7 @@ import java.util.stream.IntStream;
 /**
  * Allocates all necessary hash-partitioned segments locally at the beginning and reuses them.
  *
- * @see CachingLocalSegmentAllocator
+ * @see CachingLocalSegmentAllocatorHelper
  */
 public class HashPartitionCachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
@@ -51,6 +51,7 @@ public class HashPartitionCachingLocalSegmentAllocator implements IndexTaskSegme
   public HashPartitionCachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
+      String supervisorTaskId,
       String dataSource,
       Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec
   ) throws IOException
@@ -59,9 +60,10 @@ public class HashPartitionCachingLocalSegmentAllocator implements IndexTaskSegme
     this.dataSource = dataSource;
     this.allocateSpec = allocateSpec;
 
-    this.delegate = new CachingLocalSegmentAllocator(
+    this.delegate = new CachingLocalSegmentAllocatorHelper(
         toolbox,
         taskId,
+        supervisorTaskId,
         this::getIntervalToSegmentIds
     );
   }

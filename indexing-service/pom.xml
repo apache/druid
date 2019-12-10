@@ -199,6 +199,26 @@
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Used in native parallel batch indexing to determine distribution of dimension values -->
+            <groupId>org.apache.datasketches</groupId>
+            <artifactId>datasketches-java</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <!-- Used in native parallel batch indexing to determine distribution of dimension values -->
+            <groupId>org.apache.datasketches</groupId>
+            <artifactId>datasketches-memory</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

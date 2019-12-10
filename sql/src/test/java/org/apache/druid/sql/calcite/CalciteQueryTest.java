@@ -8652,8 +8652,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a-lol-a\",\"a-lol-b\",\"b-lol-a\",\"b-lol-b\"]"},
-            new Object[]{"[\"b-lol-b\",\"b-lol-c\",\"c-lol-b\",\"c-lol-c\"]"},
+            new Object[]{"[\"a-lol-a\",\"b-lol-b\"]"},
+            new Object[]{"[\"b-lol-b\",\"c-lol-c\"]"},
             new Object[]{"[\"d-lol-d\"]"},
             new Object[]{"[\"-lol-\"]"},
             new Object[]{nullVal},

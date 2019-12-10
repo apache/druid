@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import com.google.common.base.Optional;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -52,11 +53,11 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
 
   static InputRow createInputRow(DateTime timestamp, List<String> dimensionValues)
   {
-    InputRow inputRow = EasyMock.mock(InputRow.class);
-    EasyMock.expect(inputRow.getTimestamp()).andStubReturn(timestamp);
-    EasyMock.expect(inputRow.getDimension(DIMENSION)).andStubReturn(dimensionValues);
-    EasyMock.replay(inputRow);
-    return inputRow;
+    return new MapBasedInputRow(
+        timestamp,
+        dimensionValues,
+        Collections.singletonMap(DIMENSION, dimensionValues)
+    );
   }
 
   static CloseableIterator<InputRow> createInputRowIterator(InputRow inputRow)
@@ -75,6 +76,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
         return true;
       }
 
+      @SuppressWarnings("IteratorNextCanNotThrowNoSuchElementException")
       @Override
       public InputRow next()
       {

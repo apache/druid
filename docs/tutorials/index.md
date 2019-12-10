@@ -35,9 +35,10 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 You will need:
 
-* Java 8 (8u92+)
+* **Java 8 (8u92+)**
 * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
+> **Warning:** Java 8 is required to run Druid. While Druid will start with a higher version of Java it will not function correctly.
 
 ### Hardware
 

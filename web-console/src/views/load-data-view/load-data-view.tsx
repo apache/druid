@@ -1112,9 +1112,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             const inputData = inputQueryState.data;
 
             if (druidSource) {
-              let newSpec = fillInputFormat(spec, []);
-
-              newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', {
+              let newSpec = deepSet(spec, 'dataSchema.timestampSpec', {
                 column: '__time',
                 format: 'iso',
               });
