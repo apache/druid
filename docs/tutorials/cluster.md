@@ -134,6 +134,8 @@ We recommend running your favorite Linux distribution. You will also need:
 
   * **Java 8**
 
+> **Warning:** Java 8 is required to run Druid. While Druid will start with a higher version of Java it will not function correctly.
+
 Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
 does not have a recent enough version of Java, WebUpd8 offers [packages for those
 OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
