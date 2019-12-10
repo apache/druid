@@ -55,6 +55,8 @@ import java.util.function.Consumer;
  * If any of the handlers invoke their respective callback, the {@link HandlingInputRowIterator} will yield
  * a null {@link InputRow} next; otherwise, the next {@link InputRow} is yielded.
  * </pre>
+ *
+ * @see RangePartitionIndexTaskInputRowIteratorBuilder
  */
 public class DefaultIndexTaskInputRowIteratorBuilder implements IndexTaskInputRowIteratorBuilder
 {

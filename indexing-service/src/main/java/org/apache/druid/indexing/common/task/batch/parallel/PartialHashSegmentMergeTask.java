@@ -102,10 +102,10 @@ public class PartialHashSegmentMergeTask
   }
 
   @Override
-  HashBasedNumberedShardSpec createShardSpec(TaskToolbox toolbox, Interval interval, int partitionNum)
+  HashBasedNumberedShardSpec createShardSpec(TaskToolbox toolbox, Interval interval, int partitionId)
   {
     return new HashBasedNumberedShardSpec(
-        partitionNum,
+        partitionId,
         Preconditions.checkNotNull(partitionsSpec.getNumShards(), "numShards"),
         partitionsSpec.getPartitionDimensions(),
         toolbox.getJsonMapper()

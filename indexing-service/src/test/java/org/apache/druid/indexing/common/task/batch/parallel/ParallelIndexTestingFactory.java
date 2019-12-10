@@ -27,6 +27,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -229,7 +231,14 @@ class ParallelIndexTestingFactory
 
   static IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> createTaskClientFactory()
   {
-    return TASK_CLIENT_FACTORY;
+    return (taskInfoProvider, callerId, numThreads, httpTimeout, numRetries) -> createTaskClient();
+  }
+
+  private static ParallelIndexSupervisorTaskClient createTaskClient()
+  {
+    ParallelIndexSupervisorTaskClient taskClient = EasyMock.niceMock(ParallelIndexSupervisorTaskClient.class);
+    EasyMock.replay(taskClient);
+    return taskClient;
   }
 
   static String createRow(long timestamp, Object dimensionValue)
@@ -243,5 +252,10 @@ class ParallelIndexTestingFactory
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  static InputFormat getInputFormat()
+  {
+    return new JsonInputFormat(null, null);
   }
 }

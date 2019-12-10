@@ -54,7 +54,7 @@ each sub task creates segments individually and reports them to the supervisor t
 
 If `forceGuaranteedRollup` = true, it's executed in two phases with data shuffle which is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
 In the first phase, each sub task partitions input data based on `segmentGranularity` (primary partition key) in `granularitySpec`
-and `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
+and `partitionDimension` or `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md)
 where the first phase tasks ran. In the second phase, each sub task fetches
 partitioned data from MiddleManagers or indexers and merges them to create the final segments.
@@ -205,13 +205,13 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of firehose. See [SplitHintSpec](#splithintspec) for more details.|null|no|
-|partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
+|partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
 |indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `numShards` in `tuningConfig` and `intervals` in `granularitySpec` must be set. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `intervals` in `granularitySpec` must be set and `hashed` or `single_dim` must be used for `partitionsSpec`. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -241,18 +241,43 @@ Currently only one splitHintSpec, i.e., `segments`, is available.
 
 ### `partitionsSpec`
 
-PartitionsSpec is to describe the secondary partitioning method.
+PartitionsSpec is used to describe the secondary partitioning method.
 You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
-For perfect rollup, you should use `hashed`.
+For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
+`single_dim` (based on ranges of a single dimension). For best-effort rollup, you should use `dynamic`.
+
+The three `partitionsSpec` types have different pros and cons:
+- `dynamic`: Fastest ingestion speed. Guarantees a well-balanced distribution in segment size. Only best-effort rollup.
+- `hashed`: Moderate ingestion speed. Creates a well-balanced distribution in segment size. Allows perfect rollup. 
+- `single_dim`: Slowest ingestion speed. Segment sizes may be skewed depending on the partition key, but the broker can
+   use the partition information to efficiently prune segments early to speed up queries. Allows perfect rollup.
+
+#### Hash-based partitioning
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
-|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|5000000 (if `numShards` is not set)|either this or `numShards`|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `targetRowsPerSegment` is set.|null|no|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `targetRowsPerSegment` is set.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `targetRowsPerSegment` is set.|null|yes|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
 
-For best-effort rollup, you should use `dynamic`.
+#### Single-dimension range partitioning
+
+> Single-dimension range partitioning currently requires the
+> [druid-datasketches](../development/extensions-core/datasketches-extension.md)
+> extension to be [loaded from the classpath](../development/extensions.md#loading-extensions-from-the-classpath).
+
+> Because single-range partitioning makes two passes over the input, the index task may fail if the input changes
+> in between the two passes. 
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `single_dim`|none|yes|
+|partitionDimension|The dimension to partition on. Only rows with a single dimension value will be included.|none|yes|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
+|maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetRowsPerSegment`.|none|either this or `targetRowsPerSegment`|
+|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+
+#### Dynamic partitioning
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
