@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -66,7 +67,14 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
             NO_NEXT_INPUT_ROW
         );
 
-    Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+    assertNotInHandlerInvocationHistory(
+        handlerInvocationHistory,
+        IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.NULL_ROW
+    );
+    assertNotInHandlerInvocationHistory(
+        handlerInvocationHistory,
+        IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.ABSENT_BUCKET_INTERVAL
+    );
   }
 
   @Test
@@ -114,7 +122,14 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
             NO_NEXT_INPUT_ROW
         );
 
-    Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+    assertNotInHandlerInvocationHistory(
+        handlerInvocationHistory,
+        IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.NULL_ROW
+    );
+    assertNotInHandlerInvocationHistory(
+        handlerInvocationHistory,
+        IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.ABSENT_BUCKET_INTERVAL
+    );
   }
 
   @Test
@@ -146,5 +161,13 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
         );
 
     Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+  }
+
+  private static void assertNotInHandlerInvocationHistory(
+      List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory,
+      IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler handler
+  )
+  {
+    Assert.assertThat(handlerInvocationHistory, Matchers.not(Matchers.contains(handler)));
   }
 }
