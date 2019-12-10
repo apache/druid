@@ -249,6 +249,7 @@ def build_compatible_license_names():
     compatible_licenses['CDDL/GPLv2+CE'] = 'CDDL 1.1'
     compatible_licenses['CDDL + GPLv2 with classpath exception'] = 'CDDL 1.1'
     compatible_licenses['CDDL License'] = 'CDDL 1.1'
+    compatible_licenses['COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0'] = 'CDDL 1.0'
 
     compatible_licenses['Eclipse Public License 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['The Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
