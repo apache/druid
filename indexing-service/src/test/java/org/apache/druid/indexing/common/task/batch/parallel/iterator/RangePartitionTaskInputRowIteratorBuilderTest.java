@@ -32,8 +32,14 @@ import java.util.List;
 
 public class RangePartitionTaskInputRowIteratorBuilderTest
 {
+  private static final boolean SKIP_NULL = true;
   private static final IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester HANDLER_TESTER =
-      IndexTaskInputRowIteratorBuilderTestingFactory.createHandlerTester(() -> new RangePartitionIndexTaskInputRowIteratorBuilder(IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSION));
+      IndexTaskInputRowIteratorBuilderTestingFactory.createHandlerTester(
+          () -> new RangePartitionIndexTaskInputRowIteratorBuilder(
+              IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSION,
+              SKIP_NULL
+          )
+      );
   private static final InputRow NO_NEXT_INPUT_ROW = null;
 
   @Test
@@ -41,15 +47,24 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
   {
     DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
     List<String> multipleDimensionValues = Arrays.asList("multiple", "dimension", "values");
-    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp, multipleDimensionValues);
-    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
-    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(timestamp, IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT);
-
-    List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-        inputRowIterator,
-        granularitySpec,
-        NO_NEXT_INPUT_ROW
+    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(
+        timestamp,
+        multipleDimensionValues
     );
+    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(
+        inputRow
+    );
+    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+        timestamp,
+        IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+    );
+
+    List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+        HANDLER_TESTER.invokeHandlers(
+            inputRowIterator,
+            granularitySpec,
+            NO_NEXT_INPUT_ROW
+        );
 
     Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
   }
@@ -58,16 +73,77 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
   public void doesNotInvokeHandlersIfRowValid()
   {
     DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
-    List<String> singleDimensionValue = Collections.singletonList("single-dimension-value");
-    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp, singleDimensionValue);
-    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(inputRow);
-    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(timestamp, IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT);
-
-    List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory = HANDLER_TESTER.invokeHandlers(
-        inputRowIterator,
-        granularitySpec,
+    List<String> nullDimensionValue = Collections.singletonList(null);
+    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp, nullDimensionValue);
+    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(
         inputRow
     );
+    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+        timestamp,
+        IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+    );
+
+    List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+        HANDLER_TESTER.invokeHandlers(
+            inputRowIterator,
+            granularitySpec,
+            inputRow
+        );
+
+    Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+  }
+
+  @Test
+  public void invokesHandlerIfRowInvalidNull()
+  {
+    DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
+    List<String> nullDimensionValue = null;
+    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp, nullDimensionValue);
+    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(
+        inputRow
+    );
+    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+        timestamp,
+        IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+    );
+
+    List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+        HANDLER_TESTER.invokeHandlers(
+            inputRowIterator,
+            granularitySpec,
+            NO_NEXT_INPUT_ROW
+        );
+
+    Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+  }
+
+  @Test
+  public void doesNotInvokeHandlersIfRowValidNull()
+  {
+    DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
+    List<String> nullDimensionValue = null;
+    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(timestamp, nullDimensionValue);
+    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(
+        inputRow
+    );
+    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+        timestamp,
+        IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+    );
+
+    IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester handlerTester =
+        IndexTaskInputRowIteratorBuilderTestingFactory.createHandlerTester(
+            () -> new RangePartitionIndexTaskInputRowIteratorBuilder(
+                IndexTaskInputRowIteratorBuilderTestingFactory.DIMENSION,
+                !SKIP_NULL
+            )
+        );
+    List<IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler> handlerInvocationHistory =
+        handlerTester.invokeHandlers(
+            inputRowIterator,
+            granularitySpec,
+            inputRow
+        );
 
     Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
   }

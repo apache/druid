@@ -75,6 +75,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   public static final String TYPE = "partial_dimension_distribution";
   private static final Logger LOG = new Logger(PartialDimensionDistributionTask.class);
 
+  // Future work: StringDistribution does not handle inserting NULLs. This is the same behavior as hadoop indexing.
+  private static final boolean SKIP_NULL = true;
+
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
@@ -220,7 +223,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     try (
         CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read();
-        HandlingInputRowIterator iterator = new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension)
+        HandlingInputRowIterator iterator = new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension, SKIP_NULL)
             .delegate(inputRowIterator)
             .granularitySpec(granularitySpec)
             .nullRowRunnable(IndexTaskInputRowIteratorBuilder.NOOP_RUNNABLE)

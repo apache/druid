@@ -54,10 +54,19 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
 {
   private final DefaultIndexTaskInputRowIteratorBuilder delegate;
 
-  public RangePartitionIndexTaskInputRowIteratorBuilder(String partitionDimension)
+  /**
+   * @param partitionDimension Create range partitions for this dimension
+   * @param skipNull Whether to skip rows with a dimension value of null
+   */
+  public RangePartitionIndexTaskInputRowIteratorBuilder(String partitionDimension, boolean skipNull)
   {
     delegate = new DefaultIndexTaskInputRowIteratorBuilder();
-    delegate.appendInputRowHandler(createOnlySingleDimensionValueRowsHandler(partitionDimension));
+
+    if (skipNull) {
+      delegate.appendInputRowHandler(createOnlySingleDimensionValueRowsHandler(partitionDimension));
+    } else {
+      delegate.appendInputRowHandler(createOnlySingleOrNullDimensionValueRowsHandler(partitionDimension));
+    }
   }
 
   @Override
@@ -99,4 +108,15 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
       return dimensionValues.size() != 1;
     };
   }
+
+  private static HandlingInputRowIterator.InputRowHandler createOnlySingleOrNullDimensionValueRowsHandler(
+      String partitionDimension
+  )
+  {
+    return inputRow -> {
+      List<String> dimensionValues = inputRow.getDimension(partitionDimension);
+      return dimensionValues.size() > 1;  // Rows.objectToStrings() returns an empty list for a single null value
+    };
+  }
+
 }

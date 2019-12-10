@@ -54,6 +54,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
 {
   public static final String TYPE = "partial_range_index_generate";
   private static final String PROP_SPEC = "spec";
+  private static final boolean SKIP_NULL = true;
 
   private final String supervisorTaskId;
   private final int numAttempts;
@@ -86,7 +87,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         indexingServiceClient,
         taskClientFactory,
         appenderatorsManager,
-        new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimension(ingestionSchema))
+        new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimension(ingestionSchema), !SKIP_NULL)
     );
 
     this.numAttempts = numAttempts;
