@@ -334,13 +334,13 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     defined: (p: InputFormat) =>
       ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
   },
-  // {
-  //   name: 'delimiter',
-  //   type: 'string',
-  //   defaultValue: '\t',
-  //   defined: (p: InputFormat) => p.type === 'tsv',
-  //   info: <>A custom delimiter for data values.</>,
-  // },
+  {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    defined: (p: InputFormat) => p.type === 'tsv',
+    info: <>A custom delimiter for data values.</>,
+  },
   {
     name: 'listDelimiter',
     type: 'string',
@@ -2455,34 +2455,33 @@ export function updateIngestionType(
 }
 
 export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
-  const inputFormat = guessInputFormat(sampleData);
-  if (!inputFormat) return spec;
-
-  return deepSet(spec, 'ioConfig.inputFormat', inputFormat);
+  return deepSet(spec, 'ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
-function guessInputFormat(sampleData: string[]): InputFormat | undefined {
-  const sampleDatum = sampleData[0];
-  if (!sampleDatum) return;
+function guessInputFormat(sampleData: string[]): InputFormat {
+  let sampleDatum = sampleData[0];
+  if (sampleDatum) {
+    sampleDatum = String(sampleDatum); // Really ensure it is a string
 
-  if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-    return inputFormatFromType('json');
-  }
+    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
+      return inputFormatFromType('json');
+    }
 
-  if (sampleDatum.split('\t').length > 3) {
-    return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
-  }
+    if (sampleDatum.split('\t').length > 3) {
+      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    }
 
-  if (sampleDatum.split(',').length > 3) {
-    return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
-  }
+    if (sampleDatum.split(',').length > 3) {
+      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
+    }
 
-  if (sampleDatum.startsWith('PAR1')) {
-    return inputFormatFromType('parquet');
-  }
+    if (sampleDatum.startsWith('PAR1')) {
+      return inputFormatFromType('parquet');
+    }
 
-  if (sampleDatum.startsWith('ORC')) {
-    return inputFormatFromType('orc');
+    if (sampleDatum.startsWith('ORC')) {
+      return inputFormatFromType('orc');
+    }
   }
 
   return inputFormatFromType('regex');
