@@ -606,7 +606,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState distributionState = runNextPhase(distributionRunner);
     if (distributionState.isFailure()) {
-      return TaskStatus.failure(getId());
+      return TaskStatus.failure(getId(), PartialDimensionDistributionTask.TYPE + " failed");
     }
 
     Map<Interval, PartitionBoundaries> intervalToPartitions =
@@ -624,7 +624,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     TaskState indexingState = runNextPhase(indexingRunner);
     if (indexingState.isFailure()) {
-      return TaskStatus.failure(getId());
+      return TaskStatus.failure(getId(), PartialRangeSegmentGenerateTask.TYPE + " failed");
     }
 
     // partition (interval, partitionId) -> partition locations
