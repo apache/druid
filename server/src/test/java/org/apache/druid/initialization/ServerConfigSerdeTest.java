@@ -35,6 +35,7 @@ public class ServerConfigSerdeTest
     String defaultConfigJson = OBJECT_MAPPER.writeValueAsString(defaultConfig);
     ServerConfig defaultConfig2 = OBJECT_MAPPER.readValue(defaultConfigJson, ServerConfig.class);
     Assert.assertEquals(defaultConfig, defaultConfig2);
+    Assert.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
 
     ServerConfig modifiedConfig = new ServerConfig(
         999,
@@ -48,12 +49,14 @@ public class ServerConfigSerdeTest
         defaultConfig.getGracefulShutdownTimeout(),
         defaultConfig.getUnannouncePropagationDelay(),
         defaultConfig.getInflateBufferSize(),
-        defaultConfig.getCompressionLevel()
+        defaultConfig.getCompressionLevel(),
+        true
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
     Assert.assertEquals(modifiedConfig, modifiedConfig2);
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());
+    Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
   }
 }
