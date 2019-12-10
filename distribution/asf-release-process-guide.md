@@ -213,7 +213,7 @@ $ git checkout druid-0.16.0-incubating-rc3
 ### Build Artifacts
 
 ```bash
-$ mvn clean install -Papache-release,dist,rat -DskipTests
+$ mvn clean install -Papache-release,dist,rat -DskipTests -Dgpg.keyname=<your GPG key fingerprint>
 ```
 
 This should produce the following artifacts:
@@ -227,8 +227,8 @@ apache-druid-0.16.0-incubating-src.tar.gz.asc
 apache-druid-0.16.0-incubating-src.tar.gz.sha512
 ```
 
-You _might_ or _might not_ need to specify which key to use depending on your keychain, supply `-Dgpg.keyname=<your GPG key fingerprint>` to the `mvn install` command if required.
-
+Ensure that the GPG key fingerprint used in the `mvn install` command matches your release signing key in https://dist.apache.org/repos/dist/release/incubator/druid/KEYS.                                                                                               
+ 
 ### Verify checksums
 
 ```bash
