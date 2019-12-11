@@ -772,7 +772,11 @@ Returns segment information lists including server locations for the given datas
 
 * `/druid/broker/v1/loadstatus`
 
-Returns a flag indicating if the Broker knows about all segments in Zookeeper. This can be used to know when a Broker process is ready to be queried after a restart.
+Returns a flag indicating if the Broker knows about all segments in the cluster. This can be used to know when a Broker process is ready to be queried after a restart.
+
+* `/druid/broker/v1/readiness`
+
+Similar to `/druid/broker/v1/loadstatus`, but instead of returning a JSON, responses 200 OK if its ready and otherwise 503 SERVICE UNAVAILABLE.
 
 #### Queries
 
