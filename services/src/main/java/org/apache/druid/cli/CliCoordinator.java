@@ -46,7 +46,6 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ExecutorServices;
@@ -239,9 +238,7 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorCleanupPendingSegments.class
             );
 
-            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.COORDINATOR);
-
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
                 Coordinator.class,
                 DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()

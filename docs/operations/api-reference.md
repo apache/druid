@@ -45,7 +45,7 @@ An endpoint that always returns a boolean "true" value with a 200 OK response, u
 
 Returns the current configuration properties of the process.
 
-* `/status/selfDiscoveredStatus`
+* `/status/selfDiscovered/status`
 
 Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation
 from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
@@ -60,7 +60,7 @@ nodes will be discovered by this node timely from this point.
 
 * `/status/selfDiscovered`
 
-Similar to `/status/selfDiscoveredStatus`, but returns 200 OK response with empty body if the node has discovered itself
+Similar to `/status/selfDiscovered/status`, but returns 200 OK response with empty body if the node has discovered itself
 and 503 SERVICE UNAVAILABLE if the node hasn't discovered itself yet. This endpoint might be useful because some
 monitoring checks such as AWS load balancer health checks are not able to look at the response body.
 
