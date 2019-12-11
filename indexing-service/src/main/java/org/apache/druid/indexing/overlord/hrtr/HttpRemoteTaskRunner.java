@@ -1541,9 +1541,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       RUNNING(2, false, RunnerTaskState.RUNNING),
       COMPLETE(3, false, RunnerTaskState.NONE);
 
-      private int index;
-      private boolean isPending;
-      private RunnerTaskState runnerTaskState;
+      private final int index;
+      private final boolean isPending;
+      private final RunnerTaskState runnerTaskState;
 
       State(int index, boolean isPending, RunnerTaskState runnerTaskState)
       {
