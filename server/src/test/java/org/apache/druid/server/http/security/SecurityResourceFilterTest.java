@@ -53,7 +53,7 @@ import java.util.Collection;
 public class SecurityResourceFilterTest extends ResourceFilterTestHelper
 {
   @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
-  public static Collection<Object[]> data() throws NoSuchMethodException
+  public static Collection<Object[]> data()
   {
     return ImmutableList.copyOf(
         Iterables.concat(
@@ -70,8 +70,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPathsWithAuthorizer(CoordinatorDynamicConfigsResource.class),
             getRequestPathsWithAuthorizer(QueryResource.class),
             getRequestPathsWithAuthorizer(StatusResource.class),
-            getRequestPathsWithAuthorizer(SelfDiscoveryResource.class.getDeclaredMethod("getSelfDiscoveredStatus")),
-            getRequestPathsWithAuthorizer(SelfDiscoveryResource.class.getDeclaredMethod("getSelfDiscovered")),
+            getRequestPathsWithAuthorizer(SelfDiscoveryResource.class),
             getRequestPathsWithAuthorizer(BrokerQueryResource.class),
             getRequestPathsWithAuthorizer(RouterResource.class)
         )
