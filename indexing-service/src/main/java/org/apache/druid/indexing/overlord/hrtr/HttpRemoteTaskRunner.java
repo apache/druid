@@ -153,6 +153,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   // workers which were assigned a task and are yet to acknowledge same.
   // Map: workerId -> taskId
+  // all writes are guarded
   @GuardedBy("statusLock")
   private final ConcurrentMap<String, String> workersWithUnacknowledgedTask = new ConcurrentHashMap<>();
 
@@ -331,6 +332,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @SuppressWarnings("GuardedBy") // Read on workersWithUnacknowledgedTask is safe
   Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
   {
+    // In this class, this method is called with statusLock held.
+    // writes to workersWithUnacknowledgedTask are always guarded by statusLock.
+    // however writes to lazyWorker/blacklistedWorkers aren't necessarily guarded by same lock, so technically there
+    // could be races in that a task could get assigned to a worker which in another thread is concurrently being
+    // marked lazy/blacklisted , but that is ok because that is equivalent to this worker being picked for task and
+    // being assigned lazy/blacklisted right after even when the two threads hold a mutually exclusive lock.
     return Maps.transformEntries(
         Maps.filterEntries(
             workers,
@@ -1129,6 +1136,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               ).emit();
             }
 
+            // set state to PENDING_WORKER_ASSIGN before releasing the lock so that this task item is not picked
+            // up by another task execution thread.
             ti.setState(HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN);
             taskItem = ti;
             break;
