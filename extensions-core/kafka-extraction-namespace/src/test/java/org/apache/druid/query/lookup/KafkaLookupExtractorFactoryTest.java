@@ -25,14 +25,20 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Bytes;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
+import org.apache.druid.query.lookup.kafka.KafkaJqJsonDataParser;
+import org.apache.druid.query.lookup.kafka.KafkaJsonFlatDataParser;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.common.TopicPartition;
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -45,6 +51,8 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +76,10 @@ import java.util.concurrent.atomic.AtomicLong;
 })
 public class KafkaLookupExtractorFactoryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final String TOPIC = "some_topic";
   private static final Map<String, String> DEFAULT_PROPERTIES = ImmutableMap.of(
       "some.property", "some.value"
@@ -76,6 +88,10 @@ public class KafkaLookupExtractorFactoryTest
   private final NamespaceExtractionCacheManager cacheManager = PowerMock.createStrictMock(
       NamespaceExtractionCacheManager.class);
   private final CacheHandler cacheHandler = PowerMock.createStrictMock(CacheHandler.class);
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final String JSON1 = "{\"id\":\"key0\",\"name\":\"User0\",\"email\":\"user0@gmail.com\",\"status\":\"active\"}";
+  private static final String JSON2 = "{\"id\":\"key1\",\"name\":\"User1\",\"email\":\"user1@gmail.com\",\"status\":\"active\"}";
+  private static final String JSON3 = "{\"id\":\"key2\",\"name\":\"User2\",\"email\":\"user2@gmail.com\",\"status\":\"active\"}";
 
 
   @Rule
@@ -247,7 +263,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES,
         1,
-        false
+        false,
+        null
     )));
 
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
@@ -255,7 +272,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES,
         0,
-        true
+        true,
+        null
     )));
   }
 
@@ -288,7 +306,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("bootstrap.servers", "localhost"),
         10_000L,
-        false
+        false,
+        null
     )
     {
       @Override
@@ -320,7 +339,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("bootstrap.servers", "localhost"),
         1,
-        false
+        false,
+        null
     )
     {
       @Override
@@ -387,7 +407,8 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("bootstrap.servers", "localhost"),
         10_000L,
-        false
+        false,
+        null
     )
     {
       @Override
@@ -490,7 +511,8 @@ public class KafkaLookupExtractorFactoryTest
         kafkaTopic,
         kafkaProperties,
         connectTimeout,
-        injective
+        injective,
+        null
     );
     final KafkaLookupExtractorFactory otherFactory = mapper.readValue(
         mapper.writeValueAsString(factory),
@@ -502,13 +524,164 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertEquals(injective, otherFactory.isInjective());
   }
 
-  private IAnswer<Boolean> getBlockingAnswer()
+  @Test
+  public void testSimpleKVExtractor()
   {
-    return () -> {
-      Thread.sleep(60000);
-      Assert.fail("Test failed to complete within 60000ms");
+    MockConsumer kafkaConsumer = getMockConsumer();
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key0", "value0"));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key1", "value1"));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 2L, "key2", "value2"));
 
-      return false;
+    EasyMock.expect(cacheManager.createCache())
+        .andReturn(cacheHandler)
+        .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
+    cacheHandler.close();
+    EasyMock.expectLastCall().once();
+    PowerMock.replay(cacheManager, cacheHandler);
+
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        ImmutableMap.of("bootstrap.servers", "localhost"),
+        10_000L,
+        false,
+        null
+    )
+    {
+      @Override
+      Consumer<String, String> getConsumer()
+      {
+        return kafkaConsumer;
+      }
     };
+    Assert.assertTrue(factory.start());
+    waitForEvents(factory, 3);
+    Assert.assertEquals("value0", factory.get().apply("key0"));
+    Assert.assertEquals("value1", factory.get().apply("key1"));
+    Assert.assertEquals("value2", factory.get().apply("key2"));
+  }
+
+  @Test
+  public void testCustomJsonExtractor()
+  {
+    MockConsumer kafkaConsumer = getMockConsumer();
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key0", JSON1));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key1", JSON2));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 2L, "key2", JSON3));
+
+    EasyMock.expect(cacheManager.createCache())
+        .andReturn(cacheHandler)
+        .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
+    cacheHandler.close();
+    EasyMock.expectLastCall().once();
+    PowerMock.replay(cacheManager, cacheHandler);
+
+    final KafkaJsonFlatDataParser parser = new KafkaJsonFlatDataParser(
+        MAPPER,
+        "id",
+        "name"
+    );
+
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        ImmutableMap.of("bootstrap.servers", "localhost"),
+        10_000L,
+        false,
+        parser
+    )
+    {
+      @Override
+      Consumer<String, String> getConsumer()
+      {
+        return kafkaConsumer;
+      }
+    };
+    Assert.assertTrue(factory.start());
+    waitForEvents(factory, 3);
+
+    Assert.assertEquals("User0", factory.get().apply("key0"));
+    Assert.assertEquals("User1", factory.get().apply("key1"));
+    Assert.assertEquals("User2", factory.get().apply("key2"));
+  }
+
+  @Test
+  public void testJqJsonExtractor()
+  {
+    MockConsumer kafkaConsumer = getMockConsumer();
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key0", JSON1));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key1", JSON2));
+    kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 2L, "key2", JSON3));
+
+    EasyMock.expect(cacheManager.createCache())
+        .andReturn(cacheHandler)
+        .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
+    cacheHandler.close();
+    EasyMock.expectLastCall().once();
+    PowerMock.replay(cacheManager, cacheHandler);
+
+    JSONPathFieldSpec jqField = JSONPathFieldSpec.createJqField("name", ".email + \"_\" + .status");
+
+    final KafkaJqJsonDataParser parser = new KafkaJqJsonDataParser(
+        MAPPER,
+        "id",
+        jqField
+    );
+
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        ImmutableMap.of("bootstrap.servers", "localhost"),
+        10_000L,
+        false,
+        parser
+    )
+    {
+      @Override
+      Consumer<String, String> getConsumer()
+      {
+        return kafkaConsumer;
+      }
+    };
+    Assert.assertTrue(factory.start());
+    waitForEvents(factory, 3);
+
+    Assert.assertEquals("user0@gmail.com_active", factory.get().apply("key0"));
+    Assert.assertEquals("user1@gmail.com_active", factory.get().apply("key1"));
+    Assert.assertEquals("user2@gmail.com_active", factory.get().apply("key2"));
+  }
+
+  private void waitForEvents(KafkaLookupExtractorFactory factory, int eventCount)
+  {
+    long start = System.currentTimeMillis();
+    int timeOutMs = 10_000;
+    while (factory.getCompletedEventCount() != eventCount) {
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException ingnore) {
+      }
+      if (System.currentTimeMillis() > start + timeOutMs) {
+        throw new ISE("Took too long to update event");
+      }
+    }
+  }
+
+  private MockConsumer<String, String> getMockConsumer()
+  {
+    MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    kafkaConsumer.subscribe(Collections.singletonList(TOPIC));
+    TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
+    kafkaConsumer.rebalance(Collections.singletonList(topicPartition));
+    kafkaConsumer.updateBeginningOffsets(new HashMap<TopicPartition, Long>()
+      {
+        {
+          put(topicPartition, 0L);
+        }
+      });
+    return kafkaConsumer;
   }
 }

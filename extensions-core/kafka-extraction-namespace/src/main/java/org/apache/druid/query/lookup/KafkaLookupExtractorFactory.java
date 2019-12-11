@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -34,7 +35,9 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.kafka.KafkaLookupDataParser;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -87,6 +90,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
   @JsonProperty
   private final boolean injective;
+  
+  @JsonProperty
+  private final KafkaLookupDataParser namespaceParseSpec;
 
   @JsonCreator
   public KafkaLookupExtractorFactory(
@@ -94,7 +100,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       @JsonProperty("kafkaTopic") final String kafkaTopic,
       @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
       @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
-      @JsonProperty("injective") boolean injective
+      @JsonProperty("injective") boolean injective,
+      @JsonProperty(value = "namespaceParseSpec", required = false)
+          KafkaLookupDataParser namespaceParseSpec
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
@@ -107,6 +115,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.connectTimeout = connectTimeout;
     this.injective = injective;
     this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID();
+    this.namespaceParseSpec = namespaceParseSpec;
   }
 
   public KafkaLookupExtractorFactory(
@@ -115,7 +124,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       Map<String, String> kafkaProperties
   )
   {
-    this(cacheManager, kafkaTopic, kafkaProperties, 0, false);
+    this(cacheManager, kafkaTopic, kafkaProperties, 0, false, null);
   }
 
   public String getKafkaTopic()
@@ -158,7 +167,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       final ConcurrentMap<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
 
-
       final CountDownLatch startingReads = new CountDownLatch(1);
 
       final ListenableFuture<?> future = executorService.submit(() -> {
@@ -176,14 +184,16 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               for (final ConsumerRecord<String, String> record : records) {
                 final String key = record.key();
                 final String message = record.value();
-                if (key == null || message == null) {
+
+                Map<String, String> mapData = getParseMap(key, message);
+                if (mapData == null) {
                   LOG.error("Bad key/message from topic [%s]: [%s]", topic, record);
                   continue;
                 }
                 doubleEventCount.incrementAndGet();
-                map.put(key, message);
+                map.putAll(mapData);
                 doubleEventCount.incrementAndGet();
-                LOG.trace("Placed key[%s] val[%s]", key, message);
+                LOG.trace("Placed key[%s] val[%s]", mapData, message);
               }
             }
             catch (Exception e) {
@@ -395,5 +405,28 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
     return properties;
+  }
+
+  private Map<String, String> getParseMap(String key, String message)
+  {
+    if (key == null && message == null) {
+      return null;
+    }
+
+    //a backward compatability case when parse spec is not specifed
+    if (namespaceParseSpec == null) {
+      return ImmutableMap.<String, String>builder()
+        .put(key, message)
+        .build();
+    }
+    
+    final Parser<String, String> parser = namespaceParseSpec.getParser();
+    try {
+      return parser.parseToMap(message);
+    }
+    catch (Exception exp) {
+      LOG.error(exp, "Failed to parse kafka message [%s], msg: [%s]", this.getKafkaTopic(), message);
+      return null;
+    }
   }
 }

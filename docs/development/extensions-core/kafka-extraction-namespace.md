@@ -32,22 +32,74 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 {
   "type":"kafka",
   "kafkaTopic":"testTopic",
-  "kafkaProperties":{"zookeeper.connect":"somehost:2181/kafka"}
+  "kafkaProperties":{"bootstrap.servers":"broker_host:9091"},
+  "namespaceParseSpec": {
+    "format": "customJson",
+    "keyFieldName": "id",
+    "valueFieldName": "email"
+  }
 }
 ```
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`kafkaTopic`|The Kafka topic to read the data from|Yes||
-|`kafkaProperties`|Kafka consumer properties. At least"zookeeper.connect" must be specified. Only the zookeeper connector is supported|Yes||
+|`kafkaProperties`|Kafka consumer properties. At least"bootstrap.servers" must be specified. |Yes||
 |`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
 |`isOneToOne`|The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.md))|No|`false`|
+|`namespaceParseSpec`|How to extract key and value pairs from Kafka message|No|null|
 
 The extension `kafka-extraction-namespace` enables reading from a Kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
 
-The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kafkaProperties` as they are set by the extension as `UUID.randomUUID().toString()` and `smallest` respectively.
+The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kafkaProperties` as they are set by the extension as `UUID.randomUUID().toString()` and `earliest` respectively.
 
 See [lookups](../../querying/lookups.md) for how to configure and use lookups.
+
+# Json Extrators
+
+Besides simple kafka key and message mapping, extraction allows to extract values from Kafka JSON messages.
+
+## Custom Json Extractor
+Allows to extract key and value from Kafka json message as per the following example:
+
+```json
+{
+  "type": "kafka",
+  "kafkaTopic": "topic_employee",
+  "kafkaProperties": {
+    "bootstrap.servers": "broker:9092"
+  },
+  "namespaceParseSpec": {
+    "format": "customJson",
+    "keyFieldName": "id",
+    "valueFieldName": "email"
+  }
+}
+```
+
+## Jq Json Extractor
+
+Allows to extract key and value from Kafka json message using [JQ expressions](https://github.com/stedolan/jq/wiki/Cookbook). In the following example, Json array of categories parsed into a string where each categorie id get maps to the coresponding categorie name.
+
+```json
+{
+  "type": "kafka",
+  "kafkaTopic": "topic_app_categories",
+  "kafkaProperties": {
+    "bootstrap.servers": "broker:9092"
+  },
+  "namespaceParseSpec": {
+    "format": "jqJson",
+    "keyFieldName": "id",
+    "valueSpec": {
+      "type": "jq",
+      "name": "categories",
+      "expr": "if .categories | length == 0 then \"None\" else .categories |  map (if .== 1 then \"Entertainment\" elif . == 2 then \"Games\" else \"Unknown\" end) end"
+    }
+  }
+}
+```
+
 
 ## Limitations
 
