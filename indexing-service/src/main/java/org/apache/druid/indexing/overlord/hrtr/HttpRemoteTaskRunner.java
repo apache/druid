@@ -402,6 +402,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             taskId,
             config.getTaskAssignmentTimeout()
         ).emit();
+        // taskComplete(..) must be called outside of statusLock, see comments on method.
         taskComplete(workItem, workerHolder, TaskStatus.failure(taskId));
       }
 
@@ -631,6 +632,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                     taskItem.getTaskId(),
                     config.getTaskCleanupTimeout()
                 );
+                // taskComplete(..) must be called outside of statusLock, see comments on method.
                 taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
               }
             }
@@ -1146,15 +1148,16 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
         if (taskItem.getTask() == null) {
           log.makeAlert("No Task obj found in TaskItem for taskID[%s]. Failed.", taskId).emit();
+          // taskComplete(..) must be called outside of statusLock, see comments on method.
           taskComplete(taskItem, null, TaskStatus.failure(taskId));
           continue;
         }
 
-        try {
-          if (immutableWorker == null) {
-            throw new ISE("NULL immutableWorker");
-          }
+        if (immutableWorker == null) {
+          throw new ISE("WTH! NULL immutableWorker");
+        }
 
+        try {
           // this will send HTTP request to worker for assigning task
           if (!runTaskOnWorker(taskItem, immutableWorker.getWorker().getHost())) {
             if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
@@ -1171,6 +1174,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
              .addData("taskId", taskId)
              .emit();
 
+          // taskComplete(..) must be called outside of statusLock, see comments on method.
           taskComplete(taskItem, null, TaskStatus.failure(taskId));
         }
         finally {
@@ -1514,6 +1518,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     if (isTaskCompleted) {
+      // taskComplete(..) must be called outside of statusLock, see comments on method.
       taskComplete(taskItem, workerHolder, announcement.getTaskStatus());
     }
 
@@ -1639,6 +1644,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     private void setStateUnconditionally(State state)
     {
       if (log.isDebugEnabled()) {
+        // Exception is logged to know what led to this call.
         log.debug(
             new RuntimeException("Stacktrace..."),
             "Setting task[%s] work item state from [%s] to [%s].",
