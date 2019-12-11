@@ -179,9 +179,6 @@
       "development/extensions-core/druid-lookups": {
         "title": "Cached Lookup Module"
       },
-      "development/extensions-core/druid-pac4j": {
-        "title": "Druid pac4j based Security extension"
-      },
       "development/extensions-core/examples": {
         "title": "Extension Examples"
       },
