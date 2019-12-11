@@ -108,7 +108,7 @@ import java.util.stream.Collectors;
 /**
  * A Remote TaskRunner to manage tasks on Middle Manager nodes using internal-discovery({@link DruidNodeDiscoveryProvider})
  * to discover them and Http.
- * Middle Managers manages list of assigned/completed tasks on disk and exposes 3 HTTP endpoints
+ * Middle Managers manages list of assigned/completed tasks on disk and expose 3 HTTP endpoints
  * 1. POST request for assigning a task
  * 2. POST request for shutting down a task
  * 3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
@@ -329,7 +329,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource}
    */
   @SuppressWarnings("GuardedBy") // Read on workersWithUnacknowledgedTask is safe
-  public Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
+  Map<String, ImmutableWorkerInfo> getWorkersEligibleToRunTasks()
   {
     return Maps.transformEntries(
         Maps.filterEntries(
@@ -709,7 +709,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * This method returns the debugging information exposed by {@link HttpRemoteTaskRunnerResource} and meant
    * for that use only. It must not be used for any other purpose.
    */
-  public Map<String, Object> getWorkerSyncerDebugInfo()
+  Map<String, Object> getWorkerSyncerDebugInfo()
   {
     Preconditions.checkArgument(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
@@ -1194,7 +1194,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   /**
    * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource}
    */
-  public List<String> getPendingTasksList()
+  List<String> getPendingTasksList()
   {
     synchronized (statusLock) {
       return ImmutableList.copyOf(pendingTaskIds);
@@ -1327,7 +1327,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * Must not be used outside of this class and {@link HttpRemoteTaskRunnerResource} , used for read only.
    */
   @SuppressWarnings("GuardedBy")
-  public Map<String, String> getWorkersWithUnacknowledgedTasks()
+  Map<String, String> getWorkersWithUnacknowledgedTasks()
   {
     return workersWithUnacknowledgedTask;
   }
