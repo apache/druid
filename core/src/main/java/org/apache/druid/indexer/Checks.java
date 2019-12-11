@@ -41,7 +41,7 @@ public final class Checks
       }
     }
     if (nonNullProperty == null) {
-      throw new IAE("At most one of %s must be present", properties);
+      throw new IAE("At least one of %s must be present", properties);
     }
     return nonNullProperty;
   }

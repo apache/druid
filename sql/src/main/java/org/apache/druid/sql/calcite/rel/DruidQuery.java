@@ -59,7 +59,6 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.select.SelectQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
@@ -614,7 +613,7 @@ public class DruidQuery
 
   /**
    * Return this query as some kind of Druid query. The returned query will either be {@link TopNQuery},
-   * {@link TimeseriesQuery}, {@link GroupByQuery}, {@link ScanQuery}, or {@link SelectQuery}.
+   * {@link TimeseriesQuery}, {@link GroupByQuery}, {@link ScanQuery}
    *
    * @return Druid query
    */

@@ -37,10 +37,12 @@ import org.junit.Test;
  */
 public class PeriodLoadRuleTest
 {
-  private static final DataSegment.Builder BUILDER = DataSegment.builder()
-                                                            .dataSource("test")
-                                                            .version(DateTimes.nowUtc().toString())
-                                                            .shardSpec(NoneShardSpec.instance());
+  private static final DataSegment.Builder BUILDER = DataSegment
+      .builder()
+      .dataSource("test")
+      .version(DateTimes.nowUtc().toString())
+      .shardSpec(NoneShardSpec.instance())
+      .size(0);
 
   @Test
   public void testAppliesToAll()

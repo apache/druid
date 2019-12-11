@@ -41,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -96,7 +95,7 @@ public class CoordinatorResourceTestClient
   // return a list of the segment dates for the specified datasource
   public List<String> getMetadataSegments(final String dataSource)
   {
-    ArrayList<String> segments;
+    List<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getMetadataSegmentsURL(dataSource));
 
@@ -115,7 +114,7 @@ public class CoordinatorResourceTestClient
   // return a list of the segment dates for the specified datasource
   public List<String> getSegmentIntervals(final String dataSource)
   {
-    ArrayList<String> segments;
+    List<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 

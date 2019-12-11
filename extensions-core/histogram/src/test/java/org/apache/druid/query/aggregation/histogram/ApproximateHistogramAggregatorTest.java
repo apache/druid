@@ -22,12 +22,13 @@ package org.apache.druid.query.aggregation.histogram;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class ApproximateHistogramAggregatorTest
+public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingTest
 {
   private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
   {

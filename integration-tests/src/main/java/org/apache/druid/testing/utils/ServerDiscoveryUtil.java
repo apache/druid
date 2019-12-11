@@ -49,7 +49,7 @@ public class ServerDiscoveryUtil
 
   public static void waitUntilInstanceReady(final ServerDiscoverySelector serviceProvider, String instanceType)
   {
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         new Callable<Boolean>()
         {
           @Override

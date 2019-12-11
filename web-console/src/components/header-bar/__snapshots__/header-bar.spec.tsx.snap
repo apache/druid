@@ -10,11 +10,12 @@ exports[`header bar matches snapshot 1`] = `
     <a
       href="#"
     >
-      <Logo />
+      <Memo(DruidLogo) />
     </a>
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
       active={true}
+      disabled={false}
       href="#load-data"
       icon="cloud-upload"
       intent="none"
@@ -24,6 +25,15 @@ exports[`header bar matches snapshot 1`] = `
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
       active={false}
+      disabled={false}
+      href="#ingestion"
+      icon="gantt-chart"
+      minimal={true}
+      text="Ingestion"
+    />
+    <Blueprint3.AnchorButton
+      active={false}
+      disabled={false}
       href="#datasources"
       icon="multi-select"
       minimal={true}
@@ -31,6 +41,7 @@ exports[`header bar matches snapshot 1`] = `
     />
     <Blueprint3.AnchorButton
       active={false}
+      disabled={false}
       href="#segments"
       icon="stacked-chart"
       minimal={true}
@@ -38,21 +49,16 @@ exports[`header bar matches snapshot 1`] = `
     />
     <Blueprint3.AnchorButton
       active={false}
-      href="#tasks"
-      icon="gantt-chart"
-      minimal={true}
-      text="Tasks"
-    />
-    <Blueprint3.AnchorButton
-      active={false}
-      href="#servers"
+      disabled={false}
+      href="#services"
       icon="database"
       minimal={true}
-      text="Servers"
+      text="Services"
     />
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
       active={false}
+      disabled={false}
       href="#query"
       icon="application"
       minimal={true}
@@ -62,33 +68,15 @@ exports[`header bar matches snapshot 1`] = `
   <Blueprint3.NavbarGroup
     align="right"
   >
-    <Blueprint3.Popover
-      boundary="scrollParent"
-      captureDismiss={false}
-      content={<LegacyMenu />}
-      defaultIsOpen={false}
-      disabled={false}
-      fill={false}
-      hasBackdrop={false}
-      hoverCloseDelay={300}
-      hoverOpenDelay={150}
-      inheritDarkTheme={true}
-      interactionKind="click"
-      minimal={false}
-      modifiers={Object {}}
-      openOnTargetFocus={true}
-      position="bottom-right"
-      targetTagName="span"
-      transitionDuration={300}
-      usePortal={true}
-      wrapperTagName="span"
-    >
-      <Blueprint3.Button
-        icon="share"
-        minimal={true}
-        text="Legacy"
-      />
-    </Blueprint3.Popover>
+    <Memo(RestrictedMode)
+      capabilities={
+        Capabilities {
+          "coordinator": true,
+          "overlord": true,
+          "queryType": "nativeAndSql",
+        }
+      }
+    />
     <Blueprint3.Popover
       boundary="scrollParent"
       captureDismiss={false}

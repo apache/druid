@@ -293,7 +293,7 @@ public class BatchDataSegmentAnnouncerTest
     }
 
     List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
-    Assert.assertEquals(25, zNodes.size());
+    Assert.assertEquals(20, zNodes.size());
 
     Set<DataSegment> segments = Sets.newHashSet(testSegments);
     for (String zNode : zNodes) {
@@ -444,6 +444,7 @@ public class BatchDataSegmentAnnouncerTest
                       .dimensions(ImmutableList.of("dim1", "dim2"))
                       .metrics(ImmutableList.of("met1", "met2"))
                       .loadSpec(ImmutableMap.of("type", "local"))
+                      .size(0)
                       .build();
   }
 

@@ -90,6 +90,7 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InputFormat
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -109,6 +110,7 @@ KMS
 Kerberized
 Kerberos
 Kinesis
+Kubernetes
 LRU
 LZ4
 LZO
@@ -168,6 +170,7 @@ aggregator
 aggregators
 ambari
 analytics
+async
 authorizer
 authorizers
 autocomplete
@@ -356,6 +359,7 @@ unmerged
 unparseable
 unparsed
 uptime
+uris
 v1
 v2
 vCPUs
@@ -666,6 +670,8 @@ taskDuration
 9.2dist
 KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
+Resharding
+resharding
 LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringcompressRunOnSerializationtruetypestreamendpointreplicastaskCounttaskCount
 deaggregate
 druid-kinesis-indexing-service
@@ -934,6 +940,8 @@ forceGuaranteedRollup
 httpAuthenticationPassword
 httpAuthenticationUsername
 ingestSegment
+InputSource
+DruidInputSource
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
@@ -1284,10 +1292,14 @@ druid.broker.cache.useCache
 druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
+enableParallelMerge
 floatSum
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
+parallelMergeInitialYieldRows
+parallelMergeParallelism
+parallelMergeSmallBatchRows
 populateCache
 populateResultLevelCache
 queryId

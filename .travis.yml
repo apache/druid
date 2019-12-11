@@ -114,6 +114,18 @@ jobs:
         https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
         "
 
+    - name: "security vulnerabilities"
+      install: skip
+      script: ${MVN} dependency-check:check
+      after_failure: |-
+        echo "FAILURE EXPLANATION:
+
+        The OWASP dependency check has found security vulnerabilities. Please use a newer version
+        of the dependency that does not have vulenerabilities. If the analysis has false positives,
+        they can be suppressed by adding entries to owasp-dependency-check-suppressions.xml (for more
+        information, see https://jeremylong.github.io/DependencyCheck/general/suppression.html).
+        "
+
     - &package
       name: "(openjdk8) packaging check"
       install: skip
@@ -278,6 +290,13 @@ jobs:
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
 
+    - &integration_perfect_rollup_parallel_batch_index
+      name: "perfect rollup parallel batch index integration test"
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
     - &integration_kafka_index
       name: "kafka index integration test"
       services: *integration_test_services
@@ -302,6 +321,6 @@ jobs:
     - &integration_tests
       name: "other integration test"
       services: *integration_test_services
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,kafka-index,query,realtime-index'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index'
       script: *run_integration_test
       after_failure: *integration_test_diags

@@ -19,19 +19,16 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 
-public class PartialSegmentMergeIngestionSpec
-    extends IngestionSpec<PartialSegmentMergeIOConfig, ParallelIndexTuningConfig>
+abstract class PartialSegmentMergeIngestionSpec<T extends PartialSegmentMergeIOConfig>
+    extends IngestionSpec<T, ParallelIndexTuningConfig>
 {
-  @JsonCreator
-  public PartialSegmentMergeIngestionSpec(
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("ioConfig") PartialSegmentMergeIOConfig ioConfig,
-      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
+  PartialSegmentMergeIngestionSpec(
+      DataSchema dataSchema,
+      T ioConfig,
+      ParallelIndexTuningConfig tuningConfig
   )
   {
     super(dataSchema, ioConfig, tuningConfig);

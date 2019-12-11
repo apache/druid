@@ -432,17 +432,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // Map<{group RandomIdUtils}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
-  // The starting sequence for a new partition in [partitionGroups] is initially set to getNotSetMarker(). When a new task group
-  // is created and is assigned partitions, if the sequence in [partitionGroups] is getNotSetMarker() it will take the starting
-  // sequence value from the metadata store, and if it can't find it there, from stream. Once a task begins
-  // publishing, the sequence in partitionGroups will be updated to the ending sequence of the publishing-but-not-yet-
+  // We keep two separate maps for tracking the current state of partition->task group mappings [partitionGroups] and partition->offset
+  // mappings [partitionOffsets]. The starting offset for a new partition in [partitionOffsets] is initially set to getNotSetMarker(). When a new task group
+  // is created and is assigned partitions, if the offset for an assigned partition in [partitionOffsets] is getNotSetMarker() it will take the starting
+  // offset value from the metadata store, and if it can't find it there, from stream. Once a task begins
+  // publishing, the offset in [partitionOffsets] will be updated to the ending offset of the publishing-but-not-yet-
   // completed task, which will cause the next set of tasks to begin reading from where the previous task left
-  // off. If that previous task now fails, we will set the sequence in [partitionGroups] back to getNotSetMarker() which will
-  // cause successive tasks to again grab their starting sequence from metadata store. This mechanism allows us to
+  // off. If that previous task now fails, we will set the offset in [partitionOffsets] back to getNotSetMarker() which will
+  // cause successive tasks to again grab their starting offset from metadata store. This mechanism allows us to
   // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
   // failures during publishing.
-  // Map<{group RandomIdUtils}, Map<{partition RandomIdUtils}, {startingOffset}>>
-  protected final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<Integer, Set<PartitionIdType>> partitionGroups = new ConcurrentHashMap<>();
 
   protected final ObjectMapper sortingMapper;
   protected final List<PartitionIdType> partitionIds = new CopyOnWriteArrayList<>();
@@ -511,7 +512,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
-    this.stateManager = new SeekableStreamSupervisorStateManager(spec.getSupervisorStateManagerConfig(), spec.isSuspended());
+    this.stateManager = new SeekableStreamSupervisorStateManager(
+        spec.getSupervisorStateManagerConfig(),
+        spec.isSuspended()
+    );
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
                          ? this.tuningConfig.getWorkerThreads()
@@ -798,7 +802,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       boolean includeOffsets
   )
   {
-    int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
+    int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
 
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
@@ -898,7 +902,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Collect row ingestion stats from all tasks managed by this supervisor.
    *
    * @return A map of groupId->taskId->task row stats
-   *
    * @throws InterruptedException
    * @throws ExecutionException
    * @throws TimeoutException
@@ -1126,6 +1129,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                ));
       activelyReadingTaskGroups.clear();
       partitionGroups.clear();
+      partitionOffsets.clear();
     } else {
       if (!checkSourceMetadataMatch(dataSourceMetadata)) {
         throw new IAE(
@@ -1209,8 +1213,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                          activelyReadingTaskGroups.remove(groupId);
                          // killTaskGroupForPartitions() cleans up partitionGroups.
                          // Add the removed groups back.
-                         partitionGroups.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
-                                        .put(partition, getNotSetMarker());
+                         partitionGroups.computeIfAbsent(groupId, k -> new HashSet<>());
+                         partitionOffsets.put(partition, getNotSetMarker());
                        });
         } else {
           throw new ISE("Unable to reset metadata");
@@ -1230,6 +1234,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
       taskQueue.get().shutdown(id, reasonFormat, args);
+    } else {
+      log.error("Failed to get task queue because I'm not the leader!");
+    }
+  }
+
+  private void killTaskWithSuccess(final String id, String reasonFormat, Object... args)
+  {
+    Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
@@ -1285,6 +1299,31 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> seekableStreamIndexTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) task;
       final String taskId = task.getId();
 
+      // Check if the task has any inactive partitions. If so, terminate the task. Even if some of the
+      // partitions assigned to the task are still active, we still terminate the task. We terminate such tasks early
+      // to more rapidly ensure that all active partitions are evenly distributed and being read, and to avoid
+      // having to map expired partitions which are no longer tracked in partitionIds to a task group.
+      if (supportsPartitionExpiration()) {
+        Set<PartitionIdType> taskPartitions = seekableStreamIndexTask.getIOConfig()
+                                                                     .getStartSequenceNumbers()
+                                                                     .getPartitionSequenceNumberMap()
+                                                                     .keySet();
+        Set<PartitionIdType> inactivePartitionsInTask = Sets.difference(
+            taskPartitions,
+            new HashSet<>(partitionIds)
+        );
+        if (!inactivePartitionsInTask.isEmpty()) {
+          killTaskWithSuccess(
+              taskId,
+              "Task [%s] with partition set [%s] has inactive partitions [%s], stopping task.",
+              taskId,
+              taskPartitions,
+              inactivePartitionsInTask
+          );
+          continue;
+        }
+      }
+
       // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
       // later determine that this task is actively reading, we will make sure that it matches our current partition
       // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
@@ -1336,24 +1375,40 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
                               taskId);
 
+                          // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
+                          // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
+                          boolean endOffsetsAreInvalid = false;
                           for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
                             PartitionIdType partition = entry.getKey();
                             SequenceOffsetType sequence = entry.getValue();
-                            ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = partitionGroups.get(
-                                getTaskGroupIdForPartition(partition)
-                            );
+                            if (sequence.equals(getEndOfPartitionMarker())) {
+                              log.info(
+                                  "Got end of partition marker for partition [%s] from task [%s] in discoverTasks, clearing partition offset to refetch from metadata..",
+                                  taskId,
+                                  partition
+                              );
+                              endOffsetsAreInvalid = true;
+                              partitionOffsets.put(partition, getNotSetMarker());
+                            }
+                          }
 
-                            boolean succeeded;
-                            do {
-                              succeeded = true;
-                              SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
-                              if (previousOffset != null
-                                  && (makeSequenceNumber(previousOffset)
-                                  .compareTo(makeSequenceNumber(
-                                      sequence))) < 0) {
-                                succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
-                              }
-                            } while (!succeeded);
+                          if (!endOffsetsAreInvalid) {
+                            for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
+                              PartitionIdType partition = entry.getKey();
+                              SequenceOffsetType sequence = entry.getValue();
+
+                              boolean succeeded;
+                              do {
+                                succeeded = true;
+                                SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
+                                if (previousOffset != null
+                                    && (makeSequenceNumber(previousOffset)
+                                    .compareTo(makeSequenceNumber(
+                                        sequence))) < 0) {
+                                  succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
+                                }
+                              } while (!succeeded);
+                            }
                           }
                         } else {
                           for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
@@ -1582,6 +1637,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
+
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
           taskGroup.checkpointSequences.clear();
           taskGroup.checkpointSequences.putAll(latestCheckpoints);
@@ -1620,7 +1676,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // clear state about the taskgroup so that get latest sequence information is fetched from metadata store
       log.warn("Clearing task group [%d] information as no valid tasks left the group", groupId);
       activelyReadingTaskGroups.remove(groupId);
-      partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
+      for (PartitionIdType partitionId : taskGroup.startingSequences.keySet()) {
+        partitionOffsets.put(partitionId, getNotSetMarker());
+      }
     }
 
     taskSequences.stream().filter(taskIdSequences -> tasksToKill.contains(taskIdSequences.lhs)).forEach(
@@ -1861,6 +1919,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         previouslyExpiredPartitions
     );
 
+    Set<PartitionIdType> activePartitionsIdsFromSupplier = Sets.difference(
+        partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions,
+        closedPartitions
+    );
+
+    Set<PartitionIdType> newlyClosedPartitions = Sets.intersection(
+        closedPartitions,
+        new HashSet<>(previousPartitionIds)
+    );
+
+    log.debug("active partitions from supplier: " + activePartitionsIdsFromSupplier);
+
     if (partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions.size() != partitionIdsFromSupplier.size()) {
       // this should never happen, but we check for it and exclude the expired partitions if they somehow reappear
       log.warn(
@@ -1869,9 +1939,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           partitionIdsFromSupplier
       );
     }
-    if (partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions.size() == 0) {
+    if (activePartitionsIdsFromSupplier.size() == 0) {
       String errMsg = StringUtils.format(
-          "No partitions found for stream [%s] after removing previously expired partitions",
+          "No active partitions found for stream [%s] after removing closed and previously expired partitions",
           ioConfig.getStream()
       );
       stateManager.recordThrowableEvent(new StreamException(new ISE(errMsg)));
@@ -1886,29 +1956,37 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         continue;
       }
 
-      if (!initialPartitionDiscovery && !this.partitionIds.contains(partitionId)) {
-        subsequentlyDiscoveredPartitions.add(partitionId);
+      if (!this.partitionIds.contains(partitionId)) {
+        partitionIds.add(partitionId);
+
+        if (!initialPartitionDiscovery) {
+          subsequentlyDiscoveredPartitions.add(partitionId);
+        }
       }
     }
 
-
-    // When partitions expire, we need to recompute the task group assignments, considering only non-expired partitions,
-    // to ensure that we have even distribution of readable partitions across tasks.
+    // When partitions expire, we need to recompute the task group assignments, considering only
+    // non-closed and non-expired partitions, to ensure that we have even distribution of active
+    // partitions across tasks.
     if (supportsPartitionExpiration()) {
-      cleanupExpiredPartitions(
+      cleanupClosedAndExpiredPartitions(
           storedPartitions,
+          newlyClosedPartitions,
+          activePartitionsIdsFromSupplier,
           previouslyExpiredPartitions,
           partitionIdsFromSupplier
       );
     }
 
-    for (PartitionIdType partitionId : partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions) {
+    for (PartitionIdType partitionId : activePartitionsIdsFromSupplier) {
       int taskGroupId = getTaskGroupIdForPartition(partitionId);
-      ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionMap = partitionGroups.computeIfAbsent(
+      Set<PartitionIdType> partitionGroup = partitionGroups.computeIfAbsent(
           taskGroupId,
-          k -> new ConcurrentHashMap<>()
+          k -> new HashSet<>()
       );
-      if (partitionMap.putIfAbsent(partitionId, getNotSetMarker()) == null) {
+      partitionGroup.add(partitionId);
+
+      if (partitionOffsets.putIfAbsent(partitionId, getNotSetMarker()) == null) {
         log.info(
             "New partition [%s] discovered for stream [%s], added to task group [%d]",
             partitionId,
@@ -1948,19 +2026,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * This method determines the set of expired partitions from the set of partitions currently returned by
    * the record supplier and the set of partitions previously tracked in the metadata.
-   *
+   * <p>
    * It will mark the expired partitions in metadata and recompute the partition->task group mappings, updating
    * the metadata, the partitionIds list, and the partitionGroups mappings.
    *
-   * Note that partition IDs that were newly discovered (appears in record supplier set but not in metadata set)
-   * are not added to the recomputed partition groups here. This is handled later in
-   * {@link #updatePartitionDataFromStream} after this method is called.
-   *
    * @param storedPartitions Set of partitions previously tracked, from the metadata store
+   * @param newlyClosedPartitions Set of partitions that are closed in the metadata store but still present in the
+   *                              current {@link #partitionIds}
+   * @param activePartitionsIdsFromSupplier Set of partitions currently returned by the record supplier, but with
+   *                                        any partitions that are closed/expired in the metadata store removed
+   * @param previouslyExpiredPartitions Set of partitions that are recorded as expired in the metadata store
    * @param partitionIdsFromSupplier Set of partitions currently returned by the record supplier.
    */
-  private void cleanupExpiredPartitions(
+  private void cleanupClosedAndExpiredPartitions(
       Set<PartitionIdType> storedPartitions,
+      Set<PartitionIdType> newlyClosedPartitions,
+      Set<PartitionIdType> activePartitionsIdsFromSupplier,
       Set<PartitionIdType> previouslyExpiredPartitions,
       Set<PartitionIdType> partitionIdsFromSupplier
   )
@@ -1970,7 +2051,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<PartitionIdType> newlyExpiredPartitions = Sets.difference(storedPartitions, previouslyExpiredPartitions);
     newlyExpiredPartitions = Sets.difference(newlyExpiredPartitions, partitionIdsFromSupplier);
 
-    if (newlyExpiredPartitions.size() > 0) {
+    if (!newlyExpiredPartitions.isEmpty()) {
       log.info("Detected newly expired partitions: " + newlyExpiredPartitions);
 
       // Mark partitions as expired in metadata
@@ -1986,28 +2067,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       validateMetadataPartitionExpiration(newlyExpiredPartitions, currentMetadata, cleanedMetadata);
 
-      // Compute new partition groups, only including partitions that are
-      // still in partitionIdsFromSupplier
-      Map<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> newPartitionGroups =
-          recomputePartitionGroupsForExpiration(partitionIdsFromSupplier);
-
-      validatePartitionGroupReassignments(newPartitionGroups);
-
-      log.info("New partition groups after partition expiration: " + newPartitionGroups);
-
       try {
         boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
         if (success) {
-          partitionIds.clear();
-          partitionIds.addAll(partitionIdsFromSupplier);
 
-          for (Integer groupId : partitionGroups.keySet()) {
-            if (newPartitionGroups.containsKey(groupId)) {
-              partitionGroups.put(groupId, newPartitionGroups.get(groupId));
-            } else {
-              partitionGroups.put(groupId, new ConcurrentHashMap<>());
-            }
-          }
         } else {
           log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
         }
@@ -2016,22 +2079,49 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         throw new RuntimeException(ioe);
       }
     }
+
+    if (!newlyClosedPartitions.isEmpty()) {
+      log.info("Detected newly closed partitions: " + newlyClosedPartitions);
+    }
+
+    // Partitions have been dropped
+    if (!newlyClosedPartitions.isEmpty() || !newlyExpiredPartitions.isEmpty()) {
+      // Compute new partition groups, only including partitions that are
+      // still in partitionIdsFromSupplier and not closed
+      Map<Integer, Set<PartitionIdType>> newPartitionGroups =
+          recomputePartitionGroupsForExpiration(activePartitionsIdsFromSupplier);
+
+      validatePartitionGroupReassignments(activePartitionsIdsFromSupplier, newPartitionGroups);
+
+      log.info("New partition groups after removing closed and expired partitions: " + newPartitionGroups);
+
+      partitionIds.clear();
+      partitionIds.addAll(activePartitionsIdsFromSupplier);
+
+      for (Integer groupId : partitionGroups.keySet()) {
+        if (newPartitionGroups.containsKey(groupId)) {
+          partitionGroups.put(groupId, newPartitionGroups.get(groupId));
+        } else {
+          partitionGroups.put(groupId, new HashSet<>());
+        }
+      }
+    }
   }
 
   /**
    * When partitions are removed due to expiration it may be necessary to recompute the partitionID -> groupID
    * mappings to ensure balanced distribution of partitions.
-   *
+   * <p>
    * This function should return a copy of partitionGroups, using the provided availablePartitions as the list of
    * active partitions, reassigning partitions to different groups if necessary.
-   *
+   * <p>
    * If a partition is not in availablePartitions, it should be filtered out of the new partition groups returned
    * by this method.
    *
    * @param availablePartitions
    * @return a remapped copy of partitionGroups, containing only the partitions in availablePartitions
    */
-  protected Map<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> recomputePartitionGroupsForExpiration(
+  protected Map<Integer, Set<PartitionIdType>> recomputePartitionGroupsForExpiration(
       Set<PartitionIdType> availablePartitions
   )
   {
@@ -2039,12 +2129,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   *
    * Some seekable stream systems such as Kinesis allow partitions to expire. When this occurs, the supervisor should
    * mark the expired partitions in the saved metadata. This method returns a copy of the current metadata
    * with any expired partitions marked with an implementation-specific offset value that represents the expired state.
    *
-   * @param currentMetadata The current DataSourceMetadata from metadata storage
+   * @param currentMetadata     The current DataSourceMetadata from metadata storage
    * @param expiredPartitionIds The set of expired partition IDs.
    * @return currentMetadata but with any expired partitions removed.
    */
@@ -2056,15 +2145,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     throw new UnsupportedOperationException("This supervisor type does not support partition expiration.");
   }
 
+  protected SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadataWithClosedPartitions(
+      SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata,
+      Set<PartitionIdType> closedPartitionIds
+  )
+  {
+    throw new UnsupportedOperationException("This supervisor type does not support partition closing.");
+  }
+
   /**
    * Perform a sanity check on the datasource metadata returned by
    * {@link #createDataSourceMetadataWithExpiredPartitions}.
-   *
+   * <p>
    * Specifically, we check that the cleaned metadata's partitions are a subset of the original metadata's partitions,
    * that newly expired partitions are marked as expired, and that none of the offsets for the non-expired partitions
    * have changed.
    *
-   * @param oldMetadata metadata containing expired partitions.
+   * @param oldMetadata     metadata containing expired partitions.
    * @param cleanedMetadata new metadata without expired partitions, generated by the subclass
    */
   private void validateMetadataPartitionExpiration(
@@ -2074,10 +2171,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     Map<PartitionIdType, SequenceOffsetType> oldPartitionSeqNos = oldMetadata.getSeekableStreamSequenceNumbers()
-                                                                    .getPartitionSequenceNumberMap();
+                                                                             .getPartitionSequenceNumberMap();
 
     Map<PartitionIdType, SequenceOffsetType> cleanedPartitionSeqNos = cleanedMetadata.getSeekableStreamSequenceNumbers()
-                                                                        .getPartitionSequenceNumberMap();
+                                                                                     .getPartitionSequenceNumberMap();
 
     for (Entry<PartitionIdType, SequenceOffsetType> cleanedPartitionSeqNo : cleanedPartitionSeqNos.entrySet()) {
       if (!oldPartitionSeqNos.containsKey(cleanedPartitionSeqNo.getKey())) {
@@ -2116,40 +2213,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Perform a sanity check on the new partition groups returned by
    * {@link #recomputePartitionGroupsForExpiration}.
-   *
+   * <p>
    * Specifically, we check that the new partition groups' partitions are a subset of the original groups' partitions,
    * and that none of the offsets for the non-expired partitions have changed.
    *
    * @param newPartitionGroups new metadata without expired partitions, generated by the subclass
    */
   private void validatePartitionGroupReassignments(
-      Map<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> newPartitionGroups
+      Set<PartitionIdType> activePartitionsIdsFromSupplier,
+      Map<Integer, Set<PartitionIdType>> newPartitionGroups
   )
   {
-    Map<PartitionIdType, SequenceOffsetType> oldPartitionMappings = new HashMap<>();
-    for (ConcurrentHashMap<PartitionIdType, SequenceOffsetType> oldGroup : partitionGroups.values()) {
-      // we don't care about old task group mappings, only the partition-offset mappings
-      oldPartitionMappings.putAll(oldGroup);
-    }
-
-    for (ConcurrentHashMap<PartitionIdType, SequenceOffsetType> newGroup : newPartitionGroups.values()) {
-      for (Entry<PartitionIdType, SequenceOffsetType> newPartitionMapping : newGroup.entrySet()) {
-        if (!oldPartitionMappings.containsKey(newPartitionMapping.getKey())) {
+    for (Set<PartitionIdType> newGroup : newPartitionGroups.values()) {
+      for (PartitionIdType partitionInNewGroup : newGroup) {
+        if (!activePartitionsIdsFromSupplier.contains(partitionInNewGroup)) {
           // recomputing the groups without the expired partitions added an unknown partition somehow
           throw new IAE(
               "Recomputed partition groups [%s] contains unexpected partition ID [%s], old partition groups: [%s]",
               newPartitionGroups,
-              newPartitionMapping.getKey(),
-              partitionGroups
-          );
-        }
-
-        SequenceOffsetType oldOffset = oldPartitionMappings.get(newPartitionMapping.getKey());
-        if (!oldOffset.equals(newPartitionMapping.getValue())) {
-          throw new IAE(
-              "Recomputed partition groups [%s] has offset mismatch for partition ID [%s], original partition map: [%s]",
-              newPartitionGroups,
-              newPartitionMapping.getKey(),
+              partitionInNewGroup,
               partitionGroups
           );
         }
@@ -2271,9 +2353,29 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
 
-        // set endOffsets as the next startOffsets
+
+        boolean endOffsetsAreInvalid = false;
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
-          partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
+          if (entry.getValue().equals(getEndOfPartitionMarker())) {
+            log.info(
+                "Got end of partition marker for partition [%s] in checkTaskDuration, not updating partition offset.",
+                entry.getKey()
+            );
+            endOffsetsAreInvalid = true;
+          }
+        }
+
+        // set endOffsets as the next startOffsets
+        // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
+        // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
+        if (!endOffsetsAreInvalid) {
+          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+            partitionOffsets.put(entry.getKey(), entry.getValue());
+          }
+        } else {
+          for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
+            partitionOffsets.put(entry.getKey(), getNotSetMarker());
+          }
         }
       } else {
         for (String id : group.taskIds()) {
@@ -2285,7 +2387,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
         // clear partitionGroups, so that latest sequences from db is used as start sequences not the stale ones
         // if tasks did some successful incremental handoffs
-        partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
+        for (PartitionIdType partitionId : group.startingSequences.keySet()) {
+          partitionOffsets.put(partitionId, getNotSetMarker());
+        }
       }
 
       // remove this task group from the list of current task groups now that it has been handled
@@ -2560,7 +2664,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
 
           // reset partitions sequences for this task group so that they will be re-read from metadata storage
-          partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
+          for (PartitionIdType partitionId : group.startingSequences.keySet()) {
+            partitionOffsets.put(partitionId, getNotSetMarker());
+          }
+
           // kill all the tasks in this pending completion group
           killTasksInGroup(
               group,
@@ -2671,11 +2778,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // check that there is a current task group for each group of partitions in [partitionGroups]
     for (Integer groupId : partitionGroups.keySet()) {
       if (!activelyReadingTaskGroups.containsKey(groupId)) {
-        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
-
-        Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
-            DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
-        ) : Optional.absent());
+        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId));
+        Optional<DateTime> minimumMessageTime;
+        if (ioConfig.getLateMessageRejectionStartDateTime().isPresent()) {
+          minimumMessageTime = Optional.of(ioConfig.getLateMessageRejectionStartDateTime().get());
+        } else {
+          minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
+                                DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
+                               ) : Optional.absent());
+        }
 
         Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
@@ -2697,7 +2808,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             .filter(x -> x.getValue().get() != null)
             .collect(
                 Collectors.collectingAndThen(
-                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
+                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
+                    ImmutableMap::copyOf
                 )
             );
 
@@ -2709,7 +2821,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               .filter(x -> x.getValue().get() != null)
               .collect(
                   Collectors.collectingAndThen(
-                      Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
+                      Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
+                      ImmutableMap::copyOf
                   )
               );
         } else {
@@ -2795,22 +2908,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
-    for (Entry<PartitionIdType, SequenceOffsetType> entry : partitionGroups.get(groupId).entrySet()) {
-      PartitionIdType partition = entry.getKey();
-      SequenceOffsetType sequence = entry.getValue();
+    for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
+      SequenceOffsetType sequence = partitionOffsets.get(partitionId);
 
       if (!getNotSetMarker().equals(sequence)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
         if (!isEndOfShard(sequence)) {
-          builder.put(partition, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence()));
+          builder.put(partitionId, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence()));
         }
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(partition);
+        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(partitionId);
 
         if (offsetFromStorage != null) {
-          builder.put(partition, offsetFromStorage);
+          builder.put(partitionId, offsetFromStorage);
         }
       }
     }
@@ -3125,9 +3237,32 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> getPartitionGroups()
+  public ConcurrentHashMap<Integer, Set<PartitionIdType>> getPartitionGroups()
   {
     return partitionGroups;
+  }
+
+  @VisibleForTesting
+  public boolean isPartitionIdsEmpty()
+  {
+    return this.partitionIds.isEmpty();
+  }
+
+  public ConcurrentHashMap<PartitionIdType, SequenceOffsetType> getPartitionOffsets()
+  {
+    return partitionOffsets;
+  }
+
+  /**
+   * Should never be called outside of tests.
+   */
+  @VisibleForTesting
+  public void setPartitionIdsForTests(
+      List<PartitionIdType> partitionIdsForTests
+  )
+  {
+    partitionIds.clear();
+    partitionIds.addAll(partitionIdsForTests);
   }
 
   /**
@@ -3151,7 +3286,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * the given replicas count
    *
    * @return list of specific kafka/kinesis index taksks
-   *
    * @throws JsonProcessingException
    */
   protected abstract List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>> createIndexTasks(
@@ -3169,7 +3303,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * different between Kafka/Kinesis since Kinesis uses String as partition id
    *
    * @param partition partition id
-   *
    * @return taskgroup id
    */
   protected abstract int getTaskGroupIdForPartition(PartitionIdType partition);
@@ -3179,7 +3312,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * of [kafka/kinesis]DataSourceMetadata
    *
    * @param metadata datasource metadata
-   *
    * @return true if isInstance else false
    */
   protected abstract boolean checkSourceMetadataMatch(DataSourceMetadata metadata);
@@ -3189,7 +3321,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * [Kafka/Kinesis]IndexTask
    *
    * @param task task
-   *
    * @return true if isInstance else false
    */
   protected abstract boolean doesTaskTypeMatchSupervisor(Task task);
@@ -3199,7 +3330,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @param stream stream name
    * @param map    partitionId -> sequence
-   *
    * @return specific instance of datasource metadata
    */
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(

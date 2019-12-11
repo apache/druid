@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -75,6 +76,7 @@ import java.util.concurrent.TimeUnit;
 public class SqlBenchmark
 {
   static {
+    NullHandling.initializeForTests();
     Calcites.setSystemProperties();
   }
 
@@ -173,6 +175,7 @@ public class SqlBenchmark
                                                .interval(schemaInfo.getDataInterval())
                                                .version("1")
                                                .shardSpec(new LinearShardSpec(0))
+                                               .size(0)
                                                .build();
 
     final PlannerConfig plannerConfig = new PlannerConfig();

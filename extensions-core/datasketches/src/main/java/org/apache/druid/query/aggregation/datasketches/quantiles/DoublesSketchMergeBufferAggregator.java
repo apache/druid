@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.quantiles.DoublesUnion;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.datasketches.memory.WritableMemory;
+import org.apache.datasketches.quantiles.DoublesUnion;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;

@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
+[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://s.apache.org/slack-invite)
 [![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/incubator-druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/incubator-druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/incubator-druid)](https://codecov.io/gh/apache/incubator-druid)
@@ -25,11 +25,23 @@
 <!--- Following badges are disabled until they can be fixed: -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
 
+---
+
+[Website](https://druid.apache.org/) |
+[Documentation](https://druid.apache.org/docs/latest/design/) |
+[Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
+[User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
+[Slack](https://s.apache.org/slack-invite) |
+[Twitter](https://twitter.com/druidio) |
+[Download](https://druid.apache.org/downloads.html)
+
+---
+
 ## Apache Druid (incubating)
 
-Apache Druid (incubating) is a high performance analytics data store for event-driven data.
+Apache Druid (incubating) is a high performance real-time analytics database.
 
-*Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*
+Druid is a next-gen open source alternative to analytical databases such as Vertica, Greenplum, and Exadata, and data warehouses such as Snowflake, BigQuery, and Redshift.
 
 ### Getting started
 
@@ -89,3 +101,4 @@ Please follow the [community guidelines](https://druid.apache.org/community/) fo
 
 [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
+*Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*

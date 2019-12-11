@@ -44,7 +44,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
@@ -84,10 +84,6 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryEngine;
-import org.apache.druid.query.select.SelectQueryQueryToolChest;
-import org.apache.druid.query.select.SelectQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -133,6 +129,7 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -538,17 +535,6 @@ public class CalciteTests
                 )
             )
             .put(
-                SelectQuery.class,
-                new SelectQueryRunnerFactory(
-                    new SelectQueryQueryToolChest(
-                        TestHelper.makeJsonMapper(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
-                    new SelectQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
                     new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
@@ -662,6 +648,7 @@ public class CalciteTests
                    .interval(index1.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index1
     ).add(
@@ -670,6 +657,7 @@ public class CalciteTests
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     ).add(
@@ -678,6 +666,7 @@ public class CalciteTests
                    .interval(forbiddenIndex.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         forbiddenIndex
     ).add(
@@ -686,6 +675,7 @@ public class CalciteTests
                    .interval(indexNumericDims.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         indexNumericDims
     ).add(
@@ -694,6 +684,7 @@ public class CalciteTests
                    .interval(index4.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index4
     );
@@ -789,7 +780,7 @@ public class CalciteTests
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         EasyMock.createMock(HttpClient.class),
         EasyMock.createMock(DruidNodeDiscoveryProvider.class),
-        NodeType.COORDINATOR,
+        NodeRole.COORDINATOR,
         "/simple/leader",
         new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
     )
@@ -813,5 +804,20 @@ public class CalciteTests
         getJsonMapper()
     );
     return schema;
+  }
+
+  /**
+   * Some Calcite exceptions (such as that thrown by
+   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
+   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
+   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
+   */
+  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
+  {
+    Throwable curThrowable = t;
+    while (curThrowable.getCause() instanceof InvocationTargetException) {
+      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    }
+    return curThrowable;
   }
 }

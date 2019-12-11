@@ -30,8 +30,8 @@ import org.joda.time.Interval;
 import java.util.List;
 
 /**
- * Abstraction wrapping {@link org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
- * metrics are actually emitted, what dimensions do they have, etc.
+ * Abstraction wrapping {@link org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder} and allowing to
+ * control what metrics are actually emitted, what dimensions do they have, etc.
  *
  *
  * Goals of QueryMetrics
@@ -113,9 +113,9 @@ import java.util.List;
  *
  * Making subinterfaces of QueryMetrics for emitting custom dimensions and/or metrics for specific query types
  * -----------------------------------------------------------------------------------------------------------
- * If a query type (e. g. {@link org.apache.druid.query.metadata.metadata.SegmentMetadataQuery} (it's runners) needs to emit
- * custom dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be
- * executed:
+ * If a query type (e. g. {@link org.apache.druid.query.metadata.metadata.SegmentMetadataQuery} (it's runners) needs to
+ * emit custom dimensions and/or metrics which doesn't make sense for all other query types, the following steps should
+ * be executed:
  *
  *  1. Create `interface SegmentMetadataQueryMetrics extends QueryMetrics` (here and below "SegmentMetadata" is the
  *  query type) with additional methods (see "Adding new methods" section above).
@@ -148,14 +148,13 @@ import java.util.List;
  * This complex procedure is needed to ensure custom {@link GenericQueryMetricsFactory} specified by users still works
  * for the query type when query type decides to create their custom QueryMetrics subclass.
  *
- * {@link org.apache.druid.query.topn.TopNQueryMetrics}, {@link org.apache.druid.query.groupby.GroupByQueryMetrics}, and {@link
- * org.apache.druid.query.timeseries.TimeseriesQueryMetrics} are implemented differently, because they are introduced at the
- * same time as the whole QueryMetrics abstraction and their default implementations have to actually emit more
- * dimensions than the default generic QueryMetrics. So those subinterfaces shouldn't be taken as direct examples for
- * following the plan specified above.
+ * {@link org.apache.druid.query.topn.TopNQueryMetrics}, {@link org.apache.druid.query.groupby.GroupByQueryMetrics}, and
+ * {@link org.apache.druid.query.timeseries.TimeseriesQueryMetrics} are implemented differently, because they are
+ * introduced at the same time as the whole QueryMetrics abstraction and their default implementations have to actually
+ * emit more dimensions than the default generic QueryMetrics. So those subinterfaces shouldn't be taken as direct
+ * examples for following the plan specified above.
  *
- * Refer {@link SearchQueryMetricsFactory}
- * and {@link org.apache.druid.query.select.SelectQueryMetricsFactory} as an implementation example of this procedure.
+ * Refer {@link SearchQueryMetricsFactory} as an implementation example of this procedure.
  *
  * @param <QueryType>
  */
@@ -243,6 +242,13 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void vectorized(boolean vectorized);
 
   /**
+   * Sets broker merge parallelism, if parallel merges are enabled. This will only appear in broker level metrics. This
+   * value is identical to the {@link #reportParallelMergeParallelism} metric value, but optionally also available as a
+   * dimension.
+   */
+  void parallelMergeParallelism(int parallelism);
+
+  /**
    * Creates a {@link BitmapResultFactory} which may record some information along bitmap construction from {@link
    * #preFilters(List)}. The returned BitmapResultFactory may add some dimensions to this QueryMetrics from it's {@link
    * BitmapResultFactory#toImmutableBitmap(Object)} method. See {@link BitmapResultFactory} Javadoc for more
@@ -321,6 +327,38 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * preFilters, this metric is equal to {@link #reportSegmentRows(long)}.
    */
   QueryMetrics<QueryType> reportPreFilteredRows(long numRows);
+
+  /**
+   * Reports number of parallel tasks the broker used to process the query during parallel merge. This value is
+   * identical to the {@link #parallelMergeParallelism} dimension value, but optionally also available as a metric.
+   */
+  QueryMetrics<QueryType> reportParallelMergeParallelism(int parallelism);
+
+  /**
+   * Reports total number of input sequences processed by the broker during parallel merge.
+   */
+  QueryMetrics<QueryType> reportParallelMergeInputSequences(long numSequences);
+
+  /**
+   * Reports total number of input rows processed by the broker during parallel merge.
+   */
+  QueryMetrics<QueryType> reportParallelMergeInputRows(long numRows);
+
+  /**
+   * Reports broker total number of output rows after merging and combining input sequences (should be less than or
+   * equal to the value supplied to {@link #reportParallelMergeInputRows}.
+   */
+  QueryMetrics<QueryType> reportParallelMergeOutputRows(long numRows);
+
+  /**
+   * Reports broker total number of fork join pool tasks required to complete query
+   */
+  QueryMetrics<QueryType> reportParallelMergeTaskCount(long numTasks);
+
+  /**
+   * Reports broker total CPU time in nanoseconds where fork join merge combine tasks were doing work
+   */
+  QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs);
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.

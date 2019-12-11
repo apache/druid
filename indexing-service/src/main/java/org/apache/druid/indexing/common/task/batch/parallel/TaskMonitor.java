@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
@@ -80,26 +81,32 @@ public class TaskMonitor<T extends Task>
   // overlord client
   private final IndexingServiceClient indexingServiceClient;
   private final int maxRetry;
-  private final int expectedNumSucceededTasks;
+  private final int estimatedNumSucceededTasks;
 
+  @GuardedBy("taskCountLock")
   private int numRunningTasks;
+  @GuardedBy("taskCountLock")
   private int numSucceededTasks;
+  @GuardedBy("taskCountLock")
   private int numFailedTasks;
-  // This metric is used only for unit tests because the current taskStatus system doesn't track the killed task status.
-  // Currently, this metric only represents # of killed tasks by ParallelIndexTaskRunner.
-  // See killAllRunningTasks(), SinglePhaseParallelIndexTaskRunner.run(), and
-  // SinglePhaseParallelIndexTaskRunner.stopGracefully()
+  /**
+   * This metric is used only for unit tests because the current task status system doesn't track the killed task
+   * status. Currently, this metric only represents number of killed tasks by {@link ParallelIndexTaskRunner}.
+   * See {@link #stop()}, {@link ParallelIndexPhaseRunner#run()}, and
+   * {@link ParallelIndexPhaseRunner#stopGracefully()}.
+   */
   private int numKilledTasks;
 
+  @GuardedBy("startStopLock")
   private boolean running = false;
 
-  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int expectedNumSucceededTasks)
+  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int estimatedNumSucceededTasks)
   {
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
     this.maxRetry = maxRetry;
-    this.expectedNumSucceededTasks = expectedNumSucceededTasks;
+    this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
 
-    log.info("TaskMonitor is initialized with expectedNumSucceededTasks[%d]", expectedNumSucceededTasks);
+    log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d]", estimatedNumSucceededTasks);
   }
 
   public void start(long taskStatusCheckingPeriod)
@@ -187,23 +194,25 @@ public class TaskMonitor<T extends Task>
         running = false;
         taskStatusChecker.shutdownNow();
 
-        if (numRunningTasks > 0) {
-          final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
-          while (iterator.hasNext()) {
-            final MonitorEntry entry = iterator.next();
-            iterator.remove();
-            final String taskId = entry.runningTask.getId();
-            log.info("Request to kill subtask[%s]", taskId);
-            indexingServiceClient.killTask(taskId);
-            numRunningTasks--;
-            numKilledTasks++;
-          }
-
+        synchronized (taskCountLock) {
           if (numRunningTasks > 0) {
-            log.warn(
-                "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
-                numRunningTasks
-            );
+            final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
+            while (iterator.hasNext()) {
+              final MonitorEntry entry = iterator.next();
+              iterator.remove();
+              final String taskId = entry.runningTask.getId();
+              log.info("Request to kill subtask[%s]", taskId);
+              indexingServiceClient.killTask(taskId);
+              numRunningTasks--;
+              numKilledTasks++;
+            }
+
+            if (numRunningTasks > 0) {
+              log.warn(
+                  "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
+                  numRunningTasks
+              );
+            }
           }
         }
 
@@ -222,11 +231,10 @@ public class TaskMonitor<T extends Task>
   {
     synchronized (startStopLock) {
       if (!running) {
-        return Futures.immediateFailedFuture(new ISE("TaskMonitore is not running"));
+        return Futures.immediateFailedFuture(new ISE("TaskMonitor is not running"));
       }
-      final T task = spec.newSubTask(0);
-      log.info("Submitting a new task[%s] for spec[%s]", task.getId(), spec.getId());
-      indexingServiceClient.runTask(task);
+      final T task = submitTask(spec, 0);
+      log.info("Submitted a new task[%s] for spec[%s]", task.getId(), spec.getId());
       incrementNumRunningTasks();
 
       final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
@@ -248,9 +256,8 @@ public class TaskMonitor<T extends Task>
     synchronized (startStopLock) {
       if (running) {
         final SubTaskSpec<T> spec = monitorEntry.spec;
-        final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
-        log.info("Submitting a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
-        indexingServiceClient.runTask(task);
+        final T task = submitTask(spec, monitorEntry.taskHistory.size() + 1);
+        log.info("Submitted a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
         incrementNumRunningTasks();
 
         runningTasks.put(
@@ -262,6 +269,38 @@ public class TaskMonitor<T extends Task>
             )
         );
       }
+    }
+  }
+
+  private T submitTask(SubTaskSpec<T> spec, int numAttempts)
+  {
+    T task = spec.newSubTask(numAttempts);
+    try {
+      indexingServiceClient.runTask(task);
+    }
+    catch (Exception e) {
+      if (isUnknownTypeIdException(e)) {
+        log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
+        task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
+        indexingServiceClient.runTask(task);
+      } else {
+        throw e;
+      }
+    }
+    return task;
+  }
+
+  private boolean isUnknownTypeIdException(Throwable e)
+  {
+    if (e instanceof IllegalStateException) {
+      if (e.getMessage() != null && e.getMessage().contains("Could not resolve type id")) {
+        return true;
+      }
+    }
+    if (e.getCause() != null) {
+      return isUnknownTypeIdException(e.getCause());
+    } else {
+      return false;
     }
   }
 
@@ -277,7 +316,7 @@ public class TaskMonitor<T extends Task>
     synchronized (taskCountLock) {
       numRunningTasks--;
       numSucceededTasks++;
-      log.info("[%d/%d] tasks succeeded", numSucceededTasks, expectedNumSucceededTasks);
+      log.info("[%d/%d] tasks succeeded", numSucceededTasks, estimatedNumSucceededTasks);
     }
   }
 
@@ -289,10 +328,10 @@ public class TaskMonitor<T extends Task>
     }
   }
 
-  boolean isSucceeded()
+  int getNumSucceededTasks()
   {
     synchronized (taskCountLock) {
-      return numSucceededTasks == expectedNumSucceededTasks;
+      return numSucceededTasks;
     }
   }
 
@@ -309,16 +348,16 @@ public class TaskMonitor<T extends Task>
     return numKilledTasks;
   }
 
-  SinglePhaseParallelIndexingProgress getProgress()
+  ParallelIndexingPhaseProgress getProgress()
   {
     synchronized (taskCountLock) {
-      return new SinglePhaseParallelIndexingProgress(
+      return new ParallelIndexingPhaseProgress(
           numRunningTasks,
           numSucceededTasks,
           numFailedTasks,
           numSucceededTasks + numFailedTasks,
           numRunningTasks + numSucceededTasks + numFailedTasks,
-          expectedNumSucceededTasks
+          estimatedNumSucceededTasks
       );
     }
   }

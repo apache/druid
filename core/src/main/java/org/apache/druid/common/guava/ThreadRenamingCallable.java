@@ -21,8 +21,6 @@ package org.apache.druid.common.guava;
 
 import java.util.concurrent.Callable;
 
-/**
- */
 public abstract class ThreadRenamingCallable<T> implements Callable<T>
 {
   private final String name;
@@ -48,5 +46,5 @@ public abstract class ThreadRenamingCallable<T> implements Callable<T>
     }
   }
 
-  public abstract T doCall() throws Exception;
+  public abstract T doCall();
 }

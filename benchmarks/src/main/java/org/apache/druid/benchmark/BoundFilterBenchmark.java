@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ConciseSetUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -60,6 +61,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 10)
 public class BoundFilterBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final int START_INT = 1_000_000_000;
   private static final int END_INT = ConciseSetUtils.MAX_ALLOWED_INTEGER;
 

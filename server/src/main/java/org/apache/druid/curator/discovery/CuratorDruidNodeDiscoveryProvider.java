@@ -25,35 +25,47 @@ import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.NodeCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.concurrent.LifecycleLock;
+import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 /**
+ *
  */
 @ManageLifecycle
 public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
@@ -66,7 +78,8 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
   private ExecutorService listenerExecutor;
 
-  private final ConcurrentHashMap<NodeType, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<NodeRole, NodeRoleWatcher> nodeRoleWatchers = new ConcurrentHashMap<>();
+  private final ConcurrentLinkedQueue<NodeDiscoverer> nodeDiscoverers = new ConcurrentLinkedQueue<>();
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -83,24 +96,33 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   }
 
   @Override
-  public DruidNodeDiscovery getForNodeType(NodeType nodeType)
+  public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
   {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Preconditions.checkState(lifecycleLock.isStarted());
+    log.debug("Creating a NodeDiscoverer for node [%s] and role [%s]", node, nodeRole);
+    NodeDiscoverer nodeDiscoverer = new NodeDiscoverer(config, jsonMapper, curatorFramework, node, nodeRole);
+    nodeDiscoverers.add(nodeDiscoverer);
+    return nodeDiscoverer::nodeDiscovered;
+  }
 
-    return nodeTypeWatchers.computeIfAbsent(
-        nodeType,
-        nType -> {
-          log.info("Creating NodeTypeWatcher for nodeType [%s].", nType);
-          NodeTypeWatcher nodeTypeWatcher = new NodeTypeWatcher(
+  @Override
+  public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
+  {
+    Preconditions.checkState(lifecycleLock.isStarted());
+
+    return nodeRoleWatchers.computeIfAbsent(
+        nodeRole,
+        role -> {
+          log.debug("Creating NodeRoleWatcher for nodeRole [%s].", role);
+          NodeRoleWatcher nodeRoleWatcher = new NodeRoleWatcher(
               listenerExecutor,
               curatorFramework,
               config.getInternalDiscoveryPath(),
               jsonMapper,
-              nType
+              role
           );
-          nodeTypeWatcher.start();
-          log.info("Created NodeTypeWatcher for nodeType [%s].", nType);
-          return nodeTypeWatcher;
+          log.debug("Created NodeRoleWatcher for nodeRole [%s].", role);
+          return nodeRoleWatcher;
         }
     );
   }
@@ -113,13 +135,11 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     try {
-      log.info("starting");
-
-      // This is single-threaded to ensure that all listener calls are executed precisely in the oder of add/remove
-      // event occurences.
+      // This is single-threaded to ensure that all listener calls are executed precisely in the order of add/remove
+      // event occurrences.
       listenerExecutor = Execs.singleThreaded("CuratorDruidNodeDiscoveryProvider-ListenerExecutor");
 
-      log.info("started");
+      log.debug("Started.");
 
       lifecycleLock.started();
     }
@@ -129,32 +149,33 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   }
 
   @LifecycleStop
-  public void stop()
+  public void stop() throws IOException
   {
     if (!lifecycleLock.canStop()) {
       throw new ISE("can't stop.");
     }
 
-    log.info("stopping");
+    log.debug("Stopping.");
 
-    for (NodeTypeWatcher watcher : nodeTypeWatchers.values()) {
-      watcher.stop();
-    }
-    listenerExecutor.shutdownNow();
+    Closer closer = Closer.create();
+    closer.registerAll(nodeRoleWatchers.values());
+    closer.registerAll(nodeDiscoverers);
 
-    log.info("stopped");
+    CloseableUtils.closeBoth(closer, listenerExecutor::shutdownNow);
   }
 
-  private static class NodeTypeWatcher implements DruidNodeDiscovery
+  private static class NodeRoleWatcher implements DruidNodeDiscovery, Closeable
   {
-    private static final Logger log = new Logger(NodeTypeWatcher.class);
+    private static final Logger log = new Logger(NodeRoleWatcher.class);
 
     private final CuratorFramework curatorFramework;
 
-    private final NodeType nodeType;
+    private final NodeRole nodeRole;
     private final ObjectMapper jsonMapper;
 
-    /** hostAndPort -> DiscoveryDruidNode */
+    /**
+     * hostAndPort -> DiscoveryDruidNode
+     */
     private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
     private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
@@ -169,28 +190,45 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final CountDownLatch cacheInitialized = new CountDownLatch(1);
 
-    NodeTypeWatcher(
+    NodeRoleWatcher(
         ExecutorService listenerExecutor,
         CuratorFramework curatorFramework,
         String basePath,
         ObjectMapper jsonMapper,
-        NodeType nodeType
+        NodeRole nodeRole
     )
     {
       this.listenerExecutor = listenerExecutor;
       this.curatorFramework = curatorFramework;
-      this.nodeType = nodeType;
+      this.nodeRole = nodeRole;
       this.jsonMapper = jsonMapper;
 
-      // This is required to be single threaded from Docs in PathChildrenCache;
-      this.cacheExecutor = Execs.singleThreaded(StringUtils.format("NodeTypeWatcher[%s]", nodeType));
-      this.cache = new PathChildrenCache(
-          curatorFramework,
-          ZKPaths.makePath(basePath, nodeType.toString()),
-          true,
-          true,
-          cacheExecutor
-      );
+      // This is required to be single threaded from docs in PathChildrenCache.
+      this.cacheExecutor = Execs.singleThreaded(StringUtils.format("NodeRoleWatcher[%s]", nodeRole));
+      cache = new PathChildrenCacheFactory.Builder()
+          //NOTE: cacheData is temporarily set to false and we get data directly from ZK on each event.
+          //this is a workaround to solve curator's out-of-order events problem
+          //https://issues.apache.org/jira/browse/CURATOR-191
+          // This is also done in CuratorInventoryManager.
+          .withCacheData(true)
+          .withCompressed(true)
+          .withExecutorService(cacheExecutor)
+          .build()
+          .make(curatorFramework, ZKPaths.makePath(basePath, nodeRole.toString()));
+
+      try {
+        cache.getListenable().addListener((client, event) -> handleChildEvent(event));
+        cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+      }
+      catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      CloseableUtils.closeBoth(cache, cacheExecutor::shutdownNow);
     }
 
     @Override
@@ -205,7 +243,10 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         nodeViewInitialized = false;
       }
       if (!nodeViewInitialized) {
-        log.info("cache is not initialized yet. getAllNodes() might not return full information.");
+        log.info(
+            "Cache for node role [%s] not initialized yet; getAllNodes() might not return full information.",
+            nodeRole.getJsonName()
+        );
       }
       return unmodifiableNodes;
     }
@@ -234,105 +275,55 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         try {
           switch (event.getType()) {
             case CHILD_ADDED: {
-              final byte[] data;
-              try {
-                data = curatorFramework.getData().decompressed().forPath(event.getData().getPath());
-              }
-              catch (Exception ex) {
-                log.error(
-                    ex,
-                    "Failed to get data for path [%s]. Ignoring event [%s].",
-                    event.getData().getPath(),
-                    event.getType()
-                );
-                return;
-              }
-
-              DiscoveryDruidNode druidNode = jsonMapper.readValue(data, DiscoveryDruidNode.class);
-
-              if (!nodeType.equals(druidNode.getNodeType())) {
-                log.warn(
-                    "Node[%s:%s] add is discovered by node watcher of different node type. Ignored.",
-                    druidNode.getDruidNode().getHostAndPortToUse(),
-                    druidNode
-                );
-                return;
-              }
-
-              log.info("Node[%s:%s] appeared.", druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
-
-              addNode(druidNode);
-
+              childAdded(event);
               break;
             }
             case CHILD_REMOVED: {
-              DiscoveryDruidNode druidNode = jsonMapper.readValue(event.getData().getData(), DiscoveryDruidNode.class);
-
-              if (!nodeType.equals(druidNode.getNodeType())) {
-                log.warn(
-                    "Node[%s:%s] removal is discovered by node watcher of different type. Ignored.",
-                    druidNode.getDruidNode().getHostAndPortToUse(),
-                    druidNode
-                );
-                return;
-              }
-
-              log.info(
-                  "Node[%s:%s] disappeared.",
-                  druidNode.getDruidNode().getHostAndPortToUse(),
-                  druidNode
-              );
-
-              removeNode(druidNode);
-
+              childRemoved(event);
               break;
             }
             case INITIALIZED: {
-              // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
-              // counted down.
-              if (cacheInitialized.getCount() == 0) {
-                log.warn("cache is already initialized. ignoring [%s] event.", event.getType());
-                return;
-              }
-
-              log.info("Received INITIALIZED in node watcher.");
-
-              for (Listener listener : nodeListeners) {
-                safeSchedule(
-                    () -> {
-                      listener.nodesAdded(unmodifiableNodes);
-                      listener.nodeViewInitialized();
-                    },
-                    "Exception occured in nodesAdded([%s]) in listener [%s].",
-                    unmodifiableNodes,
-                    listener
-                );
-              }
-
-              cacheInitialized.countDown();
+              cacheInitialized();
               break;
             }
             default: {
-              log.info("Ignored event type [%s] for nodeType watcher.", event.getType());
+              log.warn("Ignored event type[%s] for node watcher of role[%s].", event.getType(), nodeRole.getJsonName());
             }
           }
         }
         catch (Exception ex) {
-          log.error(ex, "unknown error in node watcher.");
+          log.error(ex, "Unknown error in node watcher of role[%s].", nodeRole.getJsonName());
         }
       }
     }
 
-    private void safeSchedule(Runnable runnable, String errMsgFormat, Object... args)
+    @GuardedBy("lock")
+    void childAdded(PathChildrenCacheEvent event) throws IOException
     {
-      listenerExecutor.submit(() -> {
-        try {
-          runnable.run();
-        }
-        catch (Exception ex) {
-          log.error(ex, errMsgFormat, args);
-        }
-      });
+      final byte[] data = getZkDataForNode(event.getData());
+      if (data == null) {
+        log.error(
+            "Failed to get data for path [%s]. Ignoring a child addition event.",
+            event.getData().getPath()
+        );
+        return;
+      }
+
+      DiscoveryDruidNode druidNode = jsonMapper.readValue(data, DiscoveryDruidNode.class);
+
+      if (!nodeRole.equals(druidNode.getNodeRole())) {
+        log.error(
+            "Node[%s] of role[%s] addition ignored due to mismatched role (expected role[%s]).",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName(),
+            nodeRole.getJsonName()
+        );
+        return;
+      }
+
+      log.info("Node[%s] of role[%s] detected.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
+
+      addNode(druidNode);
     }
 
     @GuardedBy("lock")
@@ -353,13 +344,39 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
           }
         }
       } else {
-        log.warn(
-            "Node[%s:%s] discovered but existed already [%s].",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode,
+        log.error(
+            "Node[%s] of role[%s] discovered but existed already [%s].",
+            druidNode.getDruidNode().getUriToUse(),
+            nodeRole.getJsonName(),
             prev
         );
       }
+    }
+
+    @GuardedBy("lock")
+    private void childRemoved(PathChildrenCacheEvent event) throws IOException
+    {
+      final byte[] data = event.getData().getData();
+      if (data == null) {
+        log.error("Failed to get data for path [%s]. Ignoring a child removal event.", event.getData().getPath());
+        return;
+      }
+
+      DiscoveryDruidNode druidNode = jsonMapper.readValue(data, DiscoveryDruidNode.class);
+
+      if (!nodeRole.equals(druidNode.getNodeRole())) {
+        log.error(
+            "Node[%s] of role[%s] removal ignored due to mismatched role (expected role[%s]).",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName(),
+            nodeRole.getJsonName()
+        );
+        return;
+      }
+
+      log.info("Node[%s] of role[%s] went offline.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
+
+      removeNode(druidNode);
     }
 
     @GuardedBy("lock")
@@ -368,10 +385,10 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       DiscoveryDruidNode prev = nodes.remove(druidNode.getDruidNode().getHostAndPortToUse());
 
       if (prev == null) {
-        log.warn(
-            "Noticed disappearance of unknown druid node [%s:%s].",
-            druidNode.getDruidNode().getHostAndPortToUse(),
-            druidNode
+        log.error(
+            "Noticed disappearance of unknown druid node [%s] of role[%s].",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName()
         );
         return;
       }
@@ -382,34 +399,138 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         for (Listener listener : nodeListeners) {
           safeSchedule(
               () -> listener.nodesRemoved(nodeRemoved),
-              "Exception occured in nodeRemoved(node=[%s]) in listener [%s].",
-              druidNode.getDruidNode().getHostAndPortToUse(),
+              "Exception occured in nodeRemoved(node[%s] of role[%s]) in listener [%s].",
+              druidNode.getDruidNode().getUriToUse(),
+              druidNode.getNodeRole().getJsonName(),
               listener
           );
         }
       }
     }
 
-    public void start()
+    /**
+     * Doing this instead of a simple call to {@link ChildData#getData()} because data cache is turned off, see a
+     * comment in {@link #NodeRoleWatcher}.
+     */
+    @Nullable
+    private byte[] getZkDataForNode(ChildData child)
     {
       try {
-        cache.getListenable().addListener((client, event) -> handleChildEvent(event));
-        cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+        return curatorFramework.getData().decompressed().forPath(child.getPath());
       }
       catch (Exception ex) {
-        throw new RuntimeException(ex);
+        log.error(ex, "Exception while getting data for node %s", child.getPath());
+        return null;
       }
     }
 
-    public void stop()
+    @GuardedBy("lock")
+    private void cacheInitialized()
     {
+      // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
+      // counted down.
+      if (cacheInitialized.getCount() == 0) {
+        log.error("cache is already initialized. ignoring cache initialization event.");
+        return;
+      }
+
+      log.info("Node watcher of role[%s] is now initialized.", nodeRole.getJsonName());
+
+      for (Listener listener : nodeListeners) {
+        safeSchedule(
+            () -> {
+              listener.nodesAdded(unmodifiableNodes);
+              listener.nodeViewInitialized();
+            },
+            "Exception occured in nodesAdded([%s]) in listener [%s].",
+            unmodifiableNodes,
+            listener
+        );
+      }
+
+      cacheInitialized.countDown();
+    }
+
+    private void safeSchedule(Runnable runnable, String errMsgFormat, Object... args)
+    {
+      listenerExecutor.submit(() -> {
+        try {
+          runnable.run();
+        }
+        catch (Exception ex) {
+          log.error(errMsgFormat, args);
+        }
+      });
+    }
+  }
+
+  private static class NodeDiscoverer implements Closeable
+  {
+    private final ObjectMapper jsonMapper;
+    private final NodeCache nodeCache;
+    private final NodeRole nodeRole;
+
+    private NodeDiscoverer(
+        ZkPathsConfig config,
+        ObjectMapper jsonMapper,
+        CuratorFramework curatorFramework,
+        DruidNode node,
+        NodeRole nodeRole
+    )
+    {
+      this.jsonMapper = jsonMapper;
+      String path = CuratorDruidNodeAnnouncer.makeNodeAnnouncementPath(config, nodeRole, node);
+      nodeCache = new NodeCache(curatorFramework, path, true);
+      this.nodeRole = nodeRole;
+
       try {
-        cache.close();
-        cacheExecutor.shutdownNow();
+        nodeCache.start(true /* buildInitial */);
       }
-      catch (Exception ex) {
-        log.error(ex, "Failed to stop node watcher for type [%s].", nodeType);
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
+    }
+
+    private boolean nodeDiscovered()
+    {
+      @Nullable ChildData currentChild = nodeCache.getCurrentData();
+      if (currentChild == null) {
+        // Not discovered yet.
+        return false;
+      }
+
+      final byte[] data = currentChild.getData();
+
+      DiscoveryDruidNode druidNode;
+      try {
+        druidNode = jsonMapper.readValue(data, DiscoveryDruidNode.class);
+      }
+      catch (IOException e) {
+        log.error(e, "Exception occurred when reading node's value");
+        return false;
+      }
+
+      if (!nodeRole.equals(druidNode.getNodeRole())) {
+        log.error(
+            "Node[%s] of role[%s] add is discovered by node watcher of different node role. Ignored.",
+            druidNode.getDruidNode().getUriToUse(),
+            druidNode.getNodeRole().getJsonName()
+        );
+        return false;
+      }
+
+      log.info(
+          "Node[%s] of role[%s] appeared.",
+          druidNode.getDruidNode().getUriToUse(),
+          druidNode.getNodeRole().getJsonName()
+      );
+      return true;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      nodeCache.close();
     }
   }
 }

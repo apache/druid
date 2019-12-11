@@ -38,6 +38,7 @@ WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
 cd "$WHEREAMI/.."
 exec java `cat "$CONFDIR"/jvm.config | xargs` \
-  -cp "$WHEREAMI/../zk/lib/*:$WHEREAMI/../zk/*:$CONFDIR" \
+  -cp "$WHEREAMI/../lib/*:$CONFDIR" \
+  -Dzookeeper.jmx.log4j.disable=true \
   org.apache.zookeeper.server.quorum.QuorumPeerMain \
   "$CONFDIR"/zoo.cfg

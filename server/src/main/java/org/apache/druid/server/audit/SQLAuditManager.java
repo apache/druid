@@ -28,6 +28,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -37,13 +38,9 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.Query;
-import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -124,39 +121,20 @@ public class SQLAuditManager implements AuditManager
   {
     final Interval theInterval = getIntervalOrDefault(interval);
     return dbi.withHandle(
-        new HandleCallback<List<AuditEntry>>()
-        {
-          @Override
-          public List<AuditEntry> withHandle(Handle handle)
-          {
-            return handle.createQuery(
+        (Handle handle) -> handle
+            .createQuery(
                 StringUtils.format(
-                    "SELECT payload FROM %s WHERE audit_key = :audit_key and type = :type and created_date between :start_date and :end_date ORDER BY created_date",
+                    "SELECT payload FROM %s WHERE audit_key = :audit_key and type = :type and "
+                    + "created_date between :start_date and :end_date ORDER BY created_date",
                     getAuditTable()
                 )
-            ).bind("audit_key", key)
-                         .bind("type", type)
-                         .bind("start_date", theInterval.getStart().toString())
-                         .bind("end_date", theInterval.getEnd().toString())
-                         .map(
-                             new ResultSetMapper<AuditEntry>()
-                             {
-                               @Override
-                               public AuditEntry map(int index, ResultSet r, StatementContext ctx)
-                                   throws SQLException
-                               {
-                                 try {
-                                   return jsonMapper.readValue(r.getBytes("payload"), AuditEntry.class);
-                                 }
-                                 catch (IOException e) {
-                                   throw new SQLException(e);
-                                 }
-                               }
-                             }
-                         )
-                         .list();
-          }
-        }
+            )
+            .bind("audit_key", key)
+            .bind("type", type)
+            .bind("start_date", theInterval.getStart().toString())
+            .bind("end_date", theInterval.getEnd().toString())
+            .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), AuditEntry.class))
+            .list()
     );
   }
 
@@ -185,39 +163,19 @@ public class SQLAuditManager implements AuditManager
   {
     final Interval theInterval = getIntervalOrDefault(interval);
     return dbi.withHandle(
-        new HandleCallback<List<AuditEntry>>()
-        {
-          @Override
-          public List<AuditEntry> withHandle(Handle handle)
-          {
-            return handle.createQuery(
+        (Handle handle) -> handle
+            .createQuery(
                 StringUtils.format(
-                    "SELECT payload FROM %s WHERE type = :type and created_date between :start_date and :end_date ORDER BY created_date",
+                    "SELECT payload FROM %s WHERE type = :type and created_date between :start_date and "
+                    + ":end_date ORDER BY created_date",
                     getAuditTable()
                 )
             )
-                         .bind("type", type)
-                         .bind("start_date", theInterval.getStart().toString())
-                         .bind("end_date", theInterval.getEnd().toString())
-                         .map(
-                             new ResultSetMapper<AuditEntry>()
-                             {
-                               @Override
-                               public AuditEntry map(int index, ResultSet r, StatementContext ctx)
-                                   throws SQLException
-                               {
-                                 try {
-                                   return jsonMapper.readValue(r.getBytes("payload"), AuditEntry.class);
-                                 }
-                                 catch (IOException e) {
-                                   throw new SQLException(e);
-                                 }
-                               }
-                             }
-                         )
-                         .list();
-          }
-        }
+            .bind("type", type)
+            .bind("start_date", theInterval.getStart().toString())
+            .bind("end_date", theInterval.getEnd().toString())
+            .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), AuditEntry.class))
+            .list()
     );
   }
 
@@ -247,37 +205,18 @@ public class SQLAuditManager implements AuditManager
     final String theQueryString = queryString;
 
     return dbi.withHandle(
-        new HandleCallback<List<AuditEntry>>()
-        {
-          @Override
-          public List<AuditEntry> withHandle(Handle handle)
-          {
-            Query<Map<String, Object>> query = handle.createQuery(theQueryString);
-            if (key != null) {
-              query.bind("audit_key", key);
-            }
-            return query.bind("type", type)
-                        .setMaxRows(theLimit)
-                        .map(
-                            new ResultSetMapper<AuditEntry>()
-                            {
-                              @Override
-                              public AuditEntry map(int index, ResultSet r, StatementContext ctx)
-                                  throws SQLException
-                              {
-                                try {
-                                  return jsonMapper.readValue(r.getBytes("payload"), AuditEntry.class);
-                                }
-                                catch (IOException e) {
-                                  throw new SQLException(e);
-                                }
-                              }
-                            }
-                          )
-                          .list();
+        (Handle handle) -> {
+          Query<Map<String, Object>> query = handle.createQuery(theQueryString);
+          if (key != null) {
+            query.bind("audit_key", key);
           }
+          return query
+              .bind("type", type)
+              .setMaxRows(theLimit)
+              .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), AuditEntry.class))
+              .list();
         }
-        );
+    );
   }
 
 }

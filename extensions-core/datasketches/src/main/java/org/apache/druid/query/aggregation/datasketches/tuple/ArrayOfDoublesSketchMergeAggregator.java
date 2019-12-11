@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
+import org.apache.datasketches.tuple.ArrayOfDoublesSetOperationBuilder;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUnion;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 

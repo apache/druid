@@ -37,6 +37,8 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   @VisibleForTesting
   static final String NUM_SHARDS = "numShards";
 
+  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
+
   @Nullable
   private final Integer maxRowsPerSegment;
   @Nullable
@@ -147,6 +149,12 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
+  }
+
+  @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return getNumShards() == null ? NUM_SHARDS + " must be specified" : FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
   }
 
   @Override

@@ -34,7 +34,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   private final boolean overshadowed;
   /**
    * dataSegment is serialized "unwrapped", i.e. it's properties are included as properties of
-   * enclosing class. If in future, if {@Code SegmentWithOvershadowedStatus} were to extend {@link DataSegment},
+   * enclosing class. If in future, if {@code SegmentWithOvershadowedStatus} were to extend {@link DataSegment},
    * there will be no change in the serialized format.
    */
   @JsonUnwrapped
@@ -42,8 +42,16 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
 
   @JsonCreator
   public SegmentWithOvershadowedStatus(
-      @JsonProperty("dataSegment") DataSegment dataSegment,
       @JsonProperty("overshadowed") boolean overshadowed
+  )
+  {
+    // Jackson will overwrite dataSegment if needed (even though the field is final)
+    this(null, overshadowed);
+  }
+
+  public SegmentWithOvershadowedStatus(
+      DataSegment dataSegment,
+      boolean overshadowed
   )
   {
     this.dataSegment = dataSegment;
@@ -93,5 +101,14 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   public int compareTo(SegmentWithOvershadowedStatus o)
   {
     return dataSegment.getId().compareTo(o.dataSegment.getId());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentWithOvershadowedStatus{" +
+           "overshadowed=" + overshadowed +
+           ", dataSegment=" + dataSegment +
+           '}';
   }
 }

@@ -20,10 +20,10 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import org.apache.druid.data.input.impl.prefetch.CacheManager;
+import org.apache.druid.data.input.impl.prefetch.FetchConfig;
 import org.apache.druid.data.input.impl.prefetch.Fetcher;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.data.input.impl.prefetch.OpenedObject;
-import org.apache.druid.data.input.impl.prefetch.PrefetchConfig;
+import org.apache.druid.data.input.impl.prefetch.OpenObject;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -50,7 +50,7 @@ public class SqlFetcher<T> extends Fetcher<T>
       List<T> objects,
       ExecutorService fetchExecutor,
       @Nullable File temporaryDirectory,
-      PrefetchConfig prefetchConfig,
+      FetchConfig fetchConfig,
       ObjectOpenFunction<T> openObjectFunction
   )
   {
@@ -60,7 +60,7 @@ public class SqlFetcher<T> extends Fetcher<T>
         objects,
         fetchExecutor,
         temporaryDirectory,
-        prefetchConfig
+        fetchConfig
     );
     this.temporaryDirectory = temporaryDirectory;
     this.openObjectFunction = openObjectFunction;
@@ -84,15 +84,15 @@ public class SqlFetcher<T> extends Fetcher<T>
   }
 
   /**
-   * Generates an instance of {@link OpenedObject} for the given object. This is usually called
+   * Generates an instance of {@link OpenObject} for the given object. This is usually called
    * when prefetching is disabled. The retry is performed at the query execution layer.
    */
 
   @Override
-  protected OpenedObject<T> generateOpenObject(T object) throws IOException
+  protected OpenObject<T> generateOpenObject(T object) throws IOException
   {
     final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
-    return new OpenedObject<>(
+    return new OpenObject<>(
         object,
         openObjectFunction.open(object, outFile),
         outFile::delete

@@ -62,6 +62,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
       catch (Exception e) {
         t.addSuppressed(e);
       }
+      Throwables.propagateIfPossible(t);
       throw new RuntimeException(t);
     }
   }
@@ -89,6 +90,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
         t.addSuppressed(e);
       }
       Throwables.propagateIfInstanceOf(t, IOException.class);
+      Throwables.propagateIfPossible(t);
       throw new RuntimeException(t);
     }
     // "Normal" close
@@ -97,6 +99,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, IOException.class);
+      Throwables.propagateIfPossible(e);
       throw new RuntimeException(e);
     }
   }

@@ -50,6 +50,10 @@ public class PlannerContext
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
 
+  // This context parameter is an undocumented parameter, used internally, to allow the web console to
+  // apply a limit without having to rewrite the SQL query.
+  public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
+
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 

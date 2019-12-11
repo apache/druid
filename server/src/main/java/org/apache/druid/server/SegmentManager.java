@@ -146,13 +146,15 @@ public class SegmentManager
    *
    * @param segment segment to load
    *
+   * @param lazy whether to lazy load columns metadata
+   *
    * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
-    final Segment adapter = getAdapter(segment);
+    final Segment adapter = getAdapter(segment, lazy);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -189,11 +191,11 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
+  private Segment getAdapter(final DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
     final Segment adapter;
     try {
-      adapter = segmentLoader.getSegment(segment);
+      adapter = segmentLoader.getSegment(segment, lazy);
     }
     catch (SegmentLoadingException e) {
       segmentLoader.cleanup(segment);

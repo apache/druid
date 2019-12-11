@@ -18,6 +18,7 @@
 
 @import '../node_modules/normalize.css/normalize';
 @import '../node_modules/@blueprintjs/core/lib/css/blueprint';
+@import '../node_modules/@blueprintjs/datetime/lib/css/blueprint-datetime';
 @import '../lib/react-table';
 @import '../node_modules/react-splitter-layout/lib/index.css';
 
@@ -43,22 +44,8 @@ body {
   }
 }
 
-svg {
-  width: auto;
-  height: auto;
-}
-
 .app-container {
   position: absolute;
   height: 100%;
   width: 100%;
-}
-
-.label-info-text {
-  max-width: 400px;
-  padding: 15px;
-
-  p:last-child {
-    margin-bottom: 0;
-  }
 }
