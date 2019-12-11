@@ -665,7 +665,97 @@ module: java-core
 license_name: Apache License version 2.0
 version: 3.8.3
 libraries:
-  - org.pac4j: oidc
+  - org.pac4j: pac4j-oidc
+
+---
+
+name: pac4j-core java security library
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.8.3
+libraries:
+  - org.pac4j: pac4j-core
+
+---
+
+name: com.nimbusds lang-tag
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.4.4
+libraries:
+  - com.nimbusds: lang-tag
+
+---
+
+name: com.nimbusds nimbus-jose-jwt
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 7.9
+libraries:
+  - com.nimbusds: nimbus-jose-jwt
+
+---
+
+name: com.nimbusds oauth2-oidc-sdk
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 6.5
+libraries:
+  - com.nimbusds: oauth2-oidc-sdk
+
+---
+
+name: net.bytebuddy byte-buddy
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.9.10
+libraries:
+  - net.bytebuddy: byte-buddy
+
+---
+
+name: net.bytebuddy byte-buddy-agent
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.9.10
+libraries:
+  - net.bytebuddy: byte-buddy-agent
+
+---
+
+name: org.mockito mockito-core
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 2.28.2
+libraries:
+  - org.mockito: mockito-core
+
+---
+
+name: javax.activation activation
+license_category: binary
+module: java-core
+license_name: COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
+version: 1.1.1
+libraries:
+  - javax.activation: activation
+
+---
+
+name: com.sun.mail javax.mail
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.6.1
+libraries:
+  - com.sun.mail: javax.mail
 
 ---
 
