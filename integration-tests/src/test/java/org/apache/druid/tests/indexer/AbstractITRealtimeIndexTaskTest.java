@@ -86,10 +86,10 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
     LOG.info("Starting test: %s", this.getClass().getSimpleName());
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      // the task will run for 3 minutes and then shutdown itself
+      // the task will run for 5 minutes and then shutdown itself
       String task = setShutOffTime(
           getResourceAsString(getTaskResource()),
-          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(10))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5))
       );
       task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
 
