@@ -32,7 +32,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/druid/historical/v1")
-@ResourceFilters(StateResourceFilter.class)
 public class HistoricalResource
 {
   private final ZkCoordinator coordinator;
@@ -47,6 +46,7 @@ public class HistoricalResource
 
   @GET
   @Path("/loadstatus")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
