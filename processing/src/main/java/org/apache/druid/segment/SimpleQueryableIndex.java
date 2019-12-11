@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.BitmapFactory;
@@ -42,19 +44,20 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
-  private final Map<String, ColumnHolder> columns;
+  private final Map<String, Supplier<ColumnHolder>> columns;
   private final SmooshedFileMapper fileMapper;
   @Nullable
   private final Metadata metadata;
-  private final Map<String, DimensionHandler> dimensionHandlers;
+  private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
-      Map<String, ColumnHolder> columns,
+      Map<String, Supplier<ColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
-      @Nullable Metadata metadata
+      @Nullable Metadata metadata,
+      boolean lazy
   )
   {
     Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
@@ -71,8 +74,27 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     this.columns = columns;
     this.fileMapper = fileMapper;
     this.metadata = metadata;
-    this.dimensionHandlers = Maps.newLinkedHashMap();
-    initDimensionHandlers();
+
+    if (lazy) {
+      this.dimensionHandlers = Suppliers.memoize(() -> {
+            Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
+            for (String dim : availableDimensions) {
+              ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
+              DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+              dimensionHandlerMap.put(dim, handler);
+            }
+            return dimensionHandlerMap;
+          }
+      );
+    } else {
+      Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
+      for (String dim : availableDimensions) {
+        ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
+        dimensionHandlerMap.put(dim, handler);
+      }
+      this.dimensionHandlers = () -> dimensionHandlerMap;
+    }
   }
 
   @VisibleForTesting
@@ -81,10 +103,10 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
       List<String> columnNames,
       Indexed<String> availableDimensions,
       BitmapFactory bitmapFactory,
-      Map<String, ColumnHolder> columns,
+      Map<String, Supplier<ColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
       @Nullable Metadata metadata,
-      Map<String, DimensionHandler> dimensionHandlers
+      Supplier<Map<String, DimensionHandler>> dimensionHandlers
   )
   {
     this.dataInterval = interval;
@@ -106,7 +128,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   @Override
   public int getNumRows()
   {
-    return columns.get(ColumnHolder.TIME_COLUMN_NAME).getLength();
+    return columns.get(ColumnHolder.TIME_COLUMN_NAME).get().getLength();
   }
 
   @Override
@@ -137,11 +159,12 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   @Override
   public ColumnHolder getColumnHolder(String columnName)
   {
-    return columns.get(columnName);
+    Supplier<ColumnHolder> columnHolderSupplier = columns.get(columnName);
+    return columnHolderSupplier == null ? null : columnHolderSupplier.get();
   }
 
   @VisibleForTesting
-  public Map<String, ColumnHolder> getColumns()
+  public Map<String, Supplier<ColumnHolder>> getColumns()
   {
     return columns;
   }
@@ -167,15 +190,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   @Override
   public Map<String, DimensionHandler> getDimensionHandlers()
   {
-    return dimensionHandlers;
+    return dimensionHandlers.get();
   }
 
-  private void initDimensionHandlers()
-  {
-    for (String dim : availableDimensions) {
-      ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-      dimensionHandlers.put(dim, handler);
-    }
-  }
 }

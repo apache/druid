@@ -34,8 +34,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
@@ -73,6 +75,19 @@ public class SegmentUtils
     }
 
     throw new IOE("Invalid segment dir [%s]. Can't find either of version.bin or index.drd.", inDir);
+  }
+
+  /**
+   * Returns a String with identifiers of "segments" comma-separated. Useful for log messages. Not useful for anything
+   * else, because this doesn't take special effort to escape commas that occur in identifiers (not common, but could
+   * potentially occur in a datasource name).
+   */
+  public static String commaSeparateIdentifiers(final Collection<DataSegment> segments)
+  {
+    return segments
+        .stream()
+        .map(segment -> segment.getId().toString())
+        .collect(Collectors.joining(", "));
   }
 
   private SegmentUtils()

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * {@link ShardSpec} for range partitioning based on a single dimension
@@ -183,5 +184,27 @@ public class SingleDimensionShardSpec implements ShardSpec
            ", end='" + end + '\'' +
            ", partitionNum=" + partitionNum +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SingleDimensionShardSpec that = (SingleDimensionShardSpec) o;
+    return partitionNum == that.partitionNum &&
+           Objects.equals(dimension, that.dimension) &&
+           Objects.equals(start, that.start) &&
+           Objects.equals(end, that.end);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, start, end, partitionNum);
   }
 }

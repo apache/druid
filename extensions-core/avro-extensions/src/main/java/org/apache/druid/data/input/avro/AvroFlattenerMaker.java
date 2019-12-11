@@ -22,6 +22,7 @@ package org.apache.druid.data.input.avro;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
@@ -39,9 +40,10 @@ import java.util.stream.Collectors;
 
 public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<GenericRecord>
 {
+  private static final JsonProvider AVRO_JSON_PROVIDER = new GenericAvroJsonProvider();
   private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
-                   .jsonProvider(new GenericAvroJsonProvider())
+                   .jsonProvider(AVRO_JSON_PROVIDER)
                    .mappingProvider(new NotImplementedMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
@@ -123,6 +125,12 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   public Function<GenericRecord, Object> makeJsonQueryExtractor(final String expr)
   {
     throw new UnsupportedOperationException("Avro + JQ not supported");
+  }
+
+  @Override
+  public JsonProvider getJsonProvider()
+  {
+    return AVRO_JSON_PROVIDER;
   }
 
   private Object transformValue(final Object field)

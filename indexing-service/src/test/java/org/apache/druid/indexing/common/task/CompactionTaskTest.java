@@ -24,23 +24,23 @@ import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -50,7 +50,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -60,7 +60,7 @@ import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -103,7 +103,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
-import org.apache.druid.segment.transform.TransformingInputRowParser;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -123,6 +122,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1060,13 +1060,10 @@ public class CompactionTaskTest
       final DataSchema dataSchema = ingestionSchema.getDataSchema();
       Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
-      final InputRowParser parser = OBJECT_MAPPER.convertValue(dataSchema.getParser(), InputRowParser.class);
-      Assert.assertTrue(parser instanceof TransformingInputRowParser);
-      Assert.assertTrue(((TransformingInputRowParser) parser).getParser() instanceof NoopInputRowParser);
-      Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
+      Assert.assertEquals(new TimestampSpec(null, null, null), dataSchema.getTimestampSpec());
       Assert.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensions()),
-          new HashSet<>(parser.getParseSpec().getDimensionsSpec().getDimensions())
+          new HashSet<>(dataSchema.getDimensionsSpec().getDimensions())
       );
 
       // metrics
@@ -1088,16 +1085,16 @@ public class CompactionTaskTest
       // assert ioConfig
       final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
       Assert.assertFalse(ioConfig.isAppendToExisting());
-      final FirehoseFactory firehoseFactory = ioConfig.getFirehoseFactory();
-      Assert.assertTrue(firehoseFactory instanceof IngestSegmentFirehoseFactory);
-      final IngestSegmentFirehoseFactory ingestSegmentFirehoseFactory = (IngestSegmentFirehoseFactory) firehoseFactory;
-      Assert.assertEquals(DATA_SOURCE, ingestSegmentFirehoseFactory.getDataSource());
-      Assert.assertEquals(expectedSegmentIntervals.get(i), ingestSegmentFirehoseFactory.getInterval());
-      Assert.assertNull(ingestSegmentFirehoseFactory.getDimensionsFilter());
+      final InputSource inputSource = ioConfig.getInputSource();
+      Assert.assertTrue(inputSource instanceof DruidInputSource);
+      final DruidInputSource druidInputSource = (DruidInputSource) inputSource;
+      Assert.assertEquals(DATA_SOURCE, druidInputSource.getDataSource());
+      Assert.assertEquals(expectedSegmentIntervals.get(i), druidInputSource.getInterval());
+      Assert.assertNull(druidInputSource.getDimFilter());
 
       Assert.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensionNames()),
-          new HashSet<>(ingestSegmentFirehoseFactory.getDimensions())
+          new HashSet<>(druidInputSource.getDimensions())
       );
 
       // assert tuningConfig
@@ -1116,9 +1113,9 @@ public class CompactionTaskTest
     }
 
     @Override
-    public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+    public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
     {
-      return new ArrayList<>(segmentMap.keySet());
+      return ImmutableSet.copyOf(segmentMap.keySet());
     }
   }
 
@@ -1189,7 +1186,7 @@ public class CompactionTaskTest
     @Override
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
-      if (!(taskAction instanceof SegmentListUsedAction)) {
+      if (!(taskAction instanceof RetrieveUsedSegmentsAction)) {
         throw new ISE("action[%s] is not supported", taskAction);
       }
       return (RetType) segments;
@@ -1214,20 +1211,23 @@ public class CompactionTaskTest
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, ColumnHolder> columnMap = new HashMap<>(columnNames.size());
+        final Map<String, Supplier<ColumnHolder>> columnMap = new HashMap<>(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
           if (MIXED_TYPE_COLUMN.equals(columnName)) {
-            columnMap.put(columnName, createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval())));
+            ColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
+            columnMap.put(columnName, () -> columnHolder);
           } else if (DIMENSIONS.containsKey(columnName)) {
-            columnMap.put(columnName, createColumn(DIMENSIONS.get(columnName)));
+            ColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
+            columnMap.put(columnName, () -> columnHolder);
           } else {
             final Optional<AggregatorFactory> maybeMetric = AGGREGATORS.stream()
                                                                        .filter(agg -> agg.getName().equals(columnName))
                                                                        .findAny();
             if (maybeMetric.isPresent()) {
-              columnMap.put(columnName, createColumn(maybeMetric.get()));
+              ColumnHolder columnHolder = createColumn(maybeMetric.get());
+              columnMap.put(columnName, () -> columnHolder);
               aggregatorFactories.add(maybeMetric.get());
             }
           }
@@ -1249,7 +1249,8 @@ public class CompactionTaskTest
                 null,
                 columnMap,
                 null,
-                metadata
+                metadata,
+                false
             )
         );
       }
@@ -1275,7 +1276,7 @@ public class CompactionTaskTest
                 index.getColumns(),
                 index.getFileMapper(),
                 null,
-                index.getDimensionHandlers()
+                () -> index.getDimensionHandlers()
             )
         );
       }

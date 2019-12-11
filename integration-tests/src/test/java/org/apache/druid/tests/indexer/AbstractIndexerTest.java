@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
 
@@ -85,7 +85,7 @@ public abstract class AbstractIndexerTest
     waitForAllTasksToComplete();
     Interval interval = Intervals.of(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource);
-    RetryUtil.retryUntilFalse(
+    ITRetryUtil.retryUntilFalse(
         new Callable<Boolean>()
         {
           @Override
@@ -101,7 +101,7 @@ public abstract class AbstractIndexerTest
 
   protected void waitForAllTasksToComplete()
   {
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> {
           int numTasks = indexer.getPendingTasks().size() +
                          indexer.getRunningTasks().size() +

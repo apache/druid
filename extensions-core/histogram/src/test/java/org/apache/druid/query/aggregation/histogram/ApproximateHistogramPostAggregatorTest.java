@@ -20,13 +20,14 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ApproximateHistogramPostAggregatorTest
+public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandlingTest
 {
   static final float[] VALUES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 

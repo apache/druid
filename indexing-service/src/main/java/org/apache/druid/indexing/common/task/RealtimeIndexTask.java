@@ -32,7 +32,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -346,20 +346,20 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
-        toolbox.getObjectMapper()
+        toolbox.getJsonMapper()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
-    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    final File firehoseTempDir = toolbox.getIndexingTmpDir();
 
     LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
                                           new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        NodeType.PEON,
+        NodeRole.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService
@@ -386,7 +386,10 @@ public class RealtimeIndexTask extends AbstractTask
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
+          firehose = firehoseFactory.connect(
+              Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
+              firehoseTempDir
+          );
         }
       }
 

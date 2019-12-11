@@ -23,13 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.net.HttpHeaders;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.HttpEntity;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
@@ -38,8 +36,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URLConnection;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -109,27 +105,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   protected InputStream openObjectStream(URI object, long start) throws IOException
   {
-    URLConnection urlConnection = openURLConnection(object);
-    final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
-    final boolean withRanges = "bytes".equalsIgnoreCase(acceptRanges);
-    if (withRanges && start > 0) {
-      // Set header for range request.
-      // Since we need to set only the start offset, the header is "bytes=<range-start>-".
-      // See https://tools.ietf.org/html/rfc7233#section-2.1
-      urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
-      return urlConnection.getInputStream();
-    } else {
-      if (!withRanges && start > 0) {
-        log.warn(
-                "Since the input source doesn't support range requests, the object input stream is opened from the start and "
-                        + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
-                        + " a lot."
-        );
-      }
-      final InputStream in = urlConnection.getInputStream();
-      in.skip(start);
-      return in;
-    }
+    return HttpEntity.openInputStream(object, httpAuthenticationUsername, httpAuthenticationPasswordProvider, start);
   }
 
   @Override
@@ -194,16 +170,5 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
         getHttpAuthenticationUsername(),
         httpAuthenticationPasswordProvider
     );
-  }
-
-  private URLConnection openURLConnection(URI object) throws IOException
-  {
-    URLConnection urlConnection = object.toURL().openConnection();
-    if (!Strings.isNullOrEmpty(httpAuthenticationUsername) && httpAuthenticationPasswordProvider != null) {
-      String userPass = httpAuthenticationUsername + ":" + httpAuthenticationPasswordProvider.getPassword();
-      String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
-      urlConnection.setRequestProperty("Authorization", basicAuthString);
-    }
-    return urlConnection;
   }
 }

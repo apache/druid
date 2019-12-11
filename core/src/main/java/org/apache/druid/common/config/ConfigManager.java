@@ -124,7 +124,7 @@ public class ConfigManager
     ConfigHolder<T> holder = watchedConfigs.get(key);
     if (holder == null) {
       try {
-        log.info("Creating watch for key[%s]", key);
+        log.debug("Creating watch for key[%s]", key);
 
         holder = exec.submit(
             new Callable<ConfigHolder<T>>()

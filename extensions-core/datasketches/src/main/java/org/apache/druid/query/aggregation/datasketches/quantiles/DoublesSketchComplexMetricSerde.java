@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.GenericColumnSerializer;

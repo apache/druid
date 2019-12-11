@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 
 /**
  * In native parallel indexing, the supervisor task partitions input data into splits and assigns each of them
@@ -31,6 +32,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  *
  * @see FiniteFirehoseFactory#getSplits(SplitHintSpec)
  * @see FiniteFirehoseFactory#getNumSplits(SplitHintSpec)
+ * @see SplittableInputSource#createSplits
+ * @see SplittableInputSource#estimateNumSplits
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

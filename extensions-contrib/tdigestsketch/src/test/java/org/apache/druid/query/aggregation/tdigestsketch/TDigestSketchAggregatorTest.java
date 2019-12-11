@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,9 +42,8 @@ import java.util.Collection;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class TDigestSketchAggregatorTest
+public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
 {
-
   private final AggregationTestHelper helper;
 
   @Rule

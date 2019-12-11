@@ -227,6 +227,16 @@
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
         </exclusion>
+        <!-- Following are excluded to remove security vulnerabilities: -->
+        <exclusion>
+          <groupId>commons-beanutils</groupId>
+          <artifactId>commons-beanutils-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <!-- excluded to remove security vulnerabilities; jackson-mapper-asl is renamed to jackson-databind -->
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-mapper-asl</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

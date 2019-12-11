@@ -30,6 +30,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Json;
@@ -74,6 +75,10 @@ import java.util.Map;
 @PowerMockIgnore({"javax.net.ssl.*", "javax.xml.*", "com.sun.xml.*"})
 public class NamespaceLookupExtractorFactoryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+  
   private final ObjectMapper mapper = new DefaultObjectMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -466,7 +471,7 @@ public class NamespaceLookupExtractorFactoryTest
         namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
-    final Map<String, Object> map = new HashMap<>(mapper.<Map<String, Object>>readValue(
+    final Map<String, Object> map = new HashMap<>(mapper.readValue(
         str,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     ));

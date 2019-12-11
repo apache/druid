@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.BufferedWriter;

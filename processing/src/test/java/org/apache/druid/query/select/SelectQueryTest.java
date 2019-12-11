@@ -53,7 +53,7 @@ public class SelectQueryTest
   {
     final String exceptionMessage =
         StringUtils.format(
-            "Instantiation of [simple type, class org.apache.druid.query.select.SelectQuery] value failed: %s",
+            "Cannot construct instance of `org.apache.druid.query.select.SelectQuery`, problem: %s",
             SelectQuery.REMOVED_ERROR_MESSAGE
         );
     expectedException.expect(JsonMappingException.class);

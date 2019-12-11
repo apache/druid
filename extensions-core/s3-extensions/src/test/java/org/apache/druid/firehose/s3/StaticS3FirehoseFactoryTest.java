@@ -19,28 +19,12 @@
 
 package org.apache.druid.firehose.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.module.guice.ObjectMapperModule;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Provides;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.data.input.s3.S3InputSourceTest;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
-import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -66,7 +50,7 @@ public class StaticS3FirehoseFactoryTest
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper mapper = createObjectMapper(new TestS3Module());
+    final ObjectMapper mapper = S3InputSourceTest.createS3ObjectMapper();
 
     final List<URI> uris = Arrays.asList(
         new URI("s3://foo/bar/file.gz"),
@@ -101,9 +85,6 @@ public class StaticS3FirehoseFactoryTest
     );
     uris.sort(Comparator.comparing(URI::toString));
 
-    uris.forEach(StaticS3FirehoseFactoryTest::addExpectedObjject);
-    EasyMock.replay(S3_CLIENT);
-
     final StaticS3FirehoseFactory factory = new StaticS3FirehoseFactory(
         SERVICE,
         uris,
@@ -129,74 +110,6 @@ public class StaticS3FirehoseFactoryTest
       final List<URI> subFactoryUris = staticS3FirehoseFactory.getUris();
       Assert.assertEquals(1, subFactoryUris.size());
       Assert.assertEquals(uris.get(i), subFactoryUris.get(0));
-    }
-  }
-
-  private static void addExpectedObjject(URI uri)
-  {
-    final String s3Bucket = uri.getAuthority();
-    final String key = S3Utils.extractS3Key(uri);
-    final S3ObjectSummary objectSummary = new S3ObjectSummary();
-    objectSummary.setBucketName(s3Bucket);
-    objectSummary.setKey(key);
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setBucketName(s3Bucket);
-    result.setKeyCount(1);
-    result.getObjectSummaries().add(objectSummary);
-    EasyMock.expect(SERVICE.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class))).andReturn(result);
-  }
-
-  private static ObjectMapper createObjectMapper(DruidModule baseModule)
-  {
-    final Injector injector = Guice.createInjector(
-        new ObjectMapperModule(),
-        baseModule
-    );
-    final ObjectMapper baseMapper = injector.getInstance(ObjectMapper.class);
-
-    baseModule.getJacksonModules().forEach(baseMapper::registerModule);
-    return baseMapper;
-  }
-
-  private static class TestS3Module implements DruidModule
-  {
-    @Override
-    public List<? extends Module> getJacksonModules()
-    {
-      // Deserializer is need for AmazonS3Client even though it is injected.
-      // See https://github.com/FasterXML/jackson-databind/issues/962.
-      return ImmutableList.of(new SimpleModule().addDeserializer(AmazonS3.class, new ItemDeserializer()));
-    }
-
-    @Override
-    public void configure(Binder binder)
-    {
-
-    }
-
-    @Provides
-    public ServerSideEncryptingAmazonS3 getAmazonS3Client()
-    {
-      return SERVICE;
-    }
-  }
-
-  public static class ItemDeserializer extends StdDeserializer<AmazonS3>
-  {
-    public ItemDeserializer()
-    {
-      this(null);
-    }
-
-    public ItemDeserializer(Class<?> vc)
-    {
-      super(vc);
-    }
-
-    @Override
-    public AmazonS3 deserialize(JsonParser jp, DeserializationContext ctxt)
-    {
-      throw new UnsupportedOperationException();
     }
   }
 }

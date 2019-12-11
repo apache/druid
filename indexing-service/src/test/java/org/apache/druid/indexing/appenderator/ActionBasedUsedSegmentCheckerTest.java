@@ -21,8 +21,9 @@ package org.apache.druid.indexing.appenderator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
@@ -43,7 +44,7 @@ public class ActionBasedUsedSegmentCheckerTest
     final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
     EasyMock.expect(
         taskActionClient.submit(
-            new SegmentListUsedAction("bar", null, ImmutableList.of(Intervals.of("2002/P1D")))
+            new RetrieveUsedSegmentsAction("bar", Intervals.of("2002/P1D"), null, Segments.ONLY_VISIBLE)
         )
     ).andReturn(
         ImmutableList.of(
@@ -52,18 +53,25 @@ public class ActionBasedUsedSegmentCheckerTest
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("b")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("bar")
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
+                       .size(0)
                        .build()
         )
     );
     EasyMock.expect(
         taskActionClient.submit(
-            new SegmentListUsedAction("foo", null, ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D")))
+            new RetrieveUsedSegmentsAction(
+                "foo",
+                null,
+                ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D")),
+                Segments.ONLY_VISIBLE
+            )
         )
     ).andReturn(
         ImmutableList.of(
@@ -72,24 +80,28 @@ public class ActionBasedUsedSegmentCheckerTest
                        .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("a")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
                        .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
                        .interval(Intervals.of("2001/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
+                       .size(0)
                        .build()
         )
     );
@@ -111,12 +123,14 @@ public class ActionBasedUsedSegmentCheckerTest
                        .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("bar")
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("b")
+                       .size(0)
                        .build()
         ),
         segments

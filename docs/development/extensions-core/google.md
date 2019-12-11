@@ -38,6 +38,79 @@ Deep storage can be written to Google Cloud Storage either via this extension or
 |`druid.google.prefix`||GCS prefix.|No-prefix|
 
 
+<a name="input-source"></a>
+
+## Google cloud storage batch ingestion input source
+
+This extension also provides an input source for Druid native batch ingestion to support reading objects directly from Google Cloud Storage. Objects can be specified as list of Google Cloud Storage URI strings. The Google Cloud Storage input source is splittable and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task), where each worker task of `index_parallel` will read a single object.
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "prefixes": ["gs://foo/bar", "gs://bar/foo"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "objects": [
+          { "bucket": "foo", "path": "bar/file1.json"},
+          { "bucket": "bar", "path": "foo/file2.json"}
+        ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `google`.|N/A|yes|
+|uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|N/A|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested.|N/A|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Google Cloud Storage objects to be ingested.|N/A|`uris` or `prefixes` or `objects` must be set|
+
+
+Google Cloud Storage object:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|bucket|Name of the Google Cloud Storage bucket|N/A|yes|
+|path|The path where data is located.|N/A|yes|
+
 ## Firehose
 
 <a name="firehose"></a>

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.movingaverage;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -33,6 +34,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.ConstantAveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.LongMeanAveragerFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
@@ -47,7 +49,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class MovingAverageIterableTest
+public class MovingAverageIterableTest extends InitializedNullHandlingTest
 {
   private static final DateTime JAN_1 = new DateTime(2017, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_2 = new DateTime(2017, 1, 2, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
@@ -612,7 +614,7 @@ public class MovingAverageIterableTest
   public void testMissingDaysInMiddle()
   {
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
-
+    NullHandling.initializeForTests();
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
 
@@ -732,7 +734,7 @@ public class MovingAverageIterableTest
   public void testMissingDaysAtEnd()
   {
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
-
+    NullHandling.initializeForTests();
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
 

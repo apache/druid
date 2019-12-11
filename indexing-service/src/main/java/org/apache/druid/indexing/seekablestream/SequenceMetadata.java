@@ -27,11 +27,16 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
+import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,6 +47,8 @@ import java.util.function.BiFunction;
 
 public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
 {
+  private static final EmittingLogger log = new EmittingLogger(SequenceMetadata.class);
+
   private final int sequenceId;
   private final String sequenceName;
   private final Set<PartitionIdType> exclusiveStartPartitions;
@@ -301,14 +308,45 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       boolean useTransaction
   )
   {
-    return (mustBeNullOrEmptySegments, segmentsToPush, commitMetadata) -> {
+    return new SequenceMetadataTransactionalSegmentPublisher(
+        runner,
+        toolbox,
+        useTransaction
+    );
+  }
+
+  private class SequenceMetadataTransactionalSegmentPublisher
+      implements TransactionalSegmentPublisher
+  {
+    private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
+    private final TaskToolbox toolbox;
+    private final boolean useTransaction;
+
+    public SequenceMetadataTransactionalSegmentPublisher(
+        SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
+        TaskToolbox toolbox,
+        boolean useTransaction
+    )
+    {
+      this.runner = runner;
+      this.toolbox = toolbox;
+      this.useTransaction = useTransaction;
+    }
+
+    @Override
+    public SegmentPublishResult publishAnnotatedSegments(
+        @Nullable Set<DataSegment> mustBeNullOrEmptySegments,
+        Set<DataSegment> segmentsToPush,
+        @Nullable Object commitMetadata
+    ) throws IOException
+    {
       if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
         throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
       }
       final Map commitMetaMap = (Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata");
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> finalPartitions =
           runner.deserializePartitionsFromMetadata(
-              toolbox.getObjectMapper(),
+              toolbox.getJsonMapper(),
               commitMetaMap.get(SeekableStreamIndexTaskRunner.METADATA_PUBLISH_PARTITIONS)
           );
 
@@ -316,14 +354,43 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       if (!getEndOffsets().equals(finalPartitions.getPartitionSequenceNumberMap())) {
         throw new ISE(
             "WTF?! Driver for sequence [%s], attempted to publish invalid metadata[%s].",
-            toString(),
+            SequenceMetadata.this.toString(),
             commitMetadata
         );
       }
 
       final SegmentTransactionalInsertAction action;
 
-      if (useTransaction) {
+      if (segmentsToPush.isEmpty()) {
+        // If a task ingested no data but made progress reading through its assigned partitions,
+        // we publish no segments but still need to update the supervisor with the current offsets
+        SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> startPartitions =
+            new SeekableStreamStartSequenceNumbers<>(
+                finalPartitions.getStream(),
+                getStartOffsets(),
+                exclusiveStartPartitions
+            );
+        if (isMetadataUnchanged(startPartitions, finalPartitions)) {
+          // if we created no segments and didn't change any offsets, just do nothing and return.
+          log.info(
+              "With empty segment set, start offsets [%s] and end offsets [%s] are the same, skipping metadata commit.",
+              startPartitions,
+              finalPartitions
+          );
+          return SegmentPublishResult.ok(segmentsToPush);
+        } else {
+          log.info(
+              "With empty segment set, start offsets [%s] and end offsets [%s] changed, committing new metadata.",
+              startPartitions,
+              finalPartitions
+          );
+          action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
+              runner.getAppenderator().getDataSource(),
+              runner.createDataSourceMetadata(startPartitions),
+              runner.createDataSourceMetadata(finalPartitions)
+          );
+        }
+      } else if (useTransaction) {
         action = SegmentTransactionalInsertAction.appendAction(
             segmentsToPush,
             runner.createDataSourceMetadata(
@@ -340,6 +407,22 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       }
 
       return toolbox.getTaskActionClient().submit(action);
-    };
+    }
+
+    @Override
+    public boolean supportsEmptyPublish()
+    {
+      return true;
+    }
+  }
+
+  private boolean isMetadataUnchanged(
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers
+  )
+  {
+    Map<PartitionIdType, SequenceOffsetType> startMap = startSequenceNumbers.getPartitionSequenceNumberMap();
+    Map<PartitionIdType, SequenceOffsetType> endMap = endSequenceNumbers.getPartitionSequenceNumberMap();
+    return startMap.equals(endMap);
   }
 }

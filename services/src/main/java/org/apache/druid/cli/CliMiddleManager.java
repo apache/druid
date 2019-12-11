@@ -31,9 +31,10 @@ import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.Jerseys;
@@ -63,6 +64,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
@@ -139,12 +141,18 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
+            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.MIDDLE_MANAGER);
+
             bindAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider.builder(NodeType.MIDDLE_MANAGER)
-                                            .serviceClasses(ImmutableList.of(WorkerNodeService.class))
-                                            .build()
+                DiscoverySideEffectsProvider
+                    .builder(NodeRole.MIDDLE_MANAGER)
+                    .serviceClasses(ImmutableList.of(WorkerNodeService.class))
+                    .build()
             );
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           @Provides
@@ -174,6 +182,7 @@ public class CliMiddleManager extends ServerRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
+        new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new LookupSerdeModule()
     );

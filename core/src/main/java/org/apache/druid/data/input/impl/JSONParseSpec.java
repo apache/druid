@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathParser;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -63,14 +63,15 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   }
 
   @Override
-  public void verify(List<String> usedCols)
-  {
-  }
-
-  @Override
   public Parser<String, Object> makeParser()
   {
     return new JSONPathParser(getFlattenSpec(), objectMapper);
+  }
+
+  @Override
+  public InputFormat toInputFormat()
+  {
+    return new JsonInputFormat(getFlattenSpec(), getFeatureSpec());
   }
 
   @Override

@@ -144,7 +144,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
     // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(
-        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s') = TRUE", base64),
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE nullif(bloom_filter_test(concat(dim2, '-foo'), '%s'), 1) is null", base64),
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -152,7 +152,12 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(
                       new ExpressionDimFilter(
-                          StringUtils.format("(bloom_filter_test(concat(\"dim2\",'-foo'),'%s') == 1)", base64),
+                          StringUtils.format(
+                              "case_searched(bloom_filter_test(concat(\"dim2\",'-foo'),'%s'),1,isnull(bloom_filter_test(concat(\"dim2\",'-foo'),'%s')))",
+                              base64,
+                              base64
+                          ),
+                          null,
                           createExprMacroTable()
                       )
                   )
