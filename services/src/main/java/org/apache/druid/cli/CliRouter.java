@@ -109,12 +109,7 @@ public class CliRouter extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
           DiscoveryModule.register(binder, Self.class);
 
-          binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.ROUTER);
-
-          bindAnnouncer(
-              binder,
-              DiscoverySideEffectsProvider.builder(NodeRole.ROUTER).build()
-          );
+          bindNodeRoleAndAnnouncer(binder, DiscoverySideEffectsProvider.builder(NodeRole.ROUTER).build());
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));

@@ -32,6 +32,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -72,7 +73,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   @JsonCreator
   public HdfsInputSource(
       @JsonProperty(PROP_PATHS) Object inputPaths,
-      @JacksonInject Configuration configuration
+      @JacksonInject @Hdfs Configuration configuration
   )
   {
     this.inputPaths = coerceInputPathsToList(inputPaths, PROP_PATHS);

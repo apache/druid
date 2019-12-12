@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.orc.guice.Orc;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -89,6 +90,6 @@ public class OrcExtensionsModule implements DruidModule
       }
     }
 
-    binder.bind(Configuration.class).toInstance(conf);
+    binder.bind(Configuration.class).annotatedWith(Orc.class).toInstance(conf);
   }
 }

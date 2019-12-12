@@ -38,7 +38,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
@@ -104,9 +103,7 @@ public class CliHistorical extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
 
-          binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.HISTORICAL);
-
-          bindAnnouncer(
+          bindNodeRoleAndAnnouncer(
               binder,
               DiscoverySideEffectsProvider
                   .builder(NodeRole.HISTORICAL)
