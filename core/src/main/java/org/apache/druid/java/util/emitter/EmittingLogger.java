@@ -83,11 +83,13 @@ public class EmittingLogger extends Logger
           StringUtils.nonStrictFormat(message, objects)
       );
 
-      error(errorMessage);
       ISE e = new ISE(errorMessage);
       if (t != null) {
         e.addSuppressed(t);
       }
+
+      error(e, errorMessage);
+
       throw e;
     }
 
