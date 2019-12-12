@@ -44,7 +44,7 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`kafkaTopic`|The Kafka topic to read the data from|Yes||
-|`kafkaProperties`|Kafka consumer properties. At least"bootstrap.servers" must be specified. |Yes||
+|`kafkaProperties`|Kafka consumer properties. At least `bootstrap.servers` must be specified. |Yes||
 |`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
 |`isOneToOne`|The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.md))|No|`false`|
 |`namespaceParseSpec`|How to extract key and value pairs from Kafka message|No|null|
@@ -55,12 +55,12 @@ The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kaf
 
 See [lookups](../../querying/lookups.md) for how to configure and use lookups.
 
-# Json Extrators
+# JSON Extractors
 
-Besides simple kafka key and message mapping, extraction allows to extract values from Kafka JSON messages.
+Besides simple Kafka key and message mapping, extraction allows to extract values from Kafka JSON messages.
 
-## Custom Json Extractor
-Allows to extract key and value from Kafka json message as per the following example:
+## Custom JSON Extractors
+Allows to extract key and value from Kafka JSON message as per the following example:
 
 ```json
 {
@@ -77,9 +77,9 @@ Allows to extract key and value from Kafka json message as per the following exa
 }
 ```
 
-## Jq Json Extractor
+## Jq JSON Extractors
 
-Allows to extract key and value from Kafka json message using [JQ expressions](https://github.com/stedolan/jq/wiki/Cookbook). In the following example, Json array of categories parsed into a string where each categorie id get maps to the coresponding categorie name.
+Allows to extract key and value from Kafka JSON message using [JQ expressions](https://github.com/stedolan/jq/wiki/Cookbook). In the following example, JSON array of categories parsed into a string where each category id get maps to category name.
 
 ```json
 {
