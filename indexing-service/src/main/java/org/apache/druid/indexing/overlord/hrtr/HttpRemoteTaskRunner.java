@@ -1143,7 +1143,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             // back if this thread couldn't run this task for any reason, which we will know at some later time
             // and also we will need to add it back to its old position in the list. that becomes complex quickly.
             // Instead we keep the PENDING_WORKER_ASSIGN to notify other task execution threads not to pick this one up.
-            // And, it is automatically removed by any of the task exeuction threads when they notice that
+            // And, it is automatically removed by any of the task execution threads when they notice that
             // ti.getState().isPending() is false (at the beginning of this loop)
             ti.setState(HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN);
             taskItem = ti;
