@@ -35,9 +35,14 @@ fi
 
 CONFDIR="$(cd "$CONFDIR" && pwd)/zk"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
+JAVA_BIN=`source "$WHEREAMI"/java-util && get_java_bin`
+if [ -z "$JAVA_BIN" ]; then
+  echo "Could not find java - please run $WHEREAMI/verify-java to confirm it is installed."
+  exit 1
+fi
 
 cd "$WHEREAMI/.."
-exec java `cat "$CONFDIR"/jvm.config | xargs` \
+exec "$JAVA_BIN"/java `cat "$CONFDIR"/jvm.config | xargs` \
   -cp "$WHEREAMI/../lib/*:$CONFDIR" \
   -Dzookeeper.jmx.log4j.disable=true \
   org.apache.zookeeper.server.quorum.QuorumPeerMain \

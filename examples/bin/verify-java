@@ -19,6 +19,7 @@
 
 use strict;
 use warnings;
+use File::Basename;
 
 sub fail_check {
   my ($current_version) = @_;
@@ -44,7 +45,18 @@ if ($skip_var && $skip_var ne "0" && $skip_var ne "false" && $skip_var ne "f") {
   exit 0;
 }
 
-my $java_version = qx[java -version 2>&1];
+my $cwd =  dirname(__FILE__);
+my $java_bin = `source $cwd/java-util && get_java_bin 2>&1`;
+# Strip trailing whitespace. Executing get_java_bin appears to append a
+# new line character at the end
+$java_bin =~ s/\s+$//;
+
+# If we could not find java
+if ($java_bin eq "") {
+  fail_check()
+}
+my $java_exec = "${java_bin}/java";
+my $java_version = qx[$java_exec -version 2>&1];
 if ($?) {
   fail_check();
 }
