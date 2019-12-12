@@ -176,7 +176,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       existingHolder.addCallback(callback);
       return;
     }
-    log.info("Asking server peon[%s] to load segment[%s]", basePath, segmentHolder.getSegmentIdentifier());
+    log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getId());
     queuedSize.addAndGet(segment.getSize());
     processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
@@ -190,7 +190,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       existingHolder.addCallback(callback);
       return;
     }
-    log.info("Asking server peon[%s] to drop segment[%s]", basePath, segmentHolder.getSegmentIdentifier());
+    log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
     processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
@@ -222,9 +222,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         final String path = ZKPaths.makePath(basePath, segmentHolder.getSegmentIdentifier());
         final byte[] payload = jsonMapper.writeValueAsBytes(segmentHolder.getChangeRequest());
         curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-        log.info("SegmentChangeProcessor.run() - ZKNode created for server to load segment " + segmentHolder.getSegmentIdentifier());
         log.debug(
-            "SegmentCHangeProcessor - ZKNode created for server to [%s] %s [%s]",
+            "ZKNode created for server to [%s] %s [%s]",
             basePath,
             segmentHolder.getType() == LOAD ? "load" : "drop",
             segmentHolder.getSegmentIdentifier()

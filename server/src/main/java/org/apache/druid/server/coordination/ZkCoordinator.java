@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 
@@ -137,7 +136,6 @@ public class ZkCoordinator
 
   private void childAdded(ChildData child)
   {
-    log.info("ZKCoordinator - Submitted request to loadUnload service for path " + child.getPath());
     segmentLoadUnloadService.submit(() -> {
       final String path = child.getPath();
       DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
@@ -146,21 +144,13 @@ public class ZkCoordinator
             child.getData(),
             DataSegmentChangeRequest.class
         );
-        SegmentId segmentId = null;
-        if (finalRequest instanceof SegmentChangeRequestLoad) {
-          segmentId = ((SegmentChangeRequestLoad) finalRequest).getSegment().getId();
-          log.info("ZKCoordinator - About to make request to segmentChangeHandler for segment " + segmentId);
-        }
-        final SegmentId finalSegId = segmentId;
+
         finalRequest.go(
             dataSegmentChangeHandler,
             () -> {
               try {
                 curator.delete().guaranteed().forPath(path);
-                if (finalSegId != null) {
-                  log.info("ZKCoordinator - Zk node deleted. Completed request for segment " + finalSegId);
-                }
-                log.debug("ZKCoordinator - Zk node deleted. Completed request [%s]", finalRequest.asString());
+                log.info("Completed request [%s]", finalRequest.asString());
               }
               catch (Exception e) {
                 try {
