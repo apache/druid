@@ -38,6 +38,7 @@
     <dependency>
       <groupId>org.apache.datasketches</groupId>
       <artifactId>datasketches-java</artifactId>
+      <scope>provided</scope>
       <exclusions>
         <exclusion>
           <groupId>com.google.code.findbugs</groupId>
@@ -48,6 +49,7 @@
     <dependency>
       <groupId>org.apache.datasketches</groupId>
       <artifactId>datasketches-memory</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>

@@ -61,7 +61,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRun
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -376,30 +375,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    if (useRangePartitions()) {
-      assertDataSketchesAvailable();
-    }
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
-  }
-
-  private boolean useRangePartitions()
-  {
-    return (ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec);
-  }
-
-  private static void assertDataSketchesAvailable()
-  {
-    try {
-      //noinspection ResultOfObjectAllocationIgnored
-      new StringSketch();
-    }
-    catch (NoClassDefFoundError e) {
-      throw new ISE(
-          e,
-          "DataSketches is unvailable."
-          + " Try loading the druid-datasketches extension from the classpath for the overlord and middleManagers/indexers."
-      );
-    }
   }
 
   @Override
@@ -521,6 +497,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     return baseInputSource.isSplittable()
            && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() >= minRequiredNumConcurrentSubTasks;
+  }
+
+  private boolean useRangePartitions()
+  {
+    return ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
   }
 
   /**
