@@ -66,8 +66,11 @@ public class TDigestSketchBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buffer, int position)
   {
-    MergingDigest sketch = sketchCache.get(buffer).get(position);
     Object x = selector.getObject();
+    if (x == null) {
+      return;
+    }
+    MergingDigest sketch = sketchCache.get(buffer).get(position);
     if (x instanceof Number) {
       sketch.add(((Number) x).doubleValue());
     } else if (x instanceof MergingDigest) {

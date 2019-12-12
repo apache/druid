@@ -56,6 +56,10 @@ public class TDigestSketchAggregator implements Aggregator
   @Override
   public void aggregate()
   {
+    Object obj = selector.getObject();
+    if (obj == null) {
+      return;
+    }
     if (selector.getObject() instanceof Number) {
       synchronized (this) {
         histogram.add(((Number) selector.getObject()).doubleValue());
