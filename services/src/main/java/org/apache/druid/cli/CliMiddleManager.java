@@ -141,9 +141,7 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
-            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.MIDDLE_MANAGER);
-
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
                 DiscoverySideEffectsProvider
                     .builder(NodeRole.MIDDLE_MANAGER)

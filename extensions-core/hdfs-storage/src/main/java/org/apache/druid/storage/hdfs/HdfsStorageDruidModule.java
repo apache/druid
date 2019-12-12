@@ -28,6 +28,7 @@ import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.firehose.hdfs.HdfsFirehoseFactory;
 import org.apache.druid.guice.Binders;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
@@ -108,7 +109,7 @@ public class HdfsStorageDruidModule implements DruidModule
       }
     }
 
-    binder.bind(Configuration.class).toInstance(conf);
+    binder.bind(Configuration.class).annotatedWith(Hdfs.class).toInstance(conf);
     JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
 
     Binders.taskLogsBinder(binder).addBinding("hdfs").to(HdfsTaskLogs.class);
@@ -117,6 +118,5 @@ public class HdfsStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HdfsKerberosConfig.class);
     binder.bind(HdfsStorageAuthentication.class).in(ManageLifecycle.class);
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
-
   }
 }
