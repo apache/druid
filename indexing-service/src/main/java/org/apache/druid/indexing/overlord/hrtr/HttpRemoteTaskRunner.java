@@ -1099,13 +1099,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             HttpRemoteTaskRunnerWorkItem ti = tasks.get(taskId);
 
             if (ti == null || !ti.getState().isPending()) {
-              // happens if the task was shutdown or was picked up earlier and no more pending
+              // happens if the task was shutdown, failed or observed running by a worker
               iter.remove();
               continue;
             }
 
             if (ti.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-              // picked up by another pending task executor thread.
+              // picked up by another pending task executor thread which is in the process of trying to
+              // run it on a worker, skip to next.
               continue;
             }
 
@@ -1138,6 +1139,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
             // set state to PENDING_WORKER_ASSIGN before releasing the lock so that this task item is not picked
             // up by another task execution thread.
+            // note that we can't simply delete this task item from pendingTaskIds or else we would have to add it
+            // back if this thread couldn't run this task for any reason, which we will know at some later time
+            // and also we will need to add it back to its old position in the list. that becomes complex quickly.
+            // Instead we keep the PENDING_WORKER_ASSIGN to notify other task execution threads not to pick this one up.
+            // And, it is automatically removed by any of the task exeuction threads when they notice that
+            // ti.getState().isPending() is false (at the beginning of this loop)
             ti.setState(HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN);
             taskItem = ti;
             break;
