@@ -419,6 +419,10 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-hbase-indexing</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-hbase2-indexing</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
