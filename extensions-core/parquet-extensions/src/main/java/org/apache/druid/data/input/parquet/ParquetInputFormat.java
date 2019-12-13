@@ -19,13 +19,16 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.data.input.parquet.guice.Parquet;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.hadoop.conf.Configuration;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -35,15 +38,18 @@ import java.util.Objects;
 public class ParquetInputFormat extends NestedInputFormat
 {
   private final boolean binaryAsString;
+  private final Configuration conf;
 
   @JsonCreator
   public ParquetInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
-      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
+      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString,
+      @JacksonInject @Parquet Configuration conf
   )
   {
     super(flattenSpec);
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.conf = conf;
   }
 
   @JsonProperty
@@ -65,7 +71,7 @@ public class ParquetInputFormat extends NestedInputFormat
       File temporaryDirectory
   ) throws IOException
   {
-    return new ParquetReader(inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+    return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }
 
   @Override
