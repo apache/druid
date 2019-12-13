@@ -53,7 +53,8 @@ public class ServerConfig
       @NotNull Period gracefulShutdownTimeout,
       @NotNull Period unannouncePropagationDelay,
       int inflateBufferSize,
-      int compressionLevel
+      int compressionLevel,
+      boolean enableForwardedRequestCustomizer
   )
   {
     this.numThreads = numThreads;
@@ -68,6 +69,7 @@ public class ServerConfig
     this.unannouncePropagationDelay = unannouncePropagationDelay;
     this.inflateBufferSize = inflateBufferSize;
     this.compressionLevel = compressionLevel;
+    this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
   }
 
   public ServerConfig()
@@ -121,6 +123,9 @@ public class ServerConfig
   @Min(-1)
   @Max(9)
   private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
+
+  @JsonProperty
+  private boolean enableForwardedRequestCustomizer = false;
 
   public int getNumThreads()
   {
@@ -182,6 +187,10 @@ public class ServerConfig
     return compressionLevel;
   }
 
+  public boolean isEnableForwardedRequestCustomizer()
+  {
+    return enableForwardedRequestCustomizer;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -202,15 +211,15 @@ public class ServerConfig
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
-           Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
-           Objects.equals(unannouncePropagationDelay, that.unannouncePropagationDelay);
+           enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           maxIdleTime.equals(that.maxIdleTime) &&
+           gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
+           unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
   }
 
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         numThreads,
         queueSize,
@@ -223,7 +232,8 @@ public class ServerConfig
         gracefulShutdownTimeout,
         unannouncePropagationDelay,
         inflateBufferSize,
-        compressionLevel
+        compressionLevel,
+        enableForwardedRequestCustomizer
     );
   }
 
@@ -243,6 +253,7 @@ public class ServerConfig
            ", unannouncePropagationDelay=" + unannouncePropagationDelay +
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
+           ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
            '}';
   }
 
