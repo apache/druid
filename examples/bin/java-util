@@ -25,15 +25,16 @@
 # Returns:
 #   The bin folder of java if it exists, otherwise an empty string
 #######################################
-get_java_bin() {
+get_java_bin_dir() {
     if [ ! -z "${DRUID_JAVA_HOME-}" ]; then
-      echo "$DRUID_JAVA_HOME/bin"
+      printf "$DRUID_JAVA_HOME/bin"
     elif [ ! -z "${JAVA_HOME-}" ]; then
-      echo "$JAVA_HOME/bin"
-    elif [ ! -z `which java` ]; then
+      printf "$JAVA_HOME/bin"
+    elif [ ! -z "$(command -v java)" ]; then
       # Strip /java from the location of where java is installed
-      echo "${test_var%/java}"
+      JAVA_ON_PATH="$(command -v java)"
+      echo -n "${JAVA_ON_PATH%/java}"
     else
-      echo ""
+      printf ""
     fi
 }
