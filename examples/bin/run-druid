@@ -19,7 +19,7 @@
 
 if [ "$#" -gt 2 ] || [ "$#" -eq 0 ]
 then
-  >&2 echo "usage: $0 <service> [conf-dir]" >&2
+  >&2 echo "usage: $0 <service> [conf-dir]"
   exit 1
 fi
 

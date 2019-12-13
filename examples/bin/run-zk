@@ -19,7 +19,7 @@
 
 if [ "$#" -gt 1 ]
 then
-  >&2 echo "usage: $0 [conf-dir]" >&2
+  >&2 echo "usage: $0 [conf-dir]"
   exit 1
 fi
 
