@@ -753,3 +753,7 @@ Removing old releases from the ['release' SVN repository](https://dist.apache.or
 We consider the 'active' releases to be the latest versions of the current and previous quarterly releases. If you are adding a new quarterly release, remove the oldest quarterly release. If you are adding a bug fix release, remove the current quarterly release. 
 
 For example, if the new release is a bug fix, `0.15.1-incubating`, and the current versions are `0.15.0-incubating`, and `0.14.2-incubating`, then you would delete `0.15.0-incubating`, leaving `0.14.2-incubating` and `0.15.1-incubating` on the mirrors. If instead we were adding `0.16.0-incubating`, the resulting set of 'active' releases would be `0.15.0-incubating` and `0.16.0-incubating`.
+
+### Close the milestone and release notes
+
+After the release has been completed, close the release milestone and the release notes issue on Github.
