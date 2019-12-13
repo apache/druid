@@ -69,6 +69,7 @@ Elasticsearch
 FirehoseFactory
 Float.NEGATIVE_INFINITY
 Float.POSITIVE_INFINITY
+ForwardedRequestCustomizer
 GC
 GPG
 GSSAPI
@@ -325,6 +326,7 @@ rsync
 runtime
 schemas
 searchable
+servlet
 sharded
 sharding
 smooshed
