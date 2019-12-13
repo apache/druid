@@ -332,6 +332,22 @@ public class WorkerHolder
     }
   }
 
+  public boolean isInitialized()
+  {
+    try {
+      return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
+    }
+    catch (InterruptedException ignored) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  public boolean isEnabled()
+  {
+    return !disabled.get();
+  }
+
   public ChangeRequestHttpSyncer<WorkerHistoryItem> getUnderlyingSyncer()
   {
     return syncer;
