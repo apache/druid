@@ -52,7 +52,6 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
@@ -248,9 +247,7 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
-            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.OVERLORD);
-
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
                 IndexingService.class,
                 DiscoverySideEffectsProvider.builder(NodeRole.OVERLORD).build()
