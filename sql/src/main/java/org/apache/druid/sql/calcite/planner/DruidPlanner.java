@@ -258,24 +258,30 @@ public class DruidPlanner implements Closeable
     if (root.rel instanceof Sort) {
       Sort innerSort = (Sort) root.rel;
       final int offset = Calcites.getOffset(innerSort);
+      final int innerLimit = Calcites.getFetch(innerSort);
       final int fetch = Calcites.collapseFetch(
-          Calcites.getFetch(innerSort),
+          innerLimit,
           Ints.checkedCast(outerLimit),
           0
       );
 
+      if (fetch == innerLimit) {
+        // nothing to do, don't bother to make a new sort
+        return root.rel;
+      }
+
+      root.rel.getCluster().getPlanner().setImportance(innerSort, 0.0);
       return LogicalSort.create(
           innerSort.getInput(),
           innerSort.collation,
-          makeBigIntLiteral(offset),
+          offset > 0 ? makeBigIntLiteral(offset) : null,
           makeBigIntLiteral(fetch)
       );
     }
-
     return LogicalSort.create(
         root.rel,
         root.collation,
-        makeBigIntLiteral(0),
+        null,
         makeBigIntLiteral(outerLimit)
     );
   }
