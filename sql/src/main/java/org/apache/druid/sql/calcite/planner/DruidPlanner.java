@@ -270,7 +270,6 @@ public class DruidPlanner implements Closeable
         return root.rel;
       }
 
-      root.rel.getCluster().getPlanner().setImportance(innerSort, 0.0);
       return LogicalSort.create(
           innerSort.getInput(),
           innerSort.collation,
