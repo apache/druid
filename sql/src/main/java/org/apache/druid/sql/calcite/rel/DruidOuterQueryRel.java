@@ -131,7 +131,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 
     final GroupByQuery groupByQuery = subQuery.toGroupByQuery();
     if (groupByQuery == null) {
-      return null;
+      throw new CannotBuildQueryException("Subquery with limit caluse is not supported");
     }
 
     final RowSignature sourceRowSignature = subQuery.getOutputRowSignature();

@@ -7625,6 +7625,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUsingSubqueryWithLimit() throws Exception
   {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("Subquery with limit caluse is not supported");
+
     testQuery(
         "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA",
         ImmutableList.of(),
