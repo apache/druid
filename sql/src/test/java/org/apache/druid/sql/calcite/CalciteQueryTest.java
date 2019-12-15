@@ -101,6 +101,8 @@ import java.util.Map;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
+  private final boolean useDefault = NullHandling.replaceWithDefault();
+
   @Test
   public void testSelectConstantExpression() throws Exception
   {
@@ -329,6 +331,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
             .add(new Object[]{"druid", "aview", "VIEW"})
             .add(new Object[]{"druid", "bview", "VIEW"})
@@ -355,6 +358,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
             .add(new Object[]{"druid", "aview", "VIEW"})
             .add(new Object[]{"druid", "bview", "VIEW"})
@@ -862,7 +866,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 1L,
                 "0",
                 "[\"Baz\",\"Baz\",\"Hello\",\"World\"]",
-                "[null,\"Apple\",\"Orange\"]",
+                useDefault ? "[\"\",\"Apple\",\"Orange\"]" : "[null,\"Apple\",\"Orange\"]",
                 "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\"]",
                 "0",
                 "0",
@@ -877,10 +881,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 1L,
                 "8",
                 "[\"Baz\",\"World\",\"World\",\"World\"]",
-                "[null,\"Corundum\",\"Xylophone\"]",
-                null,
+                useDefault ? "[\"\",\"Corundum\",\"Xylophone\"]" : "[null,\"Corundum\",\"Xylophone\"]",
+                useDefault ? "" : null,
                 "8",
-                null,
+                useDefault ? "" : null,
                 "50515",
                 "9",
                 "4999.0",
@@ -903,21 +907,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
                     ImmutableList.<String>builder()
-                                 .add("__time")
-                                 .add("count")
-                                 .add("dimHyperUnique")
-                                 .add("dimMultivalEnumerated")
-                                 .add("dimMultivalEnumerated2")
-                                 .add("dimMultivalSequentialWithNulls")
-                                 .add("dimSequential")
-                                 .add("dimSequentialHalfNull")
-                                 .add("dimUniform")
-                                 .add("dimZipf")
-                                 .add("metFloatNormal")
-                                 .add("metFloatZipf")
-                                 .add("metLongSequential")
-                                 .add("metLongUniform")
-                                 .build()
+                        .add("__time")
+                        .add("count")
+                        .add("dimHyperUnique")
+                        .add("dimMultivalEnumerated")
+                        .add("dimMultivalEnumerated2")
+                        .add("dimMultivalSequentialWithNulls")
+                        .add("dimSequential")
+                        .add("dimSequentialHalfNull")
+                        .add("dimUniform")
+                        .add("dimZipf")
+                        .add("metFloatNormal")
+                        .add("metFloatZipf")
+                        .add("metLongSequential")
+                        .add("metLongUniform")
+                        .build()
                 )
                 .limit(2)
                 .order(ScanQuery.Order.DESCENDING)
@@ -931,7 +935,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 1L,
                 "0",
                 "[\"Baz\",\"Baz\",\"Hello\",\"World\"]",
-                "[null,\"Apple\",\"Orange\"]",
+                useDefault ? "[\"\",\"Apple\",\"Orange\"]" : "[null,\"Apple\",\"Orange\"]",
                 "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\"]",
                 "0",
                 "0",
@@ -947,10 +951,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 1L,
                 "8",
                 "[\"Baz\",\"World\",\"World\",\"World\"]",
-                "[null,\"Corundum\",\"Xylophone\"]",
-                null,
+                useDefault ? "[\"\",\"Corundum\",\"Xylophone\"]" : "[null,\"Corundum\",\"Xylophone\"]",
+                useDefault ? "" : null,
                 "8",
-                null,
+                useDefault ? "" : null,
                 "50515",
                 "9",
                 "4999.0",
@@ -2390,7 +2394,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableQueries() throws Exception
+  public void testUnplannableQueries()
   {
     // All of these queries are unplannable because they rely on features Druid doesn't support.
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
@@ -3766,7 +3770,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid() throws Exception
+  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid()
   {
     // Strings are implicitly cast to timestamps. Test an invalid string.
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
