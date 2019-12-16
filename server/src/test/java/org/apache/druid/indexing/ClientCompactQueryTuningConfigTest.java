@@ -26,7 +26,7 @@ import org.junit.Test;
 public class ClientCompactQueryTuningConfigTest
 {
   @Test
-  public void test_equalsContract()
+  public void testEqualsContract()
   {
     // If this test failed, make sure to validate that toString was also updated correctly!
     EqualsVerifier.forClass(ClientCompactQueryTuningConfig.class).usingGetClass().verify();
