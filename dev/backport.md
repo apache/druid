@@ -19,7 +19,7 @@
 
 # Backporting a change
 This document contains some examples of how to backport a change from master to another branch. This is not meant to be
-an exhaustive list of how to backport a change
+an exhaustive list of how to backport a change.
 
 ## Using [sqren/backport](https://github.com/sqren/backport)
 This is a CLI tool that automates the backport process for you once a change is in master.
