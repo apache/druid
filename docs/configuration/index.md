@@ -1827,6 +1827,6 @@ Supported query contexts:
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.html#router-as-management-proxy) functionality.|false|
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|20|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|PT15M|
-|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handl HTTP requests and responses|max(10, ((number of cores * 17) / 16 + 2) + 30)|
+|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|max(10, ((number of cores * 17) / 16 + 2) + 30)|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|1024|
 |`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|8 * 1024|
