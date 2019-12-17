@@ -246,7 +246,7 @@ public class PartialDimensionDistributionTaskTest
           .inputSource(inlineInputSource);
 
       exception.expect(RuntimeException.class);
-      exception.expectMessage("Cannot partition on multi-value dimension: dim");
+      exception.expectMessage("Cannot partition on multi-value dimension [dim]");
 
       runTask(taskBuilder);
     }

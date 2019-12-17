@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -104,7 +105,7 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   )
   {
     return inputRow -> {
-      int dimensionValueCount = getDimensionValueCount(inputRow, partitionDimension);
+      int dimensionValueCount = getSingleOrNullDimensionValueCount(inputRow, partitionDimension);
       return dimensionValueCount != 1;
     };
   }
@@ -114,17 +115,21 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   )
   {
     return inputRow -> {
-      int dimensionValueCount = getDimensionValueCount(inputRow, partitionDimension);
+      int dimensionValueCount = getSingleOrNullDimensionValueCount(inputRow, partitionDimension);
       return dimensionValueCount > 1;  // Rows.objectToStrings() returns an empty list for a single null value
     };
   }
 
-  private static int getDimensionValueCount(InputRow inputRow, String partitionDimension)
+  private static int getSingleOrNullDimensionValueCount(InputRow inputRow, String partitionDimension)
   {
     List<String> dimensionValues = inputRow.getDimension(partitionDimension);
     int dimensionValueCount = dimensionValues.size();
     if (dimensionValueCount > 1) {
-      throw new IllegalArgumentException("Cannot partition on multi-value dimension: " + partitionDimension);
+      throw new IAE(
+          "Cannot partition on multi-value dimension [%s] for input row [%s]",
+          partitionDimension,
+          inputRow
+      );
     }
     return dimensionValueCount;
   }

@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class RangePartitionTaskInputRowIteratorBuilderTest
+public class RangePartitionIndexTaskInputRowIteratorBuilderTest
 {
   private static final boolean SKIP_NULL = true;
   private static final IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester HANDLER_TESTER =
@@ -100,7 +100,7 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
     );
 
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Cannot partition on multi-value dimension: dimension");
+    exception.expectMessage("Cannot partition on multi-value dimension [dimension]");
 
     HANDLER_TESTER.invokeHandlers(
         inputRowIterator,
