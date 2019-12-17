@@ -195,4 +195,92 @@
     <cve>CVE-2019-17267</cve>
     <cve>CVE-2019-17531</cve>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-common-1.2.12.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-common@.*$</packageUrl>
+    <cve>CVE-2018-8025</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-client-1.2.12.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-client@.*$</packageUrl>
+    <cve>CVE-2018-8025</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-server-1.2.12.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-server@.*$</packageUrl>
+    <cpe>cpe:/a:apache:hbase</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-server-1.2.12.jar: jquery.min.js
+   ]]></notes>
+    <packageUrl regex="true">^pkg:javascript/jquery@.*$</packageUrl>
+    <cve>CVE-2012-6708</cve>
+    <cve>CVE-2015-9251</cve>
+    <cve>CVE-2019-11358</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-protocol-1.2.12.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-protocol@.*$</packageUrl>
+    <cve>CVE-2018-8025</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-hadoop-compat-1.2.12.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-hadoop\-compat@.*$</packageUrl>
+    <cve>CVE-2018-8025</cve>
+    <cve>CVE-2016-5001</cve>
+    <cve>CVE-2017-3161</cve>
+    <cve>CVE-2017-3162</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-annotations-1.2.12.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-annotations@.*$</packageUrl>
+    <cve>CVE-2018-8025</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: protobuf-java-2.5.0.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java@.*$</packageUrl>
+    <vulnerabilityName>CVE-2015-5237</vulnerabilityName>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: htrace-core-3.1.0-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-databind:2.4.0)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <cve>CVE-2018-1000873</cve>
+    <vulnerabilityName>CWE-611: Improper Restriction of XML External Entity Reference ('XXE')</vulnerabilityName>
+    <vulnerabilityName>CVE-2017-15095</vulnerabilityName>
+    <vulnerabilityName>CVE-2017-17485</vulnerabilityName>
+    <vulnerabilityName>CVE-2017-7525</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-5968</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-7489</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-11307</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-14718</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-14719</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-14720</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-14721</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-19360</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-19361</vulnerabilityName>
+    <vulnerabilityName>CVE-2018-19362</vulnerabilityName>
+    <vulnerabilityName>CVE-2019-14540</vulnerabilityName>
+    <vulnerabilityName>CVE-2019-16335</vulnerabilityName>
+    <vulnerabilityName>CVE-2019-16942</vulnerabilityName>
+    <vulnerabilityName>CVE-2019-16943</vulnerabilityName>
+    <vulnerabilityName>CVE-2019-17267</vulnerabilityName>
+    <vulnerabilityName>CVE-2019-17531</vulnerabilityName>
+  </suppress>
 </suppressions>
