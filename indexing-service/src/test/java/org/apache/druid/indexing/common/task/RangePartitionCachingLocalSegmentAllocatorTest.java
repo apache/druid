@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
@@ -139,6 +140,16 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     InputRow row = createInputRow(interval, PARTITION9);
     int partitionNum = INTERVAL_TO_PARTITONS.get(interval).size() - 2;
     testAllocate(row, interval, partitionNum, null);
+  }
+
+  @Test
+  public void test_getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow()
+  {
+    Interval interval = INTERVAL_NORMAL;
+    InputRow row = createInputRow(interval, PARTITION9);
+    String sequenceName = target.getSequenceName(interval, row);
+    String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, interval, 1);
+    Assert.assertEquals(expectedSequenceName, sequenceName);
   }
 
   @SuppressWarnings("SameParameterValue")

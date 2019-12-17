@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.task.HashPartitionCachingLocalSegmentAll
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -99,6 +100,16 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
     Assert.assertEquals(PARTITION_DIMENSIONS, shardSpec.getPartitionDimensions());
     Assert.assertEquals(NUM_PARTITONS, shardSpec.getPartitions());
     Assert.assertEquals(PARTITION_NUM, shardSpec.getPartitionNum());
+  }
+
+
+  @Test
+  public void test_getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow()
+  {
+    InputRow row = createInputRow();
+    String sequenceName = target.getSequenceName(INTERVAL, row);
+    String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, INTERVAL, PARTITION_NUM);
+    Assert.assertEquals(expectedSequenceName, sequenceName);
   }
 
   private static TaskToolbox createToolbox()
