@@ -57,7 +57,7 @@ public class FixedLengthHBaseRowKeySpec extends HBaseRowKeySpec
   @SuppressWarnings("unchecked")
   private <T> T getColumnValueOfRowKey(byte[] values, HBaseRowKeySchema rowKeySchema, int[] from)
   {
-    Object value = null;
+    Object value;
     String type = rowKeySchema.getType();
 
     if ("string".equals(type)) {
