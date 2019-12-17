@@ -26,6 +26,6 @@ This is a CLI tool that automates the backport process for you once a change is 
 
 To setup, follow the instructions in the [repository](https://github.com/sqren/backport)
 A `.backportrc.json` file is maintained in the root of this repository to keep track of the branches that can be
-backported to
+backported to.
 
 [![example](backport-fail.gif)]
