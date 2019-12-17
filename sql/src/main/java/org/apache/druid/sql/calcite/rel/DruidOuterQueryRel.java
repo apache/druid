@@ -131,7 +131,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 
     final GroupByQuery groupByQuery = subQuery.toGroupByQuery();
     if (groupByQuery == null) {
-      throw new CannotBuildQueryException("Subquery with limit clause is not supported");
+      throw new CannotBuildQueryException("Subquery could not be converted to GroupBy query");
     }
 
     final RowSignature sourceRowSignature = subQuery.getOutputRowSignature();
