@@ -7777,6 +7777,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUsingSubqueryWithLimit() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("Subquery could not be converted to GroupBy query");
+
+    testQuery(
+        "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUsingSubqueryWithoutLimit() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo ) tmpA",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
+
+  @Test
   public void testUnicodeFilterAndGroupBy() throws Exception
   {
     testQuery(
