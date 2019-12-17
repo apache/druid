@@ -104,8 +104,8 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   )
   {
     return inputRow -> {
-      List<String> dimensionValues = inputRow.getDimension(partitionDimension);
-      return dimensionValues.size() != 1;
+      int dimensionValueCount = getDimensionValueCount(inputRow, partitionDimension);
+      return dimensionValueCount != 1;
     };
   }
 
@@ -114,9 +114,18 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   )
   {
     return inputRow -> {
-      List<String> dimensionValues = inputRow.getDimension(partitionDimension);
-      return dimensionValues.size() > 1;  // Rows.objectToStrings() returns an empty list for a single null value
+      int dimensionValueCount = getDimensionValueCount(inputRow, partitionDimension);
+      return dimensionValueCount > 1;  // Rows.objectToStrings() returns an empty list for a single null value
     };
   }
 
+  private static int getDimensionValueCount(InputRow inputRow, String partitionDimension)
+  {
+    List<String> dimensionValues = inputRow.getDimension(partitionDimension);
+    int dimensionValueCount = dimensionValues.size();
+    if (dimensionValueCount > 1) {
+      throw new IllegalArgumentException("Cannot partition on multi-value dimension: " + partitionDimension);
+    }
+    return dimensionValueCount;
+  }
 }
