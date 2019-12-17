@@ -195,4 +195,70 @@
     <cve>CVE-2019-17267</cve>
     <cve>CVE-2019-17531</cve>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-hadoop-compat-2.2.2.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-hadoop\-compat@.*$</packageUrl>
+    <cpe>cpe:/a:apache:hadoop</cpe>
+    <cpe>cpe:/a:apache:hbase</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-hadoop2-compat-2.2.2.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hbase/hbase\-hadoop2\-compat@.*$</packageUrl>
+    <cpe>cpe:/a:apache:hadoop</cpe>
+    <cpe>cpe:/a:apache:hbase</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-server-2.2.2.jar: jquery.min.js
+   ]]></notes>
+    <packageUrl regex="true">^pkg:javascript/jquery@.*$</packageUrl>
+    <cve>CVE-2019-11358</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-protocol-shaded-2.2.2.jar (shaded: com.fasterxml.jackson.core:jackson-databind:2.4.0)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <cpe>cpe:/a:fasterxml:jackson</cpe>
+    <cpe>cpe:/a:fasterxml:jackson-databind</cpe>
+    <cve>CVE-2017-15095</cve>
+    <cve>CVE-2017-17485</cve>
+    <cve>CVE-2017-7525</cve>
+    <cve>CVE-2018-1000873</cve>
+    <cve>CVE-2018-11307</cve>
+    <cve>CVE-2018-14718</cve>
+    <cve>CVE-2018-14719</cve>
+    <cve>CVE-2018-14720</cve>
+    <cve>CVE-2018-14721</cve>
+    <cve>CVE-2018-19360</cve>
+    <cve>CVE-2018-19361</cve>
+    <cve>CVE-2018-19362</cve>
+    <cve>CVE-2018-5968</cve>
+    <cve>CVE-2018-7489</cve>
+    <cve>CVE-2019-14540</cve>
+    <cve>CVE-2019-16335</cve>
+    <cve>CVE-2019-16942</cve>
+    <cve>CVE-2019-16943</cve>
+    <cve>CVE-2019-17267</cve>
+    <cve>CVE-2019-17531</cve>
+    <vulnerabilityName>CWE-611: Improper Restriction of XML External Entity Reference ('XXE')</vulnerabilityName>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-shaded-netty-2.2.1.jar (shaded: io.netty:netty-all:4.1.34.Final)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty\-all@.*$</packageUrl>
+    <cpe>cpe:/a:netty:netty</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: hbase-shaded-netty-2.2.1.jar (shaded: io.netty:netty-all:4.1.34.Final)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty\-all@.*$</packageUrl>
+    <cve>CVE-2019-16869</cve>
+  </suppress>
 </suppressions>
