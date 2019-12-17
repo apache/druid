@@ -2268,8 +2268,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullLongFilter() throws Exception
   {
-    // bug in numeric vector matches prevents this test from passing
-    skipVectorize();
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -2293,8 +2291,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullDoubleFilter() throws Exception
   {
-    // bug in numeric vector matches prevents this test from passing
-    skipVectorize();
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -2319,8 +2315,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullFloatFilter() throws Exception
   {
-    // bug in numeric vector matches prevents this test from passing
-    skipVectorize();
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
