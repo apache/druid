@@ -2266,6 +2266,82 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNullLongFilter() throws Exception
+  {
+    // bug in numeric vector matches prevents this test from passing
+    skipVectorize();
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE l1 IS NULL",
+        useDefault ? ImmutableList.of() : ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(selector("l1", null, null))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{0L} : new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testNullDoubleFilter() throws Exception
+  {
+    // bug in numeric vector matches prevents this test from passing
+    skipVectorize();
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE d1 IS NULL",
+        useDefault ? ImmutableList.of() : ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(selector("d1", null, null))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{0L} : new Object[]{3L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testNullFloatFilter() throws Exception
+  {
+    // bug in numeric vector matches prevents this test from passing
+    skipVectorize();
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE f1 IS NULL",
+        useDefault ? ImmutableList.of() : ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(selector("f1", null, null))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault ? new Object[]{0L} : new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testEmptyStringEquality() throws Exception
   {
     if (NullHandling.replaceWithDefault()) {
