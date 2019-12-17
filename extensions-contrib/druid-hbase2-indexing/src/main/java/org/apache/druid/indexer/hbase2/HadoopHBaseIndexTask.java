@@ -182,7 +182,7 @@ public class HadoopHBaseIndexTask extends HadoopIndexTask
 
   private Map<String, String> getRemovingLibraries()
   {
-    Map<String, String> removingLibMap = null;
+    Map<String, String> removingLibMap;
     InputStream is = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream("druid-hbase2-indexing.properties");
 

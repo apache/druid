@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -35,6 +34,7 @@ import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -78,7 +78,7 @@ public class HBaseInputRowParser implements InputRowParser<Result>
   @Override
   public List<InputRow> parseBatch(Result input)
   {
-    return Lists.newArrayList(parse(input));
+    return Collections.singletonList(parse(input));
   }
 
   @Override
@@ -87,7 +87,7 @@ public class HBaseInputRowParser implements InputRowParser<Result>
     // All values in Result are stored in a Map and passed to MapParser.
     Map<String, Object> resultMap = rowKeySpec.getRowKeyColumns(input);
 
-    columnSchemaList.stream().forEach(cs -> {
+    columnSchemaList.forEach(cs -> {
       resultMap.put(cs.getMappingName(), HBaseUtil.getColumnValue(input, cs));
     });
 

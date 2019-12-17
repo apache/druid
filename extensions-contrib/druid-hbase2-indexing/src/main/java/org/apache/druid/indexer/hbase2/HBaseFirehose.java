@@ -48,7 +48,6 @@ public abstract class HBaseFirehose implements Firehose
   private boolean initialized;
 
   public HBaseFirehose(Iterator<Scan> scanIterator, InputRowParser<Result> parser)
-      throws IOException
   {
     this.scanIterator = scanIterator;
     this.parser = parser;
@@ -94,7 +93,7 @@ public abstract class HBaseFirehose implements Firehose
   @Override
   public InputRow nextRow()
   {
-    InputRow inputRow = null;
+    InputRow inputRow;
 
     if (result == null) {
       result = nextResult();

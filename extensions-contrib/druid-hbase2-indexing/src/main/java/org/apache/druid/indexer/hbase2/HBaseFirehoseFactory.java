@@ -86,7 +86,7 @@ public class HBaseFirehoseFactory
       return inputSplit.get();
     }).collect(Collectors.toList());
 
-    Firehose firehose = null;
+    Firehose firehose;
 
     if (scanInfo instanceof TableScanInfo) {
       Connection connection = HBaseUtil.getConnection(connectionConfig, hbaseClientConfig);
@@ -104,7 +104,7 @@ public class HBaseFirehoseFactory
   @Override
   public Stream<InputSplit<Scan>> getSplits(SplitHintSpec splitHintSpec) throws IOException
   {
-    List<Scan> scanList = null;
+    List<Scan> scanList;
 
     if (regionInfoList == null) {
       regionInfoList = HBaseUtil.getRegionInfo(connectionConfig, scanInfo, hbaseClientConfig);

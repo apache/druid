@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexer.hbase2.util;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.indexer.hbase2.input.HBaseColumnSchema;
 import org.apache.druid.indexer.hbase2.input.HBaseConnectionConfig;
 import org.apache.druid.indexer.hbase2.input.KerberosConfig;
@@ -47,7 +46,9 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -81,7 +82,7 @@ public class HBaseUtil
   public static List<RegionInfo> getRegionInfo(HBaseConnectionConfig connectionConfig,
       ScanInfo scanInfo, Map<String, Object> hbaseClientConfig) throws IOException
   {
-    List<RegionInfo> regionInfoList = null;
+    List<RegionInfo> regionInfoList;
     if (scanInfo instanceof TableScanInfo) {
       try (Connection connection = getConnection(connectionConfig, hbaseClientConfig);
           Admin admin = connection.getAdmin()) {
@@ -149,7 +150,7 @@ public class HBaseUtil
   }
 
   public static Configuration getConfiguration(HBaseConnectionConfig connectionConfig,
-      Map<String, Object> hbaseClientConfig) throws IOException
+      Map<String, Object> hbaseClientConfig)
   {
     Configuration conf = HBaseConfiguration.create();
     applySpecConfig(conf, connectionConfig, hbaseClientConfig);
@@ -170,7 +171,7 @@ public class HBaseUtil
       if (kerberosConfig != null && kerberosConfig.getPrincipal() != null
           && kerberosConfig.getKeytab() != null) {
         String userPrincipal = kerberosConfig.getPrincipal();
-        String realm = userPrincipal.substring(userPrincipal.indexOf("@") + 1);
+        String realm = userPrincipal.substring(userPrincipal.indexOf('@') + 1);
         conf.set("hadoop.security.authentication", "Kerberos");
         conf.set("hbase.security.authentication", "Kerberos");
         conf.set("hbase.master.kerberos.principal", "hbase/_HOST@" + realm);
@@ -179,7 +180,7 @@ public class HBaseUtil
     }
 
     if (hbaseClientConfig != null) {
-      hbaseClientConfig.entrySet().stream().forEach(e -> {
+      hbaseClientConfig.entrySet().forEach(e -> {
         conf.set(e.getKey(), e.getValue().toString());
       });
     }
@@ -191,11 +192,10 @@ public class HBaseUtil
     Thread.currentThread().setContextClassLoader(conf.getClassLoader());
   }
 
-
   public static List<Scan> getScanList(ScanInfo scanInfo, int splitCount, List<RegionInfo> regionInfoList)
       throws IOException
   {
-    List<Scan> scanList = null;
+    List<Scan> scanList;
 
     String startKey = scanInfo.getStartKey();
     byte[] startKeyBytes = startKey == null ? HConstants.EMPTY_START_ROW
@@ -217,7 +217,7 @@ public class HBaseUtil
         scanList = getScanListByBrokenRegion(regionInfoList, regionFragments);
       }
     } else {
-      scanList = Lists.newArrayList(createScan(startKeyBytes, endKeyBytes));
+      scanList = Collections.singletonList(createScan(startKeyBytes, endKeyBytes));
     }
 
     return scanList;
@@ -226,7 +226,8 @@ public class HBaseUtil
   private static List<Scan> getScanListByBrokenRegion(List<RegionInfo> regionInfoList, int regionFragments)
   {
     List<Scan> scanList = regionInfoList.stream().map(ri -> {
-      byte[] endKey = ri.getEndKey() == HConstants.EMPTY_BYTE_ARRAY ? Bytes.createMaxByteArray(20) : ri.getEndKey();
+      byte[] endKey = Arrays.equals(ri.getEndKey(), HConstants.EMPTY_BYTE_ARRAY) ? Bytes.createMaxByteArray(20)
+          : ri.getEndKey();
       return getScanListByKey(ri.getStartKey(), endKey, regionFragments);
     }).flatMap(Collection::stream).collect(Collectors.toList());
 
@@ -338,8 +339,8 @@ public class HBaseUtil
         final String artifact = m.group(1);
         final String version = m.group(2);
 
-        result = !removingLibMap.entrySet().stream()
-            .anyMatch(e -> {
+        result = removingLibMap.entrySet().stream()
+            .noneMatch(e -> {
               return artifact.startsWith(e.getKey()) && version.startsWith(e.getValue());
             });
 
