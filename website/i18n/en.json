@@ -104,6 +104,9 @@
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
       },
+      "development/extensions-contrib/druid-hbase2-indexing": {
+        "title": "Druid HBase2 Indexing"
+      },
       "development/extensions-contrib/graphite": {
         "title": "Graphite Emitter"
       },
