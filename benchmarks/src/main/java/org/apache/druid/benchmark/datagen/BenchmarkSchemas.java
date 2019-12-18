@@ -230,13 +230,13 @@ public class BenchmarkSchemas
     List<BenchmarkColumnSchema> simpleNullsSchemaColumns = ImmutableList.of(
         // dims
         BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, 0.5, 1, 101, 1.5),
-        BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, 0.25, 1, 100000),
+        BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, 0.3, 1, 100000),
         BenchmarkColumnSchema.makeSequential("stringSequentialHalfNull", ValueType.STRING, false, 1, 0.5, 0, 1000),
 
         // numeric dims with nulls
-        BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, 0.5, 0, 10000),
+        BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, 0.45, 0, 10000),
         BenchmarkColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, 0.25, 0, 500),
-        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.25, 0, 1000, 2.0)
+        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0)
     );
 
     List<AggregatorFactory> simpleNullsSchemaIngestAggs = new ArrayList<>();
@@ -251,6 +251,6 @@ public class BenchmarkSchemas
         false
     );
 
-    SCHEMA_MAP.put("numeric-nulls", simpleNullsSchema);
+    SCHEMA_MAP.put("nulls", simpleNullsSchema);
   }
 }
