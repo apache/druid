@@ -143,8 +143,9 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   }
 
   @Test
-  public void test_getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow()
+  public void getSequenceName()
   {
+    // getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow
     Interval interval = INTERVAL_NORMAL;
     InputRow row = createInputRow(interval, PARTITION9);
     String sequenceName = target.getSequenceName(interval, row);

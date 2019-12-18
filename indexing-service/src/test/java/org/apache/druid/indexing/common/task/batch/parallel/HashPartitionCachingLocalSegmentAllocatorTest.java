@@ -104,8 +104,9 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
 
 
   @Test
-  public void test_getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow()
+  public void getSequenceName()
   {
+    // getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow
     InputRow row = createInputRow();
     String sequenceName = target.getSequenceName(INTERVAL, row);
     String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, INTERVAL, PARTITION_NUM);
