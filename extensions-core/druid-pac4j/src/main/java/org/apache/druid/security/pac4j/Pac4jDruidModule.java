@@ -64,6 +64,7 @@ public class Pac4jDruidModule implements DruidModule
     oidcConf.setClientId(oidcConfig.getClientID());
     oidcConf.setSecret(oidcConfig.getClientSecret().getPassword());
     oidcConf.setDiscoveryURI(oidcConfig.getDiscoveryURI());
+    oidcConf.setExpireSessionWithToken(true);
     oidcConf.setUseNonce(true);
 
     OidcClient oidcClient = new OidcClient(oidcConf);
