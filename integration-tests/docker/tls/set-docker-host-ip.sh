@@ -15,5 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1')"
+DOCKER_HOST_IP="$(host "$(hostname)" | perl -nle '/has address (.*)/ && print $1')"
+if [ "$DOCKER_HOST_IP" -eq "" ]; then
+    DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1')"
+fi
 export DOCKER_HOST_IP
