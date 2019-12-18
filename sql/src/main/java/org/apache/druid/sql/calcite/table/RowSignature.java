@@ -26,6 +26,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -146,6 +147,7 @@ public class RowSignature
   public RelDataType getRelDataType(final RelDataTypeFactory typeFactory)
   {
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
+    final boolean nullNumeric = !NullHandling.replaceWithDefault();
     for (final String columnName : columnNames) {
       final ValueType columnType = getColumnType(columnName);
       final RelDataType type;
@@ -159,13 +161,13 @@ public class RowSignature
             type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
             break;
           case LONG:
-            type = Calcites.createSqlType(typeFactory, SqlTypeName.BIGINT);
+            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
             break;
           case FLOAT:
-            type = Calcites.createSqlType(typeFactory, SqlTypeName.FLOAT);
+            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, nullNumeric);
             break;
           case DOUBLE:
-            type = Calcites.createSqlType(typeFactory, SqlTypeName.DOUBLE);
+            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
             break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.
