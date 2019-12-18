@@ -180,8 +180,8 @@ public class HBaseUtil
     }
 
     if (hbaseClientConfig != null) {
-      hbaseClientConfig.entrySet().forEach(e -> {
-        conf.set(e.getKey(), e.getValue().toString());
+      hbaseClientConfig.forEach((key, value) -> {
+        conf.set(key, value.toString());
       });
     }
 

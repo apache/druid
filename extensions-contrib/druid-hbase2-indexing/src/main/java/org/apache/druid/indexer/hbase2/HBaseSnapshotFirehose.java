@@ -46,7 +46,7 @@ public class HBaseSnapshotFirehose extends HBaseFirehose
   private final Path restoreDirPath;
 
   public HBaseSnapshotFirehose(Configuration conf, ScanInfo scanInfo, Iterator<Scan> scanIterator,
-      InputRowParser<Result> parser) throws IOException
+      InputRowParser<Result> parser)
   {
     super(scanIterator, parser);
 
