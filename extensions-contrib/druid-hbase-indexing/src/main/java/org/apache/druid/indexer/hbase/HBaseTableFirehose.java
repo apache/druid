@@ -41,7 +41,6 @@ public class HBaseTableFirehose extends HBaseFirehose
   private final Closeable closer;
 
   public HBaseTableFirehose(Table table, Iterator<Scan> scanIterator, HBaseInputRowParser parser)
-      throws IOException
   {
     this(table, scanIterator, parser, null);
 
@@ -51,7 +50,7 @@ public class HBaseTableFirehose extends HBaseFirehose
   }
 
   public HBaseTableFirehose(Table table, Iterator<Scan> scanIterator, InputRowParser<Result> parser,
-      Closeable closer) throws IOException
+      Closeable closer)
   {
     super(scanIterator, parser);
 
