@@ -402,7 +402,7 @@ public class GroupByBenchmark
     // simple one column schema, for testing performance difference between querying on numeric values as Strings and
     // directly as longs
     Map<String, GroupByQuery> nullQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo nullSchema = BenchmarkSchemas.SCHEMA_MAP.get("simple-nulls");
+    BenchmarkSchemaInfo nullSchema = BenchmarkSchemas.SCHEMA_MAP.get("nulls");
 
     { // simple-null
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(nullSchema.getDataInterval()));
@@ -425,7 +425,7 @@ public class GroupByBenchmark
 
       nullQueries.put("A", queryA);
     }
-    SCHEMA_QUERY_MAP.put("simple-nulls", nullQueries);
+    SCHEMA_QUERY_MAP.put("nulls", nullQueries);
   }
 
   @Setup(Level.Trial)

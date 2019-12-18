@@ -227,30 +227,71 @@ public class BenchmarkSchemas
   }
 
   static { // simple schema with null valued rows, no aggs on numeric columns
-    List<BenchmarkColumnSchema> simpleNullsSchemaColumns = ImmutableList.of(
-        // dims
-        BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, 0.5, 1, 101, 1.5),
+    List<BenchmarkColumnSchema> nullsSchemaColumns = ImmutableList.of(
+        // string dims with nulls
+        BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, 0.8, 1, 101, 1.5),
         BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, 0.3, 1, 100000),
-        BenchmarkColumnSchema.makeSequential("stringSequentialHalfNull", ValueType.STRING, false, 1, 0.5, 0, 1000),
+        BenchmarkColumnSchema.makeSequential("stringSequential", ValueType.STRING, false, 1, 0.5, 0, 1000),
 
         // numeric dims with nulls
         BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, 0.45, 0, 10000),
         BenchmarkColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, 0.25, 0, 500),
-        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0)
+        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
+        BenchmarkColumnSchema.makeZipf("floatZipf", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
     );
 
     List<AggregatorFactory> simpleNullsSchemaIngestAggs = new ArrayList<>();
     simpleNullsSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
 
-    Interval simpleNullsSchemaDataInterval = Intervals.of("2000-01-01/P1D");
+    Interval nullsSchemaDataInterval = Intervals.of("2000-01-01/P1D");
 
-    BenchmarkSchemaInfo simpleNullsSchema = new BenchmarkSchemaInfo(
-        simpleNullsSchemaColumns,
+    BenchmarkSchemaInfo nullsSchema = new BenchmarkSchemaInfo(
+        nullsSchemaColumns,
         simpleNullsSchemaIngestAggs,
-        simpleNullsSchemaDataInterval,
+        nullsSchemaDataInterval,
         false
     );
 
-    SCHEMA_MAP.put("nulls", simpleNullsSchema);
+    SCHEMA_MAP.put("nulls", nullsSchema);
+  }
+
+  static { // simple schema with null valued rows, no aggs on numeric columns
+    List<BenchmarkColumnSchema> nullsSchemaColumns = ImmutableList.of(
+        // string dims
+        BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, null, 1, 101, 1.5),
+        BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, null, 1, 100000),
+        BenchmarkColumnSchema.makeSequential("stringSequential", ValueType.STRING, false, 1, null, 0, 1000),
+
+        // numeric dims
+        BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, null, 0, 10000),
+        BenchmarkColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, null, 0, 500),
+        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, null, 0, 1000, 2.0),
+        BenchmarkColumnSchema.makeZipf("floatZipf", ValueType.FLOAT, false, 1, null, 0, 1000, 2.0),
+
+        // string dims with nulls
+        BenchmarkColumnSchema.makeZipf("stringZipfWithNulls", ValueType.STRING, false, 1, 0.8, 1, 101, 1.5),
+        BenchmarkColumnSchema.makeDiscreteUniform("stringUniformWithNulls", ValueType.STRING, false, 1, 0.3, 1, 100000),
+        BenchmarkColumnSchema.makeSequential("stringSequentialWithNulls", ValueType.STRING, false, 1, 0.5, 0, 1000),
+
+        // numeric dims with nulls
+        BenchmarkColumnSchema.makeSequential("longSequentialWithNulls", ValueType.LONG, false, 1, 0.45, 0, 10000),
+        BenchmarkColumnSchema.makeDiscreteUniform("longUniformWithNulls", ValueType.LONG, false, 1, 0.25, 0, 500),
+        BenchmarkColumnSchema.makeZipf("doubleZipfWithNulls", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
+        BenchmarkColumnSchema.makeZipf("floatZipfWithNulls", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
+    );
+
+    List<AggregatorFactory> simpleNullsSchemaIngestAggs = new ArrayList<>();
+    simpleNullsSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
+
+    Interval nullsSchemaDataInterval = Intervals.of("2000-01-01/P1D");
+
+    BenchmarkSchemaInfo nullsSchema = new BenchmarkSchemaInfo(
+        nullsSchemaColumns,
+        simpleNullsSchemaIngestAggs,
+        nullsSchemaDataInterval,
+        false
+    );
+
+    SCHEMA_MAP.put("nulls-and-non-nulls", nullsSchema);
   }
 }
