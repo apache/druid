@@ -639,6 +639,11 @@ GROUP BY 1`;
           },
         },
         {
+          icon: IconNames.REFRESH,
+          title: 'Enable (reapply retention rules)',
+          onAction: () => this.setState({ enableDatasource: datasource }),
+        },
+        {
           icon: IconNames.COMPRESSED,
           title: 'Edit compaction configuration',
           onAction: () => {
