@@ -1690,3 +1690,24 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+ - ../docs/development/extensions-contrib/druid-hbase-indexing.md
+HadoopIndexTask
+HBase
+Json
+Nonsecure
+ParallelIndexTask
+RPC
+RowKey
+TableInputFormat
+columnSpec
+connectionConfig
+druid.extensions.useExtensionClassloaderFirst
+hbaseClientConfig
+index_hadoop
+inputSpec
+mappingName
+nonsecure
+protobuf
+rowKeySpec
+scanInfo
+splitByRegion

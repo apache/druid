@@ -24,7 +24,7 @@ title: "Druid HBase Indexing"
 
 # Druid HBase Indexing
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) 
+To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) 
 `druid-hbase-indexing` extension.
 
 ## Introduction
