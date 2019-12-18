@@ -3070,14 +3070,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .postAggregators(
                       new ArithmeticPostAggregator(
-                          "a3",
+                          useDefault ? "a2" : "a3",
                           "quotient",
                           ImmutableList.of(
-                              new FieldAccessPostAggregator(null, "a3:sum"),
-                              new FieldAccessPostAggregator(null, "a3:count")
+                              new FieldAccessPostAggregator(null, useDefault ? "a2:sum" : "a3:sum"),
+                              new FieldAccessPostAggregator(null, useDefault ? "a2:count" : "a3:count")
                           )
                       ),
-                      expressionPostAgg("p0", "((\"a4\" + \"a5\") + \"a6\")")
+                      expressionPostAgg(
+                          "p0",
+                          useDefault ? "((\"a3\" + \"a4\") + \"a5\")" : "((\"a4\" + \"a5\") + \"a6\")"
+                      )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
