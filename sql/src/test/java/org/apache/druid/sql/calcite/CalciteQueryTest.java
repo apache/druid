@@ -101,6 +101,8 @@ import java.util.Map;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
+  private final boolean useDefault = NullHandling.replaceWithDefault();
+
   @Test
   public void testSelectConstantExpression() throws Exception
   {
@@ -329,6 +331,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
             .add(new Object[]{"druid", "aview", "VIEW"})
             .add(new Object[]{"druid", "bview", "VIEW"})
@@ -355,6 +358,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
             .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
             .add(new Object[]{"druid", "aview", "VIEW"})
             .add(new Object[]{"druid", "bview", "VIEW"})
@@ -808,6 +812,156 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"abc"},
             new Object[]{"def"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectLimitWrappingAgainAkaIDontReallyQuiteUnderstandCalciteQueryPlanning() throws Exception
+  {
+    // this test is for a specific bug encountered where the 2nd query would not plan with auto limit wrapping, but if
+    // *any* column was removed from the select output, e.g. the first query in this test, then it does plan and
+    // function correctly. Running the query supplying an explicit limit worked, and turning off auto limit worked.
+    // The only difference between an explicit limit and auto limit was that the LogicalSort of the auto limit had an
+    // offset of 0 instead of null, so the resolution was to modify the planner to only set offset on the sort if the
+    // offset was non-zero. However, why the first query succeeded before this planner change and the latter did not is
+    // still a mystery...
+    testQuery(
+        "SELECT \"__time\", \"count\", \"dimHyperUnique\", \"dimMultivalEnumerated\", \"dimMultivalEnumerated2\","
+        + " \"dimMultivalSequentialWithNulls\", \"dimSequential\", \"dimSequentialHalfNull\", \"dimUniform\","
+        + " \"dimZipf\", \"metFloatNormal\", \"metFloatZipf\", \"metLongSequential\""
+        + " FROM druid.lotsocolumns"
+        + " WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '10' YEAR",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE5)
+                .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                .columns(
+                    ImmutableList.<String>builder()
+                        .add("__time")
+                        .add("count")
+                        .add("dimHyperUnique")
+                        .add("dimMultivalEnumerated")
+                        .add("dimMultivalEnumerated2")
+                        .add("dimMultivalSequentialWithNulls")
+                        .add("dimSequential")
+                        .add("dimSequentialHalfNull")
+                        .add("dimUniform")
+                        .add("dimZipf")
+                        .add("metFloatNormal")
+                        .add("metFloatZipf")
+                        .add("metLongSequential")
+                        .build()
+                )
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                1576306800000L,
+                1L,
+                "0",
+                "[\"Baz\",\"Baz\",\"Hello\",\"World\"]",
+                useDefault ? "[\"\",\"Apple\",\"Orange\"]" : "[null,\"Apple\",\"Orange\"]",
+                "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\"]",
+                "0",
+                "0",
+                "74416",
+                "27",
+                "5000.0",
+                "147.0",
+                "0"
+            },
+            new Object[]{
+                1576306800000L,
+                1L,
+                "8",
+                "[\"Baz\",\"World\",\"World\",\"World\"]",
+                useDefault ? "[\"\",\"Corundum\",\"Xylophone\"]" : "[null,\"Corundum\",\"Xylophone\"]",
+                useDefault ? "" : null,
+                "8",
+                useDefault ? "" : null,
+                "50515",
+                "9",
+                "4999.0",
+                "25.0",
+                "8"
+            }
+        )
+    );
+
+    testQuery(
+        "SELECT \"__time\", \"count\", \"dimHyperUnique\", \"dimMultivalEnumerated\", \"dimMultivalEnumerated2\","
+        + " \"dimMultivalSequentialWithNulls\", \"dimSequential\", \"dimSequentialHalfNull\", \"dimUniform\","
+        + " \"dimZipf\", \"metFloatNormal\", \"metFloatZipf\", \"metLongSequential\", \"metLongUniform\""
+        + " FROM druid.lotsocolumns"
+        + " WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '10' YEAR",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE5)
+                .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                .columns(
+                    ImmutableList.<String>builder()
+                        .add("__time")
+                        .add("count")
+                        .add("dimHyperUnique")
+                        .add("dimMultivalEnumerated")
+                        .add("dimMultivalEnumerated2")
+                        .add("dimMultivalSequentialWithNulls")
+                        .add("dimSequential")
+                        .add("dimSequentialHalfNull")
+                        .add("dimUniform")
+                        .add("dimZipf")
+                        .add("metFloatNormal")
+                        .add("metFloatZipf")
+                        .add("metLongSequential")
+                        .add("metLongUniform")
+                        .build()
+                )
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                1576306800000L,
+                1L,
+                "0",
+                "[\"Baz\",\"Baz\",\"Hello\",\"World\"]",
+                useDefault ? "[\"\",\"Apple\",\"Orange\"]" : "[null,\"Apple\",\"Orange\"]",
+                "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\"]",
+                "0",
+                "0",
+                "74416",
+                "27",
+                "5000.0",
+                "147.0",
+                "0",
+                "372"
+            },
+            new Object[]{
+                1576306800000L,
+                1L,
+                "8",
+                "[\"Baz\",\"World\",\"World\",\"World\"]",
+                useDefault ? "[\"\",\"Corundum\",\"Xylophone\"]" : "[null,\"Corundum\",\"Xylophone\"]",
+                useDefault ? "" : null,
+                "8",
+                useDefault ? "" : null,
+                "50515",
+                "9",
+                "4999.0",
+                "25.0",
+                "8",
+                "252"
+            }
         )
     );
   }
@@ -2240,7 +2394,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableQueries() throws Exception
+  public void testUnplannableQueries()
   {
     // All of these queries are unplannable because they rely on features Druid doesn't support.
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
@@ -3616,7 +3770,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid() throws Exception
+  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid()
   {
     // Strings are implicitly cast to timestamps. Test an invalid string.
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
@@ -7618,6 +7772,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"a", 2L},
             new Object[]{"abc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUsingSubqueryWithLimit() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("Subquery could not be converted to GroupBy query");
+
+    testQuery(
+        "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUsingSubqueryWithoutLimit() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo ) tmpA",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
         )
     );
   }

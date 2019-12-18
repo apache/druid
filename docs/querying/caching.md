@@ -38,12 +38,17 @@ Segment-level caching does require Druid to merge the per-segment results on eac
 from the cache. For this reason, whole-query result level caching can be more efficient if invalidation due to real-time
 ingestion is not an issue.
 
+
+## Using and populating cache
+
+All caches have a pair of parameters that control the behavior of how individual queries interact with the cache, a 'use' cache parameter, and a 'populate' cache parameter. These settings must be enabled at the service level via [runtime properties](../configuration/index.md) to utilize cache, but can be controlled on a per query basis by setting them on the [query context](../querying/query-context.md). The 'use' parameter obviously controls if a query will utilize cached results. The 'populate' parameter controls if a query will update cached results. These are separate parameters to allow queries on uncommon data to utilize cached results without polluting the cache with results that are unlikely to be re-used by other queries, for example large reports or very old data.
+
 ## Query caching on Brokers
 
 Brokers support both segment-level and whole-query result level caching. Segment-level caching is controlled by the
 parameters `useCache` and `populateCache`. Whole-query result level caching is controlled by the parameters
 `useResultLevelCache` and `populateResultLevelCache` and [runtime properties](../configuration/index.md)
-`druid.broker.cache.*`..
+`druid.broker.cache.*`.
 
 Enabling segment-level caching on the Broker can yield faster results than if query caches were enabled on Historicals for small
 clusters. This is the recommended setup for smaller production clusters (< 5 servers). Populating segment-level caches on

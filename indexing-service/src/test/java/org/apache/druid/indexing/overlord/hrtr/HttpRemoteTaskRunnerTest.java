@@ -1350,6 +1350,12 @@ public class HttpRemoteTaskRunnerTest
       }
 
       @Override
+      public boolean isInitialized()
+      {
+        return true;
+      }
+
+      @Override
       public void waitForInitialization()
       {
       }

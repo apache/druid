@@ -43,4 +43,11 @@ if [ ! -e ${LOG4J_GUI_PATH} ]; then
 fi
 wait
 
-jconsole -pluginpath ${LOG4J_API_PATH}:${LOG4J_CORE_PATH}:${LOG4J_GUI_PATH} $@
+WHEREAMI="$(dirname "$0")"
+WHEREAMI="$(cd "$WHEREAMI" && pwd)"
+JAVA_BIN_DIR="$(source "$WHEREAMI"/java-util && get_java_bin_dir)"
+if [ -z "$JAVA_BIN_DIR" ]; then
+  >&2 echo "Could not find java - please run $WHEREAMI/verify-java to confirm it is installed."
+  exit 1
+fi
+"$JAVA_BIN_DIR"/jconsole -pluginpath ${LOG4J_API_PATH}:${LOG4J_CORE_PATH}:${LOG4J_GUI_PATH} $@

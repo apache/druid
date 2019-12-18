@@ -92,7 +92,11 @@ then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
-setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+DRUID_SET_HOST=${DRUID_SET_HOST:-1}
+if [ "${DRUID_SET_HOST}" = "1" ]
+then
+    setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+fi
 
 env | grep ^druid_ | while read evar;
 do

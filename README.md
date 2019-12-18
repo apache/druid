@@ -97,6 +97,8 @@ For instructions on building Druid from source, see [docs/development/build.md](
 
 Please follow the [community guidelines](https://druid.apache.org/community/) for contributing.
 
+For instructions on setting up IntelliJ [dev/intellij-setup.md](dev/intellij-setup.md)
+
 ### License
 
 [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
