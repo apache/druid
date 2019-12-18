@@ -16,7 +16,14 @@
 # limitations under the License.
 
 DOCKER_HOST_IP="$(host "$(hostname)" | perl -nle '/has address (.*)/ && print $1')"
-if [ "$DOCKER_HOST_IP" -eq "" ]; then
+if [ -z "$DOCKER_HOST_IP" ]; then
+    # Mac specific way to get host ip
     DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1')"
 fi
+
+if [ -z "$DOCKER_HOST_IP" ]; then
+    >&2 echo "Could not set docker host IP - integration tests can not run"
+    exit 1
+fi
+
 export DOCKER_HOST_IP
