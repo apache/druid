@@ -25,13 +25,15 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class RangePartitionTaskInputRowIteratorBuilderTest
+public class RangePartitionIndexTaskInputRowIteratorBuilderTest
 {
   private static final boolean SKIP_NULL = true;
   private static final IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester HANDLER_TESTER =
@@ -43,14 +45,17 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
       );
   private static final InputRow NO_NEXT_INPUT_ROW = null;
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   @Test
   public void invokesDimensionValueCountFilterLast()
   {
     DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
-    List<String> multipleDimensionValues = Arrays.asList("multiple", "dimension", "values");
+    List<String> nullDimensionValue = Collections.emptyList();  // Rows.objectToStrings() returns empty list for null
     InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(
         timestamp,
-        multipleDimensionValues
+        nullDimensionValue
     );
     CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(
         inputRow
@@ -74,6 +79,33 @@ public class RangePartitionTaskInputRowIteratorBuilderTest
     assertNotInHandlerInvocationHistory(
         handlerInvocationHistory,
         IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler.ABSENT_BUCKET_INTERVAL
+    );
+  }
+
+  @Test
+  public void throwsExceptionIfMultipleDimensionValues()
+  {
+    DateTime timestamp = IndexTaskInputRowIteratorBuilderTestingFactory.TIMESTAMP;
+    List<String> multipleDimensionValues = Arrays.asList("multiple", "dimension", "values");
+    InputRow inputRow = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRow(
+        timestamp,
+        multipleDimensionValues
+    );
+    CloseableIterator<InputRow> inputRowIterator = IndexTaskInputRowIteratorBuilderTestingFactory.createInputRowIterator(
+        inputRow
+    );
+    GranularitySpec granularitySpec = IndexTaskInputRowIteratorBuilderTestingFactory.createGranularitySpec(
+        timestamp,
+        IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
+    );
+
+    exception.expect(IllegalArgumentException.class);
+    exception.expectMessage("Cannot partition on multi-value dimension [dimension]");
+
+    HANDLER_TESTER.invokeHandlers(
+        inputRowIterator,
+        granularitySpec,
+        NO_NEXT_INPUT_ROW
     );
   }
 
