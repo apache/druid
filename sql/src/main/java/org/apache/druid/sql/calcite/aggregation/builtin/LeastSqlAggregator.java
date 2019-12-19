@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
@@ -32,13 +31,9 @@ import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.DoubleLeastPostAggregator;
-import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.LongLeastPostAggregator;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.sql.calcite.aggregation.Aggregation;
-import org.apache.druid.sql.calcite.planner.Calcites;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -57,36 +52,36 @@ public class LeastSqlAggregator extends MultiColumnSqlAggregator
   }
 
   @Override
-  Aggregation getAggregation(
-      String name,
-      AggregateCall aggregateCall,
-      ExprMacroTable macroTable,
-      List<FieldInfo> fieldInfoList
+  AggregatorFactory createAggregatorFactory(
+      ValueType valueType,
+      String prefixedName,
+      FieldInfo fieldInfo,
+      ExprMacroTable macroTable
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
-    List<AggregatorFactory> aggregators = new ArrayList<>();
-    List<PostAggregator> postAggregators = new ArrayList<>();
-
-    // Create Min aggregator factories for provided fields & corresponding field access post aggregators.
-    int id = 0;
-    for (FieldInfo fieldInfo : fieldInfoList) {
-      String prefixedName = Calcites.makePrefixedName(name, String.valueOf(id++));
-      postAggregators.add(new FieldAccessPostAggregator(null, prefixedName));
-      switch (valueType) {
-        case LONG:
-          aggregators.add(new LongMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
-          break;
-        case FLOAT:
-        case DOUBLE:
-          aggregators.add(new DoubleMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
-          break;
-        default:
-          throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
-      }
+    final AggregatorFactory aggregatorFactory;
+    switch (valueType) {
+      case LONG:
+        aggregatorFactory = new LongMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable);
+        break;
+      case FLOAT:
+      case DOUBLE:
+        aggregatorFactory = new DoubleMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable);
+        break;
+      default:
+        throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
     }
-    // Use the field access post aggregators created in the previous loop to create the final Post aggregator.
-    PostAggregator finalPostAggregator;
+    return aggregatorFactory;
+  }
+
+  @Override
+  PostAggregator createFinalPostAggregator(
+      ValueType valueType,
+      String name,
+      List<PostAggregator> postAggregators
+  )
+  {
+    final PostAggregator finalPostAggregator;
     switch (valueType) {
       case LONG:
         finalPostAggregator = new LongLeastPostAggregator(name, postAggregators);
@@ -98,9 +93,9 @@ public class LeastSqlAggregator extends MultiColumnSqlAggregator
       default:
         throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
     }
-
-    return Aggregation.create(aggregators, finalPostAggregator);
+    return finalPostAggregator;
   }
+
 
   private static class LeastSqlAggFunction extends SqlAggFunction
   {

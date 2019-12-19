@@ -180,8 +180,8 @@ Only the COUNT aggregation can accept DISTINCT.
 |`SUM(expr)`|Sums numbers.|
 |`MIN(expr)`|Takes the minimum of numbers.|
 |`MAX(expr)`|Takes the maximum of numbers.|
-|`LEAST(expr1, expr2, ...)`|Takes the minimum of numbers across multiple expressions.|
-|`GREATEST(expr1, expr2, ...)`|Takes the maximum of numbers across multiple expressions.|
+|`LEAST(expr1, [expr2, ...])`|Takes the minimum of numbers across one or more expression(s).|
+|`GREATEST(expr1, [expr2, ...])`|Takes the maximum of numbers across one or more expressions(s).|
 |`AVG(expr)`|Averages numbers.|
 |`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|
 |`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.html) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|

@@ -19,14 +19,20 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
@@ -45,13 +51,23 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
    */
   protected static class FieldInfo
   {
-    String fieldName;
-    String expression;
+    final String fieldName;
+    final String expression;
 
-    public FieldInfo(String fieldName, String expression)
+    private FieldInfo(String fieldName, String expression)
     {
       this.fieldName = fieldName;
       this.expression = expression;
+    }
+
+    public static FieldInfo fromFieldName(String fieldName)
+    {
+      return new FieldInfo(fieldName, null);
+    }
+
+    public static FieldInfo fromExpression(String expression)
+    {
+      return new FieldInfo(null, expression);
     }
   }
 
@@ -85,25 +101,51 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
     }
 
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
-
     final List<FieldInfo> fieldInfoList = new ArrayList<>();
 
     // Convert arguments to concise field information & delegate the rest to sub-classes
     for (DruidExpression argument : arguments) {
       if (argument.isDirectColumnAccess()) {
-        fieldInfoList.add(new FieldInfo(argument.getDirectColumn(), null));
+        fieldInfoList.add(FieldInfo.fromFieldName(argument.getDirectColumn()));
       } else {
-        fieldInfoList.add(new FieldInfo(null, argument.getExpression()));
+        fieldInfoList.add(FieldInfo.fromExpression(argument.getExpression()));
       }
     }
-
+    Preconditions.checkArgument(!fieldInfoList.isEmpty(), "FieldInfoList should not be empty");
     return getAggregation(name, aggregateCall, macroTable, fieldInfoList);
   }
 
-  abstract Aggregation getAggregation(
+  private Aggregation getAggregation(
       String name,
       AggregateCall aggregateCall,
       ExprMacroTable macroTable,
       List<FieldInfo> fieldInfoList
-  );
+  )
+  {
+    final ValueType valueType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
+    List<AggregatorFactory> aggregatorFactories = new ArrayList<>();
+    List<PostAggregator> postAggregators = new ArrayList<>();
+
+    // Create Max aggregator factories for provided fields & corresponding field access post aggregators.
+    int id = 0;
+    for (FieldInfo fieldInfo : fieldInfoList) {
+      String prefixedName = Calcites.makePrefixedName(name, String.valueOf(id++));
+      postAggregators.add(new FieldAccessPostAggregator(null, prefixedName));
+      aggregatorFactories.add(createAggregatorFactory(valueType, prefixedName, fieldInfo, macroTable));
+    }
+    // Use the field access post aggregators created in the previous loop to create the final Post aggregator.
+    final PostAggregator finalPostAggregator = createFinalPostAggregator(valueType, name, postAggregators);
+    return Aggregation.create(aggregatorFactories, finalPostAggregator);
+  }
+
+  abstract AggregatorFactory createAggregatorFactory(
+      ValueType valueType,
+      String prefixedName,
+      FieldInfo fieldInfo,
+      ExprMacroTable macroTable);
+
+  abstract PostAggregator createFinalPostAggregator(
+      ValueType valueType,
+      String name,
+      List<PostAggregator> postAggregators);
 }
