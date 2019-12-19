@@ -113,12 +113,12 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     }
   }
 
-  public static final class LongVarianceAggregator extends VarianceBufferAggregator
+  public static final class DoubleVarianceAggregator extends VarianceBufferAggregator
   {
     private final boolean noNulls = NullHandling.replaceWithDefault();
-    private final BaseLongColumnValueSelector selector;
+    private final BaseDoubleColumnValueSelector selector;
 
-    public LongVarianceAggregator(BaseLongColumnValueSelector selector)
+    public DoubleVarianceAggregator(BaseDoubleColumnValueSelector selector)
     {
       this.selector = selector;
     }
@@ -127,7 +127,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     public void aggregate(ByteBuffer buf, int position)
     {
       if (noNulls || !selector.isNull()) {
-        long v = selector.getLong();
+        double v = selector.getDouble();
         long count = buf.getLong(position + COUNT_OFFSET) + 1;
         double sum = buf.getDouble(position + SUM_OFFSET) + v;
         buf.putLong(position, count);
@@ -147,12 +147,12 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     }
   }
 
-  public static final class DoubleVarianceAggregator extends VarianceBufferAggregator
+  public static final class LongVarianceAggregator extends VarianceBufferAggregator
   {
     private final boolean noNulls = NullHandling.replaceWithDefault();
-    private final BaseDoubleColumnValueSelector selector;
+    private final BaseLongColumnValueSelector selector;
 
-    public DoubleVarianceAggregator(BaseDoubleColumnValueSelector selector)
+    public LongVarianceAggregator(BaseLongColumnValueSelector selector)
     {
       this.selector = selector;
     }
@@ -161,7 +161,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     public void aggregate(ByteBuffer buf, int position)
     {
       if (noNulls || !selector.isNull()) {
-        double v = selector.getDouble();
+        long v = selector.getLong();
         long count = buf.getLong(position + COUNT_OFFSET) + 1;
         double sum = buf.getDouble(position + SUM_OFFSET) + v;
         buf.putLong(position, count);

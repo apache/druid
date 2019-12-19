@@ -32,10 +32,6 @@ public abstract class VarianceAggregator implements Aggregator
 {
   protected final VarianceAggregatorCollector holder = new VarianceAggregatorCollector();
 
-  public VarianceAggregator()
-  {
-  }
-
   @Override
   public Object get()
   {
@@ -72,7 +68,6 @@ public abstract class VarianceAggregator implements Aggregator
 
     public FloatVarianceAggregator(BaseFloatColumnValueSelector selector)
     {
-      super();
       this.selector = selector;
     }
 
@@ -92,7 +87,6 @@ public abstract class VarianceAggregator implements Aggregator
 
     public DoubleVarianceAggregator(BaseDoubleColumnValueSelector selector)
     {
-      super();
       this.selector = selector;
     }
 
@@ -112,7 +106,6 @@ public abstract class VarianceAggregator implements Aggregator
 
     public LongVarianceAggregator(BaseLongColumnValueSelector selector)
     {
-      super();
       this.selector = selector;
     }
 
@@ -131,7 +124,6 @@ public abstract class VarianceAggregator implements Aggregator
 
     public ObjectVarianceAggregator(BaseObjectColumnValueSelector<?> selector)
     {
-      super();
       this.selector = selector;
     }
 
