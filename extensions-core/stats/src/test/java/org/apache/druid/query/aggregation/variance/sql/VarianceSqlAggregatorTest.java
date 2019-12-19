@@ -202,7 +202,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     if (raw != null) {
       if (raw instanceof Double) {
         double v = ((Double) raw).doubleValue() * multiply;
-        holder.add((float) v);
+        holder.add(v);
       } else if (raw instanceof Float) {
         float v = ((Float) raw).floatValue() * multiply;
         holder.add(v);
@@ -264,7 +264,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
         .granularity(Granularities.ALL)
         .aggregators(
             ImmutableList.of(
-              new VarianceAggregatorFactory("a0:agg", "d1", "population", "float"),
+              new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
               new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
               new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
             )
@@ -319,7 +319,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
         .granularity(Granularities.ALL)
         .aggregators(
             ImmutableList.of(
-              new VarianceAggregatorFactory("a0:agg", "d1", "sample", "float"),
+              new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
               new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
               new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
             )
@@ -374,7 +374,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
         .granularity(Granularities.ALL)
         .aggregators(
             ImmutableList.of(
-              new VarianceAggregatorFactory("a0:agg", "d1", "population", "float"),
+              new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
               new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
               new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
             )
@@ -436,7 +436,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .aggregators(
                   ImmutableList.of(
-                    new VarianceAggregatorFactory("a0:agg", "d1", "sample", "float"),
+                    new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
                     new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
                     new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
                   )
@@ -502,7 +502,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
               )
               .aggregators(
                   ImmutableList.of(
-                    new VarianceAggregatorFactory("a0:agg", "v0", "sample", "float"),
+                    new VarianceAggregatorFactory("a0:agg", "v0", "sample", "double"),
                     new VarianceAggregatorFactory("a1:agg", "v1", "sample", "float"),
                     new VarianceAggregatorFactory("a2:agg", "v2", "sample", "long")
                   )

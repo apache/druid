@@ -102,7 +102,9 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
 
     if (inputType == ValueType.LONG) {
       inputTypeName = "long";
-    } else if (inputType == ValueType.FLOAT || inputType == ValueType.DOUBLE) {
+    } else if (inputType == ValueType.DOUBLE) {
+      inputTypeName = "double";
+    } else if (inputType == ValueType.FLOAT) {
       inputTypeName = "float";
     } else {
       throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);

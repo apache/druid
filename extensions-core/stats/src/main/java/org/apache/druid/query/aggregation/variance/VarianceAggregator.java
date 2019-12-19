@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.variance;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -66,6 +67,7 @@ public abstract class VarianceAggregator implements Aggregator
 
   public static final class FloatVarianceAggregator extends VarianceAggregator
   {
+    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseFloatColumnValueSelector selector;
 
     public FloatVarianceAggregator(BaseFloatColumnValueSelector selector)
@@ -77,14 +79,35 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      if (noNulls || !selector.isNull()) {
         holder.add(selector.getFloat());
+      }
+    }
+  }
+
+  public static final class DoubleVarianceAggregator extends VarianceAggregator
+  {
+    private final boolean noNulls = NullHandling.replaceWithDefault();
+    private final BaseDoubleColumnValueSelector selector;
+
+    public DoubleVarianceAggregator(BaseDoubleColumnValueSelector selector)
+    {
+      super();
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate()
+    {
+      if (noNulls || !selector.isNull()) {
+        holder.add(selector.getDouble());
       }
     }
   }
 
   public static final class LongVarianceAggregator extends VarianceAggregator
   {
+    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseLongColumnValueSelector selector;
 
     public LongVarianceAggregator(BaseLongColumnValueSelector selector)
@@ -96,7 +119,7 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      if (noNulls || !selector.isNull()) {
         holder.add(selector.getLong());
       }
     }
