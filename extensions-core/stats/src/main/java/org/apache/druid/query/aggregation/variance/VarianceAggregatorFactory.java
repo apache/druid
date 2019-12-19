@@ -259,7 +259,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @JsonProperty
   public String getInputType()
   {
-    return  inputType == null ? "float" : inputType;
+    return inputType == null ? "float" : inputType;
   }
 
   @Override
