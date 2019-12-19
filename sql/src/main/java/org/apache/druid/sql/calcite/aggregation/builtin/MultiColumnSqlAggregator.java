@@ -103,7 +103,7 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
     final List<FieldInfo> fieldInfoList = new ArrayList<>();
 
-    // Convert arguments to concise field information & delegate the rest to sub-classes
+    // Convert arguments to concise field information
     for (DruidExpression argument : arguments) {
       if (argument.isDirectColumnAccess()) {
         fieldInfoList.add(FieldInfo.fromFieldName(argument.getDirectColumn()));
@@ -126,14 +126,15 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
     List<AggregatorFactory> aggregatorFactories = new ArrayList<>();
     List<PostAggregator> postAggregators = new ArrayList<>();
 
-    // Create Max aggregator factories for provided fields & corresponding field access post aggregators.
+    // Delegate aggregator factory construction to subclasses for provided fields.
+    // Create corresponding field access post aggregators.
     int id = 0;
     for (FieldInfo fieldInfo : fieldInfoList) {
       String prefixedName = Calcites.makePrefixedName(name, String.valueOf(id++));
       postAggregators.add(new FieldAccessPostAggregator(null, prefixedName));
       aggregatorFactories.add(createAggregatorFactory(valueType, prefixedName, fieldInfo, macroTable));
     }
-    // Use the field access post aggregators created in the previous loop to create the final Post aggregator.
+    // Delegate final post aggregator construction to subclasses by passing the above aggregators.
     final PostAggregator finalPostAggregator = createFinalPostAggregator(valueType, name, postAggregators);
     return Aggregation.create(aggregatorFactories, finalPostAggregator);
   }
