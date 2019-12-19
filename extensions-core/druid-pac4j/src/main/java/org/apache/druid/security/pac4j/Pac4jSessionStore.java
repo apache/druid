@@ -20,6 +20,7 @@
 package org.apache.druid.security.pac4j;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.crypto.CryptoService;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.pac4j.core.context.ContextHelper;
@@ -51,31 +52,25 @@ public class Pac4jSessionStore implements SessionStore
   public static final String PAC4J_SESSION_PREFIX = "pac4j.session.";
 
   private final JavaSerializationHelper javaSerializationHelper;
+  private final CryptoService cryptoService;
 
-  public Pac4jSessionStore()
+  public Pac4jSessionStore(String cookiePassphrase)
   {
     javaSerializationHelper = new JavaSerializationHelper();
+    cryptoService = new CryptoService(
+        cookiePassphrase,
+        "AES",
+        "PBKDF2WithHmacSHA1",
+        "AES/CBC/PKCS5Padding",
+        8,
+        65536,
+        128
+    );
   }
 
   @Override
   public String getOrCreateSessionId(WebContext context)
   {
-    return null;
-  }
-
-  private Serializable uncompressDecryptBase64(final String v)
-  {
-    if (v != null && !v.isEmpty()) {
-      byte[] clear = StringUtils.decodeBase64String(v);
-      if (clear != null) {
-        try {
-          return javaSerializationHelper.unserializeFromBytes(unCompress(clear));
-        }
-        catch (IOException e) {
-          throw new TechnicalException(e);
-        }
-      }
-    }
     return null;
   }
 
@@ -89,31 +84,6 @@ public class Pac4jSessionStore implements SessionStore
     }
     LOGGER.debug("Get from session: [%s] = [%s]", key, value);
     return value;
-  }
-
-  private String compressEncryptBase64(final Object o)
-  {
-    if (o == null || "".equals(o)
-        || (o instanceof Map<?, ?> && ((Map<?, ?>) o).isEmpty())) {
-      return null;
-    } else {
-      byte[] bytes = javaSerializationHelper.serializeToBytes((Serializable) o);
-
-      /* compress the data  */
-      try {
-        bytes = compress(bytes);
-
-        if (bytes.length > 3000) {
-          LOGGER.warn("Cookie too big, it might not be properly set");
-        }
-
-      }
-      catch (final IOException e) {
-        throw new TechnicalException(e);
-      }
-
-      return StringUtils.encodeBase64String(bytes);
-    }
   }
 
   @Override
@@ -145,7 +115,35 @@ public class Pac4jSessionStore implements SessionStore
     context.addResponseCookie(cookie);
   }
 
-  private static byte[] compress(final byte[] data) throws IOException
+  private String compressEncryptBase64(final Object o)
+  {
+    if (o == null || "".equals(o)
+        || (o instanceof Map<?, ?> && ((Map<?, ?>) o).isEmpty())) {
+      return null;
+    } else {
+      byte[] bytes = javaSerializationHelper.serializeToBytes((Serializable) o);
+
+      bytes = compress(bytes);
+      if (bytes.length > 3000) {
+        LOGGER.warn("Cookie too big, it might not be properly set");
+      }
+
+      return StringUtils.encodeBase64String(cryptoService.encrypt(bytes));
+    }
+  }
+
+  private Serializable uncompressDecryptBase64(final String v)
+  {
+    if (v != null && !v.isEmpty()) {
+      byte[] bytes = StringUtils.decodeBase64String(v);
+      if (bytes != null) {
+        return javaSerializationHelper.unserializeFromBytes(unCompress(cryptoService.decrypt(bytes)));
+      }
+    }
+    return null;
+  }
+
+  private byte[] compress(final byte[] data)
   {
     try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream(data.length)) {
       try (GZIPOutputStream gzip = new GZIPOutputStream(byteStream)) {
@@ -153,13 +151,19 @@ public class Pac4jSessionStore implements SessionStore
       }
       return byteStream.toByteArray();
     }
+    catch (IOException ex) {
+      throw new TechnicalException(ex);
+    }
   }
 
-  private static byte[] unCompress(final byte[] data) throws IOException
+  private byte[] unCompress(final byte[] data)
   {
     try (ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
          GZIPInputStream gzip = new GZIPInputStream(inputStream)) {
       return IOUtils.toByteArray(gzip);
+    }
+    catch (IOException ex) {
+      throw new TechnicalException(ex);
     }
   }
 

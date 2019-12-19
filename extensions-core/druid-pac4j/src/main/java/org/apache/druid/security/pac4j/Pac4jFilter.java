@@ -49,12 +49,12 @@ public class Pac4jFilter implements Filter
   private Config pac4jConfig;
   private SecurityLogic<String, J2EContext> securityLogic;
   private CallbackLogic<String, J2EContext> callbackLogic;
-  static SessionStore<J2EContext> sessionStore = new Pac4jSessionStore();
+  static SessionStore<J2EContext> sessionStore;
 
   private final String name;
   private final String authorizerName;
 
-  public Pac4jFilter(String name, String authorizerName, Config pac4jConfig)
+  public Pac4jFilter(String name, String authorizerName, Config pac4jConfig, String cookiePassphrase)
   {
     this.pac4jConfig = pac4jConfig;
     this.securityLogic = new DefaultSecurityLogic<>();
@@ -62,6 +62,8 @@ public class Pac4jFilter implements Filter
 
     this.name = name;
     this.authorizerName = authorizerName;
+
+    this.sessionStore = new Pac4jSessionStore(cookiePassphrase);
   }
 
   @Override
