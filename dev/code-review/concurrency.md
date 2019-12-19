@@ -108,6 +108,8 @@ Testing
  https://github.com/code-review-checklists/java-concurrency#coordinate-test-workers)
  - [There are more test threads than CPUs (if possible for the test)?](
  https://github.com/code-review-checklists/java-concurrency#test-workers-interleavings)
+ - [Assertions in parallel threads and asynchronous code are handled properly?](
+ https://github.com/code-review-checklists/java-concurrency#concurrent-assert)
 
 Locks
  - [Can use `LifecycleLock` instead of a standard lock in a lifecycled object?](#use-lifecycle-lock)

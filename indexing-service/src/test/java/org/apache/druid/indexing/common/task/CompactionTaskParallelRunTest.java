@@ -25,6 +25,8 @@ import com.google.common.io.Files;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -38,6 +40,9 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexingTest.TestSupervisorTask;
+import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -64,8 +69,12 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RunWith(Parameterized.class)
 public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervisorTaskTest
@@ -94,9 +103,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
 
       @Override
@@ -162,6 +171,38 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     );
 
     runTask(compactionTask);
+  }
+
+  @Test
+  public void testDruidInputSourceCreateSplitsWithIndividualSplits() throws Exception
+  {
+    runIndexTask();
+
+    Interval interval = Intervals.of("2014-01-01/2014-01-02");
+
+    List<InputSplit<List<WindowedSegmentId>>> splits = DruidInputSource.createSplits(
+        coordinatorClient,
+        RETRY_POLICY_FACTORY,
+        DATA_SOURCE,
+        interval,
+        new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
+    );
+
+    List<DataSegment> segments = new ArrayList<>(
+        coordinatorClient.getDatabaseSegmentDataSourceSegments(
+            DATA_SOURCE,
+            ImmutableList.of(interval)
+        )
+    );
+
+    Set<String> segmentIdsFromSplits = new HashSet<>();
+    Set<String> segmentIdsFromCoordinator = new HashSet<>();
+    Assert.assertEquals(segments.size(), splits.size());
+    for (int i = 0; i < segments.size(); i++) {
+      segmentIdsFromCoordinator.add(segments.get(i).getId().toString());
+      segmentIdsFromSplits.add(splits.get(i).get().get(0).getSegmentId());
+    }
+    Assert.assertEquals(segmentIdsFromCoordinator, segmentIdsFromSplits);
   }
 
   private void runIndexTask() throws Exception

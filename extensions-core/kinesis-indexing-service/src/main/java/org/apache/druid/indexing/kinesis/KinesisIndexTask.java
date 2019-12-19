@@ -56,7 +56,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   )
   {
     super(
-        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
+        getOrMakeId(id, dataSchema.getDataSource(), TYPE),
         taskResource,
         dataSchema,
         tuningConfig,

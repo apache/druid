@@ -30,18 +30,15 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.17.0-incubating-SNAPSHOT</version>
+    <version>0.18.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <properties>
-    <datasketches.memory.version>0.12.2</datasketches.memory.version>
-  </properties>
-
   <dependencies>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>sketches-core</artifactId>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-java</artifactId>
+      <scope>provided</scope>
       <exclusions>
         <exclusion>
           <groupId>com.google.code.findbugs</groupId>
@@ -50,9 +47,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.yahoo.datasketches</groupId>
-      <artifactId>memory</artifactId>
-      <version>${datasketches.memory.version}</version>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-memory</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>

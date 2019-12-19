@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -99,18 +99,23 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 public class KinesisSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
+  private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
+      new JSONPathSpec(true, ImmutableList.of()),
+      ImmutableMap.of()
+  );
   private static final String DATASOURCE = "testDS";
   private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
@@ -1233,24 +1238,18 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(
                 SHARD_ID1,
-                "1",
-                SHARD_ID0,
-                "0"
+                "1"
             )))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(
                 SHARD_ID1,
-                "3",
-                SHARD_ID0,
-                "1"
+                "3"
             )));
     EasyMock.expect(
         taskClient.setEndOffsetsAsync(
             EasyMock.contains("sequenceName-0"),
             EasyMock.eq(ImmutableMap.of(
                 SHARD_ID1,
-                "3",
-                SHARD_ID0,
-                "1"
+                "3"
             )),
             EasyMock.eq(true)
         )
@@ -1293,13 +1292,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
           "3",
           taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
       );
-      Assert.assertEquals(
-          "1",
-          taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
-      );
       // start sequenceNumbers should be exclusive for the second batch of tasks
       Assert.assertEquals(
-          ImmutableSet.of(SHARD_ID0, SHARD_ID1),
+          ImmutableSet.of(SHARD_ID1),
           ((KinesisIndexTask) task).getIOConfig().getStartSequenceNumbers().getExclusivePartitions()
       );
     }
@@ -2971,7 +2966,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.moveTaskGroupToPendingCompletion(0);
     supervisor.checkpoint(
         0,
-        id1.getIOConfig().getBaseSequenceName(),
         new KinesisDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(STREAM, checkpoints.get(0), checkpoints.get(0).keySet())
         )
@@ -3098,7 +3092,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.checkpoint(
         0,
-        id1.getIOConfig().getBaseSequenceName(),
         new KinesisDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(STREAM, Collections.emptyMap(), ImmutableSet.of())
         )
@@ -3122,111 +3115,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
     Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
   }
-
-  @Test(timeout = 60_000L)
-  public void testCheckpointWithNullTaskGroupId() throws InterruptedException
-  {
-    supervisor = getTestableSupervisor(1, 3, true, "PT1S", null, null, false);
-    supervisor.getStateManager().markRunFinished();
-
-    //not adding any events
-    final KinesisIndexTask id1 = createKinesisIndexTask(
-        "id1",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(SHARD_ID1, "0"), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>(
-            "stream",
-            ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
-        ),
-        null,
-        null
-    );
-
-    final Task id2 = createKinesisIndexTask(
-        "id2",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(SHARD_ID1, "0"), ImmutableSet.of(SHARD_ID1)),
-        new SeekableStreamEndSequenceNumbers<>(
-            "stream",
-            ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
-        ),
-        null,
-        null
-    );
-
-    final Task id3 = createKinesisIndexTask(
-        "id3",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(SHARD_ID1, "0"), ImmutableSet.of(SHARD_ID1)),
-        new SeekableStreamEndSequenceNumbers<>(
-            "stream",
-            ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
-        ),
-        null,
-        null
-    );
-
-    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(STREAM)).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-    EasyMock.expect(
-        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-        null)
-    ).anyTimes();
-    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
-            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
-            .anyTimes();
-    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(SHARD_ID1, "0"));
-    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(checkpoints))
-            .times(3);
-    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
-            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
-            .anyTimes();
-    EasyMock.expect(taskClient.pauseAsync(EasyMock.anyString()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID1, "10")))
-            .anyTimes();
-    EasyMock.expect(taskClient.setEndOffsetsAsync(
-        EasyMock.anyString(),
-        EasyMock.eq(ImmutableMap.of(SHARD_ID1, "10")),
-        EasyMock.anyBoolean()
-    ))
-            .andReturn(Futures.immediateFuture(true))
-            .anyTimes();
-
-    replayAll();
-
-    supervisor.start();
-
-    supervisor.runInternal();
-
-    supervisor.checkpoint(
-        null,
-        id1.getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(STREAM, checkpoints.get(0), ImmutableSet.of())
-        )
-    );
-
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
-
-    verifyAll();
-  }
-
 
   @Test
   public void testSuspendedNoRunningTasks() throws Exception
@@ -3458,8 +3346,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testGetCurrentTotalStats()
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor.setPartitionIdsForTests(
+        ImmutableList.of(SHARD_ID0, SHARD_ID1)
+    );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition("0"),
+        supervisor.getTaskGroupIdForPartition(SHARD_ID0),
         ImmutableMap.of("0", "0"),
         Optional.absent(),
         Optional.absent(),
@@ -3468,7 +3359,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition("1"),
+        supervisor.getTaskGroupIdForPartition(SHARD_ID1),
         ImmutableMap.of("0", "0"),
         Optional.absent(),
         Optional.absent(),
@@ -4010,12 +3901,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .anyTimes();
     TreeMap<Integer, Map<String, String>> checkpointsGroup0 = new TreeMap<>();
     checkpointsGroup0.put(0, ImmutableMap.of(
-        SHARD_ID2, "0",
-        SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER
+        SHARD_ID1, "0"
     ));
     TreeMap<Integer, Map<String, String>> checkpointsGroup1 = new TreeMap<>();
     checkpointsGroup1.put(1, ImmutableMap.of(
-        SHARD_ID1, "0"
+        SHARD_ID2, "0"
     ));
     // there would be 2 tasks, 1 for each task group
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
@@ -4044,7 +3934,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID2, "0"
+                SHARD_ID1, "0"
             ),
             ImmutableSet.of()
         );
@@ -4053,7 +3943,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamEndSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID2, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+                SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
             )
         );
 
@@ -4061,7 +3951,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID1, "0"
+                SHARD_ID2, "0"
             ),
             ImmutableSet.of()
         );
@@ -4070,7 +3960,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamEndSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+                SHARD_ID2, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
             )
         );
 
@@ -4267,11 +4157,21 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(group1ExpectedStartSequenceNumbers, group1Config.getStartSequenceNumbers());
     Assert.assertEquals(group1ExpectedEndSequenceNumbers, group1Config.getEndSequenceNumbers());
 
-    Map<Integer, Map<String, String>> expectedPartitionGroups = ImmutableMap.of(
-        0, ImmutableMap.of(SHARD_ID1, "-1"),
-        1, ImmutableMap.of(SHARD_ID2, "-1")
+    Map<Integer, Set<String>> expectedPartitionGroups = ImmutableMap.of(
+        0, ImmutableSet.of(SHARD_ID1),
+        1, ImmutableSet.of(SHARD_ID2)
     );
     Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
+
+    ConcurrentHashMap<String, String> expectedPartitionOffsets = new ConcurrentHashMap<>(
+        ImmutableMap.of(
+            SHARD_ID2, "-1",
+            SHARD_ID1, "-1",
+            SHARD_ID0, "-1"
+        )
+    );
+    Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
+
   }
 
   @Test
@@ -4661,11 +4561,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
     Assert.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
 
-    Map<Integer, Map<String, String>> expectedPartitionGroups = ImmutableMap.of(
-        0, ImmutableMap.of(SHARD_ID2, "-1"),
-        1, ImmutableMap.of()
+    Map<Integer, Set<String>> expectedPartitionGroups = ImmutableMap.of(
+        0, ImmutableSet.of(SHARD_ID2),
+        1, ImmutableSet.of()
+    );
+    ConcurrentHashMap<String, String> expectedPartitionOffsets = new ConcurrentHashMap<>(
+        ImmutableMap.of(
+            SHARD_ID2, "-1",
+            SHARD_ID1, "-1",
+            SHARD_ID0, "-1"
+        )
     );
     Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
+    Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
   }
 
   private TestableKinesisSupervisor getTestableSupervisor(
@@ -4703,6 +4611,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4714,6 +4623,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null,
@@ -4783,6 +4693,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -4839,6 +4750,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4850,6 +4762,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         recordsPerFetch,
         fetchDelayMillis,
         null,
@@ -4885,6 +4798,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -4923,6 +4837,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -4934,6 +4849,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         recordsPerFetch,
         fetchDelayMillis,
         null,
@@ -4969,6 +4885,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -5009,6 +4926,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         STREAM,
+        INPUT_FORMAT,
         "awsEndpoint",
         null,
         replicas,
@@ -5020,6 +4938,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         recordsPerFetch,
         fetchDelayMillis,
         null,
@@ -5055,6 +4974,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -5084,21 +5004,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     return new DataSchema(
         dataSource,
-        OBJECT_MAPPER.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        dimensions,
-                        null,
-                        null
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of()
-                ),
-                StandardCharsets.UTF_8.name()
-            ),
-            Map.class
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(
+            dimensions,
+            null,
+            null
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
@@ -5106,8 +5016,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             Granularities.NONE,
             ImmutableList.of()
         ),
-        null,
-        OBJECT_MAPPER
+        null
     );
   }
 
@@ -5179,6 +5088,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
+            INPUT_FORMAT,
             "awsEndpoint",
             null,
             null,

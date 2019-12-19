@@ -39,7 +39,7 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    log.info("Starting coordination. Getting used segments.");
+    log.debug("Starting coordination. Getting used segments.");
 
     DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
     for (DataSegment segment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {

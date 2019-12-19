@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,9 +45,8 @@ import java.util.Collection;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class MomentsSketchAggregatorTest
+public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
 {
-
   private final AggregationTestHelper helper;
 
   @Rule

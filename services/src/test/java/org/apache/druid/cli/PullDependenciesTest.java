@@ -20,12 +20,18 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.graph.DefaultDependencyNode;
+import org.eclipse.aether.graph.Dependency;
+import org.eclipse.aether.graph.DependencyFilter;
+import org.eclipse.aether.graph.DependencyNode;
 import org.eclipse.aether.resolution.DependencyRequest;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -34,20 +40,37 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- */
 public class PullDependenciesTest
 {
-
   private static final String EXTENSION_A_COORDINATE = "groupX:extension_A:123";
   private static final String EXTENSION_B_COORDINATE = "groupY:extension_B:456";
   private static final String HADOOP_CLIENT_2_3_0_COORDINATE = "org.apache.hadoop:hadoop-client:2.3.0";
   private static final String HADOOP_CLIENT_2_4_0_COORDINATE = "org.apache.hadoop:hadoop-client:2.4.0";
+
+  private static final String DEPENDENCY_GROUPID = "groupid";
+  private static final String HADOOP_CLIENT_VULNERABLE_ARTIFACTID1 = "vulnerable1";
+  private static final String HADOOP_CLIENT_VULNERABLE_ARTIFACTID2 = "vulnerable2";
+  private static final Set<String> HADOOP_CLIENT_VULNERABLE_ARTIFACTIDS = ImmutableSet.of(
+      HADOOP_CLIENT_VULNERABLE_ARTIFACTID1,
+      HADOOP_CLIENT_VULNERABLE_ARTIFACTID2
+  );
+  private static final String HADOOP_CLIENT_VULNERABLE_JAR1 = HADOOP_CLIENT_VULNERABLE_ARTIFACTID1 + ".jar";
+  private static final String HADOOP_CLIENT_VULNERABLE_JAR2 = HADOOP_CLIENT_VULNERABLE_ARTIFACTID2 + ".jar";
+  private static final PullDependencies.Dependencies HADOOP_EXCLUSIONS =
+      PullDependencies.Dependencies.builder()
+                                   .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID1)
+                                   .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID2)
+                                   .build();
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -63,21 +86,24 @@ public class PullDependenciesTest
   private File rootExtensionsDir;
   private File rootHadoopDependenciesDir;
 
-  private HashMap<Artifact, List<String>> extensionToJars; // map Artifact to its associated jars' names
+  private Map<Artifact, List<String>> extensionToDependency;
 
   @Before
   public void setUp() throws Exception
   {
-    localRepo = temporaryFolder.newFolder();
-    extensionToJars = new HashMap<>();
+    localRepo = temporaryFolder.newFolder("local_repo");
+    extensionToDependency = new HashMap<>();
 
-    extensionToJars.put(extension_A, ImmutableList.of("a.jar", "b.jar", "c.jar"));
-    extensionToJars.put(extension_B, ImmutableList.of("d.jar", "e.jar"));
-    extensionToJars.put(hadoop_client_2_3_0, ImmutableList.of("f.jar", "g.jar"));
-    extensionToJars.put(hadoop_client_2_4_0, ImmutableList.of("h.jar", "i.jar"));
+    extensionToDependency.put(extension_A, ImmutableList.of("a", "b", "c"));
+    extensionToDependency.put(extension_B, ImmutableList.of("d", "e"));
+    extensionToDependency.put(hadoop_client_2_3_0, ImmutableList.of("f", "g"));
+    extensionToDependency.put(
+        hadoop_client_2_4_0,
+        ImmutableList.of("h", "i", HADOOP_CLIENT_VULNERABLE_ARTIFACTID1, HADOOP_CLIENT_VULNERABLE_ARTIFACTID2)
+    );
 
-    rootExtensionsDir = new File(temporaryFolder.getRoot(), "extensions");
-    rootHadoopDependenciesDir = new File(temporaryFolder.getRoot(), "druid_hadoop_dependencies");
+    rootExtensionsDir = temporaryFolder.newFolder("extensions");
+    rootHadoopDependenciesDir = temporaryFolder.newFolder("druid_hadoop_dependencies");
 
     pullDependencies = new PullDependencies(
         new DefaultTeslaAether()
@@ -85,7 +111,10 @@ public class PullDependenciesTest
           @Override
           public List<Artifact> resolveArtifacts(DependencyRequest request)
           {
-            return getArtifactsForExtension(request.getCollectRequest().getRoot().getArtifact());
+            return getArtifactsForExtension(
+                request.getCollectRequest().getRoot().getArtifact(),
+                request.getFilter()
+            );
           }
         },
         new ExtensionsConfig()
@@ -101,7 +130,8 @@ public class PullDependenciesTest
           {
             return rootHadoopDependenciesDir.getAbsolutePath();
           }
-        }
+        },
+        HADOOP_EXCLUSIONS
     );
 
     pullDependencies.coordinates = ImmutableList.of(EXTENSION_A_COORDINATE, EXTENSION_B_COORDINATE);
@@ -109,47 +139,66 @@ public class PullDependenciesTest
         HADOOP_CLIENT_2_3_0_COORDINATE,
         HADOOP_CLIENT_2_4_0_COORDINATE
     );
+
+    // Because --clean is specified, pull-deps will first remove existing root extensions and hadoop dependencies
+    pullDependencies.clean = true;
   }
 
-  private List<Artifact> getArtifactsForExtension(Artifact artifact)
+  private List<Artifact> getArtifactsForExtension(Artifact artifact, DependencyFilter filter)
   {
-    final List<String> jarNames = extensionToJars.get(artifact);
+    final List<String> names = extensionToDependency.get(artifact);
     final List<Artifact> artifacts = new ArrayList<>();
-    for (String jarName : jarNames) {
-      final File jarFile = new File(localRepo, jarName);
+    for (String name : names) {
+      final File jarFile = new File(localRepo, name + ".jar");
       try {
         jarFile.createNewFile();
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      artifacts.add(new DefaultArtifact(null, jarName, null, "jar", "1.0", null, jarFile));
+
+      DependencyNode node = new DefaultDependencyNode(
+          new Dependency(
+              new DefaultArtifact(DEPENDENCY_GROUPID, name, null, "jar", "1.0", null, jarFile),
+              "compile"
+          )
+      );
+      if (filter.accept(node, Collections.emptyList())) {
+        artifacts.add(node.getArtifact());
+      }
     }
     return artifacts;
   }
 
-  private File[] getExpectedJarFiles(Artifact artifact)
+  private List<File> getExpectedJarFiles(Artifact artifact)
   {
     final String artifactId = artifact.getArtifactId();
-    final List<String> jarNames = extensionToJars.get(artifact);
-    final File[] expectedJars = new File[jarNames.size()];
+    final List<String> names = extensionToDependency.get(artifact);
+    final List<File> expectedJars;
     if ("hadoop-client".equals(artifactId)) {
       final String version = artifact.getVersion();
-      for (int i = 0; i < jarNames.size(); ++i) {
-        expectedJars[i] = new File(
-            StringUtils.format(
-                "%s/%s/%s/%s",
-                rootHadoopDependenciesDir,
-                artifactId,
-                version,
-                jarNames.get(i)
-            )
-        );
-      }
+      expectedJars = names.stream()
+                          .filter(name -> !HADOOP_CLIENT_VULNERABLE_ARTIFACTIDS.contains(name))
+                          .map(name -> new File(
+                              StringUtils.format(
+                                  "%s/%s/%s/%s",
+                                  rootHadoopDependenciesDir,
+                                  artifactId,
+                                  version,
+                                  name + ".jar"
+                              )
+                          ))
+                          .collect(Collectors.toList());
     } else {
-      for (int i = 0; i < jarNames.size(); ++i) {
-        expectedJars[i] = new File(StringUtils.format("%s/%s/%s", rootExtensionsDir, artifactId, jarNames.get(i)));
-      }
+      expectedJars = names.stream()
+                          .map(name -> new File(
+                              StringUtils.format(
+                                  "%s/%s/%s",
+                                  rootExtensionsDir,
+                                  artifactId,
+                                  name + ".jar"
+                              )))
+                          .collect(Collectors.toList());
     }
     return expectedJars;
   }
@@ -160,7 +209,6 @@ public class PullDependenciesTest
   @Test()
   public void testPullDependencies_root_extension_dir_exists()
   {
-    rootExtensionsDir.mkdir();
     pullDependencies.run();
   }
 
@@ -170,6 +218,7 @@ public class PullDependenciesTest
   @Test(expected = RuntimeException.class)
   public void testPullDependencies_root_extension_dir_bad_state() throws IOException
   {
+    Assert.assertTrue(rootExtensionsDir.delete());
     Assert.assertTrue(rootExtensionsDir.createNewFile());
     pullDependencies.run();
   }
@@ -180,7 +229,6 @@ public class PullDependenciesTest
   @Test()
   public void testPullDependencies_root_hadoop_dependencies_dir_exists()
   {
-    rootHadoopDependenciesDir.mkdir();
     pullDependencies.run();
   }
 
@@ -190,6 +238,7 @@ public class PullDependenciesTest
   @Test(expected = RuntimeException.class)
   public void testPullDependencies_root_hadoop_dependencies_dir_bad_state() throws IOException
   {
+    Assert.assertTrue(rootHadoopDependenciesDir.delete());
     Assert.assertTrue(rootHadoopDependenciesDir.createNewFile());
     pullDependencies.run();
   }
@@ -197,11 +246,6 @@ public class PullDependenciesTest
   @Test
   public void testPullDependencies()
   {
-    rootExtensionsDir.mkdir();
-    rootHadoopDependenciesDir.mkdir();
-    // Because --clean is specified, pull-deps will first remove existing root extensions and hadoop dependencies
-    pullDependencies.clean = true;
-
     pullDependencies.run();
     final File[] actualExtensions = rootExtensionsDir.listFiles();
     Arrays.sort(actualExtensions);
@@ -209,13 +253,13 @@ public class PullDependenciesTest
     Assert.assertEquals(extension_A.getArtifactId(), actualExtensions[0].getName());
     Assert.assertEquals(extension_B.getArtifactId(), actualExtensions[1].getName());
 
-    final File[] jarsUnderExtensionA = actualExtensions[0].listFiles();
-    Arrays.sort(jarsUnderExtensionA);
-    Assert.assertArrayEquals(getExpectedJarFiles(extension_A), jarsUnderExtensionA);
+    final List<File> jarsUnderExtensionA = Arrays.asList(actualExtensions[0].listFiles());
+    Collections.sort(jarsUnderExtensionA);
+    Assert.assertEquals(getExpectedJarFiles(extension_A), jarsUnderExtensionA);
 
-    final File[] jarsUnderExtensionB = actualExtensions[1].listFiles();
-    Arrays.sort(jarsUnderExtensionB);
-    Assert.assertArrayEquals(getExpectedJarFiles(extension_B), jarsUnderExtensionB);
+    final List<File> jarsUnderExtensionB = Arrays.asList(actualExtensions[1].listFiles());
+    Collections.sort(jarsUnderExtensionB);
+    Assert.assertEquals(getExpectedJarFiles(extension_B), jarsUnderExtensionB);
 
     final File[] actualHadoopDependencies = rootHadoopDependenciesDir.listFiles();
     Arrays.sort(actualHadoopDependencies);
@@ -228,12 +272,31 @@ public class PullDependenciesTest
     Assert.assertEquals(hadoop_client_2_3_0.getVersion(), versionDirsUnderHadoopClient[0].getName());
     Assert.assertEquals(hadoop_client_2_4_0.getVersion(), versionDirsUnderHadoopClient[1].getName());
 
-    final File[] jarsUnder2_3_0 = versionDirsUnderHadoopClient[0].listFiles();
-    Arrays.sort(jarsUnder2_3_0);
-    Assert.assertArrayEquals(getExpectedJarFiles(hadoop_client_2_3_0), jarsUnder2_3_0);
+    final List<File> jarsUnder2_3_0 = Arrays.asList(versionDirsUnderHadoopClient[0].listFiles());
+    Collections.sort(jarsUnder2_3_0);
+    Assert.assertEquals(getExpectedJarFiles(hadoop_client_2_3_0), jarsUnder2_3_0);
 
-    final File[] jarsUnder2_4_0 = versionDirsUnderHadoopClient[1].listFiles();
-    Arrays.sort(jarsUnder2_4_0);
-    Assert.assertArrayEquals(getExpectedJarFiles(hadoop_client_2_4_0), jarsUnder2_4_0);
+    final List<File> jarsUnder2_4_0 = Arrays.asList(versionDirsUnderHadoopClient[1].listFiles());
+    Collections.sort(jarsUnder2_4_0);
+    Assert.assertEquals(getExpectedJarFiles(hadoop_client_2_4_0), jarsUnder2_4_0);
+  }
+
+  @Test
+  public void testPullDependeciesExcludesHadoopSecurityVulnerabilities()
+  {
+    pullDependencies.run();
+
+    File hadoopClient240 = new File(
+        rootHadoopDependenciesDir,
+        Paths.get(hadoop_client_2_4_0.getArtifactId(), hadoop_client_2_4_0.getVersion())
+             .toString()
+    );
+    Assert.assertTrue(hadoopClient240.exists());
+
+    List<String> dependencies = Arrays.stream(hadoopClient240.listFiles())
+                                      .map(File::getName)
+                                      .collect(Collectors.toList());
+    Assert.assertThat(dependencies, CoreMatchers.not(CoreMatchers.hasItem(HADOOP_CLIENT_VULNERABLE_JAR1)));
+    Assert.assertThat(dependencies, CoreMatchers.not(CoreMatchers.hasItem(HADOOP_CLIENT_VULNERABLE_JAR2)));
   }
 }

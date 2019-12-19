@@ -27,7 +27,7 @@ describe('transform table', () => {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],
@@ -39,7 +39,7 @@ describe('transform table', () => {
         columnFilter=""
         transformedColumnsOnly={false}
         transforms={[]}
-        selectedTransformIndex={-1}
+        selectedColumnName={undefined}
         onTransformSelect={() => {}}
       />
     );

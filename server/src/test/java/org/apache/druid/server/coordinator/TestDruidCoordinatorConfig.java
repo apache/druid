@@ -33,8 +33,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
 
-  private final String consoleStatic;
-
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
       Duration coordinatorPeriod,
@@ -43,7 +41,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorKillPeriod,
       Duration coordinatorKillDurationToRetain,
       int coordinatorKillMaxSegments,
-      String consoleStatic,
       Duration getLoadQueuePeonRepeatDelay
   )
   {
@@ -54,7 +51,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorKillPeriod = coordinatorKillPeriod;
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
-    this.consoleStatic = consoleStatic;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
   }
 
@@ -101,15 +97,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
-  public String getConsoleStatic()
-  {
-    return consoleStatic;
-  }
-
-  @Override
   public Duration getLoadQueuePeonRepeatDelay()
   {
     return getLoadQueuePeonRepeatDelay;
   }
-
 }

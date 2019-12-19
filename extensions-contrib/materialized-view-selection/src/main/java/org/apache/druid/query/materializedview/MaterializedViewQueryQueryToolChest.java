@@ -32,6 +32,9 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
 
+import java.util.Comparator;
+import java.util.function.BinaryOperator;
+
 public class MaterializedViewQueryQueryToolChest extends QueryToolChest 
 {
   private final QueryToolChestWarehouse warehouse;
@@ -56,6 +59,20 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
         return warehouse.getToolChest(realQuery).mergeResults(runner).run(queryPlus.withQuery(realQuery), responseContext);
       }
     };
+  }
+
+  @Override
+  public BinaryOperator createMergeFn(Query query)
+  {
+    final Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).createMergeFn(realQuery);
+  }
+
+  @Override
+  public Comparator createResultComparator(Query query)
+  {
+    final Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).createResultComparator(realQuery);
   }
 
   @Override

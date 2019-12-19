@@ -84,18 +84,6 @@ public class TestIndex
       "indexMin",
       "indexMaxPlusTen"
   };
-  public static final String[] DIMENSIONS = new String[]{
-      "market",
-      "quality",
-      "qualityLong",
-      "qualityFloat",
-      "qualityDouble",
-      "qualityNumericString",
-      "placement",
-      "placementish",
-      "partial_null_column",
-      "null_column"
-  };
 
   public static final List<DimensionSchema> DIMENSION_SCHEMAS = Arrays.asList(
       new StringDimensionSchema("market"),

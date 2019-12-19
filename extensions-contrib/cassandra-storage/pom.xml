@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.17.0-incubating-SNAPSHOT</version>
+        <version>0.18.0-incubating-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -41,6 +41,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <!--
+              ~ This library is no longer actively developed and should be migrated to DataStax Java Driver for Apache
+              ~ Cassandra. Even the latest version of astyanax (3.10.2) has transitive dependencies with security
+              ~ vulenerabilites with CVSS scores greater than 7 (e.g., libthrift 0.9.1).
+            -->
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax</artifactId>
             <version>1.0.1</version>
@@ -112,6 +117,11 @@
                 <exclusion>
                     <groupId>com.github.stephenc.high-scale-lib</groupId>
                     <artifactId>high-scale-lib</artifactId>
+                </exclusion>
+                <exclusion>
+                    <!-- Excluded to remove security vulnerability -->
+                    <groupId>org.mortbay.jetty</groupId>
+                    <artifactId>jetty</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

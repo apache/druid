@@ -63,6 +63,7 @@ import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -230,6 +231,10 @@ public class JettyServerModule extends JerseyServletModule
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       HttpConfiguration httpConfiguration = new HttpConfiguration();
+      if (config.isEnableForwardedRequestCustomizer()) {
+        httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
+      }
+
       httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
       if (node.isBindOnHost()) {
@@ -308,6 +313,9 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      if (config.isEnableForwardedRequestCustomizer()) {
+        httpsConfiguration.addCustomizer(new ForwardedRequestCustomizer());
+      }
       httpsConfiguration.setSecureScheme("https");
       httpsConfiguration.setSecurePort(node.getTlsPort());
       httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
@@ -395,7 +403,7 @@ public class JettyServerModule extends JerseyServletModule
           @Override
           public void start() throws Exception
           {
-            log.info("Starting Jetty Server...");
+            log.debug("Starting Jetty Server...");
             server.start();
             if (node.isEnableTlsPort()) {
               // Perform validation
@@ -426,12 +434,12 @@ public class JettyServerModule extends JerseyServletModule
             try {
               final long unannounceDelay = config.getUnannouncePropagationDelay().toStandardDuration().getMillis();
               if (unannounceDelay > 0) {
-                log.info("Waiting %s ms for unannouncement to propagate.", unannounceDelay);
+                log.info("Sleeping %s ms for unannouncement to propagate.", unannounceDelay);
                 Thread.sleep(unannounceDelay);
               } else {
                 log.debug("Skipping unannounce wait.");
               }
-              log.info("Stopping Jetty Server...");
+              log.debug("Stopping Jetty Server...");
               server.stop();
             }
             catch (InterruptedException e) {

@@ -143,6 +143,11 @@ the 'column data' is an array of values. Additionally, a row with *n*
 values in 'column data' will have *n* non-zero valued entries in
 bitmaps.
 
+## SQL Compatible Null Handling
+By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
+
+String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
+
 ## Naming Convention
 
 Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.

@@ -22,6 +22,8 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
@@ -39,15 +41,17 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
+  private final InputFormat inputFormat;
 
   public SeekableStreamIndexTaskIOConfig(
-      final @Nullable Integer taskGroupId, // can be null for backward compabitility
+      @Nullable final Integer taskGroupId, // can be null for backward compabitility
       final String baseSequenceName,
       final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers,
       final Boolean useTransaction,
       final DateTime minimumMessageTime,
-      final DateTime maximumMessageTime
+      final DateTime maximumMessageTime,
+      @Nullable final InputFormat inputFormat
   )
   {
     this.taskGroupId = taskGroupId;
@@ -57,6 +61,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
+    this.inputFormat = inputFormat;
 
     Preconditions.checkArgument(
         startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
@@ -114,4 +119,15 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     return minimumMessageTime;
   }
 
+  @Nullable
+  @JsonProperty("inputFormat")
+  private InputFormat getGivenInputFormat()
+  {
+    return inputFormat;
+  }
+
+  public InputFormat getInputFormat(ParseSpec parseSpec)
+  {
+    return inputFormat == null ? Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat() : inputFormat;
+  }
 }

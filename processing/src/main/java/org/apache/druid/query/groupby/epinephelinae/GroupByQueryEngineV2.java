@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -48,7 +48,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSel
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -112,7 +112,8 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig
+      final GroupByQueryConfig querySpecificConfig,
+      final QueryConfig queryConfig
   )
   {
     if (storageAdapter == null) {
@@ -139,7 +140,7 @@ public class GroupByQueryEngineV2
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-    final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+    final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
         VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
     );
 
@@ -153,7 +154,8 @@ public class GroupByQueryEngineV2
           fudgeTimestamp,
           filter,
           interval,
-          querySpecificConfig
+          querySpecificConfig,
+          queryConfig
       );
     } else {
       result = processNonVectorized(
@@ -348,20 +350,20 @@ public class GroupByQueryEngineV2
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
-          return makeNullableStrategy(new LongGroupByColumnSelectorStrategy());
+          return makeNullableNumericStrategy(new LongGroupByColumnSelectorStrategy());
         case FLOAT:
-          return makeNullableStrategy(new FloatGroupByColumnSelectorStrategy());
+          return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
-          return makeNullableStrategy(new DoubleGroupByColumnSelectorStrategy());
+          return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
 
-    private GroupByColumnSelectorStrategy makeNullableStrategy(GroupByColumnSelectorStrategy delegate)
+    private GroupByColumnSelectorStrategy makeNullableNumericStrategy(GroupByColumnSelectorStrategy delegate)
     {
       if (NullHandling.sqlCompatible()) {
-        return new NullableValueGroupByColumnSelectorStrategy(delegate);
+        return new NullableNumericGroupByColumnSelectorStrategy(delegate);
       } else {
         return delegate;
       }

@@ -20,10 +20,13 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
 
-import { pluralIfNeeded, QueryManager } from '../../../utils';
+import { pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
-export interface SupervisorsCardProps {}
+export interface SupervisorsCardProps {
+  capabilities: Capabilities;
+}
 
 export interface SupervisorsCardState {
   supervisorCountLoading: boolean;
@@ -36,7 +39,7 @@ export class SupervisorsCard extends React.PureComponent<
   SupervisorsCardProps,
   SupervisorsCardState
 > {
-  private supervisorQueryManager: QueryManager<null, any>;
+  private supervisorQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: SupervisorsCardProps, context: any) {
     super(props, context);
@@ -47,15 +50,27 @@ export class SupervisorsCard extends React.PureComponent<
     };
 
     this.supervisorQueryManager = new QueryManager({
-      processQuery: async () => {
-        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
-        const data = resp.data;
-        const runningSupervisorCount = data.filter((d: any) => d.spec.suspended === false).length;
-        const suspendedSupervisorCount = data.filter((d: any) => d.spec.suspended === true).length;
-        return {
-          runningSupervisorCount,
-          suspendedSupervisorCount,
-        };
+      processQuery: async capabilities => {
+        if (capabilities.hasSql()) {
+          return (await queryDruidSql({
+            query: `SELECT
+  COUNT(*) FILTER (WHERE "suspended" = 0) AS "runningSupervisorCount",
+  COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspendedSupervisorCount"
+FROM sys.supervisors`,
+          }))[0];
+        } else if (capabilities.hasOverlordAccess()) {
+          const resp = await axios.get('/druid/indexer/v1/supervisor?full');
+          const data = resp.data;
+          const runningSupervisorCount = data.filter((d: any) => d.spec.suspended === false).length;
+          const suspendedSupervisorCount = data.filter((d: any) => d.spec.suspended === true)
+            .length;
+          return {
+            runningSupervisorCount,
+            suspendedSupervisorCount,
+          };
+        } else {
+          throw new Error(`must have SQL or overlord access`);
+        }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -69,7 +84,9 @@ export class SupervisorsCard extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    this.supervisorQueryManager.runQuery(null);
+    const { capabilities } = this.props;
+
+    this.supervisorQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
@@ -87,7 +104,7 @@ export class SupervisorsCard extends React.PureComponent<
     return (
       <HomeViewCard
         className="supervisors-card"
-        href={'#tasks'}
+        href={'#ingestion'}
         icon={IconNames.LIST_COLUMNS}
         title={'Supervisors'}
         loading={supervisorCountLoading}

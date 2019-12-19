@@ -53,8 +53,19 @@ public class EmittingLogger extends Logger
   public EmittingLogger(Class clazz)
   {
     super(clazz);
-
     this.className = clazz.getName();
+  }
+
+  private EmittingLogger(org.slf4j.Logger log, boolean stackTraces)
+  {
+    super(log, stackTraces);
+    this.className = log.getName();
+  }
+
+  @Override
+  public EmittingLogger noStackTrace()
+  {
+    return new EmittingLogger(getSlf4jLogger(), false);
   }
 
   public AlertBuilder makeAlert(String message, Object... objects)
@@ -72,11 +83,13 @@ public class EmittingLogger extends Logger
           StringUtils.nonStrictFormat(message, objects)
       );
 
-      error(errorMessage);
       ISE e = new ISE(errorMessage);
       if (t != null) {
         e.addSuppressed(t);
       }
+
+      error(e, errorMessage);
+
       throw e;
     }
 

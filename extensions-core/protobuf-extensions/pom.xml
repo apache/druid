@@ -31,13 +31,9 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.17.0-incubating-SNAPSHOT</version>
+    <version>0.18.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-
-  <properties>
-    <protobuf.version>3.2.0</protobuf.version>
-  </properties>
 
   <dependencies>
     <dependency>
@@ -111,7 +107,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.2.1</version>
         <configuration>
           <createDependencyReducedPom>false</createDependencyReducedPom>
           <relocations>

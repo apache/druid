@@ -25,22 +25,26 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.NodeTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
@@ -58,6 +62,7 @@ import org.apache.druid.segment.realtime.CliIndexerDataSegmentServerAnnouncerLif
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
@@ -131,7 +136,7 @@ public class CliIndexer extends ServerRunnable
                   .to(UnifiedIndexerAppenderatorsManager.class)
                   .in(LazySingleton.class);
 
-            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.INDEXER_EXECUTOR));
+            binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.INDEXER_EXECUTOR));
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
@@ -142,13 +147,16 @@ public class CliIndexer extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
-            bindAnnouncer(
+            binder.bind(SegmentLoadDropHandler.class).toProvider(Providers.of(null));
+
+            bindNodeRoleAndAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider.builder(NodeType.INDEXER)
-                                            .serviceClasses(
-                                                ImmutableList.of(LookupNodeService.class, WorkerNodeService.class)
-                                            )
-                                            .build()
+                DiscoverySideEffectsProvider
+                    .builder(NodeRole.INDEXER)
+                    .serviceClasses(
+                        ImmutableList.of(LookupNodeService.class, WorkerNodeService.class, DataNodeService.class)
+                    )
+                    .build()
             );
           }
 
@@ -177,8 +185,21 @@ public class CliIndexer extends ServerRunnable
                 WorkerConfig.DEFAULT_CATEGORY
             );
           }
+
+          @Provides
+          @LazySingleton
+          public DataNodeService getDataNodeService()
+          {
+            return new DataNodeService(
+                DruidServer.DEFAULT_TIER,
+                0L,
+                ServerType.INDEXER_EXECUTOR,
+                DruidServer.DEFAULT_PRIORITY
+            );
+          }
         },
         new IndexingServiceFirehoseModule(),
+        new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),

@@ -24,12 +24,21 @@ import { ChartAxis } from './chart-axis';
 
 describe('Visualization', () => {
   it('BarUnit', () => {
-    const barGroup = <BarUnit x={10} y={10} width={10} height={10} />;
+    const barGroup = (
+      <svg>
+        <BarUnit x={10} y={10} width={10} height={10} />
+      </svg>
+    );
     const { container } = render(barGroup);
     expect(container.firstChild).toMatchSnapshot();
   });
+
   it('action barGroup', () => {
-    const barGroup = <ChartAxis transform={'value'} scale={() => null} />;
+    const barGroup = (
+      <svg>
+        <ChartAxis transform={'value'} scale={() => null} />
+      </svg>
+    );
     const { container } = render(barGroup);
     expect(container.firstChild).toMatchSnapshot();
   });

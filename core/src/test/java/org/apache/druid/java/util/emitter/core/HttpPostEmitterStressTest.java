@@ -59,6 +59,7 @@ public class HttpPostEmitterStressTest
     HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setFlushMillis(100)
         .setFlushCount(4)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
         .setMaxBatchSize(1024 * 1024)
         // For this test, we don't need any batches to be dropped, i. e. "gaps" in data

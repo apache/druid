@@ -132,7 +132,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     throw new RuntimeException(e);
                                   }
                                   catch (Exception e) {
-                                    log.error(e, "Exception with one of the sequences!");
+                                    log.noStackTrace().error(e, "Exception with one of the sequences!");
                                     Throwables.propagateIfPossible(e);
                                     throw new RuntimeException(e);
                                   }
@@ -155,7 +155,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               ).iterator();
             }
             catch (InterruptedException e) {
-              log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
             }

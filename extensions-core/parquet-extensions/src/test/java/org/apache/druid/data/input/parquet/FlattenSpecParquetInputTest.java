@@ -36,7 +36,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class FlattenSpecParquetInputTest extends BaseParquetInputTest
 {
-  private static final String TS1 = "2018-09-18T00:18:00.023Z";
+  static final String TS1 = "2018-09-18T00:18:00.023Z";
 
   @Parameterized.Parameters(name = "type = {0}")
   public static Iterable<Object[]> constructorFeeder()

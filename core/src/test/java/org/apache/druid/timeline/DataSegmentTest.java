@@ -177,6 +177,7 @@ public class DataSegmentTest
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(NoneShardSpec.instance())
+                                           .size(0)
                                            .build();
 
     Assert.assertEquals(
@@ -193,6 +194,7 @@ public class DataSegmentTest
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(0))
+                                           .size(0)
                                            .build();
 
     Assert.assertEquals(
@@ -209,6 +211,7 @@ public class DataSegmentTest
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(7))
+                                           .size(0)
                                            .build();
 
     Assert.assertEquals(
@@ -220,11 +223,8 @@ public class DataSegmentTest
   @Test
   public void testV1SerializationNullMetrics() throws Exception
   {
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource("foo")
-                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
-                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                           .build();
+    final DataSegment segment =
+        makeDataSegment("foo", "2012-01-01/2012-01-02", DateTimes.of("2012-01-01T11:22:33.444Z").toString());
 
     final DataSegment segment2 = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals("empty dimensions", ImmutableList.of(), segment2.getDimensions());

@@ -16,37 +16,43 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  FormGroup,
-  Icon,
-  Intent,
-  NumericInput,
-  Popover,
-} from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
-import { JSONInput } from '../json-input/json-input';
-import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
+import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
+import { IntervalInput } from '../interval-input/interval-input';
+import { JsonInput } from '../json-input/json-input';
+import { PopoverText } from '../popover-text/popover-text';
+import { SuggestibleInput, Suggestion } from '../suggestible-input/suggestible-input';
 
 import './auto-form.scss';
 
-export interface Field<T> {
+export type Functor<M, R> = R | ((model: M) => R);
+
+export interface Field<M> {
   name: string;
   label?: string;
   info?: React.ReactNode;
-  type: 'number' | 'size-bytes' | 'string' | 'duration' | 'boolean' | 'string-array' | 'json';
+  type:
+    | 'number'
+    | 'size-bytes'
+    | 'string'
+    | 'duration'
+    | 'boolean'
+    | 'string-array'
+    | 'json'
+    | 'interval';
   defaultValue?: any;
-  suggestions?: (string | SuggestionGroup)[];
+  suggestions?: Functor<M, Suggestion[]>;
   placeholder?: string;
   min?: number;
-  disabled?: boolean | ((model: T) => boolean);
-  defined?: boolean | ((model: T) => boolean);
-  required?: boolean | ((model: T) => boolean);
+  zeroMeansUndefined?: boolean;
+  disabled?: Functor<M, boolean>;
+  defined?: Functor<M, boolean>;
+  required?: Functor<M, boolean>;
+  adjustment?: (model: M) => M;
 }
 
 export interface AutoFormProps<T> {
@@ -55,18 +61,10 @@ export interface AutoFormProps<T> {
   onChange: (newModel: T) => void;
   onFinalize?: () => void;
   showCustom?: (model: T) => boolean;
-  updateJsonValidity?: (jsonValidity: boolean) => void;
   large?: boolean;
 }
 
-export interface AutoFormState {
-  jsonInputsValidity: any;
-}
-
-export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
-  AutoFormProps<T>,
-  AutoFormState
-> {
+export class AutoForm<T extends Record<string, any>> extends React.PureComponent<AutoFormProps<T>> {
   static REQUIRED_INTENT = Intent.PRIMARY;
 
   static makeLabelName(label: string): string {
@@ -79,29 +77,22 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     return newLabel;
   }
 
-  static evaluateFunctor<T>(
-    functor: undefined | boolean | ((model: T) => boolean),
-    model: T | undefined,
-    defaultValue = false,
-  ): boolean {
+  static evaluateFunctor<M, R>(
+    functor: undefined | Functor<M, R>,
+    model: M | undefined,
+    defaultValue: R,
+  ): R {
     if (!model || functor == null) return defaultValue;
-    switch (typeof functor) {
-      case 'boolean':
-        return functor;
-
-      case 'function':
-        return functor(model);
-
-      default:
-        throw new TypeError(`invalid functor`);
+    if (typeof functor === 'function') {
+      return (functor as any)(model);
+    } else {
+      return functor;
     }
   }
 
   constructor(props: AutoFormProps<T>) {
     super(props);
-    this.state = {
-      jsonInputsValidity: {},
-    };
+    this.state = {};
   }
 
   private fieldChange = (field: Field<T>, newValue: any) => {
@@ -117,11 +108,22 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   };
 
   private modelChange = (newModel: T) => {
-    const { fields, onChange } = this.props;
+    const { fields, onChange, model } = this.props;
 
+    // Delete things that are not defined now (but were defined prior to the change)
     for (const someField of fields) {
-      if (!AutoForm.evaluateFunctor(someField.defined, newModel, true)) {
+      if (
+        !AutoForm.evaluateFunctor(someField.defined, newModel, true) &&
+        AutoForm.evaluateFunctor(someField.defined, model, true)
+      ) {
         newModel = deepDelete(newModel, someField.name);
+      }
+    }
+
+    // Perform any adjustments if needed
+    for (const someField of fields) {
+      if (someField.adjustment) {
+        newModel = someField.adjustment(newModel);
       }
     }
 
@@ -131,13 +133,17 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderNumberInput(field: Field<T>): JSX.Element {
     const { model, large, onFinalize } = this.props;
 
-    const modelValue = deepGet(model as any, field.name) || field.defaultValue;
+    let modelValue = deepGet(model as any, field.name);
+    if (typeof modelValue !== 'number') modelValue = field.defaultValue;
     return (
       <NumericInput
         value={modelValue}
         onValueChange={(valueAsNumber: number, valueAsString: string) => {
           if (valueAsString === '' || isNaN(valueAsNumber)) return;
-          this.fieldChange(field, valueAsNumber);
+          this.fieldChange(
+            field,
+            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
+          );
         }}
         onBlur={e => {
           if (e.target.value === '') {
@@ -148,10 +154,10 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         min={field.min || 0}
         fill
         large={large}
-        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         placeholder={field.placeholder}
         intent={
-          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+          AutoForm.evaluateFunctor(field.required, model, false) && modelValue == null
             ? AutoForm.REQUIRED_INTENT
             : undefined
         }
@@ -177,7 +183,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         majorStepSize={1000000}
         fill
         large={large}
-        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
       />
     );
   }
@@ -198,11 +204,11 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         }}
         onFinalize={onFinalize}
         placeholder={field.placeholder}
-        suggestions={field.suggestions}
+        suggestions={AutoForm.evaluateFunctor(field.suggestions, model, undefined)}
         large={large}
-        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={
-          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+          AutoForm.evaluateFunctor(field.required, model, false) && modelValue == null
             ? AutoForm.REQUIRED_INTENT
             : undefined
         }
@@ -214,9 +220,9 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { model, large, onFinalize } = this.props;
     const modelValue = deepGet(model as any, field.name);
     const shownValue = modelValue == null ? field.defaultValue : modelValue;
-    const disabled = AutoForm.evaluateFunctor(field.disabled, model);
+    const disabled = AutoForm.evaluateFunctor(field.disabled, model, false);
     const intent =
-      AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+      AutoForm.evaluateFunctor(field.required, model, false) && modelValue == null
         ? AutoForm.REQUIRED_INTENT
         : undefined;
 
@@ -249,27 +255,12 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderJsonInput(field: Field<T>): JSX.Element {
-    const { model, updateJsonValidity } = this.props;
-    const { jsonInputsValidity } = this.state;
-
-    const updateInputValidity = (e: any) => {
-      if (updateJsonValidity) {
-        const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
-        this.setState({
-          jsonInputsValidity: newJSONInputValidity,
-        });
-        const allJsonValid: boolean = Object.keys(newJSONInputValidity).every(
-          property => newJSONInputValidity[property] === true,
-        );
-        updateJsonValidity(allJsonValid);
-      }
-    };
+    const { model } = this.props;
 
     return (
-      <JSONInput
+      <JsonInput
         value={deepGet(model as any, field.name)}
         onChange={(v: any) => this.fieldChange(field, v)}
-        updateInputValidity={updateInputValidity}
         placeholder={field.placeholder}
       />
     );
@@ -286,12 +277,27 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         }}
         placeholder={field.placeholder}
         large={large}
-        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={
-          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+          AutoForm.evaluateFunctor(field.required, model, false) && modelValue == null
             ? AutoForm.REQUIRED_INTENT
             : undefined
         }
+      />
+    );
+  }
+
+  private renderIntervalInput(field: Field<T>): JSX.Element {
+    const { model } = this.props;
+
+    const modelValue = deepGet(model as any, field.name);
+    return (
+      <IntervalInput
+        interval={modelValue != null ? modelValue : field.defaultValue || ''}
+        onValueChange={(v: any) => {
+          this.fieldChange(field, v);
+        }}
+        placeholder={field.placeholder}
       />
     );
   }
@@ -314,6 +320,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         return this.renderStringArrayInput(field);
       case 'json':
         return this.renderJsonInput(field);
+      case 'interval':
+        return this.renderIntervalInput(field);
       default:
         throw new Error(`unknown field type '${field.type}'`);
     }
@@ -326,22 +334,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     const label = field.label || AutoForm.makeLabelName(field.name);
     return (
-      <FormGroup
+      <FormGroupWithInfo
         key={field.name}
         label={label}
-        labelInfo={
-          field.info && (
-            <Popover
-              content={<div className="label-info-text">{field.info}</div>}
-              position="left-bottom"
-            >
-              <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
-            </Popover>
-          )
-        }
+        info={field.info ? <PopoverText>{field.info}</PopoverText> : undefined}
       >
         {this.renderFieldInput(field)}
-      </FormGroup>
+      </FormGroupWithInfo>
     );
   };
 
@@ -350,7 +349,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     return (
       <FormGroup label="Custom" key="custom">
-        <JSONInput value={model} onChange={this.modelChange} />
+        <JsonInput value={model} onChange={this.modelChange} />
       </FormGroup>
     );
   }

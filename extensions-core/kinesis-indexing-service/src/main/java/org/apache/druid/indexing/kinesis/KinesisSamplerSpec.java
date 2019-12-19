@@ -24,15 +24,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
-import org.apache.druid.indexing.overlord.sampler.FirehoseSampler;
+import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+
+import javax.annotation.Nullable;
 
 public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
 {
@@ -41,52 +40,38 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
   @JsonCreator
   public KinesisSamplerSpec(
       @JsonProperty("spec") final KinesisSupervisorSpec ingestionSpec,
-      @JsonProperty("samplerConfig") final SamplerConfig samplerConfig,
-      @JacksonInject FirehoseSampler firehoseSampler,
+      @JsonProperty("samplerConfig") @Nullable final SamplerConfig samplerConfig,
+      @JacksonInject InputSourceSampler inputSourceSampler,
       @JacksonInject @Named("kinesis") AWSCredentialsConfig awsCredentialsConfig
   )
   {
-    super(ingestionSpec, samplerConfig, firehoseSampler);
+    super(ingestionSpec, samplerConfig, inputSourceSampler);
 
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
   @Override
-  protected Firehose getFirehose(InputRowParser parser)
+  protected KinesisRecordSupplier createRecordSupplier()
   {
-    return new KinesisSamplerFirehose(parser);
-  }
+    KinesisSupervisorIOConfig ioConfig = (KinesisSupervisorIOConfig) KinesisSamplerSpec.this.ioConfig;
+    KinesisSupervisorTuningConfig tuningConfig = ((KinesisSupervisorTuningConfig) KinesisSamplerSpec.this.tuningConfig);
 
-  protected class KinesisSamplerFirehose extends SeekableStreamSamplerFirehose
-  {
-    protected KinesisSamplerFirehose(InputRowParser parser)
-    {
-      super(parser);
-    }
-
-    @Override
-    protected RecordSupplier getRecordSupplier()
-    {
-      KinesisSupervisorIOConfig ioConfig = (KinesisSupervisorIOConfig) KinesisSamplerSpec.this.ioConfig;
-      KinesisSupervisorTuningConfig tuningConfig = ((KinesisSupervisorTuningConfig) KinesisSamplerSpec.this.tuningConfig);
-
-      return new KinesisRecordSupplier(
-          KinesisRecordSupplier.getAmazonKinesisClient(
-              ioConfig.getEndpoint(),
-              awsCredentialsConfig,
-              ioConfig.getAwsAssumedRoleArn(),
-              ioConfig.getAwsExternalId()
-          ),
-          ioConfig.getRecordsPerFetch(),
-          ioConfig.getFetchDelayMillis(),
-          1,
-          ioConfig.isDeaggregate(),
-          tuningConfig.getRecordBufferSize(),
-          tuningConfig.getRecordBufferOfferTimeout(),
-          tuningConfig.getRecordBufferFullWait(),
-          tuningConfig.getFetchSequenceNumberTimeout(),
-          tuningConfig.getMaxRecordsPerPoll()
-      );
-    }
+    return new KinesisRecordSupplier(
+        KinesisRecordSupplier.getAmazonKinesisClient(
+            ioConfig.getEndpoint(),
+            awsCredentialsConfig,
+            ioConfig.getAwsAssumedRoleArn(),
+            ioConfig.getAwsExternalId()
+        ),
+        ioConfig.getRecordsPerFetch(),
+        ioConfig.getFetchDelayMillis(),
+        1,
+        ioConfig.isDeaggregate(),
+        tuningConfig.getRecordBufferSize(),
+        tuningConfig.getRecordBufferOfferTimeout(),
+        tuningConfig.getRecordBufferFullWait(),
+        tuningConfig.getFetchSequenceNumberTimeout(),
+        tuningConfig.getMaxRecordsPerPoll()
+    );
   }
 }

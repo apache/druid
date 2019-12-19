@@ -30,6 +30,10 @@ This is the unified Druid web console that servers as a data management layer fo
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
 **Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
 
+To try the console in (say) coordinator mode you could run it as such:
+
+`druid_host=localhost:8081 npm start`
+
 ## Description of the directory structure
 
 A lot of the directory structure was created to preserve the existing console structure as much as possible.
@@ -57,6 +61,7 @@ GET /status
 GET /druid/indexer/v1/supervisor?full
 POST /druid/indexer/v1/worker
 GET /druid/indexer/v1/workers
+GET /druid/indexer/v1/tasks
 GET /druid/coordinator/v1/loadqueue?simple
 GET /druid/coordinator/v1/config
 GET /druid/coordinator/v1/metadata/datasources?includeUnused

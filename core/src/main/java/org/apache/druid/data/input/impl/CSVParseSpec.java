@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.CSVParser;
 import org.apache.druid.java.util.common.parsers.Parser;
 
@@ -57,7 +58,6 @@ public class CSVParseSpec extends ParseSpec
       for (String column : columns) {
         Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
       }
-      verify(dimensionsSpec.getDimensionNames());
     } else {
       Preconditions.checkArgument(
           hasHeaderRow,
@@ -65,17 +65,6 @@ public class CSVParseSpec extends ParseSpec
           + " and hasHeaderRow must be set to true."
       );
     }
-  }
-
-  @Deprecated
-  public CSVParseSpec(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      String listDelimiter,
-      List<String> columns
-  )
-  {
-    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
   }
 
   @JsonProperty
@@ -103,17 +92,15 @@ public class CSVParseSpec extends ParseSpec
   }
 
   @Override
-  public void verify(List<String> usedCols)
-  {
-    for (String columnName : usedCols) {
-      Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
-    }
-  }
-
-  @Override
   public Parser<String, Object> makeParser()
   {
     return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+  }
+
+  @Override
+  public InputFormat toInputFormat()
+  {
+    return new CsvInputFormat(columns, listDelimiter, null, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
@@ -127,5 +114,4 @@ public class CSVParseSpec extends ParseSpec
   {
     return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
-
 }

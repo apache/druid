@@ -249,7 +249,7 @@ public class QueryResource implements QueryCountStatsProvider
                     }
                     catch (Exception ex) {
                       e = ex;
-                      log.error(ex, "Unable to send query response.");
+                      log.noStackTrace().error(ex, "Unable to send query response.");
                       throw new RuntimeException(ex);
                     }
                     finally {
@@ -319,9 +319,9 @@ public class QueryResource implements QueryCountStatsProvider
       failedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
 
-      log.makeAlert(e, "Exception handling request")
-         .addData("exception", e.toString())
-         .addData("query", query != null ? query.toString() : "unparseable query")
+      log.noStackTrace()
+         .makeAlert(e, "Exception handling request")
+         .addData("query", query != null ? jsonMapper.writeValueAsString(query) : "unparseable query")
          .addData("peer", req.getRemoteAddr())
          .emit();
 

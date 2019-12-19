@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
@@ -52,9 +53,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -278,11 +279,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public void checkpoint(
-      @Nullable Integer taskGroupId,
-      String baseSequenceName,
-      DataSourceMetadata checkpointMetadata
-  )
+  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     // do nothing
   }
@@ -346,7 +343,8 @@ public class MaterializedViewSupervisor implements Supervisor
         getVersionAndBaseSegments(
             metadataStorageCoordinator.getUsedSegmentsForInterval(
                 dataSource,
-                ALL_INTERVAL
+                ALL_INTERVAL,
+                Segments.ONLY_VISIBLE
             )
         );
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
@@ -378,7 +376,8 @@ public class MaterializedViewSupervisor implements Supervisor
       final String versionOfDerivative = derivativeVersion.get(entry.getKey());
       final int baseCount = baseSegments.get(entry.getKey()).size();
       final IntSupplier usedCountSupplier = () ->
-              metadataStorageCoordinator.getUsedSegmentsForInterval(spec.getBaseDataSource(), entry.getKey()).size();
+              metadataStorageCoordinator
+                  .getUsedSegmentsForInterval(spec.getBaseDataSource(), entry.getKey(), Segments.ONLY_VISIBLE).size();
       if (versionOfBase.compareTo(versionOfDerivative) > 0 && baseCount == usedCountSupplier.getAsInt()) {
         toBuildInterval.put(entry.getKey(), versionOfBase);
       }
@@ -434,7 +433,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getVersionAndBaseSegments(
-      List<DataSegment> snapshot
+      Collection<DataSegment> snapshot
   )
   {
     Map<Interval, String> versions = new HashMap<>();
@@ -449,7 +448,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(
-      List<Pair<DataSegment, String>> snapshot
+      Collection<Pair<DataSegment, String>> snapshot
   )
   {
     Interval maxAllowedToBuildInterval = snapshot.parallelStream()

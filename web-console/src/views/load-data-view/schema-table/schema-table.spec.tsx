@@ -27,7 +27,7 @@ describe('schema table', () => {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],

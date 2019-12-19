@@ -37,11 +37,9 @@ import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
@@ -50,14 +48,15 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
+import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -67,7 +66,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
@@ -83,7 +81,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -104,7 +101,6 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.StreamSupport;
 
 public class CompactionTask extends AbstractBatchIndexTask
 {
@@ -295,7 +291,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
+    return ImmutableList.copyOf(
+        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE))
+    );
   }
 
   @Override
@@ -528,20 +526,20 @@ public class CompactionTask extends AbstractBatchIndexTask
   )
   {
     return new ParallelIndexIOConfig(
-        new IngestSegmentFirehoseFactory(
+        null,
+        new DruidInputSource(
             dataSchema.getDataSource(),
             interval,
             null,
-            null, // no filter
-            // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
-            dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
-            Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
             null,
+            dataSchema.getDimensionsSpec().getDimensionNames(),
+            Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
             retryPolicyFactory
         ),
+        null,
         false
     );
   }
@@ -602,15 +600,14 @@ public class CompactionTask extends AbstractBatchIndexTask
     final AggregatorFactory[] finalMetricsSpec = metricsSpec == null
                                                  ? createMetricsSpec(queryableIndexAndSegments)
                                                  : convertToCombiningFactories(metricsSpec);
-    final InputRowParser parser = new NoopInputRowParser(new TimeAndDimsParseSpec(null, finalDimensionsSpec));
 
     return new DataSchema(
         dataSource,
-        jsonMapper.convertValue(parser, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT),
+        new TimestampSpec(null, null, null),
+        finalDimensionsSpec,
         finalMetricsSpec,
         granularitySpec,
-        null,
-        jsonMapper
+        null
     );
   }
 
@@ -784,17 +781,9 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     List<DataSegment> checkAndGetSegments(TaskActionClient actionClient) throws IOException
     {
-      final List<DataSegment> usedSegments = actionClient.submit(
-          new SegmentListUsedAction(dataSource, interval, null)
+      final List<DataSegment> latestSegments = new ArrayList<>(
+          actionClient.submit(new RetrieveUsedSegmentsAction(dataSource, interval, null, Segments.ONLY_VISIBLE))
       );
-      final TimelineLookup<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(usedSegments);
-      final List<DataSegment> latestSegments = timeline
-          .lookup(interval)
-          .stream()
-          .map(TimelineObjectHolder::getObject)
-          .flatMap(partitionHolder -> StreamSupport.stream(partitionHolder.spliterator(), false))
-          .map(PartitionChunk::getObject)
-          .collect(Collectors.toList());
 
       if (!inputSpec.validateSegments(latestSegments)) {
         throw new ISE(

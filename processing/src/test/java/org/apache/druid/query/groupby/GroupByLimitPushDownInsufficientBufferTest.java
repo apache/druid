@@ -26,9 +26,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
@@ -37,6 +35,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -50,6 +49,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -157,7 +157,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
   @Before
   public void setup() throws Exception
   {
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
 
     InputRow row;
     List<String> dimNames = Arrays.asList("dimA", "metA");
@@ -352,8 +352,10 @@ public class GroupByLimitPushDownInsufficientBufferTest
       }
     };
 
-
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
+        new QueryConfig()
+    );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -365,6 +367,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -383,6 +386,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV2(
             tooSmallDruidProcessingConfig,
             configSupplier,
+            queryConfigSupplier,
             bufferPool,
             tooSmallMergePool,
             new ObjectMapper(new SmileFactory()),

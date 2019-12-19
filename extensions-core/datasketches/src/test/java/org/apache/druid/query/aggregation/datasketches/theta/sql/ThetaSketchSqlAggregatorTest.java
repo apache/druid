@@ -161,6 +161,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                    .interval(index.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index
     );
@@ -441,10 +442,10 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
               2.0d,
               3.0d,
               "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
-              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
-              "\"AQMDAAAazJMXwR1ShQcBew==\"",
-              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              "\"AQMDAAA6zJMXwR1ShQcBew==\"",
+              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               1.0d
           }
       );
@@ -455,10 +456,10 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
               2.0d,
               3.0d,
               "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
-              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
-              "\"AQMDAAAazJMXwR1ShQcBew==\"",
-              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              "\"AQMDAAA6zJMXwR1ShQcBew==\"",
+              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               1.0d
           }
       );

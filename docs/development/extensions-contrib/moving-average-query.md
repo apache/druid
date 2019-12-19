@@ -100,10 +100,12 @@ These are properties which are common to all Averagers:
 * [Standard averagers](#standard-averagers):
   * doubleMean
   * doubleMeanNoNulls
+  * doubleSum
   * doubleMax
   * doubleMin
   * longMean
   * longMeanNoNulls
+  * longSum
   * longMax
   * longMin
 
@@ -113,6 +115,7 @@ These averagers offer four functions:
 
 * Mean (Average)
 * MeanNoNulls (Ignores empty buckets).
+* Sum
 * Max
 * Min
 

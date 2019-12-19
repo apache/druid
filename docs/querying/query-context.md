@@ -41,6 +41,11 @@ The query context is used for various query configuration parameters. The follow
 |maxQueuedBytes       | `druid.broker.http.maxQueuedBytes`        | Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled.|
 |serializeDateTimeAsLong| `false`       | If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process|
 |serializeDateTimeAsLongInner| `false`  | If true, DateTime is serialized as long in the data transportation between Broker and compute process|
+|enableParallelMerge|`true`|Enable parallel result merging on the Broker. Note that `druid.processing.merge.useParallelMergePool` must be enabled for this setting to be set to `true`. See [Broker configuration](../configuration/index.html#broker) for more details.|
+|parallelMergeParallelism|`druid.processing.merge.pool.parallelism`|Maximum number of parallel threads to use for parallel result merging on the Broker. See [Broker configuration](../configuration/index.html#broker) for more details.|
+|parallelMergeInitialYieldRows|`druid.processing.merge.task.initialYieldNumRows`|Number of rows to yield per ForkJoinPool merge task for parallel result merging on the Broker, before forking off a new task to continue merging sequences. See [Broker configuration](../configuration/index.html#broker) for more details.|
+|parallelMergeSmallBatchRows|`druid.processing.merge.task.smallBatchNumRows`|Size of result batches to operate on in ForkJoinPool merge tasks for parallel result merging on the Broker. See [Broker configuration](../configuration/index.html#broker) for more details.|
+
 
 In addition, some query types offer context parameters specific to that query type.
 
@@ -85,5 +90,5 @@ from the community as we work to battle-test it.
 
 |property|default| description|
 |--------|-------|------------|
-|vectorize|`false`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail).|
-|vectorSize|`512`|Sets the row batching size for a particular query.|
+|vectorize|`false`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.vectorize` if it's set.|
+|vectorSize|`512`|Sets the row batching size for a particular query. This will override `druid.query.vectorSize` if it's set.|

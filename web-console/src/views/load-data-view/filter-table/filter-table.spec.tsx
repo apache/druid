@@ -27,7 +27,7 @@ describe('filter table', () => {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],
@@ -38,7 +38,7 @@ describe('filter table', () => {
         sampleData={sampleData}
         columnFilter=""
         dimensionFilters={[]}
-        selectedFilterIndex={-1}
+        selectedFilterName={undefined}
         onShowGlobalFilter={() => {}}
         onFilterSelect={() => {}}
       />

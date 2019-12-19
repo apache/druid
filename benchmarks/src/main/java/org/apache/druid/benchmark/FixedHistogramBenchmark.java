@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -46,6 +47,10 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class FixedHistogramBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final Logger log = new Logger(FixedHistogramBenchmark.class);
 
   private static final int LOWER_LIMIT = 0;

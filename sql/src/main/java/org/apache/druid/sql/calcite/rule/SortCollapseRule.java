@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite.rule;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rex.RexLiteral;
+import org.apache.druid.sql.calcite.planner.Calcites;
 
 /**
  * Collapses two adjacent Sort operations together. Useful for queries like
@@ -45,47 +45,30 @@ public class SortCollapseRule extends RelOptRule
   @Override
   public void onMatch(final RelOptRuleCall call)
   {
-    // First is the inner sort, second is the outer sort.
-    final Sort first = call.rel(1);
-    final Sort second = call.rel(0);
+    final Sort outerSort = call.rel(0);
+    final Sort innerSort = call.rel(1);
 
-    if (second.collation.getFieldCollations().isEmpty()) {
+    if (outerSort.collation.getFieldCollations().isEmpty()
+        || outerSort.collation.getFieldCollations().equals(innerSort.collation.getFieldCollations())) {
+      final int innerOffset = Calcites.getOffset(innerSort);
+      final int innerFetch = Calcites.getFetch(innerSort);
+      final int outerOffset = Calcites.getOffset(outerSort);
+      final int outerFetch = Calcites.getFetch(outerSort);
+
       // Add up the offsets.
-      final int firstOffset = (first.offset != null ? RexLiteral.intValue(first.offset) : 0);
-      final int secondOffset = (second.offset != null ? RexLiteral.intValue(second.offset) : 0);
+      final int offset = innerOffset + outerOffset;
+      final int fetch = Calcites.collapseFetch(innerFetch, outerFetch, outerOffset);
 
-      final int offset = firstOffset + secondOffset;
-      final int fetch;
-
-      if (first.fetch == null && second.fetch == null) {
-        // Neither has a limit => no limit overall.
-        fetch = -1;
-      } else if (first.fetch == null) {
-        // Outer limit only.
-        fetch = RexLiteral.intValue(second.fetch);
-      } else if (second.fetch == null) {
-        // Inner limit only.
-        fetch = Math.max(0, RexLiteral.intValue(first.fetch) - secondOffset);
-      } else {
-        fetch = Math.max(
-            0,
-            Math.min(
-                RexLiteral.intValue(first.fetch) - secondOffset,
-                RexLiteral.intValue(second.fetch)
-            )
-        );
-      }
-
-      final Sort combined = first.copy(
-          first.getTraitSet(),
-          first.getInput(),
-          first.getCollation(),
+      final Sort combined = innerSort.copy(
+          innerSort.getTraitSet(),
+          innerSort.getInput(),
+          innerSort.getCollation(),
           offset == 0 ? null : call.builder().literal(offset),
-          call.builder().literal(fetch)
+          fetch < 0 ? null : call.builder().literal(fetch)
       );
 
       call.transformTo(combined);
-      call.getPlanner().setImportance(second, 0.0);
+      call.getPlanner().setImportance(outerSort, 0.0);
     }
   }
 }

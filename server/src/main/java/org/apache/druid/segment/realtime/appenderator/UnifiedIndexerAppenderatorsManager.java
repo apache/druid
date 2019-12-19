@@ -163,6 +163,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       );
 
       Appenderator appenderator = new AppenderatorImpl(
+          taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
           false,
@@ -201,6 +202,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       );
 
       Appenderator appenderator = Appenderators.createOffline(
+          taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
           storeCompactionState,

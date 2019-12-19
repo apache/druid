@@ -91,7 +91,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage
     }
     catch (Exception e) {
       try {
-        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+        FileUtils.deleteDirectory(outDir);
       }
       catch (IOException e1) {
         log.error(e1, "Error clearing segment directory [%s]", outDir.getAbsolutePath());

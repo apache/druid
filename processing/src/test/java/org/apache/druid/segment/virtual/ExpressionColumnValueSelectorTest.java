@@ -22,6 +22,7 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ExpressionColumnValueSelectorTest
@@ -128,6 +130,105 @@ public class ExpressionColumnValueSelectorTest
     settableSupplier.set(ImmutableList.of("1", "2", "3"));
     Assert.assertArrayEquals(new String[]{"1", "2", "3"}, (Object[]) supplier.get());
 
+  }
+
+  @Test
+  public void testCoerceListToArray()
+  {
+    List<Long> longList = ImmutableList.of(1L, 2L, 3L);
+    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(longList));
+
+    List<Integer> intList = ImmutableList.of(1, 2, 3);
+    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(intList));
+
+    List<Float> floatList = ImmutableList.of(1.0f, 2.0f, 3.0f);
+    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExpressionSelectors.coerceListToArray(floatList));
+
+    List<Double> doubleList = ImmutableList.of(1.0, 2.0, 3.0);
+    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExpressionSelectors.coerceListToArray(doubleList));
+
+    List<String> stringList = ImmutableList.of("a", "b", "c");
+    Assert.assertArrayEquals(new String[]{"a", "b", "c"}, (String[]) ExpressionSelectors.coerceListToArray(stringList));
+
+    List<String> withNulls = new ArrayList<>();
+    withNulls.add("a");
+    withNulls.add(null);
+    withNulls.add("c");
+    Assert.assertArrayEquals(new String[]{"a", null, "c"}, (String[]) ExpressionSelectors.coerceListToArray(withNulls));
+
+    List<Long> withNumberNulls = new ArrayList<>();
+    withNumberNulls.add(1L);
+    withNumberNulls.add(null);
+    withNumberNulls.add(3L);
+
+    Assert.assertArrayEquals(new Long[]{1L, null, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(withNumberNulls));
+
+    List<Object> withStringMix = ImmutableList.of(1L, "b", 3L);
+    Assert.assertArrayEquals(
+        new String[]{"1", "b", "3"},
+        (String[]) ExpressionSelectors.coerceListToArray(withStringMix)
+    );
+
+    List<Number> withIntsAndLongs = ImmutableList.of(1, 2L, 3);
+    Assert.assertArrayEquals(
+        new Long[]{1L, 2L, 3L},
+        (Long[]) ExpressionSelectors.coerceListToArray(withIntsAndLongs)
+    );
+
+    List<Number> withFloatsAndLongs = ImmutableList.of(1, 2L, 3.0f);
+    Assert.assertArrayEquals(
+        new Double[]{1.0, 2.0, 3.0},
+        (Double[]) ExpressionSelectors.coerceListToArray(withFloatsAndLongs)
+    );
+
+    List<Number> withDoublesAndLongs = ImmutableList.of(1, 2L, 3.0);
+    Assert.assertArrayEquals(
+        new Double[]{1.0, 2.0, 3.0},
+        (Double[]) ExpressionSelectors.coerceListToArray(withDoublesAndLongs)
+    );
+
+    List<Number> withFloatsAndDoubles = ImmutableList.of(1L, 2.0f, 3.0);
+    Assert.assertArrayEquals(
+        new Double[]{1.0, 2.0, 3.0},
+        (Double[]) ExpressionSelectors.coerceListToArray(withFloatsAndDoubles)
+    );
+
+    List<String> withAllNulls = new ArrayList<>();
+    withAllNulls.add(null);
+    withAllNulls.add(null);
+    withAllNulls.add(null);
+    Assert.assertArrayEquals(
+        new String[]{null, null, null},
+        (String[]) ExpressionSelectors.coerceListToArray(withAllNulls)
+    );
+  }
+
+  @Test
+  public void testCoerceExprToValue()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(1L, 2L, 3L),
+        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}))
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(1.0, 2.0, 3.0),
+        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofDoubleArray(new Double[]{1.0, 2.0, 3.0}))
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("a", "b", "c"),
+        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", "b", "c"}))
+    );
+
+    List<String> withNulls = new ArrayList<>();
+    withNulls.add("a");
+    withNulls.add(null);
+    withNulls.add("c");
+    Assert.assertEquals(
+        withNulls,
+        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", null, "c"}))
+    );
   }
 
   private static DimensionSelector dimensionSelectorFromSupplier(

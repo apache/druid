@@ -25,7 +25,8 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -54,11 +55,11 @@ public class SinkTest
   {
     final DataSchema schema = new DataSchema(
         "test",
-        null,
+        new TimestampSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
-        null,
-        new DefaultObjectMapper()
+        null
     );
 
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
@@ -209,11 +210,11 @@ public class SinkTest
   {
     final DataSchema schema = new DataSchema(
         "test",
-        null,
+        new TimestampSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
-        null,
-        new DefaultObjectMapper()
+        null
     );
 
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
