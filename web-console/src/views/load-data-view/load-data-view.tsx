@@ -740,8 +740,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <>
             <p>Load data accessible through HTTP(s).</p>
             <p>
-              Data must be in a text format and the HTTP(s) endpoint must be reachable by every
-              Druid process in the cluster.
+              Data must be in text, orc, or parquet format and the HTTP(s) endpoint must be
+              reachable by every Druid process in the cluster.
             </p>
           </>
         );
@@ -754,8 +754,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </p>
             <p>Load data directly from a local file.</p>
             <p>
-              Files must be in a text format and must be accessible to all the Druid processes in
-              the cluster.
+              Files must be in text, orc, or parquet format and must be accessible to all the Druid
+              processes in the cluster.
             </p>
           </>
         );
