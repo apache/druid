@@ -47,7 +47,7 @@ public class CryptoService
 
   private char[] passPhrase;
   private String alg = "AES";
-  private String pbeAlg = "PBKDF2WithHmacSHA1";
+  private String pbeAlg = "PBKDF2WithHmacSHA256";
   private String transformation = "AES/CBC/PKCS5Padding";
   private int saltSize = 8;
   private int iterationCount = ITERATION_COUNT;

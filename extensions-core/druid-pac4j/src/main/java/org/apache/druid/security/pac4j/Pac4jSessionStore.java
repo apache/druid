@@ -60,7 +60,7 @@ public class Pac4jSessionStore implements SessionStore
     cryptoService = new CryptoService(
         cookiePassphrase,
         "AES",
-        "PBKDF2WithHmacSHA1",
+        "PBKDF2WithHmacSHA256",
         "AES/CBC/PKCS5Padding",
         8,
         65536,
