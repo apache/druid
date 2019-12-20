@@ -2277,8 +2277,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullLongFilter() throws Exception
   {
-    // bug https://github.com/apache/incubator-druid/issues/9062 prevents this test from passing
-    skipVectorize();
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -2302,8 +2300,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullDoubleFilter() throws Exception
   {
-    // bug https://github.com/apache/incubator-druid/issues/9062 prevents this test from passing
-    skipVectorize();
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -2328,8 +2324,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullFloatFilter() throws Exception
   {
-    // bug https://github.com/apache/incubator-druid/issues/9062 prevents this test from passing
-    skipVectorize();
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
