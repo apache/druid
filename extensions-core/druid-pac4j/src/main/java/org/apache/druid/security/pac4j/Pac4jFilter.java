@@ -49,7 +49,7 @@ public class Pac4jFilter implements Filter
   private Config pac4jConfig;
   private SecurityLogic<String, J2EContext> securityLogic;
   private CallbackLogic<String, J2EContext> callbackLogic;
-  static SessionStore<J2EContext> sessionStore;
+  private SessionStore<J2EContext> sessionStore;
 
   private final String name;
   private final String authorizerName;
