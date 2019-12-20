@@ -39,7 +39,7 @@
 
 ## Apache Druid
 
-Druid is a high performance real-time analytics database. Druid's main value add is reduce time to insight and action.
+Druid is a high performance real-time analytics database. Druid's main value add is to reduce time to insight and action.
 
 Druid is designed for workflows where fast queries and ingest really matter. Druid excels at powering UIs, running operational (ad-hoc) queries, or handling high concurrency. Consider Druid as an open source alternative to data warehouses for a variety of use cases.
 
