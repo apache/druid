@@ -46,10 +46,10 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private Config pac4jConfig;
-  private SecurityLogic<String, J2EContext> securityLogic;
-  private CallbackLogic<String, J2EContext> callbackLogic;
-  private SessionStore<J2EContext> sessionStore;
+  private final Config pac4jConfig;
+  private final SecurityLogic<String, J2EContext> securityLogic;
+  private final CallbackLogic<String, J2EContext> callbackLogic;
+  private final SessionStore<J2EContext> sessionStore;
 
   private final String name;
   private final String authorizerName;
