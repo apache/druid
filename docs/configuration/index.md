@@ -636,6 +636,18 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#sql-compatible-null-handling) for more details.
 
+### HTTP Client
+
+All Druid components can communicate with each other over HTTP.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.global.http.numConnections`|Size of connection pool per destination URL. If there are more HTTP requests than this number that all need to speak to the same URL, then they will queue up.|`20`|
+|`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
+|`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
+|`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
+|`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+
 ## Master Server
 
 This section contains the configuration options for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.html#server-types).
@@ -1058,7 +1070,7 @@ its better to write a druid extension module with extending current worker selec
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`javascript`.|required; must be `javascript`|
-|`function`|String representing JavaScript function||
+|`function`|String representing JavaScript function| |
 
 Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
 
@@ -1476,11 +1488,12 @@ client has the following configuration options.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|20|
-|`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|gzip|
-|`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|PT15M|
-|`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
-|`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `druid.server.http.maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled. Can be overridden by the ["maxQueuedBytes" query context parameter](../querying/query-context.md).|0 (disabled)|
+|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|`gzip`|
+|`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
+|`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
+|`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `druid.server.http.maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled. Can be overridden by the ["maxQueuedBytes" query context parameter](../querying/query-context.md).|`0` (disabled)|
+|`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 
 ##### Retry Policy
 
@@ -1803,13 +1816,17 @@ Supported query contexts:
 
 #### Runtime Configuration
 
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.router.defaultBrokerServiceName`|Any string.|The default Broker to connect to in case service discovery fails.|druid/broker|
-|`druid.router.tierToBrokerMap`|An ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|Queries for a certain tier of data are routed to their appropriate Broker.|{"_default_tier": "<defaultBrokerServiceName>"}|
-|`druid.router.defaultRule`|Any string.|The default rule for all datasources.|"_default"|
-|`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
-|`druid.router.strategies`|An ordered JSON array of objects.|Please see [Router Strategies](../design/router.html#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
-|`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name. Please see [Avatica Query Balancing](../design/router.html#avatica-query-balancing)|Class to use for balancing Avatica queries across Brokers|rendezvousHash|
-|`druid.router.http.maxRequestBufferSize`|Maximum size of the buffer used to write requests when forwarding them to the Broker. This should be set to at least the maxHeaderSize allowed on the Broker|8 * 1024|
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.router.defaultBrokerServiceName`|The default Broker to connect to in case service discovery fails.|druid/broker|
+|`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|{"_default_tier": "<defaultBrokerServiceName>"}|
+|`druid.router.defaultRule`|The default rule for all datasources.|"_default"|
+|`druid.router.pollPeriod`|How often to poll for new rules.|PT1M|
+|`druid.router.strategies`|Please see [Router Strategies](../design/router.html#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
+|`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.html#avatica-query-balancing).|rendezvousHash|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.html#router-as-management-proxy) functionality.|false|
+|`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
+|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
+|`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|
