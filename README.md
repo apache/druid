@@ -37,11 +37,11 @@
 
 ---
 
-## Apache Druid (incubating)
+## Apache Druid
 
-Apache Druid (incubating) is a high performance real-time analytics database.
+Druid is a high performance real-time analytics database. Druid's main value add is reduce time to insight and action.
 
-Druid is a next-gen open source alternative to analytical databases such as Vertica, Greenplum, and Exadata, and data warehouses such as Snowflake, BigQuery, and Redshift.
+Druid is designed for workflows where fast queries and ingest really matter. Druid excels at powering UIs, running operational (ad-hoc) queries, or handling high concurrency. Consider Druid as an open source alternative to data warehouses for a variety of use cases.
 
 ### Getting started
 
@@ -60,7 +60,7 @@ Load [streaming](https://druid.apache.org/docs/latest/ingestion/index.html#strea
 
 [![management](https://user-images.githubusercontent.com/177816/65819338-08499d00-e1d0-11e9-80fe-faee9e9468cb.gif)](https://druid.apache.org/docs/latest/ingestion/data-management.html)
 
-Manage your cluster with ease. Get a view of your datasources, [segments](https://druid.apache.org/docs/latest/design/segments.html), [ingestion tasks](https://druid.apache.org/docs/latest/ingestion/tasks.html), and [servers]() from one convenient location. All powered by [SQL systems tables](https://druid.apache.org/docs/latest/querying/sql.html#metadata-tables) allowing you to see the underlying query for each view.
+Manage your cluster with ease. Get a view of your [datasources](https://druid.apache.org/docs/latest/design/architecture.html), [segments](https://druid.apache.org/docs/latest/design/segments.html), [ingestion tasks](https://druid.apache.org/docs/latest/ingestion/tasks.html), and [services](https://druid.apache.org/docs/latest/design/processes.html) from one convenient location. All powered by [SQL systems tables](https://druid.apache.org/docs/latest/querying/sql.html#metadata-tables), allowing you to see the underlying query for each view.
 
 #### Issue queries
 
@@ -97,8 +97,8 @@ For instructions on building Druid from source, see [docs/development/build.md](
 
 Please follow the [community guidelines](https://druid.apache.org/community/) for contributing.
 
+For instructions on setting up IntelliJ [dev/intellij-setup.md](dev/intellij-setup.md)
+
 ### License
 
 [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
-
-*Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*

@@ -268,7 +268,7 @@ The three `partitionsSpec` types have different pros and cons:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `single_dim`|none|yes|
-|partitionDimension|The dimension to partition on. Only rows with a single dimension value will be included.|none|yes|
+|partitionDimension|The dimension to partition on. Only rows with a single dimension value are allowed.|none|yes|
 |targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
 |maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetRowsPerSegment`.|none|either this or `targetRowsPerSegment`|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|

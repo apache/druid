@@ -51,6 +51,11 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
   private static final Logger LOG = new Logger(ITAppenderatorDriverRealtimeIndexTaskTest.class);
   private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_appenderator_index_task.json";
   private static final String REALTIME_QUERIES_RESOURCE = "/indexer/wikipedia_realtime_appenderator_index_queries.json";
+  /**
+   * The expected number of rows ingested for this test.
+   * The total number of rows of raw data is 22 and there's no rollup.
+   */
+  private static final int EXPECTED_NUM_ROWS = 22;
 
   @Test
   public void testRealtimeIndexTask()
@@ -138,5 +143,11 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
   String getQueriesResource()
   {
     return REALTIME_QUERIES_RESOURCE;
+  }
+
+  @Override
+  int getNumExpectedRowsIngested()
+  {
+    return EXPECTED_NUM_ROWS;
   }
 }

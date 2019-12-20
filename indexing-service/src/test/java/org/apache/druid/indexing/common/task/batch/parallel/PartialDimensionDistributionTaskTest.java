@@ -237,7 +237,7 @@ public class PartialDimensionDistributionTaskTest
     }
 
     @Test
-    public void skipsRowsWithMultipleDimensionValues()
+    public void failsIfRowHasMultipleDimensionValues()
     {
       InputSource inlineInputSource = new InlineInputSource(
           ParallelIndexTestingFactory.createRow(0, Arrays.asList("a", "b"))
@@ -245,10 +245,10 @@ public class PartialDimensionDistributionTaskTest
       PartialDimensionDistributionTaskBuilder taskBuilder = new PartialDimensionDistributionTaskBuilder()
           .inputSource(inlineInputSource);
 
-      DimensionDistributionReport report = runTask(taskBuilder);
+      exception.expect(RuntimeException.class);
+      exception.expectMessage("Cannot partition on multi-value dimension [dim]");
 
-      Map<Interval, StringDistribution> intervalToDistribution = report.getIntervalToDistribution();
-      Assert.assertEquals(0, intervalToDistribution.size());
+      runTask(taskBuilder);
     }
 
     @Test
