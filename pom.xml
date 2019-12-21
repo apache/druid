@@ -1877,6 +1877,7 @@
                                 <exclude>coordinator-console/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
+                                <exclude>.asf.yaml</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
