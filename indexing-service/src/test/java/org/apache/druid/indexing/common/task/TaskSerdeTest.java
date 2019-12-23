@@ -394,7 +394,7 @@ public class TaskSerdeTest
 
             new RealtimeTuningConfig(
                 1,
-                null,
+                10L,
                 new Period("PT10M"),
                 null,
                 null,
@@ -444,6 +444,10 @@ public class TaskSerdeTest
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod(),
         task2.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod()
+    );
+    Assert.assertEquals(
+        task.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory(),
+        task2.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory()
     );
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
