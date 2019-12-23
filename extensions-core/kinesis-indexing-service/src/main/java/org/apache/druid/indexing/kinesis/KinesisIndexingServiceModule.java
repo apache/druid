@@ -38,6 +38,9 @@ import java.util.List;
 
 public class KinesisIndexingServiceModule implements DruidModule
 {
+  public static final String AWS_SCOPE = "kinesis";
+  static final String PROPERTY_BASE = "druid.kinesis";
+
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -63,6 +66,6 @@ public class KinesisIndexingServiceModule implements DruidModule
         }
     ).to(KinesisIndexTaskClientFactory.class).in(LazySingleton.class);
 
-    JsonConfigProvider.bind(binder, "druid.kinesis", AWSCredentialsConfig.class, Names.named("kinesis"));
+    JsonConfigProvider.bind(binder, PROPERTY_BASE, AWSCredentialsConfig.class, Names.named(AWS_SCOPE));
   }
 }

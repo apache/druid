@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.name.Named;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
@@ -2939,7 +2940,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         @JacksonInject ChatHandlerProvider chatHandlerProvider,
         @JacksonInject AuthorizerMapper authorizerMapper,
         @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-        @JacksonInject AWSCredentialsConfig awsCredentialsConfig,
+        @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
         @JacksonInject AppenderatorsManager appenderatorsManager
     )
     {

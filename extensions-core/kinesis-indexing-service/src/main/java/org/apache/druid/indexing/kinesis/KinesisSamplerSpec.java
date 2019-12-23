@@ -42,7 +42,7 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
       @JsonProperty("spec") final KinesisSupervisorSpec ingestionSpec,
       @JsonProperty("samplerConfig") @Nullable final SamplerConfig samplerConfig,
       @JacksonInject InputSourceSampler inputSourceSampler,
-      @JacksonInject @Named("kinesis") AWSCredentialsConfig awsCredentialsConfig
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
   )
   {
     super(ingestionSpec, samplerConfig, inputSourceSampler);
