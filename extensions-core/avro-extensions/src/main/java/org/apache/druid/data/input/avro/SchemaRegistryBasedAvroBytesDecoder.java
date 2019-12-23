@@ -31,7 +31,10 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
@@ -41,11 +44,18 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   @JsonCreator
   public SchemaRegistryBasedAvroBytesDecoder(
       @JsonProperty("url") String url,
-      @JsonProperty("capacity") Integer capacity
+      @JsonProperty("capacity") Integer capacity,
+      @JsonProperty("urls") List<String> urls,
+      @JsonProperty("config") @Nullable Map<String, ?> config,
+      @JsonProperty("headers") @Nullable Map<String, String> headers
   )
   {
     int identityMapCapacity = capacity == null ? Integer.MAX_VALUE : capacity;
-    this.registry = new CachedSchemaRegistryClient(url, identityMapCapacity);
+    if (!url.isEmpty()) {
+      this.registry = new CachedSchemaRegistryClient(url, identityMapCapacity, config, headers);
+    } else {
+      this.registry = new CachedSchemaRegistryClient(urls, identityMapCapacity, config, headers);
+    }
   }
 
   //For UT only
