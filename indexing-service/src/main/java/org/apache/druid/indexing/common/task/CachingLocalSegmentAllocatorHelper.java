@@ -26,7 +26,6 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -133,6 +132,8 @@ class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
    */
   private String getSequenceName(Interval interval, ShardSpec shardSpec)
   {
-    return StringUtils.format("%s_%s_%d", taskId, interval, shardSpec.getPartitionNum());
+    // Note: We do not use String format here since this can be called in a tight loop
+    // and it's faster to add strings together than it is to use String#format
+    return taskId + "_" + interval + "_" + shardSpec.getPartitionNum();
   }
 }
