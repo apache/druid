@@ -73,7 +73,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       int id = bytes.getInt(); // extract schema registry id
       int length = bytes.limit() - 1 - 4;
       int offset = bytes.position() + bytes.arrayOffset();
-      Schema schema = registry.getByID(id);
+      Schema schema = registry.getById(id);
       DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
     }
