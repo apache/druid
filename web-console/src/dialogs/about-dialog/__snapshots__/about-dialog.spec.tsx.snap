@@ -76,7 +76,7 @@ exports[`about dialog matches snapshot 1`] = `
         >
           <p>
             <strong>
-              Apache Druid (incubating) is a high performance real-time analytics database.
+              Apache Druid is a high performance real-time analytics database.
             </strong>
           </p>
           <p>
