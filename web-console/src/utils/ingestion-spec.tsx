@@ -265,7 +265,8 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   // Make sure that if we actually get a task payload we extract the spec
   if (typeof (spec as any).spec === 'object') spec = (spec as any).spec;
 
-  const specType = getSpecType(spec);
+  const specType =
+    deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type');
   if (!specType) return spec as IngestionSpec;
   if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
   if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
