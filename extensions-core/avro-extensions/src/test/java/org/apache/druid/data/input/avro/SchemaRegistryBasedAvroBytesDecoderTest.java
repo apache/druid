@@ -52,7 +52,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParse() throws Exception
   {
     // Given
-    Mockito.when(registry.getByID(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
+    Mockito.when(registry.getById(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
@@ -68,7 +68,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParseCorrupted() throws Exception
   {
     // Given
-    Mockito.when(registry.getByID(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
+    Mockito.when(registry.getById(ArgumentMatchers.eq(1234))).thenReturn(SomeAvroDatum.getClassSchema());
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
@@ -81,7 +81,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   public void testParseWrongId() throws Exception
   {
     // Given
-    Mockito.when(registry.getByID(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
+    Mockito.when(registry.getById(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
