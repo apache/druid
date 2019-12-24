@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.tdunning.math.stats.MergingDigest;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -60,16 +61,20 @@ public class TDigestSketchAggregator implements Aggregator
     if (obj == null) {
       return;
     }
-    if (selector.getObject() instanceof Number) {
+    if (obj instanceof Number) {
       synchronized (this) {
-        histogram.add(((Number) selector.getObject()).doubleValue());
+        histogram.add(((Number) obj).doubleValue());
       }
-    } else if (selector.getObject() instanceof MergingDigest) {
+    } else if (obj instanceof MergingDigest) {
       synchronized (this) {
-        histogram.add((MergingDigest) selector.getObject());
+        histogram.add((MergingDigest) obj);
       }
     } else {
-      TDigestSketchUtils.throwExceptionForWrongType(selector);
+      throw new IAE(
+          "Expected a number or an instance of MergingDigest, but received [%s] of type [%s]",
+          obj,
+          obj.getClass()
+      );
     }
   }
 
