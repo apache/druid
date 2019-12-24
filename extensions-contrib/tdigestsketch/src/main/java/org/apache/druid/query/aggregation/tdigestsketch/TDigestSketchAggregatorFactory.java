@@ -24,13 +24,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.TDigest;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -217,6 +220,48 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return TDigestSketchUtils.getMaxIntermdiateTDigestSize(compression);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new ObjectAggregateCombiner<MergingDigest>()
+    {
+      private MergingDigest combined = new MergingDigest(compression);
+
+      @Override
+      public void reset(final ColumnValueSelector selector)
+      {
+        combined = null;
+        fold(selector);
+      }
+
+      @Override
+      public void fold(final ColumnValueSelector selector)
+      {
+        MergingDigest other = (MergingDigest) selector.getObject();
+        if (other == null) {
+          return;
+        }
+        if (combined == null) {
+          combined = new MergingDigest(compression);
+        }
+        combined.add(other);
+      }
+
+      @Nullable
+      @Override
+      public MergingDigest getObject()
+      {
+        return combined;
+      }
+
+      @Override
+      public Class<MergingDigest> classOfObject()
+      {
+        return MergingDigest.class;
+      }
+    };
   }
 
   @Override
