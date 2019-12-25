@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
@@ -60,9 +61,9 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
-      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
+      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.lazyObjectSummaryIterator(
           s3Client,
-          uri,
+          Collections.singletonList(uri),
           MAX_LISTING_KEYS
       );
       while (objectSummaryIterator.hasNext()) {
