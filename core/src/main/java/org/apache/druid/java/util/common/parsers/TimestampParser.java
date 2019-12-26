@@ -32,6 +32,7 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 public class TimestampParser
@@ -87,7 +88,7 @@ public class TimestampParser
       };
     } else {
       try {
-        final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format));
+        final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format).withLocale(Locale.US));
         return input -> {
           Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
           return formatter.parse(ParserUtils.stripQuotes(input));

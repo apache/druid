@@ -3,7 +3,7 @@
   <component name="MavenProjectSettings">
     <option name="testRunningSettings">
       <MavenTestRunningSettings>
-        <option name="passArgLine" value="false" />  <!-- see https://github.com/apache/incubator-druid/pull/8526 -->
+        <option name="passArgLine" value="false" />
       </MavenTestRunningSettings>
     </option>
   </component>

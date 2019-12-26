@@ -1,39 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="EntryPointsManager">
-    <list size="14">
-      <item index="0" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonCreator" />
-      <item index="1" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonProperty" />
-      <item index="2" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonValue" />
-      <item index="3" class="java.lang.String" itemvalue="com.google.inject.Inject" />
-      <item index="4" class="java.lang.String" itemvalue="com.google.inject.Provides" />
-      <item index="5" class="java.lang.String" itemvalue="io.airlift.airline.Command" />
-      <item index="6" class="java.lang.String" itemvalue="org.apache.druid.annotations.UsedByJUnitParamsRunner" />
-      <item index="7" class="java.lang.String" itemvalue="org.apache.druid.annotations.UsedInGeneratedCode" />
-      <item index="8" class="java.lang.String" itemvalue="org.apache.druid.guice.annotations.ExtensionPoint" />
-      <item index="9" class="java.lang.String" itemvalue="org.apache.druid.guice.annotations.PublicApi" />
-      <item index="10" class="java.lang.String" itemvalue="org.apache.druid.java.util.common.lifecycle.LifecycleStart" />
-      <item index="11" class="java.lang.String" itemvalue="org.apache.druid.java.util.common.lifecycle.LifecycleStop" />
-      <item index="12" class="java.lang.String" itemvalue="javax.inject.Inject" />
-      <item index="13" class="java.lang.String" itemvalue="org.openjdk.jmh.annotations.Benchmark" />
-    </list>
-    <pattern value="org.apache.druid.cli.GuiceRunnable" hierarchically="true" method="run" />
-    <pattern value="org.apache.druid.cli.GuiceRunnable" hierarchically="true" />
-    <pattern value="org.apache.druid.initialization.DruidModule" hierarchically="true" method="getJacksonModules" />
-    <writeAnnotations>
-      <writeAnnotation name="com.fasterxml.jackson.annotation.JacksonInject" />
-      <writeAnnotation name="com.fasterxml.jackson.annotation.JsonProperty" />
-      <writeAnnotation name="com.google.caliper.Param" />
-      <writeAnnotation name="io.airlift.airline.Option" />
-      <writeAnnotation name="org.easymock.Mock" />
-      <writeAnnotation name="org.mockito.Mock" />
-      <writeAnnotation name="org.openjdk.jmh.annotations.Param" />
-      <writeAnnotation name="org.powermock.api.easymock.annotation.Mock" />
-    </writeAnnotations>
-  </component>
-  <component name="JavaScriptSettings">
-    <option name="languageLevel" value="ES6" />
-  </component>
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
@@ -41,50 +7,7 @@
       </list>
     </option>
   </component>
-  <component name="NullableNotNullManager">
-    <option name="myDefaultNullable" value="javax.annotation.Nullable" />
-    <option name="myDefaultNotNull" value="javax.annotation.Nonnull" />
-    <option name="myNullables">
-      <value>
-        <list size="12">
-          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
-          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nullable" />
-          <item index="2" class="java.lang.String" itemvalue="javax.annotation.CheckForNull" />
-          <item index="3" class="java.lang.String" itemvalue="org.springframework.lang.Nullable" />
-          <item index="4" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.Nullable" />
-          <item index="5" class="java.lang.String" itemvalue="android.support.annotation.Nullable" />
-          <item index="6" class="java.lang.String" itemvalue="androidx.annotation.Nullable" />
-          <item index="7" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.Nullable" />
-          <item index="8" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableDecl" />
-          <item index="9" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableType" />
-          <item index="10" class="java.lang.String" itemvalue="androidx.annotation.RecentlyNullable" />
-          <item index="11" class="java.lang.String" itemvalue="com.android.annotations.Nullable" />
-        </list>
-      </value>
-    </option>
-    <option name="myNotNulls">
-      <value>
-        <list size="11">
-          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
-          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
-          <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
-          <item index="3" class="java.lang.String" itemvalue="android.support.annotation.NonNull" />
-          <item index="4" class="java.lang.String" itemvalue="javax.validation.constraints.NotNull" />
-          <item index="5" class="java.lang.String" itemvalue="androidx.annotation.NonNull" />
-          <item index="6" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.NonNull" />
-          <item index="7" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NonNullDecl" />
-          <item index="8" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NonNullType" />
-          <item index="9" class="java.lang.String" itemvalue="androidx.annotation.RecentlyNonNull" />
-          <item index="10" class="java.lang.String" itemvalue="com.android.annotations.NonNull" />
-        </list>
-      </value>
-    </option>
-  </component>
-  <component name="ProjectResources">
-    <resource url="http://maven.apache.org/ASSEMBLY/2.0.0" location="$PROJECT_DIR$/.idea/xml-schemas/assembly-2.0.0.xsd" />
-    <resource url="http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" location="$PROJECT_DIR$/.idea/xml-schemas/svg11.dtd" />
-  </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="false" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" project-jdk-name="1.8" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/classes" />
   </component>
 </project>
