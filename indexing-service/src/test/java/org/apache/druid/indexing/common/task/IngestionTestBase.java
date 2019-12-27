@@ -56,6 +56,7 @@ import org.apache.druid.metadata.SQLMetadataSegmentManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -94,6 +95,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private MetadataSegmentManager segmentManager;
   private TaskLockbox lockbox;
+  // protected so tests can override the default behavior
+  protected DataSegmentKiller dataSegmentKiller;
 
   @Before
   public void setUp() throws IOException
@@ -103,6 +106,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
     connector.createSegmentTable();
+    dataSegmentKiller = new NoopDataSegmentKiller();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
@@ -298,7 +302,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             taskActionClient,
             null,
             new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
-            new NoopDataSegmentKiller(),
+            dataSegmentKiller,
             null,
             null,
             null,

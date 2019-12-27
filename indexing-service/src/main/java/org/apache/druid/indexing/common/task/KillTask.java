@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientKillQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -36,7 +37,6 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -91,9 +91,9 @@ public class KillTask extends AbstractFixedIntervalTask
     }
 
     // Kill segments
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
     for (DataSegment segment : unusedSegments) {
       toolbox.getDataSegmentKiller().kill(segment);
+      toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.of(segment)));
     }
 
     return TaskStatus.success(getId());
