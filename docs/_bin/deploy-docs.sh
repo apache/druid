@@ -82,7 +82,7 @@ src=$tmp/druid
 echo "Using Version     [$version]"
 echo "Working directory [$tmp]"
 
-git clone -q --depth 1 git@github.com:apache/incubator-druid-io.github.io.git "$target"
+git clone -q --depth 1 git@github.com:apache/druid-io.github.io.git "$target"
 
 remote=$(git -C "$druid" config --local --get "remote.$origin.url")
 git clone -q --depth 1 --branch $branch $remote "$src"
@@ -122,7 +122,7 @@ if [ -z "$opt_dryrun" ]; then
 
   if [ -n "$GIT_TOKEN" ]; then
   curl -u "$GIT_TOKEN:x-oauth-basic" -XPOST -d@- \
-     https://api.github.com/repos/apache/incubator-druid-io.github.io/pulls <<EOF
+     https://api.github.com/repos/apache/druid-io.github.io/pulls <<EOF
 {
   "title" : "Update Documentation for $version",
   "head"  : "$updatebranch",
@@ -132,7 +132,7 @@ EOF
 
   else
     echo "GitHub personal token not provided, not submitting pull request"
-    echo "Please go to https://github.com/apache/incubator-druid-io.github.io and submit a pull request from the \`$updatebranch\` branch"
+    echo "Please go to https://github.com/apache/druid-io.github.io and submit a pull request from the \`$updatebranch\` branch"
   fi
 
   rm -rf $tmp

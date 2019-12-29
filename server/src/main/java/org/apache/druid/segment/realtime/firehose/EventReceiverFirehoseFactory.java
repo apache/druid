@@ -114,7 +114,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
       // Keeping the legacy 'maxIdleTime' property name for backward compatibility. When the project is updated to
-      // Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("maxIdleTime") @Nullable Long maxIdleTimeMillis,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject @Json ObjectMapper jsonMapper,
@@ -174,7 +174,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
   /**
    * Keeping the legacy 'maxIdleTime' property name for backward compatibility. When the project is updated to Jackson
-   * 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+   * 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
    */
   @JsonProperty("maxIdleTime")
   public long getMaxIdleTimeMillis()
@@ -302,7 +302,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
                 // we long the error and continue a loop after some pause.
                 log.error(
                     "Either idleCloseTimeNs or requestedShutdownTimeNs must be non-null. "
-                    + "Please file a bug at https://github.com/apache/incubator-druid/issues"
+                    + "Please file a bug at https://github.com/apache/druid/issues"
                 );
               }
               if (idleCloseTimeNs != null && idleCloseTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison

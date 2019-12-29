@@ -496,7 +496,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
           // Update the heap with the copied bucket's new offset in the new table
           offsetHeap.setAt(i, newBucketOffset);
 
-          // relocate aggregators (see https://github.com/apache/incubator-druid/pull/4071)
+          // relocate aggregators (see https://github.com/apache/druid/pull/4071)
           aggregators.relocate(
               oldBucketOffset + baseAggregatorOffset,
               newBucketOffset + baseAggregatorOffset,

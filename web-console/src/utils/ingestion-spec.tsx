@@ -393,7 +393,7 @@ export interface TimestampSpec {
 }
 
 export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
-  // https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
+  // https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
   return timestampSpec.column || 'timestamp';
 }
 

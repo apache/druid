@@ -4798,7 +4798,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithExtractionFnInOuterQuery()
   {
-    //https://github.com/apache/incubator-druid/issues/2556
+    //https://github.com/apache/druid/issues/2556
 
     GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -6852,7 +6852,7 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
   }
 
-  // https://github.com/apache/incubator-druid/issues/7820
+  // https://github.com/apache/druid/issues/7820
   @Test
   public void testGroupByWithSubtotalsSpecWithRenamedDimensionAndFilter()
   {

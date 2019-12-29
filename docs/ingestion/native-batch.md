@@ -24,7 +24,7 @@ sidebar_label: "Native batch"
   -->
 
 
-Apache Druid (incubating) currently has two types of native batch indexing tasks, `index_parallel` which can run
+Apache Druid currently has two types of native batch indexing tasks, `index_parallel` which can run
 multiple tasks in parallel, and `index` which will run a single indexing task. Please refer to our
 [Hadoop-based vs. native batch comparison table](index.md#batch) for comparisons between Hadoop-based, native batch
 (simple), and native batch (parallel) ingestion.
