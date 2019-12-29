@@ -57,6 +57,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
     emitter.emit(new ServiceMetricEvent.Builder().build("segment/max", serverConfig.getMaxSize()));
 
     final Object2LongOpenHashMap<String> pendingDeleteSizes = new Object2LongOpenHashMap<>();
+    long totalCount = 0;
 
     for (DataSegment segment : segmentLoadDropMgr.getPendingDeleteSnapshot()) {
       pendingDeleteSizes.addTo(segment.getDataSource(), segment.getSize());
@@ -93,6 +94,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
     for (Map.Entry<String, Long> entry : segmentManager.getDataSourceCounts().entrySet()) {
       String dataSource = entry.getKey();
       long count = entry.getValue();
+      totalCount += count;
       final ServiceMetricEvent.Builder builder =
           new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
                                           .setDimension("tier", serverConfig.getTier())
@@ -103,6 +105,8 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
 
       emitter.emit(builder.build("segment/count", count));
     }
+
+    emitter.emit(new ServiceMetricEvent.Builder().build("segment/totalCount", totalCount));
 
     return true;
   }

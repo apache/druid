@@ -206,6 +206,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Size in bytes of available segments.|dataSource.|Varies.|
 |`segment/count`|Number of available segments.|dataSource.|< max|
+|`segment/totalCount`|Total Number of available segments on each historical node.||< max|
 |`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|

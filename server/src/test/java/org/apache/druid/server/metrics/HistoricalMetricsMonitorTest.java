@@ -100,7 +100,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
 
     final Capture<ServiceEventBuilder<ServiceMetricEvent>> eventCapture = EasyMock.newCapture(CaptureType.ALL);
     serviceEmitter.emit(EasyMock.capture(eventCapture));
-    EasyMock.expectLastCall().times(5);
+    EasyMock.expectLastCall().times(6);
 
     EasyMock.replay(druidServerConfig, segmentManager, segmentLoadDropMgr, serviceEmitter);
     monitor.doMonitor(serviceEmitter);
@@ -165,5 +165,10 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
         "priority", String.valueOf(priority),
         "dataSource", dataSource
     ), events.get(4));
+
+    Assert.assertEquals(ImmutableMap.<String, Object>of(
+            "metric", "segment/totalCount",
+            "value", 1L
+    ), events.get(5));
   }
 }
