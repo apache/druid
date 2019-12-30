@@ -101,11 +101,28 @@ public abstract class LookupExtractor
   }
 
   /**
+   * Returns true if this lookup extractor's {@link #iterable()} method will return a valid iterator.
+   */
+  public boolean canIterate()
+  {
+    return false;
+  }
+
+  /**
+   * Returns an Iterable that iterates over the keys and values in this lookup extractor.
+   *
+   * @throws UnsupportedOperationException if {@link #canIterate()} returns false.
+   */
+  public Iterable<Map.Entry<String, String>> iterable()
+  {
+    throw new UnsupportedOperationException("Cannot iterate");
+  }
+
+  /**
    * Create a cache key for use in results caching
    *
    * @return A byte array that can be used to uniquely identify if results of a prior lookup can use the cached values
    */
-
   public abstract byte[] getCacheKey();
 
   // make this abstract again once @drcrallen fix the metmax lookup implementation.

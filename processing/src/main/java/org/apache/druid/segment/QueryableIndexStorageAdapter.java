@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
+ *
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
@@ -71,12 +72,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public QueryableIndexStorageAdapter(QueryableIndex index)
   {
     this.index = index;
-  }
-
-  @Override
-  public String getSegmentIdentifier()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -103,7 +98,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder == null) {
-      return 0;
+      // NullDimensionSelector has cardinality = 1 (one null, nothing else).
+      return 1;
     }
     try (BaseColumn col = columnHolder.getColumn()) {
       if (!(col instanceof DictionaryEncodedColumn)) {
@@ -182,9 +178,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  @Nullable
   public String getColumnTypeName(String columnName)
   {
     final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+
+    if (columnHolder == null) {
+      return null;
+    }
+
     try (final BaseColumn col = columnHolder.getColumn()) {
       if (col instanceof ComplexColumn) {
         return ((ComplexColumn) col).getTypeName();

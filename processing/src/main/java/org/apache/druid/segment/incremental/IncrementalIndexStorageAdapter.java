@@ -62,12 +62,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public String getSegmentIdentifier()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public Interval getInterval()
   {
     return index.getInterval();

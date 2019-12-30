@@ -19,27 +19,27 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.query.dimension.VectorColumnStrategizer;
+import org.apache.druid.query.dimension.VectorColumnProcessorFactory;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
-public class VectorValueMatcherColumnStrategizer implements VectorColumnStrategizer<VectorValueMatcherFactory>
+public class VectorValueMatcherColumnProcessorFactory implements VectorColumnProcessorFactory<VectorValueMatcherFactory>
 {
-  private static final VectorValueMatcherColumnStrategizer INSTANCE = new VectorValueMatcherColumnStrategizer();
+  private static final VectorValueMatcherColumnProcessorFactory INSTANCE = new VectorValueMatcherColumnProcessorFactory();
 
-  private VectorValueMatcherColumnStrategizer()
+  private VectorValueMatcherColumnProcessorFactory()
   {
     // Singleton.
   }
 
-  public static VectorValueMatcherColumnStrategizer instance()
+  public static VectorValueMatcherColumnProcessorFactory instance()
   {
     return INSTANCE;
   }
 
   @Override
-  public VectorValueMatcherFactory makeSingleValueDimensionStrategy(
+  public VectorValueMatcherFactory makeSingleValueDimensionProcessor(
       final SingleValueDimensionVectorSelector selector
   )
   {
@@ -47,7 +47,7 @@ public class VectorValueMatcherColumnStrategizer implements VectorColumnStrategi
   }
 
   @Override
-  public VectorValueMatcherFactory makeMultiValueDimensionStrategy(
+  public VectorValueMatcherFactory makeMultiValueDimensionProcessor(
       final MultiValueDimensionVectorSelector selector
   )
   {
@@ -55,19 +55,19 @@ public class VectorValueMatcherColumnStrategizer implements VectorColumnStrategi
   }
 
   @Override
-  public VectorValueMatcherFactory makeFloatStrategy(final VectorValueSelector selector)
+  public VectorValueMatcherFactory makeFloatProcessor(final VectorValueSelector selector)
   {
     return new FloatVectorValueMatcher(selector);
   }
 
   @Override
-  public VectorValueMatcherFactory makeDoubleStrategy(final VectorValueSelector selector)
+  public VectorValueMatcherFactory makeDoubleProcessor(final VectorValueSelector selector)
   {
     return new DoubleVectorValueMatcher(selector);
   }
 
   @Override
-  public VectorValueMatcherFactory makeLongStrategy(final VectorValueSelector selector)
+  public VectorValueMatcherFactory makeLongProcessor(final VectorValueSelector selector)
   {
     return new LongVectorValueMatcher(selector);
   }

@@ -149,7 +149,7 @@ public class VectorGroupByEngine
                   dimensionSpec ->
                       DimensionHandlerUtils.makeVectorProcessor(
                           dimensionSpec,
-                          GroupByVectorColumnStrategizer.instance(),
+                          GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory
                       )
               ).collect(Collectors.toList());

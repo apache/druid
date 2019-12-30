@@ -34,6 +34,7 @@ import java.nio.ByteBuffer;
 import java.util.regex.Pattern;
 
 /**
+ *
  */
 public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
 {
@@ -111,6 +112,12 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(regexBytes)
                      .array();
+  }
+
+  @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new RegexFilteredDimensionSpec(delegate.withDimension(newDimension), pattern);
   }
 
   @Override

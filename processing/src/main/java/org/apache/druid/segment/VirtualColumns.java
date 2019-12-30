@@ -141,6 +141,7 @@ public class VirtualColumns implements Cacheable
     return getVirtualColumn(columnName) != null;
   }
 
+  @Nullable
   public VirtualColumn getVirtualColumn(String columnName)
   {
     final VirtualColumn vc = withoutDotSupport.get(columnName);
@@ -264,7 +265,11 @@ public class VirtualColumns implements Cacheable
 
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
-    return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    if (virtualColumns.isEmpty()) {
+      return baseFactory;
+    } else {
+      return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    }
   }
 
   @Override
