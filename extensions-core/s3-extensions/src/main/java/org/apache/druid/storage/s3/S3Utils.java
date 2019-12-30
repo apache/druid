@@ -111,16 +111,17 @@ public class S3Utils
    *
    * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
    * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
-   * ignored). The iterator is computed lazily by calling {@link ServerSideEncryptingAmazonS3#listObjectsV2} for each
-   * prefix in batches of {@param maxListLength}.
+   * ignored). The iterator is computed incrementally by calling {@link ServerSideEncryptingAmazonS3#listObjectsV2} for
+   * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
+   * constructed.
    */
-  public static Iterator<S3ObjectSummary> lazyObjectSummaryIterator(
+  public static Iterator<S3ObjectSummary> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength
   )
   {
-    return new LazyObjectSummariesIterator(s3Client, prefixes, maxListingLength);
+    return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength);
   }
 
   /**

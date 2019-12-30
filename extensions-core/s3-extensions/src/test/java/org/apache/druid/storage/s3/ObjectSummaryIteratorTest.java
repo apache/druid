@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class LazyObjectSummariesIteratorTest
+public class ObjectSummaryIteratorTest
 {
   private static final ImmutableList<S3ObjectSummary> TEST_OBJECTS =
       ImmutableList.of(
@@ -161,7 +161,7 @@ public class LazyObjectSummariesIteratorTest
     }
 
     final List<S3ObjectSummary> actualObjects = ImmutableList.copyOf(
-        S3Utils.lazyObjectSummaryIterator(
+        S3Utils.objectSummaryIterator(
             makeMockClient(TEST_OBJECTS),
             prefixes.stream().map(URI::create).collect(Collectors.toList()),
             maxListingLength
@@ -177,7 +177,7 @@ public class LazyObjectSummariesIteratorTest
 
   /**
    * Makes a mock S3 client that handles enough of "listObjectsV2" to test the functionality of the
-   * {@link LazyObjectSummariesIterator} class.
+   * {@link ObjectSummaryIterator} class.
    */
   private static ServerSideEncryptingAmazonS3 makeMockClient(
       final List<S3ObjectSummary> objects

@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -29,11 +30,12 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Iterator class used by {@link S3Utils#lazyObjectSummaryIterator}.
+ * Iterator class used by {@link S3Utils#objectSummaryIterator}.
  *
- * Walks a set of prefixes, returning all objects underneath them except for directory placeholders.
+ * As required by the specification of that method, this iterator is computed incrementally in batches of
+ * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
  */
-public class LazyObjectSummariesIterator implements Iterator<S3ObjectSummary>
+public class ObjectSummaryIterator implements Iterator<S3ObjectSummary>
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final Iterator<URI> prefixesIterator;
@@ -44,7 +46,7 @@ public class LazyObjectSummariesIterator implements Iterator<S3ObjectSummary>
   private Iterator<S3ObjectSummary> objectSummaryIterator;
   private S3ObjectSummary currentObjectSummary;
 
-  LazyObjectSummariesIterator(
+  ObjectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength
@@ -57,6 +59,24 @@ public class LazyObjectSummariesIterator implements Iterator<S3ObjectSummary>
     prepareNextRequest();
     fetchNextBatch();
     advanceObjectSummary();
+  }
+
+  @Override
+  public boolean hasNext()
+  {
+    return currentObjectSummary != null;
+  }
+
+  @Override
+  public S3ObjectSummary next()
+  {
+    if (currentObjectSummary == null) {
+      throw new NoSuchElementException();
+    }
+
+    final S3ObjectSummary retVal = currentObjectSummary;
+    advanceObjectSummary();
+    return retVal;
   }
 
   private void prepareNextRequest()
@@ -77,6 +97,15 @@ public class LazyObjectSummariesIterator implements Iterator<S3ObjectSummary>
       result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request));
       request.setContinuationToken(result.getNextContinuationToken());
       objectSummaryIterator = result.getObjectSummaries().iterator();
+    }
+    catch (AmazonS3Exception e) {
+      throw new RE(
+          e,
+          "Failed to get object summaries from S3 bucket[%s], prefix[%s]; S3 error: %s",
+          request.getBucketName(),
+          request.getPrefix(),
+          e.getMessage()
+      );
     }
     catch (Exception e) {
       throw new RE(
@@ -113,24 +142,6 @@ public class LazyObjectSummariesIterator implements Iterator<S3ObjectSummary>
 
     // Truly nothing left to read.
     currentObjectSummary = null;
-  }
-
-  @Override
-  public boolean hasNext()
-  {
-    return currentObjectSummary != null;
-  }
-
-  @Override
-  public S3ObjectSummary next()
-  {
-    if (currentObjectSummary == null) {
-      throw new NoSuchElementException();
-    }
-
-    final S3ObjectSummary retVal = currentObjectSummary;
-    advanceObjectSummary();
-    return retVal;
   }
 
   /**

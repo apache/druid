@@ -116,7 +116,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     } else {
       final List<S3ObjectSummary> objects = new ArrayList<>();
       for (final URI prefix : prefixes) {
-        final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.lazyObjectSummaryIterator(
+        final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
             s3Client,
             Collections.singletonList(prefix),
             MAX_LISTING_LENGTH

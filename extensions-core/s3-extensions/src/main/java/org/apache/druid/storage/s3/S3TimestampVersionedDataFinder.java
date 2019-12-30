@@ -61,7 +61,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
-      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.lazyObjectSummaryIterator(
+      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
           s3Client,
           Collections.singletonList(uri),
           MAX_LISTING_KEYS
