@@ -90,11 +90,12 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
 
     final String newVersion;
     CacheScheduler.VersionedCache versionedCache = null;
+    List<Pair<String, String>> newCacheEntries = getEntriesFromDB(doIncrementalLoad, namespace, entryId, lastCheck);
     if (doIncrementalLoad) {
       newVersion = StringUtils.format("%d", lastDBUpdate);
-      versionedCache = entryId.createFromExistingCache(entryId, newVersion, pairs);
+      versionedCache = entryId.createFromExistingCache(entryId, newVersion, newCacheEntries);
       LOG.info("Finished loading %d new incremental values in last %s for %s ",
-          pairs.size(),
+          newCacheEntries.size(),
           PeriodFormat.getDefault().print(new Period(lastCheck, lastDBUpdate)),
           entryId
       );
@@ -119,7 +120,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         }
         versionedCache = scheduler.createVersionedCache(entryId, newVersion, null);
         final Map<String, String> cache = versionedCache.getCache();
-        for (Pair<String, String> pair : pairs) {
+        for (Pair<String, String> pair : newCacheEntries) {
           cache.put(pair.lhs, pair.rhs);
         }
         LOG.info("Finished loading %d values for %s", cache.size(), entryId);

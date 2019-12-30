@@ -217,6 +217,9 @@ public final class CacheScheduler
         List<Pair<String, String>> pairs
     )
     {
+      if (!(cacheStateHolder.get() instanceof VersionedCache)) {
+        return null;
+      }
       VersionedCache state = (VersionedCache) cacheStateHolder.get();
       ConcurrentMap<String, String> cache = state.cacheHandler.getCache();
       for (Pair<String, String> pair : pairs) {
@@ -408,6 +411,22 @@ public final class CacheScheduler
   {
     CACHE_NOT_INITIALIZED,
     ENTRY_CLOSED
+  }
+
+  public final class VersionedCacheBuilder{
+
+    public VersionedCache createVersionedCache(
+        @Nullable EntryImpl<? extends ExtractionNamespace> entryId,
+        String version,
+        @Nullable CacheHandler cacheHandler
+    )
+    {
+      updatesStarted.incrementAndGet();
+      return new VersionedCache(String.valueOf(entryId), version, cacheHandler);
+    }
+
+
+
   }
 
   public final class VersionedCache implements CacheState, AutoCloseable
