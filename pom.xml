@@ -78,7 +78,7 @@
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.1.1</apache.kafka.version>
+        <apache.kafka.version>2.2.1</apache.kafka.version>
         <avatica.version>1.15.0</avatica.version>
         <avro.version>1.9.1</avro.version>
         <calcite.version>1.21.0</calcite.version>
