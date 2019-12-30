@@ -152,7 +152,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     final Function<RowType, Object> columnFn = columnFunctions.get(column);
 
     if (columnFn == null) {
-      throw new IAE("Column[%d] is not a valid column");
+      throw new IAE("Column[%d] is not a valid column", column);
     }
 
     return row -> columnFn.apply(table.get(row));
