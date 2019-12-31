@@ -68,7 +68,11 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   {
     final IndexedInts keys = keySelector.getRow();
     for (int i = 0; i < valueSelectors.length; i++) {
-      values[i] = valueSelectors[i].getDouble();
+      if (valueSelectors[i].isNull()) {
+        return;
+      } else {
+        values[i] = valueSelectors[i].getDouble();
+      }
     }
     synchronized (this) {
       for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {

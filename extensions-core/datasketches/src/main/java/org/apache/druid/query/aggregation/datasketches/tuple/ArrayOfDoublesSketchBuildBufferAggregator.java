@@ -89,7 +89,11 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   public void aggregate(final ByteBuffer buf, final int position)
   {
     for (int i = 0; i < valueSelectors.length; i++) {
-      values[i] = valueSelectors[i].getDouble();
+      if (valueSelectors[i].isNull()) {
+        return;
+      } else {
+        values[i] = valueSelectors[i].getDouble();
+      }
     }
     final IndexedInts keys = keySelector.getRow();
     // Wrapping memory and ArrayOfDoublesSketch is inexpensive compared to sketch operations.
