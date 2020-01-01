@@ -230,6 +230,7 @@ public abstract class BaseQuery<T> implements Query<T>
     return descending ? retVal.reverse() : retVal;
   }
 
+  @Nullable
   @Override
   public String getId()
   {

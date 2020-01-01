@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
@@ -138,7 +139,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * to allow for query-specific dimensions and metrics.  That is, the ToolChest is expected to set some
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
-   * 
+   *
    * <p>QueryToolChests for query types in core (druid-processing) and public extensions (belonging to the Druid source
    * tree) should use delegate this method to {@link GenericQueryMetricsFactory#makeMetrics(Query)} on an injected
    * instance of {@link GenericQueryMetricsFactory}, as long as they don't need to emit custom dimensions and/or
@@ -268,5 +269,51 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
+  }
+
+  /**
+   * Returns a list of field names in the order than {@link #resultsAsArrays} would return them. The returned list will
+   * be the same length as each array returned by {@link #resultsAsArrays}.
+   *
+   * @param query same query passed to {@link #resultsAsArrays}
+   *
+   * @return list of field names
+   *
+   * @throws UnsupportedOperationException if this query type does not support returning results as arrays
+   */
+  public List<String> resultArrayFields(QueryType query)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
+  }
+
+  /**
+   * Converts a sequence of this query's ResultType into arrays. The array schema is given by
+   * {@link #resultArrayFields}. This functionality is useful because it allows higher-level processors to operate on
+   * the results of any query in a consistent way. This is useful for the SQL layer and for any algorithm that might
+   * operate on the results of an inner query.
+   *
+   * Not all query types support this method. They will throw {@link UnsupportedOperationException}, and they cannot
+   * be used by the SQL layer or by generic higher-level algorithms.
+   *
+   * Some query types return less information after translating their results into arrays, especially in situations
+   * where there is no clear way to translate fully rich results into flat arrays. For example, the scan query does not
+   * include the segmentId in its array-based results, because it could potentially conflict with a 'segmentId' field
+   * in the actual datasource being scanned.
+   *
+   * It is possible that there will be multiple arrays returned for a single result object. For example, in the topN
+   * query, each {@link org.apache.druid.query.topn.TopNResultValue} will generate a separate array for each of its
+   * {@code values}.
+   *
+   * By convention, the array form should include the __time column, if present,  as a long (milliseconds since epoch).
+   *
+   * @param resultSequence results of the form returned by {@link #mergeResults}
+   *
+   * @return results in array form
+   *
+   * @throws UnsupportedOperationException if this query type does not support returning results as arrays
+   */
+  public Sequence<Object[]> resultsAsArrays(QueryType query, Sequence<ResultType> resultSequence)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
   }
 }

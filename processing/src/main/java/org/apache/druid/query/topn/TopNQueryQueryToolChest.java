@@ -49,8 +49,10 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -524,6 +526,55 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         }
       }
     };
+  }
+
+  @Override
+  public List<String> resultArrayFields(TopNQuery query)
+  {
+    final List<String> fields = new ArrayList<>(
+        2 + query.getAggregatorSpecs().size() + query.getPostAggregatorSpecs().size()
+    );
+
+    fields.add(ColumnHolder.TIME_COLUMN_NAME);
+    fields.add(query.getDimensionSpec().getOutputName());
+    query.getAggregatorSpecs().stream().map(AggregatorFactory::getName).forEach(fields::add);
+    query.getPostAggregatorSpecs().stream().map(PostAggregator::getName).forEach(fields::add);
+
+    return fields;
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(
+      TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence
+  )
+  {
+    final List<String> fields = resultArrayFields(query);
+
+    return resultSequence.flatMap(
+        result -> {
+          final List<DimensionAndMetricValueExtractor> rows = result.getValue().getValue();
+
+          return Sequences.simple(
+              Iterables.transform(
+                  rows,
+                  row -> {
+                    final Object[] retVal = new Object[fields.size()];
+
+                    // Position 0 is always __time.
+                    retVal[0] = result.getTimestamp().getMillis();
+
+                    // Add other fields.
+                    final Map<String, Object> resultMap = row.getBaseObject();
+                    for (int i = 1; i < fields.size(); i++) {
+                      retVal[i] = resultMap.get(fields.get(i));
+                    }
+
+                    return retVal;
+                  }
+              )
+          );
+        }
+    );
   }
 
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
