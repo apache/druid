@@ -211,6 +211,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kinesis-indexing-service</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-pubsub-indexing-service</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-lookups-cached-global</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-lookups-cached-single</argument>

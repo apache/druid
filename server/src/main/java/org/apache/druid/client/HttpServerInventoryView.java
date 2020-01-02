@@ -501,7 +501,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             smileMapper,
             httpClient,
             executor,
-            new URL(druidServer.getScheme(), hostAndPort.getHostText(), hostAndPort.getPort(), "/"),
+            new URL(druidServer.getScheme(), hostAndPort.getHost(), hostAndPort.getPort(), "/"),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,
             config.getServerTimeout(),
