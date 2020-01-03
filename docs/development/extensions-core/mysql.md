@@ -23,7 +23,7 @@ title: "MySQL Metadata Store"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
 
 > The MySQL extension requires the MySQL Connector/J library which is not included in the Druid distribution.
 > Refer to the following section for instructions on how to install this library.

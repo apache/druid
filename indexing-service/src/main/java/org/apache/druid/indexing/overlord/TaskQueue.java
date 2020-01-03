@@ -279,7 +279,7 @@ public class TaskQueue
           } else if (isTaskPending(task)) {
             // if the taskFutures contain this task and this task is pending, also let the taskRunner
             // to run it to guarantee it will be assigned to run
-            // see https://github.com/apache/incubator-druid/pull/6991
+            // see https://github.com/apache/druid/pull/6991
             taskRunner.run(task);
           }
         }

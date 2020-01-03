@@ -23,7 +23,7 @@ title: "Working with different versions of Apache Hadoop"
   -->
 
 
-Apache Druid (incubating) can interact with Hadoop in two ways:
+Apache Druid can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.md) using the druid-hdfs-storage extension.
 2. [Batch-load data from Hadoop](../ingestion/hadoop.md) using Map/Reduce jobs.

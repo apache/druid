@@ -124,7 +124,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    // This is likely wrong as well as combine(), see https://github.com/apache/incubator-druid/pull/2602#issuecomment-321224202
+    // This is likely wrong as well as combine(), see https://github.com/apache/druid/pull/2602#issuecomment-321224202
     return new LongSumAggregateCombiner();
   }
 

@@ -33,7 +33,7 @@
 
   <properties>
     <!-- src repo of druid website, the artifacts of this build will be placed here -->
-    <website.src>../../incubator-druid-website-src</website.src>
+    <website.src>../../druid-website-src</website.src>
     <!--
     'version' of website to build, by default it is the Druid version we are building, but can be set explicitly
     to stage documentation for an unreleased version

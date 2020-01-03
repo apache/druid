@@ -57,7 +57,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final ObjectMapper jsonMapper;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
-  // Please see https://github.com/apache/incubator-druid/pull/5684
+  // Please see https://github.com/apache/druid/pull/5684
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
   @Inject
