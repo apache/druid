@@ -1203,7 +1203,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
            ", dimensions=" + dimensions +
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
-           (subtotalsSpec != null ? (", subtotalsSpec=" + subtotalsSpec) : null) +
+           (subtotalsSpec != null ? (", subtotalsSpec=" + subtotalsSpec) : "") +
            ", havingSpec=" + havingSpec +
            ", context=" + getContext() +
            '}';

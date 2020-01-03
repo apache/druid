@@ -4913,7 +4913,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ? new CountAggregatorFactory("_a0")
                                 : new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0"),
-                                    not(selector("d0", null, null))
+                                    not(selector("d1", null, null))
                                 )
                             )
                         )
