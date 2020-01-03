@@ -25,7 +25,7 @@ title: "Globally Cached Lookups"
 
 > Lookups are an [experimental](../experimental.md) feature.
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-global` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-global` as an extension.
 
 ## Configuration
 > Static configuration is no longer supported. Lookups can be configured through

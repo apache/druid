@@ -61,7 +61,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
     this.config = config;
 
     // Adding to lifecycle dynamically because couldn't use @ManageLifecycle on the class,
-    // see https://github.com/apache/incubator-druid/issues/4980
+    // see https://github.com/apache/druid/issues/4980
     lifecycle.addMaybeStartManagedInstance(this);
 
     serverInventoryView.registerSegmentCallback(

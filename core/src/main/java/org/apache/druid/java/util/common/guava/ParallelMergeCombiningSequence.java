@@ -50,7 +50,7 @@ import java.util.function.Consumer;
  * Artisanal, locally-sourced, hand-crafted, gluten and GMO free, bespoke, free-range, organic, small-batch parallel
  * merge combining sequence.
  *
- * See proposal: https://github.com/apache/incubator-druid/issues/8577
+ * See proposal: https://github.com/apache/druid/issues/8577
  *
  * Functionally equivalent to wrapping {@link org.apache.druid.common.guava.CombiningSequence} around a
  * {@link MergeSequence}, but done in parallel on a {@link ForkJoinPool} running in 'async' mode.
@@ -60,7 +60,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private static final Logger LOG = new Logger(ParallelMergeCombiningSequence.class);
 
   // these values were chosen carefully via feedback from benchmarks,
-  // see PR https://github.com/apache/incubator-druid/pull/8578 for details
+  // see PR https://github.com/apache/druid/pull/8578 for details
   public static final int DEFAULT_TASK_TARGET_RUN_TIME_MILLIS = 100;
   public static final int DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS = 16384;
   public static final int DEFAULT_TASK_SMALL_BATCH_NUM_ROWS = 4096;

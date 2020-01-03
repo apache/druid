@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 
 /**
  * Helper class for NullHandling. This class is used to switch between SQL compatible Null Handling behavior
- * introduced as part of https://github.com/apache/incubator-druid/issues/4349 and the old druid behavior
+ * introduced as part of https://github.com/apache/druid/issues/4349 and the old druid behavior
  * where null values are replaced with default values e.g Null Strings are replaced with empty values.
  */
 public class NullHandling

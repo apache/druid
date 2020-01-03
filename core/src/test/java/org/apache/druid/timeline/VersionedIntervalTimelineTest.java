@@ -1026,7 +1026,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
     Assert.assertTrue(timeline.lookup(Intervals.of("1970/1980")).isEmpty());
   }
 
-  /** https://github.com/apache/incubator-druid/issues/3010 */
+  /** https://github.com/apache/druid/issues/3010 */
   @Test
   public void testRemoveIncompleteKeepsComplete()
   {

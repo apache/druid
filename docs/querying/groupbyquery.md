@@ -24,7 +24,7 @@ sidebar_label: "GroupBy"
   -->
 
 
-These types of Apache Druid (incubating) queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 > Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,

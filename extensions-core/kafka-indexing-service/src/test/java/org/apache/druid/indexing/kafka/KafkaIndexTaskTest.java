@@ -2365,7 +2365,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Test
   public void testSerde() throws Exception
   {
-    // This is both a serde test and a regression test for https://github.com/apache/incubator-druid/issues/7724.
+    // This is both a serde test and a regression test for https://github.com/apache/druid/issues/7724.
 
     final KafkaIndexTask task = createTask(
         "taskid",

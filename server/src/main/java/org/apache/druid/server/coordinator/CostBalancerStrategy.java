@@ -52,7 +52,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   /**
    * This defines the unnormalized cost function between two segments.
    *
-   * See https://github.com/apache/incubator-druid/pull/2972 for more details about the cost function.
+   * See https://github.com/apache/druid/pull/2972 for more details about the cost function.
    *
    * intervalCost: segments close together are more likely to be queried together
    *
