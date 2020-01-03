@@ -85,7 +85,7 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
    * Copied from Guava's {@link Splitter#splitToList(CharSequence)}.
    * This is to avoid the error of the missing method signature when using an old Guava library.
    * For example, it may happen when running Druid Hadoop indexing jobs, since we may inherit the version provided by
-   * the Hadoop cluster. See https://github.com/apache/incubator-druid/issues/6801.
+   * the Hadoop cluster. See https://github.com/apache/druid/issues/6801.
    */
   private List<String> splitToList(String input)
   {

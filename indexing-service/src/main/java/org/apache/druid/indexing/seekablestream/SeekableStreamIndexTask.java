@@ -79,7 +79,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final LockGranularity lockGranularityToUse;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
-  // See https://github.com/apache/incubator-druid/issues/7724 for issues that can cause.
+  // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType>> runnerSupplier;
 

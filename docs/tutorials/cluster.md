@@ -23,7 +23,7 @@ title: "Clustered deployment"
   -->
 
 
-Apache Druid (incubating) is designed to be deployed as a scalable, fault-tolerant cluster.
+Apache Druid is designed to be deployed as a scalable, fault-tolerant cluster.
 
 In this document, we'll set up a simple cluster and discuss how it can be further configured to meet
 your needs.
@@ -160,7 +160,7 @@ cd apache-druid-{{DRUIDVERSION}}
 
 In the package, you should find:
 
-* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
+* `LICENSE` and `NOTICE` files
 * `bin/*` - scripts related to the [single-machine quickstart](index.html)
 * `conf/druid/cluster/*` - template configurations for a clustered setup
 * `extensions/*` - core Druid extensions

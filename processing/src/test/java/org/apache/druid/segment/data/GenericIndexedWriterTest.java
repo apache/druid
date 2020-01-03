@@ -45,7 +45,7 @@ public class GenericIndexedWriterTest
   @Test
   public void writeLargeValueIntoLargeColumn() throws IOException
   {
-    // Regression test for https://github.com/apache/incubator-druid/issues/9027.
+    // Regression test for https://github.com/apache/druid/issues/9027.
 
     final GenericIndexedWriter<String> writer = new GenericIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),

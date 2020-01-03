@@ -1,5 +1,5 @@
 {
-  "upstream": "apache/incubator-druid",
+  "upstream": "apache/druid",
   "branches": [
     { "name": "0.16.0-incubating", "checked": true },
     { "name": "0.17.0-incubating", "checked": true }

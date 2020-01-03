@@ -100,7 +100,7 @@ const siteConfig = {
   gaGtag: true,
   gaTrackingId: 'UA-131010415-1',
 
-  editUrl: 'https://github.com/apache/incubator-druid/edit/master/docs/',
+  editUrl: 'https://github.com/apache/druid/edit/master/docs/',
 
   algolia: {
     apiKey: '2de99082a9f38e49dfaa059bbe4c901d',

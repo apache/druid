@@ -2994,7 +2994,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           type: spec.type,
           spec,
 
-          // A hack to let context be set from the spec can be removed when https://github.com/apache/incubator-druid/issues/8662 is resolved
+          // A hack to let context be set from the spec can be removed when https://github.com/apache/druid/issues/8662 is resolved
           context: (spec as any).context,
         });
       } catch (e) {

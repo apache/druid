@@ -353,7 +353,7 @@ The following monitors are available:
 |`org.apache.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime processes.|
 |`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
-|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/incubator-druid/pull/4973.|
+|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
 
 
 ### Emitting Metrics
@@ -1640,7 +1640,7 @@ Below are the configuration options known to this module:
 
 Here are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run
 
-* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/incubator-druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
+* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
 * `SINGLE_THREAD` Use a single-threaded executor.
 * `SAME_THREAD` Cache maintenance is done eagerly.
 

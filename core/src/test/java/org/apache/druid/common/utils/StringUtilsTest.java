@@ -27,7 +27,7 @@ import org.junit.Test;
  */
 public class StringUtilsTest
 {
-  // copied from https://github.com/apache/incubator-druid/pull/2612
+  // copied from https://github.com/apache/druid/pull/2612
   public static final String[] TEST_STRINGS = new String[]{
       "peach", "péché", "pêche", "sin", "",
       "☃", "C", "c", "Ç", "ç", "G", "g", "Ğ", "ğ", "I", "ı", "İ", "i",

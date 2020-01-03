@@ -24,7 +24,7 @@ sidebar_label: "Loading files natively"
   -->
 
 
-This tutorial demonstrates how to perform a batch file load, using Apache Druid (incubating)'s native batch ingestion.
+This tutorial demonstrates how to perform a batch file load, using Apache Druid's native batch ingestion.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
 the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it

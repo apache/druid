@@ -223,7 +223,7 @@ public class JettyServerModule extends JerseyServletModule
     final Server server = new Server(threadPool);
 
     // Without this bean set, the default ScheduledExecutorScheduler runs as non-daemon, causing lifecycle hooks to fail
-    // to fire on main exit. Related bug: https://github.com/apache/incubator-druid/pull/1627
+    // to fire on main exit. Related bug: https://github.com/apache/druid/pull/1627
     server.addBean(new ScheduledExecutorScheduler("JettyScheduler", true), true);
 
     final List<ServerConnector> serverConnectors = new ArrayList<>();

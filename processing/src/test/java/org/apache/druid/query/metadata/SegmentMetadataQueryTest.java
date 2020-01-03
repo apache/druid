@@ -884,7 +884,7 @@ public class SegmentMetadataQueryTest
             FACTORY.mergeRunners(
                 Execs.directExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
-                //https://github.com/apache/incubator-druid/pull/1172
+                //https://github.com/apache/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
                 Lists.newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
