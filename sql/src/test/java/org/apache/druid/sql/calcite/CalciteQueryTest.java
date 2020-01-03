@@ -2613,6 +2613,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByWithGroupByEmpty() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*), SUM(cnt) FROM druid.foo GROUP BY ()",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new CountAggregatorFactory("a0"),
+                      new LongSumAggregatorFactory("a1", "cnt")
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L, 6L})
+    );
+  }
+
+  @Test
   public void testGroupByWithFilterMatchingNothingWithGroupByLiteral() throws Exception
   {
     // Cannot vectorize due to "longMax" aggregator.
@@ -4892,7 +4913,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ? new CountAggregatorFactory("_a0")
                                 : new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0"),
-                                    not(selector("d1", null, null))
+                                    not(selector("d0", null, null))
                                 )
                             )
                         )
@@ -7551,6 +7572,538 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupingSets() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (dim2, gran), (dim2), (gran), () )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0", "v1"),
+                                ImmutableList.of("v0"),
+                                ImmutableList.of("v1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", timestamp("2000-01-01"), 2L},
+            new Object[]{"", timestamp("2001-01-01"), 1L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L},
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_VALUE, null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithNumericDimension() throws Exception
+  {
+    testQuery(
+        "SELECT cnt, COUNT(*)\n"
+        + "FROM foo\n"
+        + "GROUP BY GROUPING SETS ( (cnt), () )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ValueType.LONG)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 6L},
+            new Object[]{null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByRollup() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY ROLLUP (dim2, gran)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0", "v1"),
+                                ImmutableList.of("v0"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", timestamp("2000-01-01"), 2L},
+            new Object[]{"", timestamp("2001-01-01"), 1L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L},
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_VALUE, null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByCube() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY CUBE (dim2, gran)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0", "v1"),
+                                ImmutableList.of("v0"),
+                                ImmutableList.of("v1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", timestamp("2000-01-01"), 2L},
+            new Object[]{"", timestamp("2001-01-01"), 1L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L},
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_VALUE, null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithDummyDimension() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (dim2, 'dummy', gran), (dim2), (gran), ('dummy') )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v2",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v2", "v2", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0", "v2"),
+                                ImmutableList.of("v0"),
+                                ImmutableList.of(),
+                                ImmutableList.of("v2")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", timestamp("2000-01-01"), 2L},
+            new Object[]{"", timestamp("2001-01-01"), 1L},
+            new Object[]{"a", timestamp("2000-01-01"), 1L},
+            new Object[]{"a", timestamp("2001-01-01"), 1L},
+            new Object[]{"abc", timestamp("2001-01-01"), 1L},
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_VALUE, null, 6L},
+            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsNoSuperset() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    // Note: the grouping sets are reordered in the output of this query, but this is allowed.
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (), (dim2), (gran) )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0"),
+                                ImmutableList.of("v1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", null, 3L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"abc", null, 1L},
+            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_VALUE, null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithOrderByDimension() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (), (dim2), (gran) )\n"
+        + "ORDER BY gran, dim2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0"),
+                                ImmutableList.of("v1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "v1",
+                                        Direction.ASCENDING,
+                                        StringComparators.NUMERIC
+                                    ),
+                                    new OrderByColumnSpec(
+                                        "v0",
+                                        Direction.DESCENDING,
+                                        StringComparators.LEXICOGRAPHIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", null, 1L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"", null, 3L},
+            new Object[]{NULL_VALUE, null, 6L},
+            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithOrderByAggregator() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (), (dim2), (gran) )\n"
+        + "ORDER BY SUM(cnt)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0"),
+                                ImmutableList.of("v1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "a0",
+                                        Direction.ASCENDING,
+                                        StringComparators.NUMERIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", null, 1L},
+            new Object[]{"a", null, 2L},
+            new Object[]{"", null, 3L},
+            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_VALUE, null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithOrderByAggregatorWithLimit() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim2, gran, SUM(cnt)\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, COALESCE(dim2, '') dim2, cnt FROM druid.foo) AS x\n"
+        + "GROUP BY GROUPING SETS ( (), (dim2), (gran) )\n"
+        + "ORDER BY SUM(cnt)\n"
+        + "LIMIT 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'')",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+                                ValueType.LONG
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "v0"),
+                                new DefaultDimensionSpec("v1", "v1", ValueType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("v0"),
+                                ImmutableList.of("v1"),
+                                ImmutableList.of()
+                            )
+                        )
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "a0",
+                                        Direction.ASCENDING,
+                                        StringComparators.NUMERIC
+                                    )
+                                ),
+                                1
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", null, 1L}
+        )
+    );
+  }
+
+  @Test
   public void testUsingSubqueryAsPartOfAndFilter() throws Exception
   {
     testQuery(
@@ -9731,8 +10284,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  
-  
 
   @Test
   public void testQueryContextOuterLimit() throws Exception

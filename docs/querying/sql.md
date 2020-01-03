@@ -63,7 +63,7 @@ Druid SQL supports SELECT queries with the following structure:
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM table
 [ WHERE expr ]
-[ GROUP BY exprs ]
+[ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
@@ -83,6 +83,22 @@ The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINC
 trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). GROUP BY
 can refer to an expression or a select clause ordinal position (like `GROUP BY 2` to group by the second selected
 column).
+
+The GROUP BY clause can also refer to multiple grouping sets in three ways. The most flexible is GROUP BY GROUPING SETS,
+for example `GROUP BY GROUPING SETS ( (country, city), () )`. This example is equivalent to a `GROUP BY country, city`
+followed by `GROUP BY ()` (a grand total). With GROUPING SETS, the underlying data is only scanned one time, leading to
+better efficiency. Second, GROUP BY ROLLUP computes a grouping set for each level of the grouping expressions. For
+example `GROUP BY ROLLUP (country, city)` is equivalent to `GROUP BY GROUPING SETS ( (country, city), (country), () )`
+and will produce grouped rows for each country / city pair, along with subtotals for each country, along with a grand
+total. Finally, GROUP BY CUBE computes a grouping set for each combination of grouping expressions. For example,
+`GROUP BY CUBE (country, city)` is equivalent to `GROUP BY GROUPING SETS ( (country, city), (country), (city), () )`.
+Grouping columns that do not apply to a particular row will contain `NULL`. For example, when computing
+`GROUP BY GROUPING SETS ( (country, city), () )`, the grand total row corresponding to `()` will have `NULL` for the
+"country" and "city" columns.
+
+When using GROUP BY GROUPING SETS, GROUP BY ROLLUP, or GROUP BY CUBE, be aware that results may not be generated in the
+order that you specify your grouping sets in the query. If you need results to be generated in a particular order, use
+the ORDER BY clause.
 
 The HAVING clause refers to columns that are present after execution of GROUP BY. It can be used to filter on either
 grouping expressions or aggregated values. It can only be used together with GROUP BY.

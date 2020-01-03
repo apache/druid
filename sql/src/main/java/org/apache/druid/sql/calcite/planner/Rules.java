@@ -231,8 +231,8 @@ public class Rules
     rules.addAll(SUB_QUERY_REMOVE_RULES);
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {
-      // We'll need this to expand COUNT DISTINCTs.
-      // Avoid AggregateExpandDistinctAggregatesRule.INSTANCE; it uses grouping sets and we don't support those.
+      // For some reason, even though we support grouping sets, using AggregateExpandDistinctAggregatesRule.INSTANCE
+      // here causes CalciteQueryTest#testExactCountDistinctWithGroupingAndOtherAggregators to fail.
       rules.add(AggregateExpandDistinctAggregatesRule.JOIN);
     }
 

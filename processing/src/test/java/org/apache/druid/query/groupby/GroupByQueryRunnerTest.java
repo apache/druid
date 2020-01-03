@@ -414,6 +414,8 @@ public class GroupByQueryRunnerTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
+    NullHandling.initializeForTests();
+
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : testConfigs()) {
       final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = makeQueryRunnerFactory(config);
@@ -7270,38 +7272,13 @@ public class GroupByQueryRunnerTest
         .addOrderByColumn("idx")
         .addOrderByColumn("alias")
         .addOrderByColumn("market")
-        .setLimit(1)
+        .setLimit(3)
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "alias",
-            "technology",
-            "rows",
-            1L,
-            "idx",
-            78L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "spot",
-            "rows",
-            9L,
-            "idx",
-            1102L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "rows",
-            13L,
-            "idx",
-            6619L
-        )
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

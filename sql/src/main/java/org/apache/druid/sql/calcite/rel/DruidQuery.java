@@ -26,7 +26,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import org.apache.calcite.plan.RelOptUtil;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -44,7 +45,6 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -281,6 +281,11 @@ public class DruidQuery
         virtualColumnRegistry
     );
 
+    final Subtotals subtotals = computeSubtotals(
+        partialQuery,
+        rowSignature
+    );
+
     final List<Aggregation> aggregations = computeAggregations(
         partialQuery,
         plannerContext,
@@ -306,33 +311,12 @@ public class DruidQuery
         aggregateRowSignature
     );
 
+    final Grouping grouping = Grouping.create(dimensions, subtotals, aggregations, havingFilter, aggregateRowSignature);
+
     if (aggregateProject == null) {
-      return Grouping.create(dimensions, aggregations, havingFilter, aggregateRowSignature);
+      return grouping;
     } else {
-      final Projection postAggregationProjection = Projection.postAggregation(
-          aggregateProject,
-          plannerContext,
-          aggregateRowSignature,
-          "p"
-      );
-
-      postAggregationProjection.getPostAggregators().forEach(
-          postAggregator -> aggregations.add(Aggregation.create(postAggregator))
-      );
-
-      // Remove literal dimensions that did not appear in the projection. This is useful for queries
-      // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
-      // actually want to include a dimension 'dummy'.
-      final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(aggregateProject.getChildExps(), null);
-      for (int i = dimensions.size() - 1; i >= 0; i--) {
-        final DimensionExpression dimension = dimensions.get(i);
-        if (Parser.parse(dimension.getDruidExpression().getExpression(), plannerContext.getExprMacroTable())
-                  .isLiteral() && !aggregateProjectBits.get(i)) {
-          dimensions.remove(i);
-        }
-      }
-
-      return Grouping.create(dimensions, aggregations, havingFilter, postAggregationProjection.getOutputRowSignature());
+      return grouping.applyProject(plannerContext, aggregateProject);
     }
   }
 
@@ -397,6 +381,38 @@ public class DruidQuery
     }
 
     return dimensions;
+  }
+
+  /**
+   * Builds a {@link Subtotals} object based on {@link Aggregate#getGroupSets()}.
+   */
+  private static Subtotals computeSubtotals(
+      final PartialDruidQuery partialQuery,
+      final RowSignature rowSignature
+  )
+  {
+    final Aggregate aggregate = partialQuery.getAggregate();
+
+    // dimBitMapping maps from input field position to group set position (dimension number).
+    final int[] dimBitMapping = new int[rowSignature.getRowOrder().size()];
+    int i = 0;
+    for (int dimBit : aggregate.getGroupSet()) {
+      dimBitMapping[dimBit] = i++;
+    }
+
+    // Use dimBitMapping to remap groupSets (which is input-field-position based) into subtotals (which is
+    // dimension-list-position based).
+    final List<IntList> subtotals = new ArrayList<>();
+    for (ImmutableBitSet groupSet : aggregate.getGroupSets()) {
+      final IntList subtotal = new IntArrayList();
+      for (int dimBit : groupSet) {
+        subtotal.add(dimBitMapping[dimBit]);
+      }
+
+      subtotals.add(subtotal);
+    }
+
+    return new Subtotals(subtotals);
   }
 
   /**
@@ -662,7 +678,9 @@ public class DruidQuery
   @Nullable
   public TimeseriesQuery toTimeseriesQuery()
   {
-    if (grouping == null || grouping.getHavingFilter() != null) {
+    if (grouping == null
+        || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
+        || grouping.getHavingFilter() != null) {
       return null;
     }
 
@@ -743,9 +761,10 @@ public class DruidQuery
   @Nullable
   public TopNQuery toTopNQuery()
   {
-    // Must have GROUP BY one column, ORDER BY zero or one column, limit less than maxTopNLimit, and no HAVING.
+    // Must have GROUP BY one column, no GROUPING SETS, ORDER BY ≤ 1 column, limit less than maxTopNLimit, no HAVING.
     final boolean topNOk = grouping != null
                            && grouping.getDimensions().size() == 1
+                           && !grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
                            && sorting != null
                            && (sorting.getOrderBys().size() <= 1
                                && sorting.isLimited() && sorting.getLimit() <= plannerContext.getPlannerConfig()
@@ -851,9 +870,12 @@ public class DruidQuery
         postAggregators,
         havingSpec,
         sorting != null
-        ? new DefaultLimitSpec(sorting.getOrderBys(), sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null)
+        ? new DefaultLimitSpec(
+            sorting.getOrderBys(),
+            sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null
+        )
         : NoopLimitSpec.instance(),
-        null,
+        grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }

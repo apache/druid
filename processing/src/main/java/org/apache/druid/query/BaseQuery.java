@@ -269,7 +269,7 @@ public abstract class BaseQuery<T> implements Query<T>
            Objects.equals(dataSource, baseQuery.dataSource) &&
            Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
-           Objects.equals(duration, baseQuery.duration) &&
+           Objects.equals(getDuration(), baseQuery.getDuration()) &&
            Objects.equals(granularity, baseQuery.granularity);
   }
 
@@ -277,6 +277,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public int hashCode()
   {
 
-    return Objects.hash(dataSource, descending, context, querySegmentSpec, duration, granularity);
+    return Objects.hash(dataSource, descending, context, querySegmentSpec, getDuration(), granularity);
   }
 }
