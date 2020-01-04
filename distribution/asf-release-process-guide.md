@@ -291,7 +291,7 @@ To make the staged repo publicly accessible, "Close" the staging repo.
 
 ## Release candidates and voting
 
-Release votes on held on the dev mailing list, dev@druid.apache.org. Druid PMC votes are binding.
+Release votes are held on the dev mailing list, dev@druid.apache.org. Druid PMC votes are binding.
 
 You can use the following template for the release vote thread, replacing values as necessary.
 
