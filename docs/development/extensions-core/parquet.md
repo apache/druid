@@ -23,7 +23,7 @@ title: "Apache Parquet Extension"
   -->
 
 
-This Apache Druid (incubating) module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
+This Apache Druid module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
 Apache Parquet files.
 
 Note: If using the `parquet-avro` parser for Apache Hadoop based indexing, `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to

@@ -27,7 +27,7 @@ title: "Data management"
 
 ## Schema changes
 
-Schemas for datasources can change at any time and Apache Druid (incubating) supports different schemas among segments.
+Schemas for datasources can change at any time and Apache Druid supports different schemas among segments.
 
 ### Replacing segments
 
@@ -151,7 +151,7 @@ data segments loaded in it (or if the interval you specify is empty).
 
 The output segment can have different metadata from the input segments unless all input segments have the same metadata.
 
-- Dimensions: since Apache Druid (incubating) supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
+- Dimensions: since Apache Druid supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
 If the input segments have different dimensions, the output segment basically includes all dimensions of the input segments.
 However, even if the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. For example, the data type of some dimensions can be
 changed from `string` to primitive types, or the order of dimensions can be changed for better locality.
@@ -199,7 +199,7 @@ Druid does not support single-record updates by primary key.
 
 ## Updating existing data
 
-Once you ingest some data in a dataSource for an interval and create Apache Druid (incubating) segments, you might want to make changes to
+Once you ingest some data in a dataSource for an interval and create Apache Druid segments, you might want to make changes to
 the ingested data. There are several ways this can be done.
 
 ### Using lookups
@@ -249,7 +249,7 @@ The Kill Task deletes unused segments within a specified interval from metadata 
 
 For more information, please see [Kill Task](../ingestion/tasks.html#kill).
 
-Permanent deletion of a segment in Apache Druid (incubating) has two steps:
+Permanent deletion of a segment in Apache Druid has two steps:
 
 1. The segment must first be marked as "unused". This occurs when a segment is dropped by retention rules, and when a user manually disables a segment through the Coordinator API.
 2. After segments have been marked as "unused", a Kill Task will delete any "unused" segments from Druid's metadata store as well as deep storage.

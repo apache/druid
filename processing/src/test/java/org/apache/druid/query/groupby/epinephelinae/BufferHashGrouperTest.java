@@ -133,7 +133,7 @@ public class BufferHashGrouperTest
   @Test
   public void testGrowingOverflowingInteger()
   {
-    // This test checks the bug reported in https://github.com/apache/incubator-druid/pull/4333 only when
+    // This test checks the bug reported in https://github.com/apache/druid/pull/4333 only when
     // NullHandling.replaceWithDefault() is true
     if (NullHandling.replaceWithDefault()) {
       final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();

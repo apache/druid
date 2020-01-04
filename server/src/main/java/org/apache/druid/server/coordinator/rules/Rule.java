@@ -60,7 +60,7 @@ public interface Rule
    * For example, {@link org.apache.druid.server.coordinator.ReplicationThrottler} needs to belong only to "RuleParams",
    * but not "DruidCoordinatorHelperParams". The opposite for the collection of used segments.
    *
-   * See https://github.com/apache/incubator-druid/issues/7228
+   * See https://github.com/apache/druid/issues/7228
    */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 }

@@ -24,7 +24,7 @@ sidebar_label: "JavaScript functionality"
   -->
 
 
-This page discusses how to use JavaScript to extend Apache Druid (incubating).
+This page discusses how to use JavaScript to extend Apache Druid.
 
 ## Examples
 

@@ -84,7 +84,7 @@ public class FinalizingFieldAccessPostAggregatorTest
         "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
-    // Check that the class matches exactly; see https://github.com/apache/incubator-druid/issues/6063
+    // Check that the class matches exactly; see https://github.com/apache/druid/issues/6063
     Assert.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
 
     Map<String, Object> metricValues = new HashMap<>();

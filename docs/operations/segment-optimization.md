@@ -23,7 +23,7 @@ title: "Segment Size Optimization"
   -->
 
 
-In Apache Druid (incubating), it's important to optimize the segment size because
+In Apache Druid, it's important to optimize the segment size because
 
   1. Druid stores data in segments. If you're using the [best-effort roll-up](../ingestion/index.md#rollup) mode,
   increasing the segment size might introduce further aggregation which reduces the dataSource size.

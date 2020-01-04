@@ -775,7 +775,7 @@ public class GranularityTest
     }
   }
 
-  @Test // Regression test for https://github.com/apache/incubator-druid/issues/5200.
+  @Test // Regression test for https://github.com/apache/druid/issues/5200.
   public void testIncrementOverSpringForward()
   {
     // Sao Paulo daylight savings time in 2017 starts at midnight. When we spring forward, 00:00:00 doesn't exist.

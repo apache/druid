@@ -53,7 +53,7 @@
 
     <mailingLists>
         <mailingList>
-            <name>Apache Druid (incubating) developers list</name>
+            <name>Apache Druid developers list</name>
             <subscribe>dev-subscribe@druid.apache.org</subscribe>
             <unsubscribe>dev-unsubscribe@druid.apache.org</unsubscribe>
             <post>dev@druid.apache.org</post>
@@ -64,9 +64,9 @@
     <inceptionYear>2011</inceptionYear>
 
     <scm>
-        <connection>scm:git:ssh://git@github.com/apache/incubator-druid.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/apache/incubator-druid.git</developerConnection>
-        <url>https://github.com/apache/incubator-druid.git</url>
+        <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
+        <url>https://github.com/apache/druid.git</url>
         <tag>0.13.0-incubating-SNAPSHOT</tag>
     </scm>
 
@@ -325,7 +325,7 @@
             <dependency>
               <!--
                 ~ TODO: This dependency transitively pulls in org.codehaus.jackson:jackson-mapper.asl.1.9.13 which has
-                ~ security vulnerability CVE-2017-7525. https://github.com/apache/incubator-druid/pull/8177 tracks
+                ~ security vulnerability CVE-2017-7525. https://github.com/apache/druid/pull/8177 tracks
                 ~ upgrading to a newer curator version.
               -->
               <groupId>org.apache.curator</groupId>
@@ -1486,7 +1486,7 @@
                         </goals>
                         <configuration>
                             <properties>
-                                <projectName>Apache Druid (incubating)</projectName>
+                                <projectName>Apache Druid</projectName>
                             </properties>
                             <resourceBundles>
                                 <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
@@ -1533,7 +1533,7 @@
                             -Duser.timezone=UTC
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
-                            <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                            <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
                         <trimStackTrace>false</trimStackTrace>
@@ -1770,7 +1770,7 @@
                             <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
-                                <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                                <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                                 -Ddruid.indexing.doubleStorage=double
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->

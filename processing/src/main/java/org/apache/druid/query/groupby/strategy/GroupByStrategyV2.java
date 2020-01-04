@@ -184,7 +184,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     //  1) It concats query chunks for consecutive intervals, which won't generate correct results.
     //  2) Merging instead of concating isn't a good idea, since it requires all chunks to run simultaneously,
     //     which may take more resources than the cluster has.
-    // See also https://github.com/apache/incubator-druid/pull/4004
+    // See also https://github.com/apache/druid/pull/4004
     return runner;
   }
 
