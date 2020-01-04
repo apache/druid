@@ -48,7 +48,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
     TypeReference<ResultType> resultTypeReference = getResultTypeReference();
     // resultTypeReference is null in MaterializedViewQueryQueryToolChest.
-    // See https://github.com/apache/incubator-druid/issues/6977
+    // See https://github.com/apache/druid/issues/6977
     if (resultTypeReference != null) {
       baseResultType = typeFactory.constructType(resultTypeReference);
       bySegmentResultType = typeFactory.constructParametrizedType(

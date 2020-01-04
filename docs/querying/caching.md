@@ -23,7 +23,7 @@ title: "Query caching"
   -->
 
 
-Apache Druid (incubating) supports query result caching at both the segment and whole-query result level. Cache data can be stored in the
+Apache Druid supports query result caching at both the segment and whole-query result level. Cache data can be stored in the
 local JVM heap or in an external distributed key/value store. In all cases, the Druid cache is a query result cache.
 The only difference is whether the result is a _partial result_ for a particular segment, or the result for an entire
 query. In both cases, the cache is invalidated as soon as any underlying data changes; it will never return a stale

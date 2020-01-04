@@ -143,7 +143,7 @@ public class ExportMetadata extends GuiceRunnable
         // This area is copied from CreateTables.
         // It's unknown why those modules are required in CreateTables, and if all of those modules are required or not.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123602930
+        // See https://github.com/apache/druid/pull/4429#discussion_r123602930
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),

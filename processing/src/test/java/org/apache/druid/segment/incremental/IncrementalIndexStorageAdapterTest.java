@@ -496,7 +496,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testCursorDictionaryRaceConditionFix() throws Exception
   {
-    // Tests the dictionary ID race condition bug described at https://github.com/apache/incubator-druid/pull/6340
+    // Tests the dictionary ID race condition bug described at https://github.com/apache/druid/pull/6340
 
     final IncrementalIndex index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();

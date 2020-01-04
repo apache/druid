@@ -24,7 +24,7 @@ sidebar_label: "Load from Apache Hadoop"
   -->
 
 
-This tutorial shows you how to load data files into Apache Druid (incubating) using a remote Hadoop cluster.
+This tutorial shows you how to load data files into Apache Druid using a remote Hadoop cluster.
 
 For this tutorial, we'll assume that you've already completed the previous
 [batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system and are using the

@@ -81,7 +81,7 @@ public abstract class AbstractIndexerTest
   private void unloadAndKillData(final String dataSource, String start, String end)
   {
     // Wait for any existing index tasks to complete before disabling the datasource otherwise
-    // realtime tasks can get stuck waiting for handoff. https://github.com/apache/incubator-druid/issues/1729
+    // realtime tasks can get stuck waiting for handoff. https://github.com/apache/druid/issues/1729
     waitForAllTasksToComplete();
     Interval interval = Intervals.of(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource);
