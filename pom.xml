@@ -89,14 +89,9 @@
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.12.v20180830</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-<<<<<<< HEAD
-        <jackson.version>2.10.0</jackson.version>
-        <log4j.version>2.5</log4j.version>
-=======
         <jackson.version>2.10.1</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
->>>>>>> 66657012bf50c42b5d847a379f33f8a5bdda2dda
         <netty3.version>3.10.6.Final</netty3.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.42.Final</netty4.version>
