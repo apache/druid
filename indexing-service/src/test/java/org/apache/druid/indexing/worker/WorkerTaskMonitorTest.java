@@ -22,7 +22,6 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
-import com.google.common.io.Files;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -44,6 +43,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -148,7 +148,7 @@ public class WorkerTaskMonitorTest
   private WorkerTaskMonitor createTaskMonitor()
   {
     final TaskConfig taskConfig = new TaskConfig(
-        Files.createTempDir().toString(),
+        FileUtils.createTempDir().toString(),
         null,
         null,
         0,

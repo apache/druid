@@ -22,6 +22,8 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -51,12 +53,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AWSCredentialsConfig awsCredentialsConfig,
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
       @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
-        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
+        getOrMakeId(id, dataSchema.getDataSource(), TYPE),
         taskResource,
         dataSchema,
         tuningConfig,
@@ -127,5 +129,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   public String getType()
   {
     return TYPE;
+  }
+
+  @VisibleForTesting
+  AWSCredentialsConfig getAwsCredentialsConfig()
+  {
+    return awsCredentialsConfig;
   }
 }

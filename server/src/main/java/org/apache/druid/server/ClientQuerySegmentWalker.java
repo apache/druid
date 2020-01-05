@@ -92,7 +92,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    // This does not adhere to the fluent workflow. See https://github.com/apache/incubator-druid/issues/5517
+    // This does not adhere to the fluent workflow. See https://github.com/apache/druid/issues/5517
     return new ResultLevelCachingQueryRunner<>(makeRunner(query, baseClientRunner, toolChest),
                                                toolChest,
                                                query,

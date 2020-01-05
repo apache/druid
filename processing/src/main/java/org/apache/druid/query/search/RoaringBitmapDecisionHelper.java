@@ -22,7 +22,7 @@ package org.apache.druid.query.search;
 public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
   // This value comes from an experiment.
-  // See the discussion at https://github.com/apache/incubator-druid/pull/3792#issuecomment-268331804.
+  // See the discussion at https://github.com/apache/druid/pull/3792#issuecomment-268331804.
   private static final double BITMAP_INTERSECT_COST = 4.5;
   private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
 

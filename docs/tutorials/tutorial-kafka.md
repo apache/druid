@@ -26,7 +26,7 @@ sidebar_label: "Load from Apache Kafka"
 
 ## Getting started
 
-This tutorial demonstrates how to load data into Apache Druid (incubating) from a Kafka stream, using Druid's Kafka indexing service.
+This tutorial demonstrates how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
 the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
@@ -180,60 +180,62 @@ Paste in this spec and click `Submit`.
 ```json
 {
   "type": "kafka",
-  "dataSchema": {
-    "dataSource": "wikipedia",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "time",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": [
-            "channel",
-            "cityName",
-            "comment",
-            "countryIsoCode",
-            "countryName",
-            "isAnonymous",
-            "isMinor",
-            "isNew",
-            "isRobot",
-            "isUnpatrolled",
-            "metroCode",
-            "namespace",
-            "page",
-            "regionIsoCode",
-            "regionName",
-            "user",
-            { "name": "added", "type": "long" },
-            { "name": "deleted", "type": "long" },
-            { "name": "delta", "type": "long" }
-          ]
+  "spec" : {
+    "dataSchema": {
+      "dataSource": "wikipedia",
+      "parser": {
+        "type": "string",
+        "parseSpec": {
+          "format": "json",
+          "timestampSpec": {
+            "column": "time",
+            "format": "auto"
+          },
+          "dimensionsSpec": {
+            "dimensions": [
+              "channel",
+              "cityName",
+              "comment",
+              "countryIsoCode",
+              "countryName",
+              "isAnonymous",
+              "isMinor",
+              "isNew",
+              "isRobot",
+              "isUnpatrolled",
+              "metroCode",
+              "namespace",
+              "page",
+              "regionIsoCode",
+              "regionName",
+              "user",
+              { "name": "added", "type": "long" },
+              { "name": "deleted", "type": "long" },
+              { "name": "delta", "type": "long" }
+            ]
+          }
         }
+      },
+      "metricsSpec" : [],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "NONE",
+        "rollup": false
       }
     },
-    "metricsSpec" : [],
-    "granularitySpec": {
-      "type": "uniform",
-      "segmentGranularity": "DAY",
-      "queryGranularity": "NONE",
-      "rollup": false
-    }
-  },
-  "tuningConfig": {
-    "type": "kafka",
-    "reportParseExceptions": false
-  },
-  "ioConfig": {
-    "topic": "wikipedia",
-    "replicas": 2,
-    "taskDuration": "PT10M",
-    "completionTimeout": "PT20M",
-    "consumerProperties": {
-      "bootstrap.servers": "localhost:9092"
+    "tuningConfig": {
+      "type": "kafka",
+      "reportParseExceptions": false
+    },
+    "ioConfig": {
+      "topic": "wikipedia",
+      "replicas": 2,
+      "taskDuration": "PT10M",
+      "completionTimeout": "PT20M",
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
+      }
     }
   }
 }

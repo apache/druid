@@ -31,14 +31,15 @@ import java.util.Iterator;
  *
  * Only a snapshot of the locations is returned here. The implemntations currently do not handle all kinds of
  * concurrency issues and accesses to the underlying storage. Please see
- * https://github.com/apache/incubator-druid/pull/8038#discussion_r325520829 of PR https://github
- * .com/apache/incubator-druid/pull/8038 for more details.
+ * https://github.com/apache/druid/pull/8038#discussion_r325520829 of PR https://github
+ * .com/apache/druid/pull/8038 for more details.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl =
     LeastBytesUsedStorageLocationSelectorStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "leastBytesUsed", value = LeastBytesUsedStorageLocationSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "random", value = RandomStorageLocationSelectorStrategy.class)
 })
 public interface StorageLocationSelectorStrategy
 {

@@ -279,7 +279,7 @@ public class TaskQueue
           } else if (isTaskPending(task)) {
             // if the taskFutures contain this task and this task is pending, also let the taskRunner
             // to run it to guarantee it will be assigned to run
-            // see https://github.com/apache/incubator-druid/pull/6991
+            // see https://github.com/apache/druid/pull/6991
             taskRunner.run(task);
           }
         }
@@ -387,6 +387,8 @@ public class TaskQueue
    * Shuts down a task if it has not yet finished.
    *
    * @param taskId task to kill
+   * @param reasonFormat A format string indicating the shutdown reason
+   * @param args arguments for reasonFormat
    */
   public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
@@ -397,6 +399,31 @@ public class TaskQueue
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
           notifyStatus(task, TaskStatus.failure(taskId), reasonFormat, args);
+          break;
+        }
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Shuts down a task, but records the task status as a success, unike {@link #shutdown(String, String, Object...)}
+   *
+   * @param taskId task to shutdown
+   * @param reasonFormat A format string indicating the shutdown reason
+   * @param args arguments for reasonFormat
+   */
+  public void shutdownWithSuccess(final String taskId, String reasonFormat, Object... args)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskId, "taskId");
+      for (final Task task : tasks) {
+        if (task.getId().equals(taskId)) {
+          notifyStatus(task, TaskStatus.success(taskId), reasonFormat, args);
           break;
         }
       }

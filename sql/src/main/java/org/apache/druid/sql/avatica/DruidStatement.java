@@ -68,8 +68,8 @@ public class DruidStatement implements Closeable
    * we would not need to use this executor.
    * <p>
    * See discussion at:
-   * https://github.com/apache/incubator-druid/pull/4288
-   * https://github.com/apache/incubator-druid/pull/4415
+   * https://github.com/apache/druid/pull/4288
+   * https://github.com/apache/druid/pull/4415
    */
   private final ExecutorService yielderOpenCloseExecutor;
   private State state = State.NEW;

@@ -22,7 +22,7 @@ package org.apache.druid.storage.google;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -31,7 +31,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 
 public class GoogleDataSegmentPullerTest extends EasyMockSupport
 {
@@ -42,7 +41,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
   public void testDeleteOutputDirectoryWhenErrorIsRaisedPullingSegmentFiles()
       throws IOException, SegmentLoadingException
   {
-    final File outDir = Files.createTempDirectory("druid").toFile();
+    final File outDir = FileUtils.createTempDir();
     try {
       GoogleStorage storage = createMock(GoogleStorage.class);
       final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(

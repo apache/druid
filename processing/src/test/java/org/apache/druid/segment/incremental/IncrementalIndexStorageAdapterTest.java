@@ -64,6 +64,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -83,7 +84,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  */
 @RunWith(Parameterized.class)
-public class IncrementalIndexStorageAdapterTest
+public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingTest
 {
   interface IndexCreator
   {
@@ -495,7 +496,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testCursorDictionaryRaceConditionFix() throws Exception
   {
-    // Tests the dictionary ID race condition bug described at https://github.com/apache/incubator-druid/pull/6340
+    // Tests the dictionary ID race condition bug described at https://github.com/apache/druid/pull/6340
 
     final IncrementalIndex index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();

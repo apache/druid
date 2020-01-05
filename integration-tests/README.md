@@ -36,7 +36,8 @@ Integration Testing Using Docker
 
 For running integration tests using docker there are 2 approaches.
 If your platform supports docker natively, you can simply set `DOCKER_IP`
-environment variable to localhost and skip to [Running tests](#running-tests) section.
+environment variable to localhost and skip to [Running tests](#running-tests) section. Ensure that you have
+at least 4GiB of memory allocated to the docker engine (This can be set under Preferences > Advanced).
 
 ```
 export DOCKER_IP=127.0.0.1

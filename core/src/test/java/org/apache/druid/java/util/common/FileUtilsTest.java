@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -33,6 +34,9 @@ public class FileUtilsTest
 {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testMap() throws IOException
@@ -79,5 +83,60 @@ public class FileUtilsTest
       return null;
     });
     Assert.assertEquals("baz", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
+  }
+
+  @Test
+  public void testCreateTempDir() throws IOException
+  {
+    final File tempDir = FileUtils.createTempDir();
+    try {
+      Assert.assertEquals(
+          new File(System.getProperty("java.io.tmpdir")).toPath(),
+          tempDir.getParentFile().toPath()
+      );
+    }
+    finally {
+      Files.delete(tempDir.toPath());
+    }
+  }
+
+  @Test
+  public void testCreateTempDirNonexistentBase()
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("java.io.tmpdir (/nonexistent) does not exist");
+
+    final String oldJavaTmpDir = System.getProperty("java.io.tmpdir");
+    try {
+      System.setProperty("java.io.tmpdir", "/nonexistent");
+      FileUtils.createTempDir();
+    }
+    finally {
+      System.setProperty("java.io.tmpdir", oldJavaTmpDir);
+    }
+  }
+
+  @Test
+  public void testCreateTempDirUnwritableBase() throws IOException
+  {
+    final File baseDir = FileUtils.createTempDir();
+    try {
+      expectedException.expect(IllegalStateException.class);
+      expectedException.expectMessage("java.io.tmpdir (" + baseDir + ") is not writable");
+
+      final String oldJavaTmpDir = System.getProperty("java.io.tmpdir");
+      try {
+        System.setProperty("java.io.tmpdir", baseDir.getPath());
+        baseDir.setWritable(false);
+        FileUtils.createTempDir();
+      }
+      finally {
+        System.setProperty("java.io.tmpdir", oldJavaTmpDir);
+      }
+    }
+    finally {
+      baseDir.setWritable(true);
+      Files.delete(baseDir.toPath());
+    }
   }
 }

@@ -37,10 +37,13 @@ import java.util.Set;
  */
 public class LifecycleModule implements Module
 {
-  // this scope includes final logging shutdown, so all other handlers in this lifecycle scope should avoid logging in
-  // the 'stop' method, either failing silently or failing violently and throwing an exception causing an ungraceful exit
+  /**
+   * This scope includes final logging shutdown, so all other handlers in this lifecycle scope should avoid logging in
+   * their stop() method, either failing silently or failing violently and throwing an exception causing an ungraceful
+   * exit.
+   */
   private final LifecycleScope initScope = new LifecycleScope(Lifecycle.Stage.INIT);
-  private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
+  private final LifecycleScope normalScope = new LifecycleScope(Lifecycle.Stage.NORMAL);
   private final LifecycleScope serverScope = new LifecycleScope(Lifecycle.Stage.SERVER);
   private final LifecycleScope annoucementsScope = new LifecycleScope(Lifecycle.Stage.ANNOUNCEMENTS);
 
@@ -118,7 +121,7 @@ public class LifecycleModule implements Module
     getEagerBinder(binder); // Load up the eager binder so that it will inject the empty set at a minimum.
 
     binder.bindScope(ManageLifecycleInit.class, initScope);
-    binder.bindScope(ManageLifecycle.class, scope);
+    binder.bindScope(ManageLifecycle.class, normalScope);
     binder.bindScope(ManageLifecycleServer.class, serverScope);
     binder.bindScope(ManageLifecycleAnnouncements.class, annoucementsScope);
   }
@@ -141,7 +144,7 @@ public class LifecycleModule implements Module
       }
     };
     initScope.setLifecycle(lifecycle);
-    scope.setLifecycle(lifecycle);
+    normalScope.setLifecycle(lifecycle);
     serverScope.setLifecycle(lifecycle);
     annoucementsScope.setLifecycle(lifecycle);
 

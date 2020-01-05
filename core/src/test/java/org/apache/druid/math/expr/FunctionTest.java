@@ -21,11 +21,12 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class FunctionTest
+public class FunctionTest extends InitializedNullHandlingTest
 {
   private Expr.ObjectBinding bindings;
 

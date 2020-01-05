@@ -28,12 +28,8 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.17.0-incubating-SNAPSHOT</version>
+        <version>0.18.0-SNAPSHOT</version>
     </parent>
-
-    <properties>
-        <apache.kafka.version>2.1.0</apache.kafka.version>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -183,6 +179,10 @@
             <artifactId>log4j-slf4j-impl</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -251,6 +251,13 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -26,6 +26,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.UUIDUtils;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,6 +47,7 @@ import java.net.URI;
 import java.util.Map;
 
 /**
+ *
  */
 public class HdfsDataSegmentPusher implements DataSegmentPusher
 {
@@ -55,11 +57,15 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final ObjectMapper jsonMapper;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
-  // Please see https://github.com/apache/incubator-druid/pull/5684
+  // Please see https://github.com/apache/druid/pull/5684
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
   @Inject
-  public HdfsDataSegmentPusher(HdfsDataSegmentPusherConfig config, Configuration hadoopConfig, ObjectMapper jsonMapper)
+  public HdfsDataSegmentPusher(
+      HdfsDataSegmentPusherConfig config,
+      @Hdfs Configuration hadoopConfig,
+      ObjectMapper jsonMapper
+  )
   {
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
@@ -77,8 +83,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           }
         }
     );
-
-    log.info("Configured HDFS as deep storage");
   }
 
   @Deprecated
@@ -101,7 +105,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
     final String storageDir = this.getStorageDir(segment, false);
 
-    log.info(
+    log.debug(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getId(),
         fullyQualifiedStorageDirectory.get(),
@@ -118,7 +122,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
 
     fs.mkdirs(tmpIndexFile.getParent());
-    log.info("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
+    log.debug("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
 
     final long size;
     final DataSegment dataSegment;

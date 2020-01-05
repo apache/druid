@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 public class LongVectorValueMatcher implements VectorValueMatcherFactory
 {
   private final VectorValueSelector selector;
+  private final boolean canHaveNulls = !NullHandling.replaceWithDefault();
 
   public LongVectorValueMatcher(final VectorValueSelector selector)
   {
@@ -38,6 +40,10 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
+    if (value == null && canHaveNulls) {
+      return makeNullValueMatcher(selector);
+    }
+
     final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
 
     if (matchVal == null) {

@@ -19,14 +19,13 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
@@ -34,13 +33,16 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -58,6 +60,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -148,6 +151,10 @@ public class GroupByBenchmark
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
 
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private File tmpDir;
   private IncrementalIndex anIncrementalIndex;
   private List<QueryableIndex> queryableIndexes;
@@ -162,7 +169,11 @@ public class GroupByBenchmark
   static {
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
-        JSON_MAPPER,
+        JSON_MAPPER.setInjectableValues(
+            new InjectableValues.Std()
+                .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+                .addValue(ObjectMapper.class.getName(), JSON_MAPPER)
+        ),
         new ColumnConfig()
         {
           @Override
@@ -387,6 +398,34 @@ public class GroupByBenchmark
       simpleFloatQueries.put("A", queryA);
     }
     SCHEMA_QUERY_MAP.put("simpleFloat", simpleFloatQueries);
+
+    // simple one column schema, for testing performance difference between querying on numeric values as Strings and
+    // directly as longs
+    Map<String, GroupByQuery> nullQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo nullSchema = BenchmarkSchemas.SCHEMA_MAP.get("nulls");
+
+    { // simple-null
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(nullSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new DoubleSumAggregatorFactory(
+          "doubleSum",
+          "doubleZipf"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(new DefaultDimensionSpec("stringZipf", "stringZipf", ValueType.STRING))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .setContext(ImmutableMap.of("vectorize", vectorize))
+          .build();
+
+      nullQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("nulls", nullQueries);
   }
 
   @Setup(Level.Trial)
@@ -414,7 +453,7 @@ public class GroupByBenchmark
         rowsPerSegment
     );
 
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     log.info("Using temp dir: %s", tmpDir.getAbsolutePath());
 
     // queryableIndexes   -> numSegments worth of on-disk segments
@@ -545,6 +584,7 @@ public class GroupByBenchmark
     return new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
+                .withDimensionsSpec(schemaInfo.getDimensionsSpec())
                 .withMetrics(schemaInfo.getAggsArray())
                 .withRollup(withRollup)
                 .build()

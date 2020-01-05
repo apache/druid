@@ -113,7 +113,7 @@ public interface GroupByStrategy
   @Nullable
   default BinaryOperator<ResultRow> createMergeFn(Query<ResultRow> query)
   {
-    throw new UOE("%s doesn't provide a merge function", this.getClass().getName());
+    return null;
   }
 
   /**

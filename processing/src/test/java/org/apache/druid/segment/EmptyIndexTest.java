@@ -21,8 +21,8 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;

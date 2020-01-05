@@ -117,6 +117,7 @@ public class EmitterTest
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(timeInMillis)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setFlushCount(Integer.MAX_VALUE)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(
@@ -132,6 +133,7 @@ public class EmitterTest
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setFlushCount(size)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(
@@ -150,6 +152,10 @@ public class EmitterTest
     props.setProperty("org.apache.druid.java.util.emitter.recipientBaseUrl", TARGET_URL);
     props.setProperty("org.apache.druid.java.util.emitter.flushMillis", String.valueOf(Long.MAX_VALUE));
     props.setProperty("org.apache.druid.java.util.emitter.flushCount", String.valueOf(size));
+    props.setProperty(
+        "org.apache.druid.java.util.emitter.flushTimeOut",
+        String.valueOf(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
+    );
 
     Lifecycle lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, JSON_MAPPER, lifecycle);
@@ -167,6 +173,7 @@ public class EmitterTest
         .setFlushMillis(Long.MAX_VALUE)
         .setFlushCount(size)
         .setContentEncoding(encoding)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(
         config,
@@ -182,6 +189,7 @@ public class EmitterTest
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
         .setFlushCount(Integer.MAX_VALUE)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setBasicAuthentication(authentication)
         .setBatchingStrategy(BatchingStrategy.NEWLINES)
         .setMaxBatchSize(1024 * 1024)
@@ -200,6 +208,7 @@ public class EmitterTest
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
         .setFlushCount(Integer.MAX_VALUE)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setMaxBatchSize(batchSize)
         .build();
     HttpPostEmitter emitter = new HttpPostEmitter(

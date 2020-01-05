@@ -25,7 +25,7 @@ title: "MiddleManager Process"
 
 ### Configuration
 
-For Apache Druid (incubating) MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.html#middlemanager-and-peons).
+For Apache Druid MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.html#middlemanager-and-peons).
 
 ### HTTP endpoints
 

@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.CloserRule;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -56,9 +57,8 @@ import java.util.List;
 /**
  */
 @RunWith(Parameterized.class)
-public class IncrementalIndexTest
+public class IncrementalIndexTest extends InitializedNullHandlingTest
 {
-
   interface IndexCreator
   {
     IncrementalIndex createIndex();

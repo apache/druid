@@ -27,6 +27,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
 {
@@ -68,11 +69,32 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   // For backwards compatibility
-  @Deprecated
   @JsonProperty
-  public SeekableStreamDataSourceMetadata getPreviousCheckPoint()
+  private SeekableStreamDataSourceMetadata getPreviousCheckPoint()
   {
     return checkpointMetadata;
+  }
+
+  // For backwards compatibility
+  @JsonProperty
+  private SeekableStreamDataSourceMetadata getCurrentCheckPoint()
+  {
+    return checkpointMetadata;
+  }
+
+  /**
+   * This method is for backwards compatibility to add the missing property (sequenceName) in serialized JSON,
+   * so rolling-updates from older versions are compatible, a dummy value is returned since the value is not
+   * used in any production code as long as the json property is present
+   *
+   * TODO : this should be removed when we don't need rolling-update compatibility with version 0.15 or earlier anymore
+   *
+   * @return dummy value
+   */
+  @JsonProperty("sequenceName")
+  private String getBaseSequenceName()
+  {
+    return "dummy";
   }
 
   @JsonProperty
@@ -114,4 +136,39 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
            ", checkpointMetadata=" + checkpointMetadata +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    CheckPointDataSourceMetadataAction that = (CheckPointDataSourceMetadataAction) o;
+    if (!supervisorId.equals(that.supervisorId)) {
+      return false;
+    }
+    if (taskGroupId != that.taskGroupId) {
+      return false;
+    }
+
+    if (!Objects.equals(checkpointMetadata, that.checkpointMetadata)) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        supervisorId,
+        taskGroupId,
+        checkpointMetadata
+    );
+  }
+
 }

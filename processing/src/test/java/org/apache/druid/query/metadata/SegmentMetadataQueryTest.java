@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -73,6 +74,10 @@ import java.util.concurrent.Executors;
 @RunWith(Parameterized.class)
 public class SegmentMetadataQueryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final SegmentMetadataQueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -879,7 +884,7 @@ public class SegmentMetadataQueryTest
             FACTORY.mergeRunners(
                 Execs.directExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
-                //https://github.com/apache/incubator-druid/pull/1172
+                //https://github.com/apache/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
                 Lists.newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )

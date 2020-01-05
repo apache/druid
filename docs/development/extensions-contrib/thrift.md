@@ -23,7 +23,7 @@ title: "Thrift"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-thrift-extensions`.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-thrift-extensions`.
 
 This extension enables Druid to ingest thrift compact data online (`ByteBuffer`) and offline (SequenceFile of type `<Writable, BytesWritable>` or LzoThriftBlock File).
 

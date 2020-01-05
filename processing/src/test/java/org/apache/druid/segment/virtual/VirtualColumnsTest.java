@@ -49,6 +49,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,7 +59,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
-public class VirtualColumnsTest
+public class VirtualColumnsTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

@@ -23,7 +23,7 @@ sidebar_label: "Hadoop-based"
   ~ under the License.
   -->
 
-Apache Hadoop-based batch ingestion in Apache Druid (incubating) is supported via a Hadoop-ingestion task. These tasks can be posted to a running
+Apache Hadoop-based batch ingestion in Apache Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
 instance of a Druid [Overlord](../design/overlord.md). Please refer to our [Hadoop-based vs. native batch comparison table](index.md#batch) for
 comparisons between Hadoop-based, native batch (simple), and native batch (parallel) ingestion.
 
@@ -366,7 +366,7 @@ The configuration options are:
 |type|Type of partitionSpec to be used.|"single_dim"|
 |targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
 |targetPartitionSize|Deprecated. Renamed to `targetRowsPerSegment`. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|no|
-|maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetPartitionSize`.|no|
+|maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetRowsPerSegment`.|no|
 |maxPartitionSize|Deprecated. Use `maxRowsPerSegment` instead. Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetPartitionSize`.|no|
 |partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|no|
@@ -448,7 +448,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop
 
 ### Options
 
-- "--coordinate" - provide a version of Apache Hadoop to use. This property will override the default Hadoop coordinates. Once specified, Apache Druid (incubating) will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`.
+- "--coordinate" - provide a version of Apache Hadoop to use. This property will override the default Hadoop coordinates. Once specified, Apache Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`.
 - "--no-default-hadoop" - don't pull down the default hadoop version
 
 ### Spec file

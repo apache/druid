@@ -23,7 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;
@@ -49,12 +49,12 @@ public class ITSystemTableQueryTest
   public void before()
   {
     // ensure that wikipedia segments are loaded completely
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
     );
 
     // ensure that the twitter segments are loaded completely
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded(TWITTER_DATA_SOURCE), "twitter segment load"
     );
   }

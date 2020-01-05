@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`popover text matches snapshot 1`] = `
+<div
+  class="popover-text"
+>
+  Hello world
+</div>
+`;

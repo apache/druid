@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * This aggregator builds sketches from raw data.
  * The input is in the form of a key and array of double values.
- * The output is {@link com.yahoo.sketches.tuple.ArrayOfDoublesSketch}.
+ * The output is {@link org.apache.datasketches.tuple.ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 {
@@ -61,7 +61,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   /**
    * This method uses synchronization because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
-   * https://github.com/apache/incubator-druid/pull/3956
+   * https://github.com/apache/druid/pull/3956
    */
   @Override
   public void aggregate()
@@ -81,7 +81,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   /**
    * This method uses synchronization because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
-   * https://github.com/apache/incubator-druid/pull/3956
+   * https://github.com/apache/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
    * aggregate() calls

@@ -20,15 +20,38 @@
 package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.util.Map;
 
-public class JacksonUtils
+public final class JacksonUtils
 {
-  public static final TypeReference<Map<String, Object>> TYPE_REFERENCE_MAP_STRING_OBJECT = new TypeReference<Map<String, Object>>()
+  public static final TypeReference<Map<String, Object>> TYPE_REFERENCE_MAP_STRING_OBJECT =
+      new TypeReference<Map<String, Object>>()
+      {
+      };
+  public static final TypeReference<Map<String, String>> TYPE_REFERENCE_MAP_STRING_STRING =
+      new TypeReference<Map<String, String>>()
+      {
+      };
+  public static final TypeReference<Map<String, Boolean>> TYPE_REFERENCE_MAP_STRING_BOOLEAN =
+      new TypeReference<Map<String, Boolean>>()
+      {
+      };
+
+  /** Silences Jackson's {@link IOException}. */
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, Class<T> valueClass)
   {
-  };
-  public static final TypeReference<Map<String, String>> TYPE_REFERENCE_MAP_STRING_STRING = new TypeReference<Map<String, String>>()
+    try {
+      return mapper.readValue(bytes, valueClass);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private JacksonUtils()
   {
-  };
+  }
 }

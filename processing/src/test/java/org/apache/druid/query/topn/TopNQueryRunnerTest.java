@@ -4292,19 +4292,6 @@ public class TopNQueryRunnerTest
     return runWithMerge(query, ResponseContext.createEmpty());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, ResponseContext context)
-  {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
-    final QueryRunner<Result<TopNResultValue>> _runner = new FinalizeResultsQueryRunner(
-        chest.mergeResults(chest.preMergeQueryDecoration(runner)),
-        chest
-    );
-    return _runner.run(QueryPlus.wrap(query), context);
-  }
-
   @Test
   public void testTopNWithExtractionFilterNoExistingValue()
   {
@@ -5726,7 +5713,7 @@ public class TopNQueryRunnerTest
   @Test
   public void testFullOnTopNBoundFilterAndLongSumMetric()
   {
-    // this tests the stack overflow issue from https://github.com/apache/incubator-druid/issues/4628
+    // this tests the stack overflow issue from https://github.com/apache/druid/issues/4628
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -5757,7 +5744,7 @@ public class TopNQueryRunnerTest
   }
 
   /**
-   * Regression test for https://github.com/apache/incubator-druid/issues/5132
+   * Regression test for https://github.com/apache/druid/issues/5132
    */
   @Test
   public void testTopNWithNonBitmapFilter()

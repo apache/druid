@@ -23,12 +23,13 @@ import org.junit.Test;
 
 public class LoggerTest
 {
+  private final Logger log = new Logger(LoggerTest.class);
+
   @SuppressWarnings("MalformedFormatString")
   @Test
   public void testLogWithCrazyMessages()
   {
     final String message = "this % might %d kill %*.s the %s parser";
-    final Logger log = new Logger(LoggerTest.class);
     log.warn(message);
   }
 
@@ -36,10 +37,17 @@ public class LoggerTest
   @Test
   public void testLegacyLogging()
   {
-    final Logger log = new Logger(LoggerTest.class);
     final Throwable throwable = new Throwable();
     // These should show up in an IDE as deprecated, but shouldn't actually fail.
     log.error("foo", throwable);
     log.warn("foo", throwable);
+  }
+
+  @Test
+  public void testErrorExceptions()
+  {
+    log.noStackTrace().error(new RuntimeException("beep"), "Feel the hatred of %d years", 10000);
+    log.noStackTrace().error(new RuntimeException("beep"), "");
+    log.error(new RuntimeException("beep"), "An exception");
   }
 }

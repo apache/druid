@@ -94,8 +94,8 @@ public class JavaScriptPostAggregator implements PostAggregator
    * in {@link #compile(String)} without worrying about final modifiers
    * on the fields of the created object
    *
-   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
-   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
+   * @see <a href="https://github.com/apache/druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/druid/pull/6662#discussion_r237013157</a>
    */
   @MonotonicNonNull
   private volatile Function fn;

@@ -37,7 +37,12 @@ public interface ValueMatcher extends HotLoopCallee
   boolean matches();
 
   // Utility method to match null values.
-  static ValueMatcher nullValueMatcher(BaseNullableColumnValueSelector selector)
+
+  /**
+   * Returns a ValueMatcher that matches when the primitive long, double, or float value from {@code selector}
+   * should be treated as null.
+   */
+  static ValueMatcher primitiveNullValueMatcher(BaseNullableColumnValueSelector selector)
   {
     return new ValueMatcher()
     {

@@ -27,6 +27,7 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
@@ -87,9 +88,7 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   private GoogleByteSource createGoogleByteSource(GoogleBlob object)
   {
     final String bucket = object.getBucket();
-    final String path = object.getPath().startsWith("/")
-                        ? object.getPath().substring(1)
-                        : object.getPath();
+    final String path = StringUtils.maybeRemoveLeadingSlash(object.getPath());
 
     return new GoogleByteSource(storage, bucket, path);
   }

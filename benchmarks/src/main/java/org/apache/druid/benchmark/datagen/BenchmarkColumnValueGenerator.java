@@ -116,6 +116,13 @@ public class BenchmarkColumnValueGenerator
           ret = Long.parseLong(input.toString());
         }
         break;
+      case DOUBLE:
+        if (input instanceof Number) {
+          ret = ((Number) input).doubleValue();
+        } else {
+          ret = Double.parseDouble(input.toString());
+        }
+        break;
       case FLOAT:
         if (input instanceof Number) {
           ret = ((Number) input).floatValue();

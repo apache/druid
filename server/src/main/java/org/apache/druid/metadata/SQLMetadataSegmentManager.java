@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -65,6 +66,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -313,7 +315,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       // isPollingDatabasePeriodically() to ensure that when stopPollingDatabasePeriodically() exits, poll() won't
       // actually run anymore after that (it could only enter the synchronized section and exit immediately because the
       // localStartedOrder doesn't match the new currentStartPollingOrder). It's needed to avoid flakiness in
-      // SqlSegmentsMetadataTest. See https://github.com/apache/incubator-druid/issues/6028
+      // SqlSegmentsMetadataTest. See https://github.com/apache/druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopPollLock.readLock();
       lock.lock();
       try {
@@ -503,20 +505,17 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           }
           query = query
               .map((int index, ResultSet resultSet, StatementContext context) -> {
-                try {
-                  DataSegment segment = jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
-                  if (resultSet.getBoolean("used")) {
-                    usedSegmentsOverlappingInterval.add(segment);
-                  } else {
-                    if (interval == null || interval.contains(segment.getInterval())) {
-                      unusedSegmentsInInterval.add(segment);
-                    }
+                DataSegment segment =
+                    JacksonUtils.readValue(jsonMapper, resultSet.getBytes("payload"), DataSegment.class);
+                if (resultSet.getBoolean("used")) {
+                  usedSegmentsOverlappingInterval.add(segment);
+                } else {
+                  if (interval == null || interval.contains(segment.getInterval())) {
+                    unusedSegmentsInInterval.add(segment);
                   }
-                  return null;
                 }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                //noinspection ReturnOfNull: intentional, consume() call below doesn't use the results.
+                return null;
               });
           // Consume the query results to ensure usedSegmentsOverlappingInterval and unusedSegmentsInInterval are
           // populated.
@@ -670,14 +669,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .bind("dataSource", dataSource)
               .bind("start", interval.getStart().toString())
               .bind("end", interval.getEnd().toString())
-              .map((int index, ResultSet resultSet, StatementContext context) -> {
-                try {
-                  return jsonMapper.readValue(resultSet.getBytes("payload"), DataSegment.class);
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              })
+              .map((int index, ResultSet resultSet, StatementContext context) ->
+                       JacksonUtils.readValue(jsonMapper, resultSet.getBytes("payload"), DataSegment.class)
+              )
               .iterator();
           return StreamSupport.stream(segmentResultIterable.spliterator(), false);
         })
@@ -879,14 +873,14 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public Collection<String> retrieveAllDataSourceNames()
+  public Set<String> retrieveAllDataSourceNames()
   {
     return connector.getDBI().withHandle(
         handle -> handle
             .createQuery(StringUtils.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable()))
             .fold(
-                new ArrayList<>(),
-                (List<String> druidDataSources,
+                new HashSet<>(),
+                (Set<String> druidDataSources,
                  Map<String, Object> stringObjectMap,
                  FoldController foldController,
                  StatementContext statementContext) -> {

@@ -249,7 +249,7 @@ public class QueryResource implements QueryCountStatsProvider
                     }
                     catch (Exception ex) {
                       e = ex;
-                      log.error(ex, "Unable to send query response.");
+                      log.noStackTrace().error(ex, "Unable to send query response.");
                       throw new RuntimeException(ex);
                     }
                     finally {
@@ -276,7 +276,7 @@ public class QueryResource implements QueryCountStatsProvider
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        //Limit the response-context header, see https://github.com/apache/incubator-druid/issues/2331
+        //Limit the response-context header, see https://github.com/apache/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
         //and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
@@ -319,9 +319,9 @@ public class QueryResource implements QueryCountStatsProvider
       failedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
 
-      log.makeAlert(e, "Exception handling request")
-         .addData("exception", e.toString())
-         .addData("query", query != null ? query.toString() : "unparseable query")
+      log.noStackTrace()
+         .makeAlert(e, "Exception handling request")
+         .addData("query", query != null ? jsonMapper.writeValueAsString(query) : "unparseable query")
          .addData("peer", req.getRemoteAddr())
          .emit();
 

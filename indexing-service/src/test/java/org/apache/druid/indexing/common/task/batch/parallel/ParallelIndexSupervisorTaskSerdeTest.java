@@ -19,18 +19,17 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -48,6 +47,7 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -57,7 +57,6 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -66,6 +65,7 @@ import java.util.Map;
 public class ParallelIndexSupervisorTaskSerdeTest
 {
   private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
+  private static final List<Interval> INTERVALS = Collections.singletonList(Intervals.of("2018/2019"));
 
   private static ObjectMapper createObjectMapper()
   {
@@ -86,7 +86,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
     ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
         .ingestionSpec(
             new ParallelIndexIngestionSpecBuilder()
-                .inputIntervals(Collections.singletonList(Intervals.of("2018/2019")))
+                .inputIntervals(INTERVALS)
                 .build()
         )
         .build();
@@ -115,11 +115,11 @@ public class ParallelIndexSupervisorTaskSerdeTest
   }
 
   @Test
-  public void forceGuaranteedRollupWithMissingNumShards()
+  public void forceGuaranteedRollupWithHashPartitionsMissingNumShards()
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec"
+        "forceGuaranteedRollup is incompatible with partitionsSpec: numShards must be specified"
     );
 
     Integer numShards = null;
@@ -128,9 +128,64 @@ public class ParallelIndexSupervisorTaskSerdeTest
             new ParallelIndexIngestionSpecBuilder()
                 .forceGuaranteedRollup(true)
                 .partitionsSpec(new HashedPartitionsSpec(null, numShards, null))
+                .inputIntervals(INTERVALS)
                 .build()
         )
         .build();
+  }
+
+  @Test
+  public void forceGuaranteedRollupWithHashPartitionsValid()
+  {
+    Integer numShards = 2;
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
+        .ingestionSpec(
+            new ParallelIndexIngestionSpecBuilder()
+                .forceGuaranteedRollup(true)
+                .partitionsSpec(new HashedPartitionsSpec(null, numShards, null))
+                .inputIntervals(INTERVALS)
+                .build()
+        )
+        .build();
+
+    PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
+    Assert.assertThat(partitionsSpec, CoreMatchers.instanceOf(HashedPartitionsSpec.class));
+  }
+
+  @Test
+  public void forceGuaranteedRollupWithSingleDimPartitionsMissingDimension()
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage(
+        "forceGuaranteedRollup is incompatible with partitionsSpec: partitionDimension must be specified"
+    );
+
+    new ParallelIndexSupervisorTaskBuilder()
+        .ingestionSpec(
+            new ParallelIndexIngestionSpecBuilder()
+                .forceGuaranteedRollup(true)
+                .partitionsSpec(new SingleDimensionPartitionsSpec(1, null, null, true))
+                .inputIntervals(INTERVALS)
+                .build()
+        )
+        .build();
+  }
+
+  @Test
+  public void forceGuaranteedRollupWithSingleDimPartitionsValid()
+  {
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
+        .ingestionSpec(
+            new ParallelIndexIngestionSpecBuilder()
+                .forceGuaranteedRollup(true)
+                .partitionsSpec(new SingleDimensionPartitionsSpec(1, null, "a", true))
+                .inputIntervals(INTERVALS)
+                .build()
+        )
+        .build();
+
+    PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
+    Assert.assertThat(partitionsSpec, CoreMatchers.instanceOf(SingleDimensionPartitionsSpec.class));
   }
 
   private static class ParallelIndexSupervisorTaskBuilder
@@ -171,29 +226,15 @@ public class ParallelIndexSupervisorTaskSerdeTest
 
   private static class ParallelIndexIngestionSpecBuilder
   {
-    private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-        new TimestampSpec(
-            "ts",
-            "auto",
-            null
-        ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
-        null,
-        Arrays.asList("ts", "dim", "val"),
-        false,
-        0
+    private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
+    private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
     );
 
-    private static final TypeReference<Map<String, Object>> PARSER_TYPE = new TypeReference<Map<String, Object>>()
-    {
-    };
-
     private final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        new LocalFirehoseFactory(new File("tmp"), "test_*", null),
+        null,
+        new LocalInputSource(new File("tmp"), "test_*"),
+        new CsvInputFormat(Arrays.asList("ts", "dim", "val"), null, null, false, 0),
         false
     );
 
@@ -207,6 +248,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
     @Nullable
     PartitionsSpec partitionsSpec = null;
 
+    @SuppressWarnings("SameParameterValue")
     ParallelIndexIngestionSpecBuilder inputIntervals(List<Interval> inputIntervals)
     {
       this.inputIntervals = inputIntervals;
@@ -230,16 +272,13 @@ public class ParallelIndexSupervisorTaskSerdeTest
     {
       DataSchema dataSchema = new DataSchema(
           "dataSource",
-          OBJECT_MAPPER.convertValue(
-              new StringInputRowParser(PARSE_SPEC, null),
-              PARSER_TYPE
-          ),
+          TIMESTAMP_SPEC,
+          DIMENSIONS_SPEC,
           new AggregatorFactory[]{
               new LongSumAggregatorFactory("val", "val")
           },
           new UniformGranularitySpec(Granularities.DAY, Granularities.MINUTE, inputIntervals),
-          null,
-          OBJECT_MAPPER
+          null
       );
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(

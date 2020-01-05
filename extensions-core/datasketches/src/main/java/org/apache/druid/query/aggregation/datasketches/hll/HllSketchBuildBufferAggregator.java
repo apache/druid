@@ -20,12 +20,12 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.google.common.util.concurrent.Striped;
-import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.hll.HllSketch;
-import com.yahoo.sketches.hll.TgtHllType;
-import com.yahoo.sketches.hll.Union;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.TgtHllType;
+import org.apache.datasketches.hll.Union;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -217,7 +217,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     inspector.visit("selector", selector);
     // lgK should be inspected because different execution paths exist in HllSketch.update() that is called from
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
-    // See https://github.com/apache/incubator-druid/pull/6893#discussion_r250726028
+    // See https://github.com/apache/druid/pull/6893#discussion_r250726028
     inspector.visit("lgK", lgK);
   }
 }

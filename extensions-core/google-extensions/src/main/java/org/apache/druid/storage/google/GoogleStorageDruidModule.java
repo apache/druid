@@ -30,6 +30,7 @@ import com.google.api.services.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
 import org.apache.druid.firehose.google.StaticGoogleBlobStoreFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -41,7 +42,7 @@ import java.util.List;
 
 public class GoogleStorageDruidModule implements DruidModule
 {
-  public static final String SCHEME = "google";
+  static final String SCHEME = "google";
   private static final Logger LOG = new Logger(GoogleStorageDruidModule.class);
   private static final String APPLICATION_NAME = "druid-google-extensions";
 
@@ -72,7 +73,9 @@ public class GoogleStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(StaticGoogleBlobStoreFirehoseFactory.class, "static-google-blobstore"))
+            new NamedType(StaticGoogleBlobStoreFirehoseFactory.class, "static-google-blobstore"),
+            new NamedType(GoogleCloudStorageInputSource.class, SCHEME)
+        )
     );
   }
 

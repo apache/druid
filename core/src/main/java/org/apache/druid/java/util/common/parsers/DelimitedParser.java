@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
    * Copied from Guava's {@link Splitter#splitToList(CharSequence)}.
    * This is to avoid the error of the missing method signature when using an old Guava library.
    * For example, it may happen when running Druid Hadoop indexing jobs, since we may inherit the version provided by
-   * the Hadoop cluster. See https://github.com/apache/incubator-druid/issues/6801.
+   * the Hadoop cluster. See https://github.com/apache/druid/issues/6801.
    */
   private List<String> splitToList(String input)
   {
@@ -94,7 +95,12 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
     List<String> result = new ArrayList<String>();
 
     while (iterator.hasNext()) {
-      result.add(iterator.next());
+      String splitValue = iterator.next();
+      if (!NullHandling.replaceWithDefault() && splitValue.isEmpty()) {
+        result.add(null);
+      } else {
+        result.add(splitValue);
+      }
     }
 
     return Collections.unmodifiableList(result);

@@ -138,12 +138,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
         final String typeName = agg.getTypeName();
-        boolean isComplexMetric =
+        final boolean isComplexMetric =
             GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) == null ||
             typeName.equalsIgnoreCase(ValueType.COMPLEX.name());
+
+        final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
+
         if (!isComplexMetric || !deserializeComplexMetrics) {
-          return baseSelectorFactory.makeColumnValueSelector(column);
+          return selector;
         } else {
+          // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
+          // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
+          // has worked so far.
+
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", typeName);
@@ -155,31 +162,25 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             @Override
             public boolean isNull()
             {
-              return in.get().getMetric(column) == null;
+              return selector.isNull();
             }
 
             @Override
             public long getLong()
             {
-              Number metric = in.get().getMetric(column);
-              assert NullHandling.replaceWithDefault() || metric != null;
-              return DimensionHandlerUtils.nullToZero(metric).longValue();
+              return selector.getLong();
             }
 
             @Override
             public float getFloat()
             {
-              Number metric = in.get().getMetric(column);
-              assert NullHandling.replaceWithDefault() || metric != null;
-              return DimensionHandlerUtils.nullToZero(metric).floatValue();
+              return selector.getFloat();
             }
 
             @Override
             public double getDouble()
             {
-              Number metric = in.get().getMetric(column);
-              assert NullHandling.replaceWithDefault() || metric != null;
-              return DimensionHandlerUtils.nullToZero(metric).doubleValue();
+              return selector.getDouble();
             }
 
             @Override
@@ -192,6 +193,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             @Override
             public Object getObject()
             {
+              // Here is where the magic happens: read from "in" directly, don't go through the normal "selector".
               return extractor.extractValue(in.get(), column, agg);
             }
 
@@ -199,6 +201,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
               inspector.visit("in", in);
+              inspector.visit("selector", selector);
               inspector.visit("extractor", extractor);
             }
           };
@@ -426,7 +429,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
-    public IncrementalIndex buildOnheap()
+    public OnheapIncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
@@ -922,7 +925,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   /**
    * Currently called to initialize IncrementalIndex dimension order during index creation
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
-   * https://github.com/apache/incubator-druid/issues/2011
+   * https://github.com/apache/druid/issues/2011
    */
   public void loadDimensionIterable(
       Iterable<String> oldDimensionOrder,
@@ -997,7 +1000,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return iterableWithPostAggregations(null, false).iterator();
   }
 
-  public Iterable<Row> iterableWithPostAggregations(@Nullable final List<PostAggregator> postAggs, final boolean descending)
+  public Iterable<Row> iterableWithPostAggregations(
+      @Nullable final List<PostAggregator> postAggs,
+      final boolean descending
+  )
   {
     return () -> {
       final List<DimensionDesc> dimensions = getDimensions();
@@ -1237,6 +1243,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     /**
      * Get all {@link IncrementalIndexRow} to persist, ordered with {@link Comparator<IncrementalIndexRow>}
+     *
      * @return
      */
     Iterable<IncrementalIndexRow> persistIterable();

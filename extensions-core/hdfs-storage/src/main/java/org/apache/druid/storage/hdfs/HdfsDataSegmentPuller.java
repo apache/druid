@@ -22,6 +22,7 @@ package org.apache.druid.storage.hdfs;
 import com.google.common.base.Predicate;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -178,7 +179,7 @@ public class HdfsDataSegmentPuller implements URIDataPuller
   protected final Configuration config;
 
   @Inject
-  public HdfsDataSegmentPuller(final Configuration config)
+  public HdfsDataSegmentPuller(@Hdfs final Configuration config)
   {
     this.config = config;
   }

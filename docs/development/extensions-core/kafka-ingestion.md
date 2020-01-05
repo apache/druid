@@ -30,7 +30,7 @@ partition and offset mechanism and are therefore able to provide guarantees of e
 The supervisor oversees the state of the indexing tasks to coordinate handoffs,
 manage failures, and ensure that the scalability and replication requirements are maintained.
 
-This service is provided in the `druid-kafka-indexing-service` core Apache Druid (incubating) extension (see
+This service is provided in the `druid-kafka-indexing-service` core Apache Druid extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
 > The Kafka indexing service supports transactional topics which were introduced in Kafka 0.11.x. These changes make the
@@ -399,4 +399,4 @@ events for the interval 13:00 - 14:00 may be split across previous and new set o
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.md).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
-Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).
+Hadoop (see [here](https://github.com/apache/druid/pull/5102)).

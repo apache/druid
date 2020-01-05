@@ -85,12 +85,13 @@ public class S3DataSegmentArchiverTest
       .version("version")
       .loadSpec(ImmutableMap.of(
           "type",
-          S3StorageDruidModule.SCHEME,
+          S3StorageDruidModule.SCHEME_S3_ZIP,
           S3DataSegmentPuller.BUCKET,
           "source_bucket",
           S3DataSegmentPuller.KEY,
           "source_key"
       ))
+      .size(0)
       .build();
 
   @BeforeClass
@@ -106,7 +107,7 @@ public class S3DataSegmentArchiverTest
     final DataSegment archivedSegment = SOURCE_SEGMENT
         .withLoadSpec(ImmutableMap.of(
             "type",
-            S3StorageDruidModule.SCHEME,
+            S3StorageDruidModule.SCHEME_S3_ZIP,
             S3DataSegmentPuller.BUCKET,
             ARCHIVER_CONFIG.getArchiveBucket(),
             S3DataSegmentPuller.KEY,
@@ -143,7 +144,7 @@ public class S3DataSegmentArchiverTest
     final DataSegment archivedSegment = SOURCE_SEGMENT
         .withLoadSpec(ImmutableMap.of(
             "type",
-            S3StorageDruidModule.SCHEME,
+            S3StorageDruidModule.SCHEME_S3_ZIP,
             S3DataSegmentPuller.BUCKET,
             ARCHIVER_CONFIG.getArchiveBucket(),
             S3DataSegmentPuller.KEY,

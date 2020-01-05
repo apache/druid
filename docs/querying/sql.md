@@ -31,7 +31,7 @@ sidebar_label: "Druid SQL"
 -->
 
 
-> Apache Druid (incubating) supports two query languages: Druid SQL and [native queries](querying.md), which
+> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md), which
 > SQL queries are planned into, and which end users can also issue directly. This document describes the SQL language.
 
 Druid SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
@@ -115,13 +115,17 @@ milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore
 timezone information, but only carry information about the exact moment in time they represent. See the
 [Time functions](#time-functions) section for more information about timestamp handling.
 
-Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
-Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
+### Null handling modes
+By default Druid treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
+in this mode Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
 and both will evaluate to true if `col` contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will
 return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)`
 aggregator will count the number of rows where expr is neither null nor the empty string. String columns in Druid are
 NULLable. Numeric columns are NOT NULL; if you query a numeric column that is not present in all segments of your Druid
 datasource, then it will be treated as zero for rows from those segments.
+
+If `druid.generic.useDefaultValueForNull` is set to `false` _system-wide, at indexing time_, data
+will be stored in a manner that allows distinguishing empty strings from NULL values for string columns, and will allow NULL values to be stored for numeric columns. Druid SQL will generally operate more properly and the SQL optimizer will work best in this mode, however this does come at a cost. See the [segment documentation on SQL compatible null-handling](../design/segments.md#sql-compatible-null-handling) for more details.
 
 For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
 Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
@@ -195,6 +199,10 @@ Only the COUNT aggregation can accept DISTINCT.
 |`STDDEV_POP(expr)`|Computes standard deviation population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
 |`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
 |`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`EARLIEST(expr)`|Returns the earliest non-null value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "earliest" is the value first encountered with the minimum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the first value encountered.|
+|`EARLIEST(expr, maxBytesPerString)`|Like `EARLIEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+|`LATEST(expr)`|Returns the latest non-null value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "latest" is the value last encountered with the maximum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|
+|`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
 
@@ -351,7 +359,7 @@ All 'array' references in the multi-value string function documentation can refe
 
 |Function|Notes|
 |--------|-----|
-| `ARRAY(expr1,expr ...)` | constructs an SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `ARRAY(expr1,expr ...)` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
 | `MV_LENGTH(arr)` | returns length of array expression |
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
@@ -403,6 +411,11 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |Function|Notes|
 |--------|-----|
 |`DS_GET_QUANTILE(expr, fraction)`|Returns the quantile estimate corresponding to `fraction` from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_GET_QUANTILES(expr, fraction0, fraction1, ...)`|Returns a string representing an array of quantile estimates corresponding to a list of fractions from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`|Returns a string representing an approximation to the histogram given a list of split points that define the histogram bins from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_CDF(expr, splitPoint0, splitPoint1, ...)`|Returns a string representing approximation to the Cumulative Distribution Function given a list of split points that define the edges of the bins from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_RANK(expr, value)`|Returns an approximation to the rank of a given value that is the fraction of the distribution less than that value from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_QUANTILE_SUMMARY(expr)`|Returns a string summary of a quantiles sketch, useful for debugging. `expr` must return a quantiles sketch.|
 
 ### Other functions
 
@@ -737,7 +750,7 @@ GROUP BY 1
 ORDER BY 2 DESC
 ```
 
-*Caveat:* Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for e.g.. Kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not guaranteed that the same task gets picked every time. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/incubator-druid/issues/5915) about this inconsistency with stream ingestion tasks.
+*Caveat:* Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for e.g.. Kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not guaranteed that the same task gets picked every time. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/druid/issues/5915) about this inconsistency with stream ingestion tasks.
 
 #### SERVERS table
 

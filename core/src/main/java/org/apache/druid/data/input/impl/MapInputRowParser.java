@@ -22,16 +22,18 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
@@ -50,18 +52,47 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   @Override
   public List<InputRow> parseBatch(Map<String, Object> theMap)
   {
-    final List<String> dimensions;
-    if (!this.dimensions.isEmpty()) {
-      dimensions = this.dimensions;
+    return ImmutableList.of(
+        parse(
+            parseSpec.getTimestampSpec(),
+            dimensions,
+            parseSpec.getDimensionsSpec().getDimensionExclusions(),
+            theMap
+        )
+    );
+  }
+
+  public static InputRow parse(InputRowSchema inputRowSchema, Map<String, Object> theMap) throws ParseException
+  {
+    return parse(inputRowSchema.getTimestampSpec(), inputRowSchema.getDimensionsSpec(), theMap);
+  }
+
+  public static InputRow parse(
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      Map<String, Object> theMap
+  ) throws ParseException
+  {
+    return parse(timestampSpec, dimensionsSpec.getDimensionNames(), dimensionsSpec.getDimensionExclusions(), theMap);
+  }
+
+  public static InputRow parse(
+      TimestampSpec timestampSpec,
+      List<String> dimensions,
+      Set<String> dimensionExclusions,
+      Map<String, Object> theMap
+  ) throws ParseException
+  {
+    final List<String> dimensionsToUse;
+    if (!dimensions.isEmpty()) {
+      dimensionsToUse = dimensions;
     } else {
-      dimensions = Lists.newArrayList(
-          Sets.difference(theMap.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
-      );
+      dimensionsToUse = new ArrayList<>(Sets.difference(theMap.keySet(), dimensionExclusions));
     }
 
     final DateTime timestamp;
     try {
-      timestamp = parseSpec.getTimestampSpec().extractTimestamp(theMap);
+      timestamp = timestampSpec.extractTimestamp(theMap);
       if (timestamp == null) {
         final String input = theMap.toString();
         throw new NullPointerException(
@@ -76,7 +107,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       throw new ParseException(e, "Unparseable timestamp found! Event: %s", theMap);
     }
 
-    return ImmutableList.of(new MapBasedInputRow(timestamp, dimensions, theMap));
+    return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
   }
 
   @JsonProperty

@@ -24,11 +24,16 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
-import com.yahoo.sketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchCDFOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchQuantileOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchQuantilesOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchRankOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSummaryOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchToHistogramOperatorConversion;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -56,6 +61,11 @@ public class DoublesSketchModule implements DruidModule
     SqlBindings.addAggregator(binder, DoublesSketchObjectSqlAggregator.class);
 
     SqlBindings.addOperatorConversion(binder, DoublesSketchQuantileOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, DoublesSketchQuantilesOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, DoublesSketchToHistogramOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, DoublesSketchRankOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, DoublesSketchCDFOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, DoublesSketchSummaryOperatorConversion.class);
   }
 
   @Override

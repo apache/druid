@@ -23,7 +23,7 @@ title: "Multitenancy considerations"
   -->
 
 
-Apache Druid (incubating) is often used to power user-facing data applications, where multitenancy is an important requirement. This
+Apache Druid is often used to power user-facing data applications, where multitenancy is an important requirement. This
 document outlines Druid's multitenant storage and querying features.
 
 ## Shared datasources or datasource-per-tenant?

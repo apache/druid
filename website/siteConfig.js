@@ -85,7 +85,7 @@ const siteConfig = {
 
   stylesheets: [
     'https://use.fontawesome.com/releases/v5.7.2/css/all.css',
-    '/css/code-block-buttons.css'
+    '/css/code-block-buttons.css',
   ],
 
   // On page navigation for the current documentation page.
@@ -100,7 +100,18 @@ const siteConfig = {
   gaGtag: true,
   gaTrackingId: 'UA-131010415-1',
 
- editUrl: 'https://github.com/apache/incubator-druid/edit/master/docs/',
+  editUrl: 'https://github.com/apache/druid/edit/master/docs/',
+
+  algolia: {
+    apiKey: '2de99082a9f38e49dfaa059bbe4c901d',
+    indexName: 'apache_druid',
+    algoliaOptions: {
+      facetFilters: [
+        "language:LANGUAGE",
+        "version:druidVersion",
+      ]
+    },
+  },
 
   // Show documentation's last contributor's name.
   // enableUpdateBy: true,

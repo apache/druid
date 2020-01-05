@@ -22,8 +22,6 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -32,6 +30,7 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
@@ -68,6 +67,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
@@ -90,7 +90,7 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
-public class MultiValuedDimensionTest
+public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters(name = "groupby: {0} forceHashAggregation: {2} ({1})")
   public static Collection<?> constructorFeeder()
@@ -161,7 +161,7 @@ public class MultiValuedDimensionTest
         "2011-01-12T00:00:00.000Z,product_1,t1\tt2\tt3,u1\tu2",
         "2011-01-13T00:00:00.000Z,product_2,t3\tt4\tt5,u3\tu4",
         "2011-01-14T00:00:00.000Z,product_3,t5\tt6\tt7,u1\tu5",
-        "2011-01-14T00:00:00.000Z,product_4,,u2"
+        "2011-01-14T00:00:00.000Z,product_4,\"\",u2"
     };
 
     for (String row : rows) {
@@ -169,7 +169,7 @@ public class MultiValuedDimensionTest
     }
 
 
-    persistedSegmentDir = Files.createTempDir();
+    persistedSegmentDir = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
@@ -202,7 +202,7 @@ public class MultiValuedDimensionTest
     for (String row : rowsNullSampler) {
       incrementalIndexNullSampler.add(parserNullSampler.parse(row));
     }
-    persistedSegmentDirNullSampler = Files.createTempDir();
+    persistedSegmentDirNullSampler = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
               .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, new IndexSpec(), null);
 
@@ -610,8 +610,8 @@ public class MultiValuedDimensionTest
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3t3", "count", 4L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t5t5", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1t2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t4t4", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t2", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7t7", "count", 2L)
     );
 

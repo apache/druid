@@ -223,8 +223,6 @@ public class Parser
    */
   private static Expr applyUnapplied(Expr expr, List<String> unappliedBindings)
   {
-    final Map<IdentifierExpr, IdentifierExpr> toReplace = new HashMap<>();
-
     // filter to get list of IdentifierExpr that are backed by the unapplied bindings
     final List<IdentifierExpr> args = expr.analyzeInputs()
                                           .getFreeVariables()
@@ -236,18 +234,23 @@ public class Parser
 
     // construct lambda args from list of args to apply. Identifiers in a lambda body have artificial 'binding' values
     // that is the same as the 'identifier', because the bindings are supplied by the wrapping apply function
+    // replacements are done by binding rather than identifier because repeats of the same input should not result
+    // in a cartesian product
+    final Map<String, IdentifierExpr> toReplace = new HashMap<>();
     for (IdentifierExpr applyFnArg : args) {
-      IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getIdentifier());
-      lambdaArgs.add(lambdaRewrite);
-      toReplace.put(applyFnArg, lambdaRewrite);
+      if (!toReplace.containsKey(applyFnArg.getBinding())) {
+        IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getBinding());
+        lambdaArgs.add(lambdaRewrite);
+        toReplace.put(applyFnArg.getBinding(), lambdaRewrite);
+      }
     }
 
     // rewrite identifiers in the expression which will become the lambda body, so they match the lambda identifiers we
     // are constructing
     Expr newExpr = expr.visit(childExpr -> {
       if (childExpr instanceof IdentifierExpr) {
-        if (toReplace.containsKey(childExpr)) {
-          return toReplace.get(childExpr);
+        if (toReplace.containsKey(((IdentifierExpr) childExpr).getBinding())) {
+          return toReplace.get(((IdentifierExpr) childExpr).getBinding());
         }
       }
       return childExpr;
@@ -257,13 +260,13 @@ public class Parser
     // wrap an expression in either map or cartesian_map to apply any unapplied identifiers
     final LambdaExpr lambdaExpr = new LambdaExpr(lambdaArgs, newExpr);
     final ApplyFunction fn;
-    if (args.size() == 1) {
+    if (lambdaArgs.size() == 1) {
       fn = new ApplyFunction.MapFunction();
     } else {
       fn = new ApplyFunction.CartesianMapFunction();
     }
 
-    final Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, ImmutableList.copyOf(args));
+    final Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, ImmutableList.copyOf(lambdaArgs));
     return magic;
   }
 

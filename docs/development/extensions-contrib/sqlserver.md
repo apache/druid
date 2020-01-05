@@ -23,7 +23,7 @@ title: "Microsoft SQLServer"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `sqlserver-metadata-storage` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `sqlserver-metadata-storage` as an extension.
 
 ## Setting up SQLServer
 

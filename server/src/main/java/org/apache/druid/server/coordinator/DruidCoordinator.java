@@ -326,7 +326,7 @@ public class DruidCoordinator
         final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
         if (loadedView != null) {
           // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
-          // Please see https://github.com/apache/incubator-druid/pull/5632 and LoadStatusBenchmark for more info.
+          // Please see https://github.com/apache/druid/pull/5632 and LoadStatusBenchmark for more info.
           for (DataSegment serverSegment : loadedView.getSegments()) {
             segments.remove(serverSegment);
           }
@@ -359,7 +359,7 @@ public class DruidCoordinator
 
   public void markSegmentAsUnused(DataSegment segment)
   {
-    log.info("Marking segment[%s] as unused", segment.getId());
+    log.debug("Marking segment[%s] as unused", segment.getId());
     segmentsMetadata.markSegmentAsUnused(segment.getId().toString());
   }
 
@@ -518,8 +518,10 @@ public class DruidCoordinator
         return;
       }
 
-      log.info("I am the leader of the coordinators, all must bow!");
-      log.info("Starting coordination in [%s]", config.getCoordinatorStartDelay());
+      log.info(
+          "I am the leader of the coordinators, all must bow! Starting coordination in [%s].",
+          config.getCoordinatorStartDelay()
+      );
 
       segmentsMetadata.startPollingDatabasePeriodically();
       metadataRuleManager.start();
@@ -600,8 +602,8 @@ public class DruidCoordinator
     helpers.add(segmentCompactor);
     helpers.addAll(indexingServiceHelpers);
 
-    log.info(
-        "Done making indexing service helpers [%s]",
+    log.debug(
+        "Done making indexing service helpers %s",
         helpers.stream().map(helper -> helper.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(helpers);
@@ -721,7 +723,7 @@ public class DruidCoordinator
                   if (!loadManagementPeons.containsKey(server.getName())) {
                     LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(server);
                     loadQueuePeon.start();
-                    log.info("Created LoadQueuePeon for server[%s].", server.getName());
+                    log.debug("Created LoadQueuePeon for server[%s].", server.getName());
 
                     loadManagementPeons.put(server.getName(), loadQueuePeon);
                   }
@@ -743,7 +745,7 @@ public class DruidCoordinator
                   disappeared.remove(server.getName());
                 }
                 for (String name : disappeared) {
-                  log.info("Removing listener for server[%s] which is no longer there.", name);
+                  log.debug("Removing listener for server[%s] which is no longer there.", name);
                   LoadQueuePeon peon = loadManagementPeons.remove(name);
                   peon.stop();
                 }
