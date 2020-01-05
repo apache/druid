@@ -114,13 +114,13 @@ public class IndexGeneratorJob implements Jobby
 
     final Path descriptorInfoDir = config.makeDescriptorInfoDir();
 
-    try {
-      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
-
+    try (FileSystem fs = descriptorInfoDir.getFileSystem(conf)) {
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue((InputStream) fs.open(status.getPath()), DataSegment.class);
-        publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getId());
+        try (InputStream input = fs.open(status.getPath())) {
+          final DataSegment segment = jsonMapper.readValue(input, DataSegment.class);
+          publishedSegmentsBuilder.add(segment);
+          log.info("Adding segment %s to the list of published segments", segment.getId());
+        }
       }
     }
     catch (FileNotFoundException e) {
@@ -140,7 +140,7 @@ public class IndexGeneratorJob implements Jobby
   }
 
   private final HadoopDruidIndexerConfig config;
-  private IndexGeneratorStats jobStats;
+  private final IndexGeneratorStats jobStats;
   private Job job;
 
   public IndexGeneratorJob(
