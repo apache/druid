@@ -147,7 +147,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
       @SuppressWarnings("MustBeClosedChecker") // we register dimValues in the closer
-      Indexed<String> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
+          Indexed<String> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
@@ -194,7 +194,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
       cardinality = dimValueLookup.size();
     }
 
-    log.info(
+    log.debug(
         "Completed dim[%s] conversions with cardinality[%,d] in %,d millis.",
         dimensionName,
         cardinality,
@@ -248,7 +248,10 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   }
 
   @Override
-  public ColumnValueSelector convertSortedSegmentRowValuesToMergedRowValues(int segmentIndex, ColumnValueSelector source)
+  public ColumnValueSelector convertSortedSegmentRowValuesToMergedRowValues(
+      int segmentIndex,
+      ColumnValueSelector source
+  )
   {
     IntBuffer converter = dimConversions.get(segmentIndex);
     if (converter == null) {
@@ -440,7 +443,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
       spatialWriter.write(ImmutableRTree.newImmutableFromMutable(tree));
     }
 
-    log.info(
+    log.debug(
         "Completed dim[%s] inverted with cardinality[%,d] in %,d millis.",
         dimensionName,
         dictionarySize,
@@ -546,8 +549,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
         .withBitmapIndex(bitmapWriter)
         .withSpatialIndex(spatialWriter)
         .withByteOrder(IndexIO.BYTE_ORDER);
-
-    //log.info("Completed dimension column[%s] in %,d millis.", dimensionName, System.currentTimeMillis() - dimStartTime);
 
     return builder
         .addSerde(partBuilder.build())

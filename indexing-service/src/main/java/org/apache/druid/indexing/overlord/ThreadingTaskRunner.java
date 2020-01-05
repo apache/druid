@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -43,6 +42,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -193,7 +193,7 @@ public class ThreadingTaskRunner
                             // This will block for a while. So we append the thread information with more details
                             final String priorThreadName = Thread.currentThread().getName();
                             Thread.currentThread()
-                                  .setName(StringUtils.format("%s-[%s]", priorThreadName, task.getId()));
+                                  .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus = null;
                             final TaskToolbox toolbox = toolboxFactory.build(task);
@@ -243,8 +243,8 @@ public class ThreadingTaskRunner
 
                               try {
                                 if (!stopping && taskDir.exists()) {
-                                  LOGGER.info("Removing task directory: %s", taskDir);
                                   FileUtils.deleteDirectory(taskDir);
+                                  LOGGER.info("Removed task directory: %s", taskDir);
                                 }
                               }
                               catch (Exception e) {

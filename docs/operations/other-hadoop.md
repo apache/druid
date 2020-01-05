@@ -23,7 +23,7 @@ title: "Working with different versions of Apache Hadoop"
   -->
 
 
-Apache Druid (incubating) can interact with Hadoop in two ways:
+Apache Druid can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.md) using the druid-hdfs-storage extension.
 2. [Batch-load data from Hadoop](../ingestion/hadoop.md) using Map/Reduce jobs.
@@ -89,7 +89,7 @@ classloader.
 2. Batch ingestion uses jars from `hadoop-dependencies/` to submit Map/Reduce jobs (location customizable via the
 `druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html#extensions)).
 
-`hadoop-client:2.8.3` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
+`hadoop-client:2.8.5` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
 many Hadoop distributions (the version does not necessarily need to match), but if you run into issues, you can instead
 have Druid load libraries that exactly match your distribution. To do this, either copy the jars from your Hadoop
 cluster, or use the `pull-deps` tool to download the jars from a Maven repository.

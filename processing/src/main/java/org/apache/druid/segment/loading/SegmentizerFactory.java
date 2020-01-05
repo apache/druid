@@ -31,5 +31,5 @@ import java.io.File;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MMappedQueryableSegmentizerFactory.class)
 public interface SegmentizerFactory
 {
-  Segment factorize(DataSegment segment, File parentDir) throws SegmentLoadingException;
+  Segment factorize(DataSegment segment, File parentDir, boolean lazy) throws SegmentLoadingException;
 }

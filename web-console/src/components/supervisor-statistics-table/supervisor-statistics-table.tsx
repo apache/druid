@@ -123,9 +123,13 @@ export class SupervisorStatisticsTable extends React.PureComponent<
       },
     ];
 
-    if (data && data.length) {
+    const movingAveragesBuildSegments = deepGet(
+      data as any,
+      '0.summary.movingAverages.buildSegments',
+    );
+    if (movingAveragesBuildSegments) {
       columns = columns.concat(
-        Object.keys(deepGet(data[0], 'summary.movingAverages.buildSegments'))
+        Object.keys(movingAveragesBuildSegments)
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
           .map(
             (interval: string): Column<TableRow> => {

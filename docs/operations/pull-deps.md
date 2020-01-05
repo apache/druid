@@ -23,7 +23,7 @@ title: "pull-deps tool"
   -->
 
 
-`pull-deps` is an Apache Druid (incubating) tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.
+`pull-deps` is an Apache Druid tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.
 
 `pull-deps` has several command line options, they are as follows:
 

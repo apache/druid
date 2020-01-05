@@ -26,7 +26,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -49,7 +49,7 @@ public class MoveTask extends AbstractFixedIntervalTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("target") Map<String, Object> targetLoadSpec,
       @JsonProperty("context") Map<String, Object> context,
-      // See https://github.com/apache/incubator-druid/pull/1922
+      // See https://github.com/apache/druid/pull/1922
       @JsonProperty("targetLoadSpec") Map<String, Object> targetLoadSpecCOMPAT
   )
   {
@@ -85,7 +85,7 @@ public class MoveTask extends AbstractFixedIntervalTask
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new RetrieveUnusedSegmentsAction(myLock.getDataSource(), myLock.getInterval()));
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {

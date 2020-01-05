@@ -28,6 +28,7 @@ import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
+import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -38,6 +39,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
@@ -47,9 +49,10 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @JsonCreator
   public KinesisSupervisorSpec(
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") KinesisSupervisorTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") KinesisSupervisorIOConfig ioConfig,
+      @JsonProperty("spec") @Nullable KinesisSupervisorIngestionSpec ingestionSchema,
+      @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
+      @JsonProperty("tuningConfig") @Nullable KinesisSupervisorTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") @Nullable KinesisSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
@@ -60,48 +63,20 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject @Named("kinesis") AWSCredentialsConfig awsCredentialsConfig,
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
     super(
-        dataSchema,
-        tuningConfig != null
-        ? tuningConfig
-        : new KinesisSupervisorTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
+        ingestionSchema != null
+        ? ingestionSchema
+        : new KinesisSupervisorIngestionSpec(
+            dataSchema,
+            ioConfig,
+            tuningConfig != null
+            ? tuningConfig
+            : KinesisSupervisorTuningConfig.defaultConfig()
         ),
-        ioConfig,
         context,
         suspended,
         taskStorage,
@@ -158,6 +133,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @Deprecated
   @JsonProperty
   public KinesisSupervisorTuningConfig getTuningConfig()
   {
@@ -165,6 +141,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @Deprecated
   @JsonProperty
   public KinesisSupervisorIOConfig getIoConfig()
   {
@@ -172,9 +149,17 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  @JsonProperty
+  public KinesisSupervisorIngestionSpec getSpec()
+  {
+    return (KinesisSupervisorIngestionSpec) super.getSpec();
+  }
+
+  @Override
   protected KinesisSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KinesisSupervisorSpec(
+        getSpec(),
         getDataSchema(),
         getTuningConfig(),
         getIoConfig(),

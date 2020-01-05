@@ -36,6 +36,7 @@ import org.apache.druid.server.http.IntervalsResource;
 import org.apache.druid.server.http.MetadataResource;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.http.RulesResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
 import org.apache.druid.server.security.ForbiddenException;
@@ -51,7 +52,6 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class SecurityResourceFilterTest extends ResourceFilterTestHelper
 {
-
   @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
   public static Collection<Object[]> data()
   {
@@ -70,6 +70,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPathsWithAuthorizer(CoordinatorDynamicConfigsResource.class),
             getRequestPathsWithAuthorizer(QueryResource.class),
             getRequestPathsWithAuthorizer(StatusResource.class),
+            getRequestPathsWithAuthorizer(SelfDiscoveryResource.class),
             getRequestPathsWithAuthorizer(BrokerQueryResource.class),
             getRequestPathsWithAuthorizer(RouterResource.class)
         )

@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.helper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -44,11 +44,11 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
@@ -87,33 +87,24 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.dataSources = dataSources;
     this.timelineIterators = new HashMap<>(dataSources.size());
 
-    for (Entry<String, VersionedIntervalTimeline<String, DataSegment>> entry : dataSources.entrySet()) {
-      final String dataSource = entry.getKey();
-      final VersionedIntervalTimeline<String, DataSegment> timeline = entry.getValue();
+    dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
-        final List<Interval> searchIntervals = findInitialSearchInterval(
-            timeline,
-            config.getSkipOffsetFromLatest(),
-            skipIntervals.get(dataSource)
-        );
+        final List<Interval> searchIntervals =
+            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
         }
       }
-    }
+    });
 
-    for (Entry<String, DataSourceCompactionConfig> entry : compactionConfigs.entrySet()) {
-      final String dataSourceName = entry.getKey();
-      final DataSourceCompactionConfig config = entry.getValue();
-
+    compactionConfigs.forEach((String dataSourceName, DataSourceCompactionConfig config) -> {
       if (config == null) {
         throw new ISE("Unknown dataSource[%s]", dataSourceName);
       }
-
       updateQueue(dataSourceName, config);
-    }
+    });
   }
 
   @Override
@@ -211,15 +202,26 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           .flatMap(interval -> timeline
               .lookup(interval)
               .stream()
-              .filter(holder -> {
-                final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
-                final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
-                return !chunks.isEmpty()
-                       && partitionBytes > 0
-                       && interval.contains(chunks.get(0).getObject().getInterval());
-              })
+              .filter(holder -> isCompactibleHolder(interval, holder))
           )
           .collect(Collectors.toList());
+    }
+
+    private boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
+    {
+      final Iterator<PartitionChunk<DataSegment>> chunks = holder.getObject().iterator();
+      if (!chunks.hasNext()) {
+        return false; // There should be at least one chunk for a holder to be compactible.
+      }
+      PartitionChunk<DataSegment> firstChunk = chunks.next();
+      if (!interval.contains(firstChunk.getObject().getInterval())) {
+        return false;
+      }
+      long partitionBytes = firstChunk.getObject().getSize();
+      while (partitionBytes == 0 && chunks.hasNext()) {
+        partitionBytes += chunks.next().getObject().getSize();
+      }
+      return partitionBytes > 0;
     }
 
     @Override
@@ -384,26 +386,29 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final List<Interval> searchIntervals = new ArrayList<>();
 
     for (Interval lookupInterval : filteredInterval) {
-      final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
-          new Interval(lookupInterval.getStart(), lookupInterval.getEnd())
-      );
-
-      final List<DataSegment> segments = holders
+      final List<DataSegment> segments = timeline
+          .findNonOvershadowedObjectsInInterval(lookupInterval, Partitions.ONLY_COMPLETE)
           .stream()
-          .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-          .map(PartitionChunk::getObject)
+          // findNonOvershadowedObjectsInInterval() may return segments merely intersecting with lookupInterval, while
+          // we are interested only in segments fully lying within lookupInterval here.
           .filter(segment -> lookupInterval.contains(segment.getInterval()))
-          .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
           .collect(Collectors.toList());
 
-      if (!segments.isEmpty()) {
-        searchIntervals.add(
-            new Interval(
-                segments.get(0).getInterval().getStart(),
-                segments.get(segments.size() - 1).getInterval().getEnd()
-            )
-        );
+      if (segments.isEmpty()) {
+        continue;
       }
+
+      DateTime searchStart = segments
+          .stream()
+          .map(segment -> segment.getId().getIntervalStart())
+          .min(Comparator.naturalOrder())
+          .orElseThrow(AssertionError::new);
+      DateTime searchEnd = segments
+          .stream()
+          .map(segment -> segment.getId().getIntervalEnd())
+          .max(Comparator.naturalOrder())
+          .orElseThrow(AssertionError::new);
+      searchIntervals.add(new Interval(searchStart, searchEnd));
     }
 
     return searchIntervals;

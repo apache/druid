@@ -21,7 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.utils.CompressionUtils;
@@ -50,7 +50,7 @@ public class AzureDataSegmentPuller
     this.azureStorage = azureStorage;
   }
 
-  org.apache.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
+  FileUtils.FileCopyResult getSegmentFiles(
       final String containerName,
       final String blobPath,
       final File outDir
@@ -58,7 +58,7 @@ public class AzureDataSegmentPuller
       throws SegmentLoadingException
   {
     try {
-      FileUtils.forceMkdir(outDir);
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
       log.info(
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
@@ -75,7 +75,7 @@ public class AzureDataSegmentPuller
       }
 
       final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, actualBlobPath);
-      final org.apache.druid.java.util.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
+      final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
           AzureUtils.AZURE_RETRY,

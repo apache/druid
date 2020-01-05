@@ -23,7 +23,7 @@ title: "Basic Security"
   -->
 
 
-This Apache Druid (incubating) extension adds:
+This Apache Druid extension adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store
 - an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups
@@ -306,13 +306,13 @@ Create a new user with name {userName}
 Delete the user with name {userName}
 
 ##### Group mapping Creation/Deletion
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings)`
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings)`
 Return a list of all group mappings.
 
-`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName})`
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`
 Return the group mapping and role information of the group mapping with name {groupMappingName}
 
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName})`
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`
 Create a new group mapping with name {groupMappingName}
 Content: JSON group mapping object
 Example request body:
@@ -327,7 +327,7 @@ Example request body:
 }
 ```
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName})`
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName})`
 Delete the group mapping with name {groupMappingName}
 
 #### Role Creation/Deletion
@@ -403,10 +403,10 @@ Assign role {roleName} to user {userName}.
 `DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`
 Unassign role {roleName} from user {userName}
 
-`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName}/roles/{roleName})`
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName})`
 Assign role {roleName} to group mapping {groupMappingName}.
 
-`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName}/roles/{roleName})`
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName})`
 Unassign role {roleName} from group mapping {groupMappingName}
 
 

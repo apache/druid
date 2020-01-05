@@ -384,6 +384,7 @@ public class BatchServerInventoryViewTest
                           )
                       )
                       .version(DateTimes.nowUtc().toString())
+                      .size(0)
                       .build();
   }
 

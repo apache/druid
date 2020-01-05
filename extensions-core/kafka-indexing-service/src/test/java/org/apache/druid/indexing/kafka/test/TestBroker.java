@@ -20,11 +20,10 @@
 package org.apache.druid.indexing.kafka.test;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -62,7 +61,7 @@ public class TestBroker implements Closeable
   )
   {
     this.zookeeperConnect = zookeeperConnect;
-    this.directory = directory == null ? Files.createTempDir() : directory;
+    this.directory = directory == null ? FileUtils.createTempDir() : directory;
     this.directoryCleanup = directory == null;
     this.id = id;
     this.brokerProps = brokerProps == null ? ImmutableMap.of() : brokerProps;
@@ -136,7 +135,7 @@ public class TestBroker implements Closeable
       server.awaitShutdown();
     }
     if (directoryCleanup) {
-      FileUtils.forceDelete(directory);
+      FileUtils.deleteDirectory(directory);
     }
   }
 }

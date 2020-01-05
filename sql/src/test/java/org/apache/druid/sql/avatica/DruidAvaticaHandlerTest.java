@@ -35,6 +35,7 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
@@ -117,6 +118,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
+
+  private final boolean nullNumeric = !NullHandling.replaceWithDefault();
 
   @BeforeClass
   public static void setUpClass()
@@ -402,6 +405,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE4),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE5),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
@@ -450,6 +460,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE5),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -483,7 +499,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -515,7 +531,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -523,7 +539,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -574,7 +590,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -598,7 +614,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -606,7 +622,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),

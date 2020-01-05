@@ -142,7 +142,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           />
         )}
         {runeMode && (
-          <MenuItem icon={IconNames.PRINT} text="Pretty print JSON" onClick={onPrettier} />
+          <MenuItem icon={IconNames.ALIGN_LEFT} text="Prettify JSON" onClick={onPrettier} />
         )}
       </Menu>
     );

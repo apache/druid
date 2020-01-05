@@ -25,10 +25,12 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -46,6 +48,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -110,23 +113,23 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   /**
    * Returns the total number of sub tasks required to execute this phase.
    */
-  abstract int getTotalNumSubTasks() throws IOException;
+  abstract int estimateTotalNumSubTasks() throws IOException;
 
   @Override
   public TaskState run() throws Exception
   {
-    if (getTotalNumSubTasks() == 0) {
+    final CountingSubTaskSpecIterator subTaskSpecIterator = new CountingSubTaskSpecIterator(subTaskSpecIterator());
+    if (!subTaskSpecIterator.hasNext()) {
       LOG.warn("There's no input split to process");
       return TaskState.SUCCESS;
     }
 
-    final Iterator<SubTaskSpec<SubTaskType>> subTaskSpecIterator = subTaskSpecIterator();
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
         Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
         tuningConfig.getMaxRetry(),
-        getTotalNumSubTasks()
+        estimateTotalNumSubTasks()
     );
     TaskState state = TaskState.RUNNING;
 
@@ -161,17 +164,17 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
               if (!subTaskSpecIterator.hasNext()) {
                 // We have no more subTasks to run
-                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
+                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.isEmpty()) {
                   subTaskScheduleAndMonitorStopped = true;
-                  if (taskMonitor.isSucceeded()) {
+                  if (subTaskSpecIterator.count == taskMonitor.getNumSucceededTasks()) {
                     // Succeeded
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
-                    final SinglePhaseParallelIndexingProgress monitorStatus = taskMonitor.getProgress();
+                    final ParallelIndexingPhaseProgress monitorStatus = taskMonitor.getProgress();
                     throw new ISE(
-                        "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
-                        monitorStatus.getExpectedSucceeded(),
+                        "Expected [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
+                        subTaskSpecIterator.count,
                         monitorStatus.getSucceeded(),
                         monitorStatus.getFailed()
                     );
@@ -195,10 +198,14 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
               } else {
                 final SinglePhaseSubTaskSpec spec =
                     (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
+                final InputRowParser inputRowParser = spec.getIngestionSpec().getDataSchema().getParser();
                 LOG.error(
                     "Failed to run sub tasks for inputSplits[%s]",
                     getSplitsIfSplittable(
-                        spec.getIngestionSpec().getIOConfig().getFirehoseFactory(),
+                        spec.getIngestionSpec().getIOConfig().getNonNullInputSource(inputRowParser),
+                        spec.getIngestionSpec().getIOConfig().getNonNullInputFormat(
+                            inputRowParser == null ? null : inputRowParser.getParseSpec()
+                        ),
                         tuningConfig.getSplitHintSpec()
                     )
                 );
@@ -218,6 +225,33 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     }
 
     return state;
+  }
+
+  private class CountingSubTaskSpecIterator implements Iterator<SubTaskSpec<SubTaskType>>
+  {
+    private final Iterator<SubTaskSpec<SubTaskType>> delegate;
+    private int count;
+
+    private CountingSubTaskSpecIterator(Iterator<SubTaskSpec<SubTaskType>> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return delegate.hasNext();
+    }
+
+    @Override
+    public SubTaskSpec<SubTaskType> next()
+    {
+      if (!delegate.hasNext()) {
+        throw new NoSuchElementException();
+      }
+      count++;
+      return delegate.next();
+    }
   }
 
   private boolean isRunning()
@@ -255,15 +289,16 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   }
 
   private static List<InputSplit> getSplitsIfSplittable(
-      FirehoseFactory firehoseFactory,
+      InputSource inputSource,
+      InputFormat inputFormat,
       @Nullable SplitHintSpec splitHintSpec
   ) throws IOException
   {
-    if (firehoseFactory instanceof FiniteFirehoseFactory) {
-      final FiniteFirehoseFactory<?, ?> finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
-      return finiteFirehoseFactory.getSplits(splitHintSpec).collect(Collectors.toList());
+    if (inputSource instanceof SplittableInputSource) {
+      final SplittableInputSource<?> splittableInputSource = (SplittableInputSource) inputSource;
+      return splittableInputSource.createSplits(inputFormat, splitHintSpec).collect(Collectors.toList());
     } else {
-      throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
+      throw new ISE("inputSource[%s] is not splittable", inputSource.getClass().getSimpleName());
     }
   }
 
@@ -314,9 +349,9 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   }
 
   @Override
-  public ParallelIndexingProgress getProgress()
+  public ParallelIndexingPhaseProgress getProgress()
   {
-    return taskMonitor == null ? SinglePhaseParallelIndexingProgress.notRunning() : taskMonitor.getProgress();
+    return taskMonitor == null ? ParallelIndexingPhaseProgress.notRunning() : taskMonitor.getProgress();
   }
 
   @Override

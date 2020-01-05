@@ -167,6 +167,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void parallelMergeParallelism(int parallelism)
+  {
+    delegateQueryMetrics.parallelMergeParallelism(parallelism);
+  }
+
+  @Override
   public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
   {
     return delegateQueryMetrics.makeBitmapResultFactory(factory);
@@ -254,6 +260,42 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportPreFilteredRows(long numRows)
   {
     return delegateQueryMetrics.reportPreFilteredRows(numRows);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeParallelism(int parallelism)
+  {
+    return delegateQueryMetrics.reportParallelMergeParallelism(parallelism);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeInputSequences(long numSequences)
+  {
+    return delegateQueryMetrics.reportParallelMergeInputSequences(numSequences);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeInputRows(long numRows)
+  {
+    return delegateQueryMetrics.reportParallelMergeInputRows(numRows);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeOutputRows(long numRows)
+  {
+    return delegateQueryMetrics.reportParallelMergeOutputRows(numRows);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeTaskCount(long numTasks)
+  {
+    return delegateQueryMetrics.reportParallelMergeTaskCount(numTasks);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeTotalCpuTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeTotalCpuTime(timeNs);
   }
 
   @Override

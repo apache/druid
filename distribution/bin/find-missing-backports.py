@@ -100,7 +100,7 @@ for commit_msg in all_release_commits.splitlines():
     release_pr_subjects.add(title)
 
 # Get all closed PRs and filter out with milestone
-next_url = "https://api.github.com/repos/apache/incubator-druid/pulls?state=closed"
+next_url = "https://api.github.com/repos/apache/druid/pulls?state=closed"
 
 while next_url is not None:
     resp = requests.get(next_url, auth=(github_username, os.environ["GIT_TOKEN"]))

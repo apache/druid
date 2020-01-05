@@ -25,7 +25,7 @@ title: "Coordinator Process"
 
 ### Configuration
 
-For Apache Druid (incubating) Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
+For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
 
 ### HTTP endpoints
 

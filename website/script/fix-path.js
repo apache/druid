@@ -51,6 +51,23 @@ try {
     },
   });
 
+  // Add docusearch version meta
+  // ref: https://community.algolia.com/docsearch/required-configuration.html#introduces-global-information-as-meta-tags
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /<meta name="docsearch:language"[^>]+\/>/g,
+    to: (match, fullText) => {
+      return match + `<meta name="docsearch:version" content="${druidVersion}" />`;
+    },
+  });
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /"version:druidVersion"/g,
+    to: (match, fullText) => {
+      return `"version:${druidVersion}"`;
+    },
+  });
+
   console.log('Fixed versions');
 
 } catch (error) {

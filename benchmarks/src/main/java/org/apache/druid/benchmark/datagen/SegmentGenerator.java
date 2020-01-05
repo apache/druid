@@ -19,17 +19,10 @@
 
 package org.apache.druid.benchmark.datagen;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -68,6 +61,10 @@ public class SegmentGenerator implements Closeable
   private static final String CACHE_DIR_PROPERTY = "druid.benchmark.cacheDir";
   private static final String CACHE_DIR_ENV_VAR = "DRUID_BENCHMARK_CACHE_DIR";
 
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private final File cacheDir;
   private final boolean cleanupCacheDir;
 
@@ -90,7 +87,7 @@ public class SegmentGenerator implements Closeable
         log.warn("No cache directory provided; benchmark data caching is disabled. "
                  + "Set the 'druid.benchmark.cacheDir' property or 'DRUID_BENCHMARK_CACHE_DIR' environment variable "
                  + "to use caching.");
-        this.cacheDir = Files.createTempDir();
+        this.cacheDir = FileUtils.createTempDir();
         this.cleanupCacheDir = true;
       }
     }
@@ -141,30 +138,8 @@ public class SegmentGenerator implements Closeable
         numRows
     );
 
-    final List<DimensionSchema> dimensions = new ArrayList<>();
-    for (BenchmarkColumnSchema columnSchema : schemaInfo.getColumnSchemas()) {
-      if (schemaInfo.getAggs().stream().noneMatch(agg -> agg.getName().equals(columnSchema.getName()))) {
-        switch (columnSchema.getType()) {
-          case STRING:
-            dimensions.add(new StringDimensionSchema(columnSchema.getName()));
-            break;
-          case LONG:
-            dimensions.add(new LongDimensionSchema(columnSchema.getName()));
-            break;
-          case DOUBLE:
-            dimensions.add(new DoubleDimensionSchema(columnSchema.getName()));
-            break;
-          case FLOAT:
-            dimensions.add(new FloatDimensionSchema(columnSchema.getName()));
-            break;
-          default:
-            throw new ISE("Unhandleable type[%s]", columnSchema.getType());
-        }
-      }
-    }
-
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dimensions, ImmutableList.of(), ImmutableList.of()))
+        .withDimensionsSpec(schemaInfo.getDimensionsSpec())
         .withMetrics(schemaInfo.getAggsArray())
         .withRollup(schemaInfo.isWithRollup())
         .withQueryGranularity(granularity)

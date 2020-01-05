@@ -19,10 +19,11 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
-public abstract class MacroTestBase
+public abstract class MacroTestBase extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

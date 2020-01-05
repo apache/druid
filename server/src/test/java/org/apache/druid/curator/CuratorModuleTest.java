@@ -154,12 +154,12 @@ public final class CuratorModuleTest
                                    l.getLevel().equals(Level.ERROR)
                                    && l.getMessage()
                                        .getFormattedMessage()
-                                       .equals("Unhandled error in Curator Framework")
+                                       .equals("Unhandled error in Curator, stopping server.")
                      )
     );
   }
 
-  @Ignore("Verifies changes in https://github.com/apache/incubator-druid/pull/8458, but overkill for regular testing")
+  @Ignore("Verifies changes in https://github.com/apache/druid/pull/8458, but overkill for regular testing")
   @Test
   public void ignoresDeprecatedCuratorConfigProperties()
   {

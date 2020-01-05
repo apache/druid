@@ -228,7 +228,7 @@ where `SomePasswordProvider` is the implementation of `PasswordProvider` interfa
 When you do `mvn install`, Druid extensions will be packaged within the Druid tarball and `extensions` directory, which are both underneath `distribution/target/`.
 
 If you want your extension to be included, you can add your extension's maven coordinate as an argument at
-[distribution/pom.xml](https://github.com/apache/incubator-druid/blob/master/distribution/pom.xml#L95)
+[distribution/pom.xml](https://github.com/apache/druid/blob/master/distribution/pom.xml#L95)
 
 During `mvn install`, maven will install your extension to the local maven repository, and then call [pull-deps](../operations/pull-deps.md) to pull your extension from
 there. In the end, you should see your extension underneath `distribution/target/extensions` and within Druid tarball.

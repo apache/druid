@@ -56,7 +56,7 @@ for commit_id in all_release_commits.splitlines():
         # wait 3 seconds between calls to avoid hitting the rate limit
         time.sleep(3)
 
-        search_url = "https://api.github.com/search/issues?q=type:pr+is:merged+is:closed+repo:apache/incubator-druid+SHA:{}"
+        search_url = "https://api.github.com/search/issues?q=type:pr+is:merged+is:closed+repo:apache/druid+SHA:{}"
         resp = requests.get(search_url.format(commit_id), auth=(github_username, os.environ["GIT_TOKEN"]))
         resp_json = resp.json()
 

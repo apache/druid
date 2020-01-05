@@ -59,12 +59,12 @@ exports[`load data view matches snapshot 1`] = `
     </div>
     <div
       className="step-section"
-      key="Transform and configure schema"
+      key="Transform data and configure schema"
     >
       <div
         className="step-nav-l1"
       >
-        Transform and configure schema
+        Transform data and configure schema
       </div>
       <Blueprint3.ButtonGroup
         className="step-nav-l2"

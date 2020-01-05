@@ -22,8 +22,8 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
@@ -121,7 +121,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(DataSegment segment) throws SegmentLoadingException
+  public Segment getSegment(DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
     final ReferenceCountingLock lock = createOrGetLock(segment);
     final File segmentFiles;
@@ -147,7 +147,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
 
-    return factory.factorize(segment, segmentFiles);
+    return factory.factorize(segment, segmentFiles, lazy);
   }
 
   @Override

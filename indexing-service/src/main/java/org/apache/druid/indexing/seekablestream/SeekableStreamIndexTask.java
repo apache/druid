@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -40,7 +39,6 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -81,7 +79,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final LockGranularity lockGranularityToUse;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
-  // See https://github.com/apache/incubator-druid/issues/7724 for issues that can cause.
+  // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType>> runnerSupplier;
 
@@ -123,17 +121,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
-  }
-
-  private static String makeTaskId(String dataSource, String type)
-  {
-    final String suffix = RandomIdUtils.getRandomId();
-    return Joiner.on("_").join(type, dataSource, suffix);
-  }
-
-  protected static String getFormattedId(String dataSource, String type)
-  {
-    return makeTaskId(dataSource, type);
   }
 
   protected static String getFormattedGroupId(String dataSource, String type)
@@ -212,7 +199,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
         toolbox.getIndexMergerV9(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -251,7 +238,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
-        toolbox.getObjectMapper(),
+        toolbox.getJsonMapper(),
         metrics
     );
   }

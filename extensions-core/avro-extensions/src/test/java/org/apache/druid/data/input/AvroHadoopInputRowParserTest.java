@@ -21,7 +21,6 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
@@ -29,6 +28,7 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
+import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -81,7 +81,7 @@ public class AvroHadoopInputRowParserTest
   private static GenericRecord buildAvroFromFile(GenericRecord datum)
       throws IOException
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = FileUtils.createTempDir();
 
     // 0. write avro object into temp file.
     File someAvroDatumFile = new File(tmpDir, "someAvroDatum.avro");

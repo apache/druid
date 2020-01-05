@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -65,6 +66,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  */
@@ -181,6 +183,7 @@ public class CachingClusteredClientFunctionalityTest
                        .interval(interval)
                        .version(version)
                        .shardSpec(NoneShardSpec.instance())
+                       .size(0)
                        .build(),
             new TierSelectorStrategy()
             {
@@ -301,13 +304,30 @@ public class CachingClusteredClientFunctionalityTest
             return mergeLimit;
           }
         },
-        new DruidHttpClientConfig() {
+        new DruidHttpClientConfig()
+        {
           @Override
           public long getMaxQueuedBytes()
           {
             return 0L;
           }
-        }
+        },
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
+
+          @Override
+          public int getMergePoolParallelism()
+          {
+            // fixed so same behavior across all test environments
+            return 4;
+          }
+        },
+        ForkJoinPool.commonPool()
     );
   }
 

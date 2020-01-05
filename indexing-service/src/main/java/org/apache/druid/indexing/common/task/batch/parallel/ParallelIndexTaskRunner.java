@@ -38,7 +38,7 @@ import java.util.Set;
  * uses {@link SinglePhaseParallelIndexTaskRunner} for it.
  *
  * For perfect rollup, parallel indexing is executed in multiple phases. The supervisor task currently uses
- * {@link PartialSegmentGenerateParallelIndexTaskRunner} and {@link PartialSegmentMergeParallelIndexTaskRunner},
+ * {@link PartialHashSegmentGenerateParallelIndexTaskRunner} and {@link PartialHashSegmentMergeParallelIndexTaskRunner},
  * and can use more runners in the future.
  */
 public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReportType extends SubTaskReport>
@@ -71,9 +71,9 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
   Map<String, SubTaskReportType> getReports();
 
   /**
-   * Returns the current {@link ParallelIndexingProgress}.
+   * Returns the current {@link ParallelIndexingPhaseProgress}.
    */
-  ParallelIndexingProgress getProgress();
+  ParallelIndexingPhaseProgress getProgress();
 
   /**
    * Returns the IDs of current running tasks.

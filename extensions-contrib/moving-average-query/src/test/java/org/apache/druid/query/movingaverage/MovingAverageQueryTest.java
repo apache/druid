@@ -38,7 +38,6 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -51,6 +50,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -66,6 +66,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
@@ -84,19 +85,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Base class for implementing MovingAverageQuery tests
  */
 @RunWith(Parameterized.class)
-public class MovingAverageQueryTest
+public class MovingAverageQueryTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper jsonMapper;
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ServerConfig serverConfig;
 
-  private final List<Row> groupByResults = new ArrayList<>();
+  private final List<ResultRow> groupByResults = new ArrayList<>();
   private final List<Result<TimeseriesResultValue>> timeseriesResults = new ArrayList<>();
 
   private final TestConfig config;
@@ -219,9 +221,9 @@ public class MovingAverageQueryTest
     return MovingAverageQuery.class;
   }
 
-  private TypeReference<?> getExpectedResultType()
+  private TypeReference<List<MapBasedRow>> getExpectedResultType()
   {
-    return new TypeReference<List<Row>>()
+    return new TypeReference<List<MapBasedRow>>()
     {
     };
   }
@@ -349,7 +351,16 @@ public class MovingAverageQueryTest
           {
             return 0L;
           }
-        }
+        },
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
+        },
+        ForkJoinPool.commonPool()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

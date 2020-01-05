@@ -26,7 +26,7 @@ committer who visits an issue or a PR authored by a non-committer.
 
 1. Add appropriate labels to the PR, in particular:
 
-   - [**`Design Review`**](https://github.com/apache/incubator-druid/labels/Design%20Review) - for changes that will be
+   - [**`Design Review`**](https://github.com/apache/druid/labels/Design%20Review) - for changes that will be
    hard to undo after they appear in some Druid release, and/or changes that will have lasting consequences in the
    codebase. Examples:
      - Major architectural changes or API changes
@@ -46,7 +46,7 @@ committer who visits an issue or a PR authored by a non-committer.
      `@ExtensionPoint`), configuration options, emitted metric names, HTTP endpoint paths and parameters that are added
      or changed in the PR. If they are not listed, ask the PR author to update the PR description.
 
-   - [**`Incompatible`**](https://github.com/apache/incubator-druid/labels/Incompatible) - for changes that alter public
+   - [**`Incompatible`**](https://github.com/apache/druid/labels/Incompatible) - for changes that alter public
    API elements (`@PublicApi` or `@ExtensionPoint`), runtime configuration options, emitted metric names, HTTP endpoint
    behavior, or server behavior in some way that affects one of the following:
 
@@ -62,7 +62,7 @@ committer who visits an issue or a PR authored by a non-committer.
      All `Incompatible` PRs should be labelled `Design Review` too, but not vice versa: some `Design Review` issues,
      proposals and PRs may not be `Incompatible`.
 
-   - [**`Release Notes`**](https://github.com/apache/incubator-druid/labels/Release%20Notes) - for important changes
+   - [**`Release Notes`**](https://github.com/apache/druid/labels/Release%20Notes) - for important changes
    that should be reflected in the next Druid’s version release notes. Critically, those are changes that require some
    server or query configuration changes made by Druid cluster operators to preserve the former cluster behaviour, i. e.
    the majority of PRs labelled `Incompatible`. However, some `Incompatible` PRs may not need to be labelled
@@ -72,18 +72,18 @@ committer who visits an issue or a PR authored by a non-committer.
      Secondarily, PRs that add new features, improve performance or improve Druid cluster operation experience could
      also be labelled `Release Notes` at your discretion.
 
-   - [**`Bug`**](https://github.com/apache/incubator-druid/labels/Bug) / [**`Security`**](
-   https://github.com/apache/incubator-druid/labels/Security) / [**`Feature`**](
-   https://github.com/apache/incubator-druid/labels/Feature) / [**`Performance`**](
-   https://github.com/apache/incubator-druid/labels/Performance) / [**`Refactoring`**](
-   https://github.com/apache/incubator-druid/labels/Refactoring) / [**`Improvement`**](
-   https://github.com/apache/incubator-druid/labels/Improvement) - can be used to distinguish between types of changes.
-   [**`Compatibility`**](https://github.com/apache/incubator-druid/labels/Compatibility) label also falls into this
+   - [**`Bug`**](https://github.com/apache/druid/labels/Bug) / [**`Security`**](
+   https://github.com/apache/druid/labels/Security) / [**`Feature`**](
+   https://github.com/apache/druid/labels/Feature) / [**`Performance`**](
+   https://github.com/apache/druid/labels/Performance) / [**`Refactoring`**](
+   https://github.com/apache/druid/labels/Refactoring) / [**`Improvement`**](
+   https://github.com/apache/druid/labels/Improvement) - can be used to distinguish between types of changes.
+   [**`Compatibility`**](https://github.com/apache/druid/labels/Compatibility) label also falls into this
    category, it's specifically for PRs that restore or improve compatibility with previous Druid versions if it was
    inadvertently broken, or for changes that ensure forward compatibility with future Druid versions, forseening specific
    changes that would otherwise break the compatibility.
 
-   - [**`Development Blocker`**](https://github.com/apache/incubator-druid/labels/Development%20Blocker) - for changes
+   - [**`Development Blocker`**](https://github.com/apache/druid/labels/Development%20Blocker) - for changes
    that need to be merged before some other PRs could even be published. `Development Blocker` PRs should be prioritized
    by reviewers, so that they could be merged as soon as possible, thus not blocking somebody's work.
 
@@ -94,46 +94,46 @@ the author of the PR) or in a comment (if you have added labels to a PR submitte
 #creating-a-new-label-on-github) if none of the existing `Area` labels is applicable to the PR or issue.
 
    - [`Area - Automation/Static Analysis`](
-   https://github.com/apache/incubator-druid/labels/Area%20-%20Automation%2FStatic%20Analysis) - for any PRs and issues
+   https://github.com/apache/druid/labels/Area%20-%20Automation%2FStatic%20Analysis) - for any PRs and issues
    about Checkstyle, forbidden-apis, IntelliJ inspections, code style, etc. Should also be used for PRs and issue
    related to TeamCity CI problems.
-   - [`Area - Cache`](https://github.com/apache/incubator-druid/labels/Area%20-%20Cache) - for PRs and issues related to
+   - [`Area - Cache`](https://github.com/apache/druid/labels/Area%20-%20Cache) - for PRs and issues related to
    Druid's query results cache (local or remote). Don't use for PRs that anyhow relate to caching in different contexts.
-   - [`Area - Dev`](https://github.com/apache/incubator-druid/labels/Area%20-%20Dev) - for PRs and issues related to the
+   - [`Area - Dev`](https://github.com/apache/druid/labels/Area%20-%20Dev) - for PRs and issues related to the
    project itself, such as adding developer's docs and checklists, Github issue and PR templates, Github-related issues.
    Don't use for PRs and issues related to CI problems: use either `Area - Testing` for problems with Travis or
    `Area - Automation/Static Analysis` for problems with TeamCity. PRs with `Area - Dev` label should usually change
    files in `dev/` or `.github/` directories.
-   - [`Area - Documentation`](https://github.com/apache/incubator-druid/labels/Area%20-%20Documentation) - for PRs and
+   - [`Area - Documentation`](https://github.com/apache/druid/labels/Area%20-%20Documentation) - for PRs and
    issues about Druid's documentation for users and cluster operators. Don't use for PRs and issues about the
    documentation of the Druid's development process itself: use `Area - Dev` for that purpose. Don't use for issues and
    PR regarding adding internal design documentation and specification to code, usually, in the form of Javadocs or
    comments (there is no specialized label for this).  
-   - [`Area - Lookups`](https://github.com/apache/incubator-druid/labels/Area%20-%20Lookups) - for PRs and issues
+   - [`Area - Lookups`](https://github.com/apache/druid/labels/Area%20-%20Lookups) - for PRs and issues
    related to Druid's Query Time Lookups (QTL) feature.
-   - [`Area - Metadata`](https://github.com/apache/incubator-druid/labels/Area%20-%20Metadata) - for PRs and issues
+   - [`Area - Metadata`](https://github.com/apache/druid/labels/Area%20-%20Metadata) - for PRs and issues
    related to the organization and contents of the metadata store, the metadata store itself, and managing the metadata
    in the memory of various Druid nodes.
-   - [`Area - Null Handling`](https://github.com/apache/incubator-druid/labels/Area%20-%20Null%20Handling) - for PRs and
-   issues related to the [Null Handling project](https://github.com/apache/incubator-druid/issues/4349).
-   - [`Area - Operations`](https://github.com/apache/incubator-druid/labels/Area%20-%20Operations) - for PRs and issues
+   - [`Area - Null Handling`](https://github.com/apache/druid/labels/Area%20-%20Null%20Handling) - for PRs and
+   issues related to the [Null Handling project](https://github.com/apache/druid/issues/4349).
+   - [`Area - Operations`](https://github.com/apache/druid/labels/Area%20-%20Operations) - for PRs and issues
    related to Druid cluster operation process, for example, PRs adding more alerting, logging, changing configuration
    options.
-   - [`Area - Query UI`](https://github.com/apache/incubator-druid/labels/Area%20-%20Query%20UI) - for issues that
+   - [`Area - Query UI`](https://github.com/apache/druid/labels/Area%20-%20Query%20UI) - for issues that
    mention or discuss the questions related to presenting Druid query results for human perception.
-   - [`Area - Querying`](https://github.com/apache/incubator-druid/labels/Area%20-%20Querying) - for any PRs and issues
+   - [`Area - Querying`](https://github.com/apache/druid/labels/Area%20-%20Querying) - for any PRs and issues
    related to the process of making data queries against Druid clusters, including the PRs and issues about query
    processing and aggregators.
    - [`Area - Segment Balancing/Coordination`](
-   https://github.com/apache/incubator-druid/labels/Area%20-%20Segment%20Balancing%2FCoordination) - for PRs and issue
+   https://github.com/apache/druid/labels/Area%20-%20Segment%20Balancing%2FCoordination) - for PRs and issue
    related to the process of loading and dropping segments in Druid clusters according to specified *rules*, and
    balancing segments between Historical nodes in clusters. Coordinator node is responsible for both processes. This
    label is not called "Area - Coordinator" because Coordinator has some other duties that are not covered by this
    label, for example, compacting segments.
-   - [`Area - Testing`](https://github.com/apache/incubator-druid/labels/Area%20-%20Testing) - use for any PRs and
+   - [`Area - Testing`](https://github.com/apache/druid/labels/Area%20-%20Testing) - use for any PRs and
    issues related to testing (including integration testing), Travis CI issues, and flaky tests. For flaky tests, also
-   add [`Flaky test`](https://github.com/apache/incubator-druid/labels/Flaky%20test) label.
-   - [`Area - Zookeeper/Curator`](https://github.com/apache/incubator-druid/labels/Area%20-%20Zookeeper%2FCurator) - for
+   add [`Flaky test`](https://github.com/apache/druid/labels/Flaky%20test) label.
+   - [`Area - Zookeeper/Curator`](https://github.com/apache/druid/labels/Area%20-%20Zookeeper%2FCurator) - for
    any PRs and issues related to ZooKeeper, Curator, and node discovery in Druid.
 
 
@@ -147,7 +147,7 @@ problems even if you don't plan to review the PR.
 
 6. If you create an issue that is relatively small and self-contained and you don't plan to work on it in the near
 future, consider labelling it [**`Contributions Welcome`**](
-https://github.com/apache/incubator-druid/labels/Contributions%20Welcome) so that other people know that the issue is
+https://github.com/apache/druid/labels/Contributions%20Welcome) so that other people know that the issue is
 free to pick up and is relatively easily doable even for those who are not very familiar with the codebase.
 
 ## PR merge action item checklist

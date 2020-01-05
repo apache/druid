@@ -23,7 +23,7 @@ title: "Basic cluster tuning"
   -->
 
 
-This document provides basic guidelines for configuration properties and cluster architecture considerations related to performance tuning of an Apache Druid (incubating) deployment.
+This document provides basic guidelines for configuration properties and cluster architecture considerations related to performance tuning of an Apache Druid deployment.
 
 Please note that this document provides general guidelines and rules-of-thumb: these are not absolute, universal rules for cluster tuning, and this introductory guide is not an exhaustive description of all Druid tuning properties, which are described in the [configuration reference](../configuration/index.md).
 

@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
+import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.utils.JvmUtils;
@@ -34,6 +35,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
   public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
+  public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
@@ -144,4 +146,76 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   {
     return System.getProperty("java.io.tmpdir");
   }
+
+  @Config(value = "${base_path}.merge.useParallelMergePool")
+  public boolean useParallelMergePoolConfigured()
+  {
+    return true;
+  }
+
+  public boolean useParallelMergePool()
+  {
+    final boolean useParallelMergePoolConfigured = useParallelMergePoolConfigured();
+    final int parallelism = getMergePoolParallelism();
+    // need at least 3 to do 2 layer merge
+    if (parallelism > 2) {
+      return useParallelMergePoolConfigured;
+    }
+    if (useParallelMergePoolConfigured) {
+      log.debug(
+          "Parallel merge pool is enabled, but there are not enough cores to enable parallel merges: %s",
+          parallelism
+      );
+    }
+    return false;
+  }
+
+  @Config(value = "${base_path}.merge.pool.parallelism")
+  public int getMergePoolParallelismConfigured()
+  {
+    return DEFAULT_NUM_THREADS;
+  }
+
+  public int getMergePoolParallelism()
+  {
+    int poolParallelismConfigured = getMergePoolParallelismConfigured();
+    if (poolParallelismConfigured != DEFAULT_NUM_THREADS) {
+      return poolParallelismConfigured;
+    } else {
+      // assume 2 hyper-threads per core, so that this value is probably by default the number of physical cores * 1.5
+      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75);
+    }
+  }
+
+  @Config(value = "${base_path}.merge.pool.awaitShutdownMillis")
+  public long getMergePoolAwaitShutdownMillis()
+  {
+    return DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
+  }
+
+  @Config(value = "${base_path}.merge.pool.defaultMaxQueryParallelism")
+  public int getMergePoolDefaultMaxQueryParallelism()
+  {
+    // assume 2 hyper-threads per core, so that this value is probably by default the number of physical cores
+    return (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1);
+  }
+
+  @Config(value = "${base_path}.merge.task.targetRunTimeMillis")
+  public int getMergePoolTargetTaskRunTimeMillis()
+  {
+    return ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS;
+  }
+
+  @Config(value = "${base_path}.merge.task.initialYieldNumRows")
+  public int getMergePoolTaskInitialYieldRows()
+  {
+    return ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS;
+  }
+
+  @Config(value = "${base_path}.merge.task.smallBatchNumRows")
+  public int getMergePoolSmallBatchRows()
+  {
+    return ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS;
+  }
 }
+

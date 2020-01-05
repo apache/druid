@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.17.0-incubating-SNAPSHOT</version>
+        <version>0.18.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -137,6 +137,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
               </exclusion>
+              <!-- Following are excluded to remove security vulnerabilities: -->
+              <exclusion>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils-core</artifactId>
+              </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -202,10 +207,6 @@
               <artifactId>jetty-util</artifactId>
             </exclusion>
             <exclusion>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-annotations</artifactId>
-            </exclusion>
-            <exclusion>
               <groupId>com.google.protobuf</groupId>
               <artifactId>protobuf-java</artifactId>
             </exclusion>
@@ -248,6 +249,16 @@
             <exclusion>
               <groupId>com.sun.jersey</groupId>
               <artifactId>jersey-server</artifactId>
+            </exclusion>
+            <!-- Following are excluded to remove security vulnerabilities: -->
+            <exclusion>
+              <groupId>commons-beanutils</groupId>
+              <artifactId>commons-beanutils-core</artifactId>
+            </exclusion>
+            <exclusion>
+              <!-- excluded to remove security vulnerabilities; jackson-mapper-asl is renamed to jackson-databind -->
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-mapper-asl</artifactId>
             </exclusion>
           </exclusions>
         </dependency>

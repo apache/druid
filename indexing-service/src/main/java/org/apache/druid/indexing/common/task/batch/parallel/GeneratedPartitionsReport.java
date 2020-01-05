@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
@@ -30,18 +29,12 @@ import java.util.Objects;
  * This report is collected by {@link ParallelIndexSupervisorTask} and
  * used to generate {@link PartialSegmentMergeIOConfig}.
  */
-public class GeneratedPartitionsReport implements SubTaskReport
+abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SubTaskReport
 {
-  public static final String TYPE = "generated_partitions";
-
   private final String taskId;
-  private final List<PartitionStat> partitionStats;
+  private final List<T> partitionStats;
 
-  @JsonCreator
-  public GeneratedPartitionsReport(
-      @JsonProperty("taskId") String taskId,
-      @JsonProperty("partitionStats") List<PartitionStat> partitionStats
-  )
+  GeneratedPartitionsReport(String taskId, List<T> partitionStats)
   {
     this.taskId = taskId;
     this.partitionStats = partitionStats;
@@ -55,7 +48,7 @@ public class GeneratedPartitionsReport implements SubTaskReport
   }
 
   @JsonProperty
-  public List<PartitionStat> getPartitionStats()
+  public List<T> getPartitionStats()
   {
     return partitionStats;
   }

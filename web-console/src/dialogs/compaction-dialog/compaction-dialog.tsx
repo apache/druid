@@ -34,7 +34,6 @@ export interface CompactionDialogProps {
 
 export interface CompactionDialogState {
   currentConfig?: Record<string, any>;
-  allJsonValid: boolean;
 }
 
 export class CompactionDialog extends React.PureComponent<
@@ -45,9 +44,7 @@ export class CompactionDialog extends React.PureComponent<
 
   constructor(props: CompactionDialogProps) {
     super(props);
-    this.state = {
-      allJsonValid: true,
-    };
+    this.state = {};
   }
 
   componentDidMount(): void {
@@ -70,7 +67,7 @@ export class CompactionDialog extends React.PureComponent<
 
   render(): JSX.Element {
     const { onClose, onDelete, datasource, compactionConfig } = this.props;
-    const { currentConfig, allJsonValid } = this.state;
+    const { currentConfig } = this.state;
 
     return (
       <Dialog
@@ -158,7 +155,6 @@ export class CompactionDialog extends React.PureComponent<
           ]}
           model={currentConfig}
           onChange={m => this.setState({ currentConfig: m })}
-          updateJsonValidity={e => this.setState({ allJsonValid: e })}
         />
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -173,7 +169,7 @@ export class CompactionDialog extends React.PureComponent<
               text="Submit"
               intent={Intent.PRIMARY}
               onClick={this.handleSubmit}
-              disabled={!currentConfig || !allJsonValid}
+              disabled={!currentConfig}
             />
           </div>
         </div>

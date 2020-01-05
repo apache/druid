@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketches;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 public class FloatVectorValueMatcher implements VectorValueMatcherFactory
 {
   private final VectorValueSelector selector;
+  private final boolean canHaveNulls = !NullHandling.replaceWithDefault();
 
   public FloatVectorValueMatcher(final VectorValueSelector selector)
   {
@@ -38,6 +40,10 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
+    if (value == null && canHaveNulls) {
+      return makeNullValueMatcher(selector);
+    }
+
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
 
     if (matchVal == null) {

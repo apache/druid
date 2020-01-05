@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -70,8 +71,13 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     @VisibleForTesting
     public static final PruneSpecsHolder DEFAULT = new PruneSpecsHolder();
 
-    @Inject(optional = true) @PruneLoadSpec boolean pruneLoadSpec = false;
-    @Inject(optional = true) @PruneLastCompactionState boolean pruneLastCompactionState = false;
+    @Inject(optional = true)
+    @PruneLoadSpec
+    boolean pruneLoadSpec = false;
+
+    @Inject(optional = true)
+    @PruneLastCompactionState
+    boolean pruneLastCompactionState = false;
   }
 
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
@@ -102,6 +108,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final CompactionState lastCompactionState;
   private final long size;
 
+  @VisibleForTesting
   public DataSegment(
       SegmentId segmentId,
       Map<String, Object> loadSpec,
@@ -214,6 +221,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
                                ? null
                                : prepareCompactionState(lastCompactionState);
     this.binaryVersion = binaryVersion;
+    Preconditions.checkArgument(size >= 0);
     this.size = size;
   }
 
@@ -310,6 +318,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public CompactionState getLastCompactionState()
   {
     return lastCompactionState;

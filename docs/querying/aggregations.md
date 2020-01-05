@@ -23,7 +23,7 @@ title: "Aggregations"
   -->
 
 
-Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid (incubating).
+Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid.
 Aggregations can also be specified as part of many queries at query time.
 
 Available aggregations are:
