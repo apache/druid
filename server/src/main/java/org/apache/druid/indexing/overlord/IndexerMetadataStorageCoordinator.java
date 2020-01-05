@@ -42,9 +42,6 @@ public interface IndexerMetadataStorageCoordinator
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
    *
-<<<<<<< HEAD
-   * @return The DataSegments which include data in the requested interval. These segments may contain data outside the requested interval.
-=======
    * @param dataSource The datasource to query
    * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive,
    *                   end is exclusive
@@ -60,7 +57,6 @@ public interface IndexerMetadataStorageCoordinator
    * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
    * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
    * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
->>>>>>> 66657012bf50c42b5d847a379f33f8a5bdda2dda
    */
   default Collection<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval, Segments visibility)
   {
@@ -95,14 +91,10 @@ public interface IndexerMetadataStorageCoordinator
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested interval.
    *
-<<<<<<< HEAD
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
-=======
    * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
    * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
    * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
    * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
->>>>>>> 66657012bf50c42b5d847a379f33f8a5bdda2dda
    */
   Collection<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals, Segments visibility);
 
