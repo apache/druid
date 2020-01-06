@@ -55,7 +55,7 @@ configuration than `micro-quickstart`.
 
 ## Getting started
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+[Download](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
 the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
