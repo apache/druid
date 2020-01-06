@@ -67,7 +67,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>0.18.0-incubating-SNAPSHOT</tag>
+        <tag>0.18.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
