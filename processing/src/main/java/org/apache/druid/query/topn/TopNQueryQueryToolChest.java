@@ -544,9 +544,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public Sequence<Object[]> resultsAsArrays(
-      TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence
-  )
+  public Sequence<Object[]> resultsAsArrays(TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence)
   {
     final List<String> fields = resultArrayFields(query);
 
