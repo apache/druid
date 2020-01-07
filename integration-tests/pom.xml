@@ -31,10 +31,6 @@
         <version>0.16.0</version>
     </parent>
 
-    <properties>
-        <apache.kafka.version>2.1.1</apache.kafka.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
