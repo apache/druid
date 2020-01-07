@@ -510,7 +510,7 @@ const DIMENSION_SPEC_FORM_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['string', 'long', 'float'],
+    suggestions: ['string', 'long', 'float', 'double'],
   },
   {
     name: 'createBitmapIndex',
