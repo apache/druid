@@ -438,6 +438,7 @@ public class AggregationTestHelper implements Closeable
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
+                  .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
                   .withRollup(rollup)
@@ -458,6 +459,7 @@ public class AggregationTestHelper implements Closeable
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(minTimestamp)
+                      .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                       .withQueryGranularity(gran)
                       .withMetrics(metrics)
                       .withRollup(rollup)
