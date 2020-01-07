@@ -102,7 +102,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("inputFormat")
   private InputFormat getGivenInputFormat()
   {
     return inputFormat;
