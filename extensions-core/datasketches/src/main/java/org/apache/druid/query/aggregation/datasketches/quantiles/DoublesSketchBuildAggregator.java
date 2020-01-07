@@ -43,6 +43,9 @@ public class DoublesSketchBuildAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
+    if (valueSelector.isNull()) {
+      return;
+    }
     sketch.update(valueSelector.getDouble());
   }
 
