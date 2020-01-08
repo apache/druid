@@ -91,6 +91,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -112,7 +113,7 @@ import java.util.stream.Collectors;
 /**
  */
 @RunWith(Parameterized.class)
-public class TopNQueryRunnerTest
+public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
 
@@ -5771,5 +5772,222 @@ public class TopNQueryRunnerTest
 
     // Don't check results, just the fact that the query could complete
     Assert.assertNotNull(runWithMerge(query).toList());
+  }
+
+  @Test
+  public void test_topN_orderByLongNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("longNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongSumAggregatorFactory("longNumericNull", "longNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("longNumericNull", 80L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("longNumericNull", 40L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("longNumericNull", 20L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("longNumericNull", 10L)
+                        .build(),
+                    makeNumericNullRowHelper("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeNumericNullRowHelper("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeNumericNullRowHelper("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void test_topN_orderByFloatNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("floatNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongSumAggregatorFactory("floatNumericNull", "floatNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("floatNumericNull", 80f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("floatNumericNull", 70f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("floatNumericNull", 70f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("floatNumericNull", 70f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("floatNumericNull", 50f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("floatNumericNull", 50f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("floatNumericNull", 50f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("floatNumericNull", 40f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("floatNumericNull", 20f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("floatNumericNull", 10f)
+                        .build(),
+                    makeNumericNullRowHelper("index_alias", 114L, "floatNumericNull", NullHandling.defaultFloatValue()),
+                    makeNumericNullRowHelper("index_alias", 126L, "floatNumericNull", NullHandling.defaultFloatValue()),
+                    makeNumericNullRowHelper("index_alias", 166L, "floatNumericNull", NullHandling.defaultFloatValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void test_topN_orderByDoubleNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("doubleNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongSumAggregatorFactory("doubleNumericNull", "doubleNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("doubleNumericNull", 80d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("doubleNumericNull", 70d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("doubleNumericNull", 70d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("doubleNumericNull", 70d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("doubleNumericNull", 50d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("doubleNumericNull", 50d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("doubleNumericNull", 50d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("doubleNumericNull", 40d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("doubleNumericNull", 20d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("doubleNumericNull", 10d)
+                        .build(),
+                    makeNumericNullRowHelper("index_alias", 114L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
+                    makeNumericNullRowHelper("index_alias", 126L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
+                    makeNumericNullRowHelper("index_alias", 166L, "doubleNumericNull", NullHandling.defaultDoubleValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  private static Map<String, Object> makeNumericNullRowHelper(
+      String dimName,
+      Object dimValue,
+      String nameOfColumnWithNull,
+      Object defaultNullValue
+  )
+  {
+    Map<String, Object> nullRow = new HashMap<>();
+    nullRow.put(dimName, dimValue);
+    nullRow.put(nameOfColumnWithNull, defaultNullValue);
+    return nullRow;
   }
 }
