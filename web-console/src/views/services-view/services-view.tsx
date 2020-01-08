@@ -133,6 +133,7 @@ interface MiddleManagerQueryResultRow {
   blacklistedUntil: string | null;
   currCapacityUsed: number;
   lastCompletedTaskTime: string;
+  category: string;
   runningTasks: string[];
   worker: {
     capacity: number;
@@ -152,11 +153,12 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
-  //   coordinator => 7
-  //   overlord => 6
-  //   router => 5
-  //   broker => 4
-  //   historical => 3
+  //   coordinator => 8
+  //   overlord => 7
+  //   router => 6
+  //   broker => 5
+  //   historical => 4
+  //   indexer => 3
   //   middle_manager => 2
   //   peon => 1
 
@@ -164,11 +166,12 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
   (
     CASE "server_type"
-    WHEN 'coordinator' THEN 7
-    WHEN 'overlord' THEN 6
-    WHEN 'router' THEN 5
-    WHEN 'broker' THEN 4
-    WHEN 'historical' THEN 3
+    WHEN 'coordinator' THEN 8
+    WHEN 'overlord' THEN 7
+    WHEN 'router' THEN 6
+    WHEN 'broker' THEN 5
+    WHEN 'historical' THEN 4
+    WHEN 'indexer' THEN 3
     WHEN 'middle_manager' THEN 2
     WHEN 'peon' THEN 1
     ELSE 0
@@ -426,7 +429,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 100,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager') {
+              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
                 return row.worker ? row.currCapacityUsed / row.worker.capacity : null;
               } else {
                 return row.max_size ? row.curr_size / row.max_size : null;
@@ -440,6 +443,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                   const totalMax = sum(originalHistoricals, s => s.max_size);
                   return fillIndicator(totalCurr / totalMax);
 
+                case 'indexer':
                 case 'middle_manager':
                   const originalMiddleManagers = row.subRows.map(r => r._original);
                   const totalCurrCapacityUsed = sum(
@@ -463,6 +467,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                 case 'historical':
                   return fillIndicator(row.value);
 
+                case 'indexer':
                 case 'middle_manager':
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
@@ -484,7 +489,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             width: 400,
             filterable: false,
             accessor: row => {
-              if (row.service_type === 'middle_manager') {
+              if (row.service_type === 'middle_manager' || row.service_type === 'indexer') {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
 
                 const details: string[] = [];
@@ -517,6 +522,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                     segmentsToDropSize,
                   );
 
+                case 'indexer':
                 case 'middle_manager':
                   return row.value;
 
