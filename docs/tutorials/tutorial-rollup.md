@@ -55,25 +55,19 @@ We'll ingest this data using the following ingestion task spec, located at `quic
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "rollup-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "srcIP",
-              "dstIP"
-            ]
-          },
-          "timestampSpec": {
-            "column": "timestamp",
-            "format": "iso"
-          }
-        }
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "srcIP",
+          "dstIP"
+        ]
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -89,16 +83,19 @@ We'll ingest this data using the following ingestion task spec, located at `quic
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial",
         "filter" : "rollup-data.json"
       },
+      "inputFormat" : {
+        "type" : "json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }
