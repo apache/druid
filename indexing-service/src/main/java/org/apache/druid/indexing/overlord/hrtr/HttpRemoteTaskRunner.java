@@ -421,7 +421,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   // CAUTION: This method calls RemoteTaskRunnerWorkItem.setResult(..) which results in TaskQueue.notifyStatus() being called
   // because that is attached by TaskQueue to task result future. So, this method must not be called with "statusLock"
-  // held. See https://github.com/apache/incubator-druid/issues/6201
+  // held. See https://github.com/apache/druid/issues/6201
   private void taskComplete(
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem,
       WorkerHolder workerHolder,

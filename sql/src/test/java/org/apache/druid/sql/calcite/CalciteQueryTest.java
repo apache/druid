@@ -1125,7 +1125,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectProjectionFromSelectSingleColumnDescending() throws Exception
   {
-    // Regression test for https://github.com/apache/incubator-druid/issues/7768.
+    // Regression test for https://github.com/apache/druid/issues/7768.
 
     // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
     // in the inner query. This is valid, as the SQL standard considers the subquery results to be an unordered
@@ -1818,7 +1818,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHavingOnRatio() throws Exception
   {
-    // Test for https://github.com/apache/incubator-druid/issues/4264
+    // Test for https://github.com/apache/druid/issues/4264
 
     testQuery(
         "SELECT\n"
@@ -2555,7 +2555,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithImpossibleTimeFilter() throws Exception
   {
-    // Regression test for https://github.com/apache/incubator-druid/issues/7671
+    // Regression test for https://github.com/apache/druid/issues/7671
 
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -3622,7 +3622,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInFilterWith23Elements() throws Exception
   {
-    // Regression test for https://github.com/apache/incubator-druid/issues/4203.
+    // Regression test for https://github.com/apache/druid/issues/4203.
 
     final List<String> elements = new ArrayList<>();
     elements.add("abc");
@@ -7617,7 +7617,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeExtractWithTooFewArguments() throws Exception
   {
-    // Regression test for https://github.com/apache/incubator-druid/pull/7710.
+    // Regression test for https://github.com/apache/druid/pull/7710.
     expectedException.expect(ValidationException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(CalciteContextException.class));
     expectedException.expectCause(
@@ -7696,7 +7696,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
 
-    // Regression test for https://github.com/apache/incubator-druid/issues/4208
+    // Regression test for https://github.com/apache/druid/issues/4208
     testQuery(
         "SELECT dim1, dim2 FROM druid.foo\n"
         + " WHERE dim2 IN (\n"

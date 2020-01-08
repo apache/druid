@@ -17,22 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
-public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class MomentSketchAggregatorFactorySerdeTest
 {
-  // This value comes from an experiment.
-  // See the discussion at https://github.com/apache/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 7.425;
-  private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
-
-  public static ConciseBitmapDecisionHelper instance()
+  @Test
+  public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
-    return INSTANCE;
-  }
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    MomentSketchAggregatorFactory factory = new MomentSketchAggregatorFactory(
+        "name", "fieldName", 128, true
+    );
 
-  private ConciseBitmapDecisionHelper()
-  {
-    super(BITMAP_INTERSECT_COST);
+    MomentSketchAggregatorFactory other = objectMapper.readValue(
+        objectMapper.writeValueAsString(factory),
+        MomentSketchAggregatorFactory.class
+    );
+
+    Assert.assertEquals(factory, other);
   }
 }

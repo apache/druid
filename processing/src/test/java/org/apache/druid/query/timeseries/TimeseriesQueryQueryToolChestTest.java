@@ -181,7 +181,7 @@ public class TimeseriesQueryQueryToolChestTest
                                          )
                                          .build();
 
-    // Test for https://github.com/apache/incubator-druid/issues/4093.
+    // Test for https://github.com/apache/druid/issues/4093.
     Assert.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),

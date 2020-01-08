@@ -58,8 +58,8 @@ public class JavaScriptDimFilter implements DimFilter
    * in {@link JavaScriptPredicateFactory(String, ExtractionFn)} without worrying about final modifiers
    * on the fields of the created object
    *
-   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
-   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
+   * @see <a href="https://github.com/apache/druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/druid/pull/6662#discussion_r237013157</a>
    */
   @MonotonicNonNull
   private volatile JavaScriptPredicateFactory predicateFactory;

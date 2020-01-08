@@ -49,7 +49,7 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
       private final int numStorageLocations = storageLocations.size();
       private int remainingIterations = numStorageLocations;
       // Each call to this methods starts with a different startIndex to avoid the same location being picked up over
-      // again. See https://github.com/apache/incubator-druid/issues/8614.
+      // again. See https://github.com/apache/druid/issues/8614.
       private int i = startIndex.getAndUpdate(n -> (n + 1) % numStorageLocations);
 
       @Override

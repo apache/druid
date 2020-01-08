@@ -78,7 +78,7 @@ public class ParquetExtensionsModule implements DruidModule
     conf.setClassLoader(getClass().getClassLoader());
 
     // Ensure that FileSystem class level initialization happens with correct CL
-    // See https://github.com/apache/incubator-druid/issues/1714
+    // See https://github.com/apache/druid/issues/1714
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());

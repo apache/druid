@@ -22,7 +22,7 @@ title: "Spatial filters"
   ~ under the License.
   -->
 
-Apache Druid (incubating) supports filtering specially spatially indexed columns based on an origin and a bound.
+Apache Druid supports filtering specially spatially indexed columns based on an origin and a bound.
 
 ## Spatial indexing
 
