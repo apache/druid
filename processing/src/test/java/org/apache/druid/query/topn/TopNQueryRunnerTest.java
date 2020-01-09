@@ -5791,7 +5791,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 97L)
                         .put("longNumericNull", 80L)
@@ -5859,7 +5859,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 97L)
                         .put("floatNumericNull", 80f)
@@ -5927,7 +5927,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 97L)
                         .put("doubleNumericNull", 80d)
