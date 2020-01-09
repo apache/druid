@@ -1006,20 +1006,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     }
 
                     event.put(specs[0], eventVal);
-
-                    /*
-                    event.put(
-                        specs[0],
-                        specs.length == 1 || specs[1].equals("STRING") ? values1[i] :
-                        specs[1].equals("TIME") ? toTimestamp(values1[i]) :
-                        specs[1].equals("FLOAT") ? Float.valueOf(values1[i]) :
-                        specs[1].equals("DOUBLE") ? Double.valueOf(values1[i]) :
-                        specs[1].equals("LONG") ? Long.valueOf(values1[i]) :
-                        specs[1].equals("NULL") ? null :
-                        specs[1].equals("STRINGS") ? Arrays.asList(values1[i].split("\u0001")) :
-                        values1[i]
-                    );
-                    */
                   }
                   return event;
                 }
