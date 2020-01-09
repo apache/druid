@@ -263,13 +263,18 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup, boolean bitmap)
   {
+    CharSource stream = getResourceCharSource(resourceFilename);
+    return makeRealtimeIndex(stream, rollup, bitmap);
+  }
+
+  public static CharSource getResourceCharSource(final String resourceFilename)
+  {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
-    CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
-    return makeRealtimeIndex(stream, rollup, bitmap);
+    return Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
   }
 
   public static IncrementalIndex makeRealtimeIndex(final CharSource source)
