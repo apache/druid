@@ -35,8 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- */
 public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
 {
   @Test
@@ -55,10 +53,12 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6D
+                "roku",
+                6D
             ),
             new FieldAccessPostAggregator(
-                "rows", "rows"
+                "rows",
+                "rows"
             )
         );
 
@@ -93,16 +93,18 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     final String aggName = "rows";
     ArithmeticPostAggregator arithmeticPostAggregator;
     CountAggregator agg = new CountAggregator();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6D
+                "roku",
+                6D
             ),
             new FieldAccessPostAggregator(
-                "rows", "rows"
+                "rows",
+                "rows"
             )
         );
 
@@ -126,15 +128,17 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
   {
     final String aggName = "doubleWithNulls";
     ArithmeticPostAggregator arithmeticPostAggregator;
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6D
+                "roku",
+                6D
             ),
             new FieldAccessPostAggregator(
-                aggName, aggName
+                aggName,
+                aggName
             )
         );
 
