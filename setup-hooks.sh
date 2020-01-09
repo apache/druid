@@ -1,3 +1,3 @@
 #!/bin/bash
 
-ln -s ../../hooks/pre-commit.sh .git/hooks/pre-commit
+ln -s ../../hooks/pre-push.sh .git/hooks/pre-push
