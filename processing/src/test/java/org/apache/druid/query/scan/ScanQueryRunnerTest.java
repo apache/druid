@@ -281,6 +281,9 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
+            null,
+            null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
         V_0112_0114
