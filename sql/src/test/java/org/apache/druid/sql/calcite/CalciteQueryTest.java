@@ -44,11 +44,13 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
@@ -1331,6 +1333,347 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NullHandling.sqlCompatible() ? 18.0 : 15.0}
         )
+    );
+  }
+
+  @Test
+  public void testEarliestAggregatorsNumericNulls() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongFirstAggregatorFactory("a0", "l1"),
+                          new DoubleFirstAggregatorFactory("a1", "d1"),
+                          new FloatFirstAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{7L, 1.0, 1.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testLatestAggregatorsNumericNull() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT LATEST(l1), LATEST(d1), LATEST(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongLastAggregatorFactory("a0", "l1"),
+                          new DoubleLastAggregatorFactory("a1", "d1"),
+                          new FloatLastAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultLongValue(), NullHandling.defaultDoubleValue(), NullHandling.defaultFloatValue()}
+        )
+    );
+  }
+
+  @Test
+  public void testOrderByEarliestFloat() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0f},
+          new Object[]{"2", 0.0f},
+          new Object[]{"abc", 0.0f},
+          new Object[]{"def", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    }
+    testQuery(
+        "SELECT dim1, EARLIEST(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                  .aggregators(
+                      aggregators(
+                          new FloatFirstAggregatorFactory("a0", "f1")
+                      )
+                  )
+                  .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                  .threshold(10)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByEarliestDouble() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0},
+          new Object[]{"2", 0.0},
+          new Object[]{"abc", 0.0},
+          new Object[]{"def", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    }
+    testQuery(
+        "SELECT dim1, EARLIEST(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new DoubleFirstAggregatorFactory("a0", "d1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByEarliestLong() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0L},
+          new Object[]{"2", 0L},
+          new Object[]{"abc", 0L},
+          new Object[]{"def", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, EARLIEST(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new LongFirstAggregatorFactory("a0", "l1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByLatestFloat() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0f},
+          new Object[]{"2", 0.0f},
+          new Object[]{"abc", 0.0f},
+          new Object[]{"def", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    }
+
+    testQuery(
+        "SELECT dim1, LATEST(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new FloatLastAggregatorFactory("a0", "f1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByLatestDouble() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0},
+          new Object[]{"2", 0.0},
+          new Object[]{"abc", 0.0},
+          new Object[]{"def", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    }
+    testQuery(
+        "SELECT dim1, LATEST(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new DoubleLastAggregatorFactory("a0", "d1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByLatestLong() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0L},
+          new Object[]{"2", 0L},
+          new Object[]{"abc", 0L},
+          new Object[]{"def", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, LATEST(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new LongLastAggregatorFactory("a0", "l1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
     );
   }
 
