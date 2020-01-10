@@ -25,9 +25,9 @@ import org.apache.druid.java.util.common.ISE;
 
 public class InputRowContextExecutor
 {
-  //CHECKSTYLE.OFF: Regexp
+  //CHECKSTYLE.OFF: ConstantName
   private static final ThreadLocal<InputRow> in = new ThreadLocal<>();
-  //CHECKSTYLE.ON: Regexp
+  //CHECKSTYLE.ON: ConstantName
   private final InputRow row;
   private final Runnable runnable;
 
