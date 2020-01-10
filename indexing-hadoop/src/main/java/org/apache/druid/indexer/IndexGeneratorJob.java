@@ -105,7 +105,7 @@ public class IndexGeneratorJob implements Jobby
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
-    final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
+    final Configuration conf = JobHelper.injectSystemProperties(new Configuration(), config.getAllowedHadoopPrefix());
     config.addJobProperties(conf);
 
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
@@ -167,7 +167,7 @@ public class IndexGeneratorJob implements Jobby
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");
 
-      JobHelper.injectSystemProperties(job);
+      JobHelper.injectSystemProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());
       config.addJobProperties(job);
       // inject druid properties like deep storage bindings
       JobHelper.injectDruidProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());

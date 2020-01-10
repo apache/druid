@@ -96,7 +96,7 @@ public class DetermineHashedPartitionsJob implements Jobby
           StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );
 
-      JobHelper.injectSystemProperties(groupByJob);
+      JobHelper.injectSystemProperties(groupByJob.getConfiguration(), config.getAllowedHadoopPrefix());
       config.addJobProperties(groupByJob);
       groupByJob.setMapperClass(DetermineCardinalityMapper.class);
       groupByJob.setMapOutputKeyClass(LongWritable.class);
