@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
@@ -1165,7 +1166,7 @@ public class CompactionTaskTest
     @Override
     public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
     {
-      final Map<DataSegment, File> submap = new HashMap<>(segments.size());
+      final Map<DataSegment, File> submap = Maps.newHashMapWithExpectedSize(segments.size());
       for (DataSegment segment : segments) {
         final File file = Preconditions.checkNotNull(segmentFileMap.get(segment));
         submap.put(segment, file);
@@ -1204,14 +1205,14 @@ public class CompactionTaskTest
     {
       super(mapper, () -> 0);
 
-      queryableIndexMap = new HashMap<>(segmentFileMap.size());
+      queryableIndexMap = Maps.newHashMapWithExpectedSize(segmentFileMap.size());
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {
         final DataSegment segment = entry.getKey();
         final List<String> columnNames = new ArrayList<>(segment.getDimensions().size() + segment.getMetrics().size());
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Supplier<ColumnHolder>> columnMap = new HashMap<>(columnNames.size());
+        final Map<String, Supplier<ColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {

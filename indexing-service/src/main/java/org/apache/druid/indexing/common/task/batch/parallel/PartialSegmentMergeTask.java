@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.io.FileUtils;
@@ -158,7 +159,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
     final List<TaskLock> locks = toolbox.getTaskActionClient().submit(
         new SurrogateAction<>(supervisorTaskId, new LockListAction())
     );
-    final Map<Interval, String> intervalToVersion = new HashMap<>(locks.size());
+    final Map<Interval, String> intervalToVersion = Maps.newHashMapWithExpectedSize(locks.size());
     locks.forEach(lock -> {
       if (lock.isRevoked()) {
         throw new ISE("Lock[%s] is revoked", lock);

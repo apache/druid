@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -45,7 +46,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +85,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.objectMapper = objectMapper;
     this.compactionConfigs = compactionConfigs;
     this.dataSources = dataSources;
-    this.timelineIterators = new HashMap<>(dataSources.size());
+    this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);

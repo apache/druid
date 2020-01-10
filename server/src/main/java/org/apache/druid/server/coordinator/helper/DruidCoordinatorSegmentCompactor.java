@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.helper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.indexing.ClientCompactQuery;
@@ -91,7 +92,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         final List<TaskStatusPlus> compactTasks = filterNonCompactTasks(indexingServiceClient.getActiveTasks());
         // dataSource -> list of intervals of compact tasks
-        final Map<String, List<Interval>> compactTaskIntervals = new HashMap<>(compactionConfigList.size());
+        final Map<String, List<Interval>> compactTaskIntervals = Maps.newHashMapWithExpectedSize(
+            compactionConfigList.size());
         int numEstimatedNonCompleteCompactionTasks = 0;
         for (TaskStatusPlus status : compactTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());

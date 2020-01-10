@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -380,7 +381,7 @@ public class OverlordResource
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
     }
 
-    Map<String, TaskStatus> result = new HashMap<>(taskIds.size());
+    Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
     for (String taskId : taskIds) {
       Optional<TaskStatus> optional = taskStorageQueryAdapter.getStatus(taskId);
       if (optional.isPresent()) {
