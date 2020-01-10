@@ -39,7 +39,7 @@ public abstract class NumericFirstAggregator<TSelector extends BaseNullableColum
     this.valueSelector = valueSelector;
 
     firstTime = Long.MAX_VALUE;
-    rhsNull = false;
+    rhsNull = !useDefault;
   }
 
   abstract void setCurrentValue();

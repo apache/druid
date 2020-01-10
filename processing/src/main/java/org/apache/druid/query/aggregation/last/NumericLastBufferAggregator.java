@@ -72,7 +72,7 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MIN_VALUE);
-    buf.put(position + NULL_OFFSET, RHS_NOT_NULL);
+    buf.put(position + NULL_OFFSET, useDefault ? RHS_NOT_NULL : RHS_NULL);
     initValue(buf, position);
   }
 

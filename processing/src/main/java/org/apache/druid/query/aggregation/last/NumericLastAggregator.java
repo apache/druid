@@ -39,7 +39,7 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
     this.valueSelector = valueSelector;
 
     lastTime = Long.MIN_VALUE;
-    rhsNull = false;
+    rhsNull = !useDefault;
   }
 
   abstract void setCurrentValue();

@@ -72,7 +72,7 @@ public abstract class NumericFirstBufferAggregator<TSelector extends BaseNullabl
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MAX_VALUE);
-    buf.put(position + NULL_OFFSET, RHS_NOT_NULL);
+    buf.put(position + NULL_OFFSET, useDefault ? RHS_NOT_NULL : RHS_NULL);
     initValue(buf, position);
   }
 
