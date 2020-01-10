@@ -265,11 +265,7 @@ public class Expressions
           postAggregatorVisitor
       );
 
-      if (expression == null) {
-        return null;
-      } else {
         return expression;
-      }
     }
   }
 

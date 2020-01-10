@@ -27,6 +27,8 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 
+import java.util.Objects;
+
 /**
  * Represents a "simple" extraction of a value from a Druid row, which is defined as a column plus an extractionFn.
  * This is useful since identifying simple extractions and treating them specially can allow Druid to perform
@@ -89,10 +91,10 @@ public class SimpleExtraction
 
     SimpleExtraction that = (SimpleExtraction) o;
 
-    if (column != null ? !column.equals(that.column) : that.column != null) {
+    if (!Objects.equals(column, that.column)) {
       return false;
     }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+    return Objects.equals(extractionFn, that.extractionFn);
 
   }
 
