@@ -30,7 +30,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 public class LoadingLookupTest extends InitializedNullHandlingTest

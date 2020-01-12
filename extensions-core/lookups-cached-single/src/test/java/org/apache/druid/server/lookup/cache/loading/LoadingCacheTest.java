@@ -85,10 +85,10 @@ public class LoadingCacheTest
   @Test
   public void testPut()
   {
-    loadingCache.get("key2", new Function<Void, String>()
+    loadingCache.get("key2", new Function<String, String>()
     {
       @Override
-      public String apply(Void aVoid)
+      public String apply(String key)
       {
         return "value2";
       }
@@ -99,10 +99,10 @@ public class LoadingCacheTest
   @Test
   public void testInvalidate()
   {
-    loadingCache.get("key2", new Function<Void, String>()
+    loadingCache.get("key2", new Function<String, String>()
     {
       @Override
-      public String apply(Void aVoid)
+      public String apply(String key)
       {
         return "value2";
       }
@@ -115,10 +115,10 @@ public class LoadingCacheTest
   @Test
   public void testInvalidateAll()
   {
-    loadingCache.get("key2", new Function<Void, String>()
+    loadingCache.get("key2", new Function<String, String>()
     {
       @Override
-      public String apply(Void aVoid)
+      public String apply(String key)
       {
         return "value2";
       }
@@ -132,10 +132,10 @@ public class LoadingCacheTest
   public void testInvalidateAll1()
   {
     loadingCache.invalidateAll();
-    loadingCache.get("key2", new Function<Void, String>()
+    loadingCache.get("key2", new Function<String, String>()
     {
       @Override
-      public String apply(Void aVoid)
+      public String apply(String key)
       {
         return "value2";
       }
