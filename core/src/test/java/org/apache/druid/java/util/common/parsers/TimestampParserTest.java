@@ -140,6 +140,7 @@ public class TimestampParserTest
 
     long millis1 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8)).getMillis();
     long millis2 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-6)).getMillis();
+    // java.util.Locale.setDefault(java.util.Locale.US);
 
     Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ z yyyy");
     Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 GMT-0800 PST 1994").getMillis());
@@ -157,6 +158,7 @@ public class TimestampParserTest
   @Test
   public void testTimeZoneAtExtremeLocations()
   {
+    // java.util.Locale.setDefault(java.util.Locale.US);
     Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd yy HH:mm:ss zZ z");
     Assert.assertEquals(new DateTime(2005, 1, 22, 13, 0, DateTimeZone.forOffsetHours(-6)).getMillis(),
                         parser.apply("Sat Jan 22 05 13:00:00 GMT-0600 CST").getMillis());

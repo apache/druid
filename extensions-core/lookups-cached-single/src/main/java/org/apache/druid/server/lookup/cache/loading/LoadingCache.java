@@ -21,19 +21,18 @@ package org.apache.druid.server.lookup.cache.loading;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 /**
  * A semi-persistent mapping from keys to values. Cache entries are added using
- * {@link #get(Object, Callable)} and stored in the cache until either evicted or manually invalidated.
+ * {@link #get(Object, Function)} and stored in the cache until either evicted or manually invalidated.
  * <p>
  * <p>Implementations of this interface are expected to be thread-safe, and can be safely accessed
  * by multiple concurrent threads.
@@ -74,13 +73,12 @@ public interface LoadingCache<K, V> extends Closeable
    * <p><b>Warning:</b> as with {@link CacheLoader#load}, {@code valueLoader} <b>must not</b> return
    * {@code null}; it may either return a non-null value or throw an exception.
    *
-   * @throws ExecutionException if a checked exception was thrown while loading the value
    * @throws UncheckedExecutionException if an unchecked exception was thrown while loading the
    *     value
    * @throws ExecutionError if an error was thrown while loading the value
    *
    */
-  V get(K key, Callable<? extends V> valueLoader) throws ExecutionException;
+  V get(K key, Function<? super K, ? extends V> valueLoader);
 
   /**
    * Copies all of the mappings from the specified map to the cache. This method is used for bulk put.

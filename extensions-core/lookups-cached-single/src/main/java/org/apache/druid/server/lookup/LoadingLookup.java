@@ -29,9 +29,8 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 /**
  * Loading  lookup will load the key\value pair upon request on the key it self, the general algorithm is load key if absent.
@@ -74,10 +73,10 @@ public class LoadingLookup extends LookupExtractor
 
     final String presentVal;
     try {
-      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
+      presentVal = loadingCache.get(keyEquivalent, new ApplyFunction());
       return NullHandling.emptyToNullIfNeeded(presentVal);
     }
-    catch (ExecutionException e) {
+    catch (Exception e) {
       LOGGER.debug("value not found for key [%s]", key);
       return null;
     }
@@ -95,10 +94,10 @@ public class LoadingLookup extends LookupExtractor
     }
     final List<String> retList;
     try {
-      retList = reverseLoadingCache.get(valueEquivalent, new UnapplyCallable(valueEquivalent));
+      retList = reverseLoadingCache.get(valueEquivalent, new UnapplyFunction());
       return retList;
     }
-    catch (ExecutionException e) {
+    catch (Exception e) {
       LOGGER.debug("list of keys not found for value [%s]", value);
       return Collections.EMPTY_LIST;
     }
@@ -127,17 +126,10 @@ public class LoadingLookup extends LookupExtractor
     return LookupExtractionModule.getRandomCacheKey();
   }
 
-  private class ApplyCallable implements Callable<String>
+  private class ApplyFunction implements Function<String, String>
   {
-    private final String key;
-
-    public ApplyCallable(String key)
-    {
-      this.key = key;
-    }
-
     @Override
-    public String call()
+    public String apply(String key)
     {
       // When SQL compatible null handling is disabled,
       // avoid returning null and return an empty string to cache it.
@@ -145,17 +137,10 @@ public class LoadingLookup extends LookupExtractor
     }
   }
 
-  private class UnapplyCallable implements Callable<List<String>>
+  private class UnapplyFunction implements Function<String, List<String>>
   {
-    private final String value;
-
-    public UnapplyCallable(String value)
-    {
-      this.value = value;
-    }
-
     @Override
-    public List<String> call()
+    public List<String> apply(String value)
     {
       return dataFetcher.reverseFetchKeys(value);
     }

@@ -19,11 +19,11 @@
 
 package org.apache.druid.java.util.http.client.pool;
 
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -35,7 +35,6 @@ import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -58,7 +57,7 @@ public class ResourcePool<K, V> implements Closeable
 
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config)
   {
-    this.pool = CacheBuilder.newBuilder().build(
+    this.pool = Caffeine.newBuilder().build(
         new CacheLoader<K, ImmediateCreationResourceHolder<K, V>>()
         {
           @Override
@@ -90,7 +89,7 @@ public class ResourcePool<K, V> implements Closeable
     try {
       holder = pool.get(key);
     }
-    catch (ExecutionException e) {
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
     final V value = holder.get();

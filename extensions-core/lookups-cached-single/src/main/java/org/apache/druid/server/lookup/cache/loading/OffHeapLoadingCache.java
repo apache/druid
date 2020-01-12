@@ -30,10 +30,10 @@ import org.mapdb.HTreeMap;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
 {
@@ -131,7 +131,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
   }
 
   @Override
-  public V get(K key, final Callable<? extends V> valueLoader)
+  public V get(K key, final Function<? super K, ? extends V> valueLoader)
   {
     synchronized (key) {
       V value = cache.get(key);
@@ -139,7 +139,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
         return value;
       }
       try {
-        value = valueLoader.call();
+        value = valueLoader.apply(key);
         cache.put(key, value);
         return value;
       }

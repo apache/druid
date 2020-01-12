@@ -88,13 +88,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.jdbi</groupId>
-      <artifactId>jdbi</artifactId>
-      <scope>provided</scope>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.jdbi</groupId>
+      <artifactId>jdbi</artifactId>
       <scope>provided</scope>
     </dependency>
     <!-- Tests -->

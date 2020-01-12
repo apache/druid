@@ -22,11 +22,11 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractFuture;
@@ -140,7 +140,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.exec = exec;
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
 
-    requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
+    requestStatuses = Caffeine.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
   }
 
   @LifecycleStart

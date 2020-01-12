@@ -33,8 +33,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 @RunWith(Parameterized.class)
 public class LoadingCacheTest
@@ -84,12 +83,12 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testPut() throws ExecutionException
+  public void testPut()
   {
-    loadingCache.get("key2", new Callable()
+    loadingCache.get("key2", new Function<Void, String>()
     {
       @Override
-      public Object call()
+      public String apply(Void aVoid)
       {
         return "value2";
       }
@@ -98,12 +97,12 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testInvalidate() throws ExecutionException
+  public void testInvalidate()
   {
-    loadingCache.get("key2", new Callable()
+    loadingCache.get("key2", new Function<Void, String>()
     {
       @Override
-      public Object call()
+      public String apply(Void aVoid)
       {
         return "value2";
       }
@@ -114,12 +113,12 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testInvalidateAll() throws ExecutionException
+  public void testInvalidateAll()
   {
-    loadingCache.get("key2", new Callable()
+    loadingCache.get("key2", new Function<Void, String>()
     {
       @Override
-      public Object call()
+      public String apply(Void aVoid)
       {
         return "value2";
       }
@@ -130,13 +129,13 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testInvalidateAll1() throws ExecutionException
+  public void testInvalidateAll1()
   {
     loadingCache.invalidateAll();
-    loadingCache.get("key2", new Callable()
+    loadingCache.get("key2", new Function<Void, String>()
     {
       @Override
-      public Object call()
+      public String apply(Void aVoid)
       {
         return "value2";
       }
