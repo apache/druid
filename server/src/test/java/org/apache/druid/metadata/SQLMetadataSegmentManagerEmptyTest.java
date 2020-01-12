@@ -48,7 +48,7 @@ public class SQLMetadataSegmentManagerEmptyTest
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
     MetadataSegmentManagerConfig config = new MetadataSegmentManagerConfig();

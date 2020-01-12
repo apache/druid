@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -121,14 +122,14 @@ public interface ColumnarDoubles extends Closeable
         @Override
         public double getDouble()
         {
-          assert NullHandling.replaceWithDefault() || !isNull();
+          Preconditions.checkState(NullHandling.replaceWithDefault() || !isNull());
           return ColumnarDoubles.this.get(offset.getOffset());
         }
 
         @Override
         public double getDouble(int offset)
         {
-          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
+          Preconditions.checkState(NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset));
           return ColumnarDoubles.this.get(offset);
         }
 

@@ -129,7 +129,7 @@ public class StringColumnAggregationTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     if (segments != null) {
       for (Segment seg : segments) {
