@@ -97,28 +97,6 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testApplyWithExecutionError()
-  {
-    EasyMock.expect(lookupCache.get(EasyMock.eq("key"), EasyMock.anyObject(Function.class)))
-            .andThrow(new ExecutionException(null))
-            .once();
-    EasyMock.replay(lookupCache);
-    Assert.assertNull(loadingLookup.apply("key"));
-    EasyMock.verify(lookupCache);
-  }
-
-  @Test
-  public void testUnApplyWithExecutionError()
-  {
-    EasyMock.expect(reverseLookupCache.get(EasyMock.eq("value"), EasyMock.anyObject(Function.class)))
-            .andThrow(new ExecutionException(null))
-            .once();
-    EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply("value"));
-    EasyMock.verify(reverseLookupCache);
-  }
-
-  @Test
   public void testGetCacheKey()
   {
     Assert.assertFalse(Arrays.equals(loadingLookup.getCacheKey(), loadingLookup.getCacheKey()));
