@@ -39,6 +39,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -90,6 +91,7 @@ public class BatchServerInventoryViewTest
   private CuratorFramework cf;
   private ObjectMapper jsonMapper;
   private Announcer announcer;
+  private NodeAnnouncer nodeAnnouncer;
   private BatchDataSegmentAnnouncer segmentAnnouncer;
   private DataSegmentServerAnnouncer serverAnnouncer;
   private Set<DataSegment> testSegments;
@@ -123,6 +125,9 @@ public class BatchServerInventoryViewTest
     );
     announcer.start();
 
+    nodeAnnouncer = new NodeAnnouncer(cf);
+    nodeAnnouncer.start();
+
     DruidServerMetadata serverMetadata = new DruidServerMetadata(
         "id",
         "host",
@@ -145,7 +150,7 @@ public class BatchServerInventoryViewTest
     serverAnnouncer = new CuratorDataSegmentServerAnnouncer(
         serverMetadata,
         zkPathsConfig,
-        announcer,
+        nodeAnnouncer,
         jsonMapper
     );
     serverAnnouncer.announce();
@@ -225,6 +230,7 @@ public class BatchServerInventoryViewTest
     filteredBatchServerInventoryView.stop();
     serverAnnouncer.unannounce();
     announcer.stop();
+    nodeAnnouncer.stop();
     cf.close();
     testingCluster.stop();
   }

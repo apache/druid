@@ -21,21 +21,17 @@ package org.apache.druid.server.listener.announcer;
 
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.CloserRule;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.Closeable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class ListenerResourceAnnouncerTest extends CuratorTestBase
@@ -45,19 +41,6 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
   private final String announcePath = listeningAnnouncerConfig.getAnnouncementPath(listenerKey);
   @Rule
   public CloserRule closerRule = new CloserRule(true);
-  private ExecutorService executorService;
-
-  @Before
-  public void setUp()
-  {
-    executorService = Execs.singleThreaded("listener-resource--%d");
-  }
-
-  @After
-  public void tearDown()
-  {
-    executorService.shutdownNow();
-  }
 
   @Test
   public void testAnnouncerBehaves() throws Exception
@@ -68,7 +51,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
     closerRule.closeLater(curator);
     Assert.assertNotNull(curator.create().forPath("/druid"));
     Assert.assertTrue(curator.blockUntilConnected(10, TimeUnit.SECONDS));
-    final Announcer announcer = new Announcer(curator, executorService);
+    final NodeAnnouncer announcer = new NodeAnnouncer(curator);
     final HostAndPortWithScheme node = HostAndPortWithScheme.fromString("localhost");
     final ListenerResourceAnnouncer listenerResourceAnnouncer = new ListenerResourceAnnouncer(
         announcer,
@@ -109,7 +92,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
   @Test
   public void testStartCorrect()
   {
-    final Announcer announcer = EasyMock.createStrictMock(Announcer.class);
+    final NodeAnnouncer announcer = EasyMock.createStrictMock(NodeAnnouncer.class);
     final HostAndPortWithScheme node = HostAndPortWithScheme.fromString("some_host");
 
     final ListenerResourceAnnouncer resourceAnnouncer = new ListenerResourceAnnouncer(

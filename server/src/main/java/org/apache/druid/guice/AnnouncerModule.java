@@ -24,6 +24,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
@@ -51,5 +52,12 @@ public class AnnouncerModule implements Module
   public Announcer getAnnouncer(CuratorFramework curator)
   {
     return new Announcer(curator, Execs.singleThreaded("Announcer-%s"));
+  }
+
+  @Provides
+  @ManageLifecycle
+  public NodeAnnouncer getNodeAnnouncer(CuratorFramework curator)
+  {
+    return new NodeAnnouncer(curator);
   }
 }

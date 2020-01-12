@@ -40,6 +40,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -64,6 +65,7 @@ public class Announcer
   private final ExecutorService pathChildrenCacheExecutor;
 
   private final List<Announceable> toAnnounce = new ArrayList<>();
+  @GuardedBy("toAnnounce")
   private final List<Announceable> toUpdate = new ArrayList<>();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new ConcurrentHashMap<>();

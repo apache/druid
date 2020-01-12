@@ -20,7 +20,7 @@
 package org.apache.druid.query.lookup;
 
 import com.google.inject.Inject;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.HostAndPortWithScheme;
@@ -31,7 +31,7 @@ class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 {
   @Inject
   public LookupResourceListenerAnnouncer(
-      Announcer announcer,
+      NodeAnnouncer announcer,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
       @Self DruidNode node
   )
