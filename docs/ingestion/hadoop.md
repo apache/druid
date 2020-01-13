@@ -115,7 +115,7 @@ Also note that Druid automatically computes the classpath for Hadoop job contain
 
 ## `dataSchema`
 
-This field is required. See the [`dataSchema`](index.md#dataschema) section of the main ingestion page for details on
+This field is required. See the [`dataSchema`](index.md#legacy-dataschema-spec) section of the main ingestion page for details on
 what it should contain.
 
 ## `ioConfig`
@@ -145,7 +145,17 @@ A type of inputSpec where a static path to the data files is provided.
 For example, using the static input paths:
 
 ```
-"paths" : "s3n://billy-bucket/the/data/is/here/data.gz,s3n://billy-bucket/the/data/is/here/moredata.gz,s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
+"paths" : "hdfs://path/to/data/is/here/data.gz,hdfs://path/to/data/is/here/moredata.gz,hdfs://path/to/data/is/here/evenmoredata.gz"
+```
+
+You can also read from cloud storage such as AWS S3 or Google Cloud Storage.
+
+```
+"paths" : "s3a://billy-bucket/the/data/is/here/data.gz,s3a://billy-bucket/the/data/is/here/moredata.gz,s3a://billy-bucket/the/data/is/here/evenmoredata.gz"
+```
+
+```
+"paths" : "gs://billy-bucket/the/data/is/here/data.gz,gs://billy-bucket/the/data/is/here/moredata.gz,gs://billy-bucket/the/data/is/here/evenmoredata.gz"
 ```
 
 #### `granularity`

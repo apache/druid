@@ -52,22 +52,16 @@ A sample supervisor spec is shown below:
   "type": "kinesis",
   "dataSchema": {
     "dataSource": "metrics-kinesis",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": [],
-          "dimensionExclusions": [
-            "timestamp",
-            "value"
-          ]
-        }
-      }
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": [],
+      "dimensionExclusions": [
+        "timestamp",
+        "value"
+      ]
     },
     "metricsSpec": [
       {
@@ -102,6 +96,9 @@ A sample supervisor spec is shown below:
   },
   "ioConfig": {
     "stream": "metrics",
+    "inputFormat": {
+      "type": "json"
+    },
     "endpoint": "kinesis.us-east-1.amazonaws.com",
     "taskCount": 1,
     "replicas": 1,
@@ -195,6 +192,7 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`stream`|String|The Kinesis stream to read.|yes|
+|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [the below section](#specifying-data-format) for details about specifying the input format.|yes|
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisShards}`.|no (default == 1)|
@@ -210,6 +208,19 @@ For Roaring bitmaps:
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
+
+#### Specifying data format
+
+Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser-deprecated) to specify the data format.
+The `inputFormat` is a new and recommended way to specify the data format for Kinesis indexing service,
+but unfortunately, it doesn't support all data formats supported by the legacy `parser`.
+(They will be supported in the future.)
+
+The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
+[`delimited`](../../ingestion/data-formats.md#tsv-delimited), and [`json`](../../ingestion/data-formats.md#json).
+You can also read [`avro_stream`](../../ingestion/data-formats.md#avro-stream-parser),
+[`protobuf`](../../ingestion/data-formats.md#protobuf-parser),
+and [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 ## Operations
 

@@ -31,9 +31,11 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
 
 1. Add a new deep storage implementation by extending the `org.apache.druid.segment.loading.DataSegment*` and
    `org.apache.druid.tasklogs.TaskLog*` classes.
-1. Add a new Firehose by extending `org.apache.druid.data.input.FirehoseFactory`.
-1. Add a new input parser by extending `org.apache.druid.data.input.impl.InputRowParser`.
-1. Add a new string-based input format by extending `org.apache.druid.data.input.impl.ParseSpec`.
+1. Add a new input source by extending `org.apache.druid.data.input.InputSource`.
+1. Add a new input entity by extending `org.apache.druid.data.input.InputEntity`.
+1. Add a new input source reader if necessary by extending `org.apache.druid.data.input.InputSourceReader`. You can use `org.apache.druid.data.input.impl.InputEntityIteratingReader` in most cases.
+1. Add a new input format by extending `org.apache.druid.data.input.InputFormat`.
+1. Add a new input entity reader by extending `org.apache.druid.data.input.TextReader` for text formats or `org.apache.druid.data.input.IntermediateRowParsingReader` for binary formats.
 1. Add Aggregators by extending `org.apache.druid.query.aggregation.AggregatorFactory`, `org.apache.druid.query.aggregation.Aggregator`,
    and `org.apache.druid.query.aggregation.BufferAggregator`.
 1. Add PostAggregators by extending `org.apache.druid.query.aggregation.PostAggregator`.
@@ -57,7 +59,7 @@ The DruidModule class is has two methods
 
 The `configure(Binder)` method is the same method that a normal Guice module would have.
 
-The `getJacksonModules()` method provides a list of Jackson modules that are used to help initialize the Jackson ObjectMapper instances used by Druid.  This is how you add extensions that are instantiated via Jackson (like AggregatorFactory and Firehose objects) to Druid.
+The `getJacksonModules()` method provides a list of Jackson modules that are used to help initialize the Jackson ObjectMapper instances used by Druid.  This is how you add extensions that are instantiated via Jackson (like AggregatorFactory and InputSource objects) to Druid.
 
 ### Registering your Druid Module
 
@@ -148,29 +150,43 @@ To start a segment killing task, you need to access the old Coordinator console 
 
 After the killing task ends, `index.zip` (`partitionNum_index.zip` for HDFS data storage) file should be deleted from the data storage.
 
-### Adding a new Firehose
+### Adding support for a new input source
 
-There is an example of this in the `s3-extensions` module with the StaticS3FirehoseFactory.
+Adding support for a new input source requires to implement three interfaces, i.e., `InputSource`, `InputEntity`, and `InputSourceReader`.
+`InputSource` is to define where the input data is stored. `InputEntity` is to define how data can be read in parallel
+in [native parallel indexing](../ingestion/native-batch.md).
+`InputSourceReader` defines how to read your new input source and you can simply use the provided `InputEntityIteratingReader` in most cases.
 
-Adding a Firehose is done almost entirely through the Jackson Modules instead of Guice.  Specifically, note the implementation
+There is an example of this in the `druid-s3-extensions` module with the `S3InputSource` and `S3Entity`.
+
+Adding an InputSource is done almost entirely through the Jackson Modules instead of Guice. Specifically, note the implementation
 
 ``` java
 @Override
 public List<? extends Module> getJacksonModules()
 {
   return ImmutableList.of(
-          new SimpleModule().registerSubtypes(new NamedType(StaticS3FirehoseFactory.class, "static-s3"))
+          new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, "s3"))
   );
 }
 ```
 
-This is registering the FirehoseFactory with Jackson's polymorphic serialization/deserialization layer.  More concretely, having this will mean that if you specify a `"firehose": { "type": "static-s3", ... }` in your realtime config, then the system will load this FirehoseFactory for your firehose.
+This is registering the InputSource with Jackson's polymorphic serialization/deserialization layer.  More concretely, having this will mean that if you specify a `"inputSource": { "type": "s3", ... }` in your IO config, then the system will load this InputSource for your `InputSource` implementation.
 
-Note that inside of Druid, we have made the @JacksonInject annotation for Jackson deserialized objects actually use the base Guice injector to resolve the object to be injected.  So, if your FirehoseFactory needs access to some object, you can add a @JacksonInject annotation on a setter and it will get set on instantiation.
+Note that inside of Druid, we have made the @JacksonInject annotation for Jackson deserialized objects actually use the base Guice injector to resolve the object to be injected.  So, if your InputSource needs access to some object, you can add a @JacksonInject annotation on a setter and it will get set on instantiation.
+
+### Adding support for a new data format
+
+Adding support for a new data format requires to implement two interfaces, i.e., `InputFormat` and `InputEntityReader`.
+`InputFormat` is to define how your data is formatted. `InputEntityReader` is to define how to parse your data and convert into Druid `InputRow`.
+
+There is an example in the `druid-orc-extensions` module with the `OrcInputFormat` and `OrcReader`.
+ 
+Adding an InputFormat is very similar to adding an InputSource. They operate purely through Jackson and thus should just be additions to the Jackson modules returned by your DruidModule.
 
 ### Adding Aggregators
 
-Adding AggregatorFactory objects is very similar to Firehose objects.  They operate purely through Jackson and thus should just be additions to the Jackson modules returned by your DruidModule.
+Adding AggregatorFactory objects is very similar to InputSource objects.  They operate purely through Jackson and thus should just be additions to the Jackson modules returned by your DruidModule.
 
 ### Adding Complex Metrics
 

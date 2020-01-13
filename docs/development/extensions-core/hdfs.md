@@ -52,33 +52,8 @@ All services that need to access GCS need to have the [GCS connector jar](https:
 
 Tested with Druid 0.9.0, Hadoop 2.7.2 and gcs-connector jar 1.4.4-hadoop2.
 
-<a name="firehose"></a>
+## Reading data from HDFS
 
-## Native batch ingestion
-
-This firehose ingests events from a predefined list of files from a Hadoop filesystem.
-This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task).
-Since each split represents an HDFS file, each worker task of `index_parallel` will read an object.
-
-Sample spec:
-
-```json
-"firehose" : {
-    "type" : "hdfs",
-    "paths": "/foo/bar,/foo/baz"
-}
-```
-
-This firehose provides caching and prefetching features. During native batch indexing, a firehose can be read twice if
-`intervals` are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scanning
-of files is slow.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|type|This should be `hdfs`.|none (required)|
-|paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths.|none (required)|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|
-|prefetchTriggerBytes|Threshold to trigger prefetching files.|maxFetchCapacityBytes / 2|
-|fetchTimeout|Timeout for fetching each file.|60000|
-|maxFetchRetry|Maximum number of retries for fetching each file.|3|
+The [HDFS input source](../../ingestion/native-batch.md#hdfs-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md#parallel-task)
+to read objects directly from HDFS Storage. If you use the [Hadoop task](../../ingestion/hadoop.md),
+you can read data from HDFS by specifying the paths in your [`inputSpec`](../../ingestion/hadoop.md#inputspec).
