@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
@@ -42,15 +43,6 @@ import java.util.Set;
 
 public class JavaScriptPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return ((Double) o).compareTo((Double) o1);
-    }
-  };
-
   private interface Function
   {
     double apply(Object[] args);
@@ -127,7 +119,7 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Comparator getComparator()
   {
-    return COMPARATOR;
+    return DoubleSumAggregator.COMPARATOR;
   }
 
   @Override
