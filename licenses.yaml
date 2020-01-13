@@ -3143,6 +3143,7 @@ libraries:
   - org.apache.parquet: parquet-encoding
   - org.apache.parquet: parquet-hadoop
   - org.apache.parquet: parquet-jackson
+  - org.apache.parquet: parquet-format-structures
 notices:
   - parquet-avro: |
       Apache Parquet MR
