@@ -31,7 +31,6 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 
@@ -110,11 +109,9 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   {
     ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
     if (cap == null || ValueType.isNumeric(cap.getType())) {
-      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new MomentSketchBuildAggregator(selector, k, getCompress());
+      return new MomentSketchBuildAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     } else {
-      final ColumnValueSelector<MomentSketchWrapper> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new MomentSketchMergeAggregator(selector, k, getCompress());
+      return new MomentSketchMergeAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     }
   }
 
@@ -123,11 +120,9 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   {
     ColumnCapabilities cap = metricFactory.getColumnCapabilities(fieldName);
     if (cap == null || ValueType.isNumeric(cap.getType())) {
-      final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new MomentSketchBuildBufferAggregator(selector, k, getCompress());
+      return new MomentSketchBuildBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     } else {
-      final ColumnValueSelector<MomentSketchWrapper> selector = metricFactory.makeColumnValueSelector(fieldName);
-      return new MomentSketchMergeBufferAggregator(selector, k, getCompress());
+      return new MomentSketchMergeBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), k, getCompress());
     }
   }
 
