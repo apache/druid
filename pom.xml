@@ -67,7 +67,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>0.13.0-incubating-SNAPSHOT</tag>
+        <tag>0.17.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -1490,7 +1490,6 @@
                             </properties>
                             <resourceBundles>
                                 <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
-                                <resourceBundle>org.apache.apache.resources:apache-incubator-disclaimer-resource-bundle:1.2-SNAPSHOT</resourceBundle>
                             </resourceBundles>
                         </configuration>
                     </execution>
