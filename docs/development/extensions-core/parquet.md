@@ -29,12 +29,8 @@ Apache Parquet files.
 Note: If using the `parquet-avro` parser for Apache Hadoop based indexing, `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
  [include  both](../../development/extensions.md#loading-extensions).
 
-## Parquet and Native Batch
-This extension provides a `parquet` input format which can be used with Druid [native batch ingestion](../../ingestion/native-batch.md).
-
-### Parquet InputFormat
-
-Druid supports Parquet input format. See [Data formats](../../ingestion/data-formats.md#parquet) for details.
-
-## Parquet Hadoop Parser
-
+The `druid-parquet-extensions` provides the [Parquet input format](../../ingestion/data-formats.md#parquet), the [Parquet Hadoop parser](../../ingestion/data-formats.md#parquet-hadoop-parser),
+and the [Parquet Avro Hadoop Parser](../../ingestion/data-formats.md#parquet-avro-hadoop-parser) with `druid-avro-extensions`.
+The Parquet input format is available for [native batch ingestion](../../ingestion/native-batch.md)
+and the other 2 parsers are for [Hadoop batch ingestion](../../ingestion/hadoop.md).
+Please see corresponding docs for details.
