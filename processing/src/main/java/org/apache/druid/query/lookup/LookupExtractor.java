@@ -103,20 +103,14 @@ public abstract class LookupExtractor
   /**
    * Returns true if this lookup extractor's {@link #iterable()} method will return a valid iterator.
    */
-  public boolean canIterate()
-  {
-    return false;
-  }
+  public abstract boolean canIterate();
 
   /**
    * Returns an Iterable that iterates over the keys and values in this lookup extractor.
    *
    * @throws UnsupportedOperationException if {@link #canIterate()} returns false.
    */
-  public Iterable<Map.Entry<String, String>> iterable()
-  {
-    throw new UnsupportedOperationException("Cannot iterate");
-  }
+  public abstract Iterable<Map.Entry<String, String>> iterable();
 
   /**
    * Create a cache key for use in results caching

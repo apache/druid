@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -56,7 +57,7 @@ public class JoinConditionAnalysis
       final List<Expr> nonEquiConditions
   )
   {
-    this.originalExpression = originalExpression;
+    this.originalExpression = Preconditions.checkNotNull(originalExpression, "originalExpression");
     this.equiConditions = equiConditions;
     this.nonEquiConditions = nonEquiConditions;
   }
@@ -164,7 +165,7 @@ public class JoinConditionAnalysis
       return false;
     }
     JoinConditionAnalysis that = (JoinConditionAnalysis) o;
-    return originalExpression.equals(that.originalExpression);
+    return Objects.equals(originalExpression, that.originalExpression);
   }
 
   @Override

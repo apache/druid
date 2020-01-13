@@ -128,8 +128,7 @@ public class PossiblyNullDimensionSelector extends AbstractDimensionSelector imp
   @Override
   public IdLookup idLookup()
   {
-    final IdLookup baseIdLookup = baseSelector.idLookup();
-    return baseIdLookup != null ? this : null;
+    return baseSelector.idLookup() != null ? this : null;
   }
 
   @Override

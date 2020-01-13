@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
@@ -259,6 +260,15 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("(|| (== (+ x y) j.z) (== z j.zz))"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(JoinConditionAnalysis.class)
+                  .usingGetClass()
+                  .withIgnoredFields("equiConditions", "nonEquiConditions")
+                  .verify();
   }
 
   private static JoinConditionAnalysis analyze(final String expression)

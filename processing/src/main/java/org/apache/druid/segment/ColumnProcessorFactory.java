@@ -20,14 +20,13 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
-import org.apache.druid.query.dimension.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ValueType;
 
 /**
  * Class that encapsulates knowledge about how to create "column processors", which are... objects that process columns
  * and want to have type-specific logic. Used by {@link ColumnProcessors#makeProcessor}.
  *
- * Column processors can be any type "T". The idea is that a ColumnStrategizer embodies the logic for wrapping
+ * Column processors can be any type "T". The idea is that a ColumnProcessorFactory embodies the logic for wrapping
  * and processing selectors of various types, and so enables nice code design, where type-dependent code is not
  * sprinkled throughout.
  *

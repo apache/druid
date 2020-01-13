@@ -76,11 +76,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     baseAdapter.getAvailableDimensions().forEach(availableDimensions::add);
 
     for (JoinableClause clause : clauses) {
-      clause.getJoinable()
-            .getAvailableColumns()
-            .stream()
-            .map(c -> clause.getPrefix() + c)
-            .forEach(availableDimensions::add);
+      availableDimensions.addAll(clause.getAvailableColumnsPrefixed());
     }
 
     return new ListIndexed<>(Lists.newArrayList(availableDimensions));
@@ -277,7 +273,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     // gets first dibs to claim a column.
     return Lists.reverse(clauses)
                 .stream()
-                .filter(clause -> column.startsWith(clause.getPrefix()))
+                .filter(clause -> clause.includesColumn(column))
                 .findFirst();
   }
 }

@@ -38,6 +38,13 @@ public class HashJoinEngine
     // No instantiation.
   }
 
+  /**
+   * Creates a cursor that represents the join of {@param leftCursor} with {@param joinableClause}. The resulting
+   * cursor may generate nulls on the left-hand side (for righty joins; see {@link JoinType#isRighty()}) or on
+   * the right-hand side (for lefty joins; see {@link JoinType#isLefty()}). Columns that start with the
+   * joinable clause's prefix (see {@link JoinableClause#getPrefix()}) will come from the Joinable's column selector
+   * factory, and all other columns will come from the leftCursor's column selector factory.
+   */
   public static Cursor makeJoinCursor(final Cursor leftCursor, final JoinableClause joinableClause)
   {
     final ColumnSelectorFactory leftColumnSelectorFactory = leftCursor.getColumnSelectorFactory();

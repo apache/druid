@@ -43,19 +43,19 @@ public class PossiblyNullColumnValueSelector<T> implements ColumnValueSelector<T
   @Override
   public double getDouble()
   {
-    return beNull.getAsBoolean() ? 0L : baseSelector.getDouble();
+    return beNull.getAsBoolean() ? NullHandling.ZERO_DOUBLE : baseSelector.getDouble();
   }
 
   @Override
   public float getFloat()
   {
-    return beNull.getAsBoolean() ? 0L : baseSelector.getFloat();
+    return beNull.getAsBoolean() ? NullHandling.ZERO_FLOAT : baseSelector.getFloat();
   }
 
   @Override
   public long getLong()
   {
-    return beNull.getAsBoolean() ? 0L : baseSelector.getLong();
+    return beNull.getAsBoolean() ? NullHandling.ZERO_LONG : baseSelector.getLong();
   }
 
   @Override

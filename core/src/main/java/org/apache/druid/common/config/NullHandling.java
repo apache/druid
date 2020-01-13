@@ -132,6 +132,8 @@ public class NullHandling
       return (T) defaultDoubleValue();
     } else if (clazz == Long.class) {
       return (T) defaultLongValue();
+    } else if (clazz == Number.class) {
+      return (T) defaultDoubleValue();
     } else if (clazz == String.class) {
       return (T) defaultStringValue();
     } else {
