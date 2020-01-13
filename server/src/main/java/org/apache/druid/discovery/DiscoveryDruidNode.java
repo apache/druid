@@ -66,7 +66,7 @@ public class DiscoveryDruidNode
 
   /**
    * Keeping the legacy name 'nodeType' property name for backward compatibility. When the project is updated to
-   * Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152.
+   * Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152.
    */
   @JsonProperty("nodeType")
   public NodeRole getNodeRole()

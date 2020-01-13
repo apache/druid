@@ -925,7 +925,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   /**
    * Currently called to initialize IncrementalIndex dimension order during index creation
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
-   * https://github.com/apache/incubator-druid/issues/2011
+   * https://github.com/apache/druid/issues/2011
    */
   public void loadDimensionIterable(
       Iterable<String> oldDimensionOrder,

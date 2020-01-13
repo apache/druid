@@ -24,7 +24,7 @@ sidebar_label: "Making native queries"
   -->
 
 
-> Apache Druid (incubating) supports two query languages: [Druid SQL](sql.md) and native queries. Druid SQL
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and native queries. Druid SQL
 > queries are planned into native queries. This document describes the native query language.
 
 Native queries in Druid are JSON objects and are typically issued to the Broker or Router processes. Queries can be

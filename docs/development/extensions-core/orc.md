@@ -23,7 +23,7 @@ title: "ORC Extension"
   -->
 
 
-This Apache Druid (incubating) module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
+This Apache Druid module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
 Apache ORC files.
 
 To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-orc-extensions`.

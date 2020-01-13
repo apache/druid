@@ -23,7 +23,7 @@ fi
 
 URL_VERSION=$1
 DRUID_VERSION=$2
-WEBSRC="../../incubator-druid-website-src"
+WEBSRC="../../druid-website-src"
 
 if [ "$#" -gt 2 ]; then
   WEBSRC=$3

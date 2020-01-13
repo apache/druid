@@ -126,6 +126,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -153,7 +154,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
-public class GroupByQueryRunnerTest
+public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 {
   public static final ObjectMapper DEFAULT_MAPPER = TestHelper.makeSmileMapper();
   private static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -4798,7 +4799,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithExtractionFnInOuterQuery()
   {
-    //https://github.com/apache/incubator-druid/issues/2556
+    //https://github.com/apache/druid/issues/2556
 
     GroupByQuery subquery = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -6852,7 +6853,7 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
   }
 
-  // https://github.com/apache/incubator-druid/issues/7820
+  // https://github.com/apache/druid/issues/7820
   @Test
   public void testGroupByWithSubtotalsSpecWithRenamedDimensionAndFilter()
   {

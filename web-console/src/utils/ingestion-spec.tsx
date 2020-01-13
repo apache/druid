@@ -393,7 +393,7 @@ export interface TimestampSpec {
 }
 
 export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
-  // https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
+  // https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
   return timestampSpec.column || 'timestamp';
 }
 
@@ -510,7 +510,7 @@ const DIMENSION_SPEC_FORM_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['string', 'long', 'float'],
+    suggestions: ['string', 'long', 'float', 'double'],
   },
   {
     name: 'createBitmapIndex',
