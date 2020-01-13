@@ -305,6 +305,9 @@ them to create the final segments. Finally, they push the final segments to the 
 
 #### Single-dimension range partitioning
 
+> Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+Try set `maxNumConcurrentSubTasks` to larger than 1 to use this partitioning.
+
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `single_dim`|none|yes|
