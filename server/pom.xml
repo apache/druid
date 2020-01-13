@@ -236,6 +236,10 @@
             <artifactId>netty-handler</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.skife.config</groupId>
             <artifactId>config-magic</artifactId>
         </dependency>
