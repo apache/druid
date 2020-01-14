@@ -1003,6 +1003,10 @@ Sample specs:
 |type|This should be `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths.|None|yes|
 
+You can also ingest from cloud storage using the HDFS input source.
+However, if you want to read from AWS S3 or Google Cloud Storage, consider using
+the [S3 input source](#s3-input-source) or the [Google Cloud Storage input source](#google-cloud-storage-input-source) instead.
+
 ### HTTP Input Source
 
 The HDFS input source is to support reading files directly

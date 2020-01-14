@@ -149,13 +149,43 @@ For example, using the static input paths:
 ```
 
 You can also read from cloud storage such as AWS S3 or Google Cloud Storage.
+To do so, you need to install the necessary library under `${DRUID_HOME}/hadoop-dependencies` in _all MiddleManager or Indexer processes_.
+For S3, you can run the below command to install the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
+
+```bash
+java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
+```
+
+Once you install the Hadoop AWS module in all MiddleManager and Indexer processes, you can put
+your S3 paths in the inputSpec with the below job properties.
 
 ```
 "paths" : "s3a://billy-bucket/the/data/is/here/data.gz,s3a://billy-bucket/the/data/is/here/moredata.gz,s3a://billy-bucket/the/data/is/here/evenmoredata.gz"
 ```
 
+```json
+"jobProperties" : {
+   "fs.s3a.impl" : "org.apache.hadoop.fs.s3a.S3AFileSystem",
+   "fs.AbstractFileSystem.s3a.impl" : "org.apache.hadoop.fs.s3a.S3A",
+   "fs.s3a.access.key" : "YOUR_ACCESS_KEY",
+   "fs.s3a.secret.key" : "YOUR_SECRET_KEY"
+}
+```
+
+For Google Cloud Storage, you need to install [GCS connector jar](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
+under `${DRUID_HOME}/hadoop-dependencies` in _all MiddleManager or Indexer processes_.
+Once you install the GCS Connector jar in all MiddleManager and Indexer processes, you can put
+your Google Cloud Storage paths in the inputSpec with the below job properties.
+For more configurations, see the [instructions to configure Hadoop for Google Cloud Storage](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop)
+
 ```
 "paths" : "gs://billy-bucket/the/data/is/here/data.gz,gs://billy-bucket/the/data/is/here/moredata.gz,gs://billy-bucket/the/data/is/here/evenmoredata.gz"
+```
+
+```json
+"jobProperties" : {
+   "fs.AbstractFileSystem.gs.impl" : "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS"
+}
 ```
 
 #### `granularity`
