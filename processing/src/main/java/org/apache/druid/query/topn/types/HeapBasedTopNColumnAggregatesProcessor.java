@@ -27,13 +27,8 @@ import org.apache.druid.query.topn.TopNResultBuilder;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
 
-import java.util.Map;
-
-public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggregateStoreType extends Map>
-    extends ColumnSelectorStrategy
+public interface HeapBasedTopNColumnAggregatesProcessor<ValueSelectorType> extends ColumnSelectorStrategy
 {
-  int CARDINALITY_UNKNOWN = -1;
-
   int getCardinality(ValueSelectorType selector);
 
   /**
@@ -53,17 +48,7 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggr
    *
    * @return an Aggregator[][] for integer-valued dimensions, null otherwise
    */
-  Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter);
-
-  /**
-   * Used by DimExtractionTopNAlgorithm.
-   *
-   * Creates an aggregate store map suitable for this strategy's type that will be
-   * passed to dimExtractionScanAndAggregate() and updateDimExtractionResults().
-   *
-   * @return Aggregate store map
-   */
-  DimExtractionAggregateStoreType makeDimExtractionAggregateStore();
+  Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter);
 
   /**
    * Used by DimExtractionTopNAlgorithm.
@@ -84,29 +69,19 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggr
    * @param selector        Dimension value selector
    * @param cursor          Cursor for the segment being queried
    * @param rowSelector     Integer lookup containing aggregators
-   * @param aggregatesStore Map containing aggregators
    *
    * @return the number of processed rows (after postFilters are applied inside the cursor being processed)
    */
-  long dimExtractionScanAndAggregate(
+  long scanAndAggregate(
       TopNQuery query,
       ValueSelectorType selector,
       Cursor cursor,
-      Aggregator[][] rowSelector,
-      DimExtractionAggregateStoreType aggregatesStore
+      Aggregator[][] rowSelector
   );
 
-  /**
-   * Used by DimExtractionTopNAlgorithm.
-   *
-   * Read entries from the aggregates store, adding the keys and associated values to the resultBuilder, applying the
-   * valueTransformer to the keys if present
-   *
-   * @param aggregatesStore Map created by makeDimExtractionAggregateStore()
-   * @param resultBuilder   TopN result builder
-   */
-  void updateDimExtractionResults(
-      DimExtractionAggregateStoreType aggregatesStore,
-      TopNResultBuilder resultBuilder
-  );
+  void updateResults(TopNResultBuilder resultBuilder);
+
+  void initAggregateStore();
+
+  void closeAggregators();
 }

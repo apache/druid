@@ -21,7 +21,7 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.topn.types.TopNColumnSelectorStrategyFactory;
+import org.apache.druid.query.topn.types.HeapBasedTopNColumnAggregatesProcessorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
@@ -45,7 +45,7 @@ public class TopNMapFn
   public Result<TopNResultValue> apply(final Cursor cursor, final @Nullable TopNQueryMetrics queryMetrics)
   {
     final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
-        new TopNColumnSelectorStrategyFactory(query.getDimensionSpec().getOutputType()),
+        new HeapBasedTopNColumnAggregatesProcessorFactory(query.getDimensionSpec().getOutputType()),
         query.getDimensionSpec(),
         cursor.getColumnSelectorFactory()
     );

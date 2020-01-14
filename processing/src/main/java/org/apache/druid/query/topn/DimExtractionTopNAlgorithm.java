@@ -21,17 +21,15 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.topn.types.TopNColumnSelectorStrategy;
+import org.apache.druid.query.topn.types.HeapBasedTopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
-
-import java.util.Map;
 
 /**
  * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle multiple index numerals referencing the same dimension value.
  */
 public class DimExtractionTopNAlgorithm
-    extends BaseTopNAlgorithm<Aggregator[][], Map<Comparable, Aggregator[]>, TopNParams>
+    extends BaseTopNAlgorithm<Aggregator[][], HeapBasedTopNColumnAggregatesProcessor, TopNParams>
 {
   private final TopNQuery query;
 
@@ -47,7 +45,7 @@ public class DimExtractionTopNAlgorithm
 
   @Override
   public TopNParams makeInitParams(
-      final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus,
+      final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus,
       final Cursor cursor
   )
   {
@@ -64,8 +62,8 @@ public class DimExtractionTopNAlgorithm
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
-    ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
-    return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, storageAdapter);
+    ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
+    return selectorPlus.getColumnSelectorStrategy().getRowSelector(query, params, storageAdapter);
   }
 
   @Override
@@ -75,54 +73,45 @@ public class DimExtractionTopNAlgorithm
   }
 
   @Override
-  protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
+  protected HeapBasedTopNColumnAggregatesProcessor makeDimValAggregateStore(TopNParams params)
   {
-    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
-    return selectorPlus.getColumnSelectorStrategy().makeDimExtractionAggregateStore();
+    final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
+    return selectorPlus.getColumnSelectorStrategy();
   }
 
   @Override
-  public long scanAndAggregate(
+  protected long scanAndAggregate(
       TopNParams params,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      HeapBasedTopNColumnAggregatesProcessor processor
   )
   {
     final Cursor cursor = params.getCursor();
-    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
 
-    return selectorPlus.getColumnSelectorStrategy().dimExtractionScanAndAggregate(
+    return processor.scanAndAggregate(
         query,
         selectorPlus.getSelector(),
         cursor,
-        rowSelector,
-        aggregatesStore
+        rowSelector
     );
   }
 
   @Override
   protected void updateResults(
       TopNParams params,
-      Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore,
+      Aggregator[][] aggregators,
+      HeapBasedTopNColumnAggregatesProcessor processor,
       TopNResultBuilder resultBuilder
   )
   {
-    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
-    selectorPlus.getColumnSelectorStrategy().updateDimExtractionResults(
-        aggregatesStore,
-        resultBuilder
-    );
+    processor.updateResults(resultBuilder);
   }
 
   @Override
-  protected void closeAggregators(Map<Comparable, Aggregator[]> valueMap)
+  protected void closeAggregators(HeapBasedTopNColumnAggregatesProcessor processor)
   {
-    for (Aggregator[] aggregators : valueMap.values()) {
-      for (Aggregator agg : aggregators) {
-        agg.close();
-      }
-    }
+    processor.closeAggregators();
   }
 
   @Override

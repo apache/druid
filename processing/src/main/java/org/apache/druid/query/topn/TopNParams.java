@@ -20,7 +20,7 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.topn.types.TopNColumnSelectorStrategy;
+import org.apache.druid.query.topn.types.HeapBasedTopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 
@@ -28,13 +28,14 @@ import org.apache.druid.segment.DimensionSelector;
  */
 public class TopNParams
 {
+  public static final int CARDINALITY_UNKNOWN = -1;
   private final Cursor cursor;
   private final int cardinality;
   private final int numValuesPerPass;
-  private final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus;
+  private final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus;
 
   protected TopNParams(
-      ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus,
+      ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus,
       Cursor cursor,
       int numValuesPerPass
   )
@@ -52,7 +53,7 @@ public class TopNParams
     return (DimensionSelector) selectorPlus.getSelector();
   }
 
-  public ColumnSelectorPlus<TopNColumnSelectorStrategy> getSelectorPlus()
+  public ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> getSelectorPlus()
   {
     return selectorPlus;
   }

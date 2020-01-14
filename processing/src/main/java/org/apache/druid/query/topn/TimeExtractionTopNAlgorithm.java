@@ -27,6 +27,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ValueType;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -77,7 +78,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
   @SuppressWarnings("unchecked")
   protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
-    return params.getSelectorPlus().getColumnSelectorStrategy().makeDimExtractionAggregateStore();
+    return new HashMap<>();
   }
 
   @Override
@@ -96,7 +97,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
 
     long processedRows = 0;
     while (!cursor.isDone()) {
-      final Comparable key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
+      final Comparable<?> key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
