@@ -189,15 +189,14 @@ public class LookupJoinMatcher implements JoinMatcher
       keyExprs = null;
     } else if (condition.isAlwaysFalse()) {
       keyExprs = null;
-    } else if (condition.getNonEquiConditions().isEmpty()
-               && condition.getEquiConditions()
-                           .stream()
-                           .allMatch(eq -> eq.getRightColumn().equals(LookupColumnSelectorFactory.KEY_COLUMN))) {
-      keyExprs = condition.getEquiConditions().stream()
-                          .map(Equality::getLeftExpr)
-                          .collect(Collectors.toList());
+    } else if (!condition.getNonEquiConditions().isEmpty()) {
+      throw new IAE("Cannot join lookup with non-equi condition: %s", condition);
+    } else if (!condition.getEquiConditions()
+                         .stream()
+                         .allMatch(eq -> eq.getRightColumn().equals(LookupColumnSelectorFactory.KEY_COLUMN))) {
+      throw new IAE("Cannot join lookup with condition referring to non-key column: %s", condition);
     } else {
-      throw new IAE("Cannot join lookup with condition: %s", condition);
+      keyExprs = condition.getEquiConditions().stream().map(Equality::getLeftExpr).collect(Collectors.toList());
     }
 
     return new LookupJoinMatcher(extractor, leftSelectorFactory, condition, keyExprs, remainderNeeded);

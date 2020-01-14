@@ -44,6 +44,9 @@ public class HashJoinEngine
    * the right-hand side (for lefty joins; see {@link JoinType#isLefty()}). Columns that start with the
    * joinable clause's prefix (see {@link JoinableClause#getPrefix()}) will come from the Joinable's column selector
    * factory, and all other columns will come from the leftCursor's column selector factory.
+   *
+   * Ensuing that the joinable clause's prefix does not conflict with any columns from "leftCursor" is the
+   * responsibility of the caller.
    */
   public static Cursor makeJoinCursor(final Cursor leftCursor, final JoinableClause joinableClause)
   {
