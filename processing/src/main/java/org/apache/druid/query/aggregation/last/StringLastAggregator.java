@@ -25,25 +25,29 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 
 public class StringLastAggregator implements Aggregator
 {
   private final BaseLongColumnValueSelector timeSelector;
-  private final BaseObjectColumnValueSelector valueSelector;
+  private final BaseObjectColumnValueSelector<?> valueSelector;
   private final int maxStringBytes;
+  private final boolean needsFoldCheck;
 
   protected long lastTime;
   protected String lastValue;
 
   public StringLastAggregator(
-      BaseLongColumnValueSelector timeSelector,
-      BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      final BaseLongColumnValueSelector timeSelector,
+      final BaseObjectColumnValueSelector<?> valueSelector,
+      final int maxStringBytes,
+      final boolean needsFoldCheck
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
+    this.needsFoldCheck = needsFoldCheck;
 
     lastTime = DateTimes.MIN.getMillis();
     lastValue = null;
@@ -52,22 +56,28 @@ public class StringLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
-        timeSelector,
-        valueSelector
-    );
+    if (needsFoldCheck) {
+      // Less efficient code path when folding is a possibility (we must read the value selector first just in case
+      // it's a foldable object).
+      final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+          timeSelector,
+          valueSelector
+      );
 
-    if (inPair == null) {
-      // Don't aggregate nulls.
-      return;
-    }
+      if (inPair != null && inPair.rhs != null && inPair.lhs >= lastTime) {
+        lastTime = inPair.lhs;
+        lastValue = StringFirstLastUtils.fastLooseChop(inPair.rhs, maxStringBytes);
+      }
+    } else {
+      final long time = timeSelector.getLong();
 
-    if (inPair != null && inPair.rhs != null && inPair.lhs >= lastTime) {
-      lastTime = inPair.lhs;
-      lastValue = inPair.rhs;
+      if (time >= lastTime) {
+        final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
 
-      if (lastValue.length() > maxStringBytes) {
-        lastValue = lastValue.substring(0, maxStringBytes);
+        if (value != null) {
+          lastTime = time;
+          lastValue = StringFirstLastUtils.fastLooseChop(value, maxStringBytes);
+        }
       }
     }
   }

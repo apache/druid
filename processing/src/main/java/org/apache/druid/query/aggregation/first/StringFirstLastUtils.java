@@ -24,6 +24,9 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -33,23 +36,63 @@ public class StringFirstLastUtils
 {
   private static final int NULL_VALUE = -1;
 
+  /**
+   * Shorten "s" to "maxBytes" chars. Fast and loose because these are *chars* not *bytes*. Use
+   * {@link #chop(String, int)} for slower, but accurate chopping.
+   */
+  @Nullable
+  public static String fastLooseChop(@Nullable final String s, final int maxBytes)
+  {
+    if (s == null || s.length() <= maxBytes) {
+      return s;
+    } else {
+      return s.substring(0, maxBytes);
+    }
+  }
+
+  /**
+   * Shorten "s" to what could fit in "maxBytes" bytes as UTF-8.
+   */
   @Nullable
   public static String chop(@Nullable final String s, final int maxBytes)
   {
     if (s == null) {
       return null;
     } else {
-      // Shorten firstValue to what could fit in maxBytes as UTF-8.
       final byte[] bytes = new byte[maxBytes];
       final int len = StringUtils.toUtf8WithLimit(s, ByteBuffer.wrap(bytes));
       return new String(bytes, 0, len, StandardCharsets.UTF_8);
     }
   }
 
+  /**
+   * Returns whether a given value selector *might* contain SerializablePairLongString objects.
+   */
+  public static boolean selectorNeedsFoldCheck(
+      final BaseObjectColumnValueSelector<?> valueSelector,
+      @Nullable final ColumnCapabilities valueSelectorCapabilities
+  )
+  {
+    if (valueSelectorCapabilities != null && valueSelectorCapabilities.getType() != ValueType.COMPLEX) {
+      // Known, non-complex type.
+      return false;
+    }
+
+    if (valueSelector instanceof NilColumnValueSelector) {
+      // Nil column, definitely no SerializablePairLongStrings.
+      return false;
+    }
+
+    // Check if the reported class could possibly be SerializablePairLongString.
+    final Class<?> clazz = valueSelector.classOfObject();
+    return clazz.isAssignableFrom(SerializablePairLongString.class)
+           || SerializablePairLongString.class.isAssignableFrom(clazz);
+  }
+
   @Nullable
   public static SerializablePairLongString readPairFromSelectors(
       final BaseLongColumnValueSelector timeSelector,
-      final BaseObjectColumnValueSelector valueSelector
+      final BaseObjectColumnValueSelector<?> valueSelector
   )
   {
     final long time;
