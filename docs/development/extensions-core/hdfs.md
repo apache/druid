@@ -105,10 +105,17 @@ All services that need to access GCS need to have the [GCS connector jar](https:
 One option is to place this jar in `${DRUID_HOME}/lib/` and `${DRUID_HOME}/extensions/druid-hdfs-storage/`.
 
 Finally, you need to add the below properties in the `core-site.xml`.
-For more configurations, see the [instructions to configure Hadoop](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop)
-and the [default configuration file](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/conf/gcs-core-default.xml).
+For more configurations, see the [instructions to configure Hadoop](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop),
+[GCS core default](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/conf/gcs-core-default.xml)
+and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
 
 ```xml
+<property>
+  <name>fs.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem</value>
+  <description>The FileSystem for gs: (GCS) uris.</description>
+</property>
+
 <property>
   <name>fs.AbstractFileSystem.gs.impl</name>
   <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
