@@ -142,6 +142,7 @@
         <module>extensions-core/stats</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
+        <module>extensions-core/pubsub-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>

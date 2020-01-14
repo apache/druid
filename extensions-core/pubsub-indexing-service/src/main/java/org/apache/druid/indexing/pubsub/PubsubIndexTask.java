@@ -165,7 +165,7 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      return new PubsubRecordSupplier(configMapper);
+      return new PubsubRecordSupplier(ioConfig.getProjectId(), ioConfig.getSubscription());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

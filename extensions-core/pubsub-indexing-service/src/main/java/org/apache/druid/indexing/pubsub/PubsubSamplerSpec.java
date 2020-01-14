@@ -118,7 +118,7 @@ public class PubsubSamplerSpec implements SamplerSpec
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      return new PubsubRecordSupplier(objectMapper);
+      return new PubsubRecordSupplier(ioConfig.getProjectId(), ioConfig.getSubscription());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

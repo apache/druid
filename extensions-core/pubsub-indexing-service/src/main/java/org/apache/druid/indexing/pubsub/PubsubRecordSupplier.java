@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.pubsub;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.pubsub.v1.stub.GrpcSubscriberStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStubSettings;
@@ -41,11 +40,16 @@ public class PubsubRecordSupplier implements Closeable
   private static final Logger log = new Logger(PubsubRecordSupplier.class);
 
   private boolean closed;
+  private final String projectId;
+  private final String subscription;
 
   public PubsubRecordSupplier(
-      ObjectMapper sortingMapper
+      String projectId,
+      String subscription
   )
   {
+    this.projectId = projectId;
+    this.subscription = subscription;
   }
 
   @Nonnull
@@ -61,10 +65,8 @@ public class PubsubRecordSupplier implements Closeable
                                 .build();
 
       try (SubscriberStub subscriber = GrpcSubscriberStub.create(subscriberStubSettings)) {
-        String projectId = "fifth-shine-238813";
-        String subscriptionId = "druid";
         int numOfMessages = 10;   // max number of messages to be pulled
-        String subscriptionName = ProjectSubscriptionName.format(projectId, subscriptionId);
+        String subscriptionName = ProjectSubscriptionName.format(projectId, subscription);
         PullRequest pullRequest =
             PullRequest.newBuilder()
                        .setMaxMessages(numOfMessages)

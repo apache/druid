@@ -34,6 +34,8 @@ import javax.annotation.Nullable;
 public class PubsubIndexTaskIOConfig implements IOConfig
 {
   @Nullable
+  private final String projectId;
+  private final String subscription;
   private final Integer taskGroupId;
   private final long pollTimeout;
   private final DateTime minimumMessageTime;
@@ -42,6 +44,8 @@ public class PubsubIndexTaskIOConfig implements IOConfig
 
   @JsonCreator
   public PubsubIndexTaskIOConfig(
+      @JsonProperty("projectId") String projectId,
+      @JsonProperty("subscription") String subscription,
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
@@ -49,11 +53,25 @@ public class PubsubIndexTaskIOConfig implements IOConfig
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat
   )
   {
+    this.projectId = projectId;
+    this.subscription = subscription;
     this.taskGroupId = taskGroupId;
     this.pollTimeout = pollTimeout != null ? pollTimeout : PubsubSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
     this.minimumMessageTime = minimumMessageTime;
     this.maximumMessageTime = maximumMessageTime;
     this.inputFormat = inputFormat;
+  }
+
+  @JsonProperty
+  public String getProjectId()
+  {
+    return projectId;
+  }
+
+  @JsonProperty
+  public String getSubscription()
+  {
+    return subscription;
   }
 
   @Nullable
@@ -98,7 +116,8 @@ public class PubsubIndexTaskIOConfig implements IOConfig
   public String toString()
   {
     return "PubsubIndexTaskIOConfig{" +
-           "taskGroupId=" + getTaskGroupId() +
+           "projectId=" + getProjectId() +
+           ", subscription=" + getSubscription() +
            ", pollTimeout=" + getPollTimeout() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +

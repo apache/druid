@@ -218,6 +218,8 @@ public class PubsubSupervisor implements Supervisor
   PubsubIndexTaskIOConfig createTaskIoConfig(PubsubSupervisorIOConfig ioConfig)
   {
     return new PubsubIndexTaskIOConfig(
+        ioConfig.getProjectId(),
+        ioConfig.getSubscription(),
         null,
         ioConfig.getPollTimeout(),
         DateTimes.nowUtc(),

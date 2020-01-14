@@ -34,11 +34,11 @@ import javax.annotation.Nullable;
 
 public class PubsubSupervisorIOConfig
 {
-  public static final String SUBSCRIPTION = "subscription";
   public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
 
   private final long pollTimeout;
 
+  private final String projectId;
   private final String subscription;
   @Nullable
   private final InputFormat inputFormat; // nullable for backward compatibility
@@ -54,6 +54,7 @@ public class PubsubSupervisorIOConfig
 
   @JsonCreator
   public PubsubSupervisorIOConfig(
+      @JsonProperty("projectId") String projectId,
       @JsonProperty("subscription") String subscription,
       @JsonProperty("inputFormat") InputFormat inputFormat,
       @JsonProperty("replicas") Integer replicas,
@@ -68,7 +69,7 @@ public class PubsubSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime
   )
   {
-    Preconditions.checkNotNull(subscription, "subscription");
+    this.projectId = Preconditions.checkNotNull(projectId, "project id cannot be null");
     this.subscription = Preconditions.checkNotNull(subscription, "subscription cannot be null");
     this.inputFormat = inputFormat;
     this.replicas = replicas != null ? replicas : 1;
@@ -175,6 +176,12 @@ public class PubsubSupervisorIOConfig
   }
 
   @JsonProperty
+  public String getProjectId()
+  {
+    return projectId;
+  }
+
+  @JsonProperty
   public String getSubscription()
   {
     return subscription;
@@ -190,7 +197,8 @@ public class PubsubSupervisorIOConfig
   public String toString()
   {
     return "PubsubSupervisorIOConfig{" +
-           "subscription='" + getSubscription() + '\'' +
+           "projectId='" + getProjectId() + '\'' +
+           ", subscription='" + getSubscription() + '\'' +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
