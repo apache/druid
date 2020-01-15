@@ -27,6 +27,8 @@ import java.nio.ByteBuffer;
 
 public class FloatAnyBufferAggregator implements BufferAggregator
 {
+  private static final byte BYTE_FLAG_IS_NOT_SET = -1;
+  private static final byte BYTE_FLAG_IS_SET = 1;
   private static final float NULL_VALUE = 0;
   private final BaseFloatColumnValueSelector valueSelector;
 
@@ -38,39 +40,41 @@ public class FloatAnyBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putFloat(position, NULL_VALUE);
+    buf.put(position, BYTE_FLAG_IS_NOT_SET);
+    buf.putFloat(position + Byte.BYTES, NULL_VALUE);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (buf.getFloat(position) == NULL_VALUE && !valueSelector.isNull()) {
-      buf.putFloat(position, valueSelector.getFloat());
+    if (buf.get(position) == BYTE_FLAG_IS_NOT_SET && !valueSelector.isNull()) {
+      buf.putFloat(position + Byte.BYTES, valueSelector.getFloat());
+      buf.put(position, BYTE_FLAG_IS_SET);
     }
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return buf.getFloat(position);
+    return buf.getFloat(position + Byte.BYTES);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return buf.getFloat(position);
+    return buf.getFloat(position + Byte.BYTES);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getFloat(position);
+    return (long) buf.getFloat(position + Byte.BYTES);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getFloat(position);
+    return (double) buf.getFloat(position + Byte.BYTES);
   }
 
   @Override
