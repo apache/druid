@@ -39,4 +39,5 @@ public class ExtractionCacheHelper
   public static final byte CACHE_TYPE_ID_LOWER = 0xC;
   public static final byte CACHE_TYPE_ID_BUCKET = 0xD;
   public static final byte CACHE_TYPE_ID_STRLEN = 0xE;
+  public static final byte CACHE_TYPE_ID_MISSINGVALUE = 0xF;
 }

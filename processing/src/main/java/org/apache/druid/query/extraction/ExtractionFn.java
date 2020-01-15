@@ -52,7 +52,8 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "upper", value = UpperExtractionFn.class),
     @JsonSubTypes.Type(name = "lower", value = LowerExtractionFn.class),
     @JsonSubTypes.Type(name = "bucket", value = BucketExtractionFn.class),
-    @JsonSubTypes.Type(name = "strlen", value = StrlenExtractionFn.class)
+    @JsonSubTypes.Type(name = "strlen", value = StrlenExtractionFn.class),
+    @JsonSubTypes.Type(name = "replaceMissing", value = ReplaceMissingValueExtractionFn.class)
 })
 public interface ExtractionFn extends Cacheable
 {
