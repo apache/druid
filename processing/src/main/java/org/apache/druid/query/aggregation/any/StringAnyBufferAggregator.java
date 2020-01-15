@@ -51,7 +51,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    int stringSizeBytes = buf.getInt();
+    int stringSizeBytes = buf.getInt(position);
     if (stringSizeBytes < 0) {
       final Object object = valueSelector.getObject();
       if (object != null) {
@@ -59,7 +59,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
         if (foundValue != null) {
           ByteBuffer mutationBuffer = buf.duplicate();
           mutationBuffer.position(position + Integer.BYTES);
-          mutationBuffer.limit(maxStringBytes);
+          mutationBuffer.limit(position + Integer.BYTES + maxStringBytes);
           final int len = StringUtils.toUtf8WithLimit(foundValue, mutationBuffer);
           mutationBuffer.putInt(position, len);
         }
