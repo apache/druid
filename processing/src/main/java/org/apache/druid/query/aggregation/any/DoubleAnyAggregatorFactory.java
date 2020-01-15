@@ -48,7 +48,6 @@ public class DoubleAnyAggregatorFactory extends NullableNumericAggregatorFactory
 
   private final String fieldName;
   private final String name;
-  private final boolean storeDoubleAsFloat;
 
   @JsonCreator
   public DoubleAnyAggregatorFactory(
@@ -60,7 +59,6 @@ public class DoubleAnyAggregatorFactory extends NullableNumericAggregatorFactory
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
-    this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
   }
 
   @Override
@@ -139,7 +137,7 @@ public class DoubleAnyAggregatorFactory extends NullableNumericAggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @Override
@@ -156,16 +154,13 @@ public class DoubleAnyAggregatorFactory extends NullableNumericAggregatorFactory
   @Override
   public String getTypeName()
   {
-    if (storeDoubleAsFloat) {
-      return "float";
-    }
     return "double";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Double.BYTES;
+    return Double.BYTES + Byte.BYTES;
   }
 
   @Override

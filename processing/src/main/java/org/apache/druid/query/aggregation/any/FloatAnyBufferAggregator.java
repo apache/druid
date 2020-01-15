@@ -20,14 +20,22 @@
 package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.NullableNumericAggregator;
+import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
+/**
+ * This Aggregator is created by the {@link FloatAnyAggregatorFactory} which extends from
+ * {@link NullableNumericAggregatorFactory}. If null needs to be handle, then {@link NullableNumericAggregatorFactory}
+ * will wrap this aggregator in {@link NullableNumericAggregator} and can handle all null in that class.
+ * Hence, no null will ever be pass into this aggregator from the valueSelector.
+ */
 public class FloatAnyBufferAggregator implements BufferAggregator
 {
-  private static final byte BYTE_FLAG_IS_NOT_SET = -1;
+  private static final byte BYTE_FLAG_IS_NOT_SET = 0;
   private static final byte BYTE_FLAG_IS_SET = 1;
   private static final float NULL_VALUE = 0;
   private final BaseFloatColumnValueSelector valueSelector;
@@ -47,7 +55,7 @@ public class FloatAnyBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == BYTE_FLAG_IS_NOT_SET && !valueSelector.isNull()) {
+    if (buf.get(position) == BYTE_FLAG_IS_NOT_SET) {
       buf.putFloat(position + Byte.BYTES, valueSelector.getFloat());
       buf.put(position, BYTE_FLAG_IS_SET);
     }
@@ -80,7 +88,7 @@ public class FloatAnyBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-
+    // no-op
   }
 
   @Override

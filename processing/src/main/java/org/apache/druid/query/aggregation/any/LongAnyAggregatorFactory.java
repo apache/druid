@@ -136,7 +136,7 @@ public class LongAnyAggregatorFactory extends NullableNumericAggregatorFactory<C
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @Override
@@ -159,7 +159,7 @@ public class LongAnyAggregatorFactory extends NullableNumericAggregatorFactory<C
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES;
+    return Long.BYTES + Byte.BYTES;
   }
 
   @Override

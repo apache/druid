@@ -35,7 +35,7 @@ public class StringAnyAggregator implements Aggregator
   {
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
-    foundValue = null;
+    this.foundValue = null;
   }
 
   @Override
@@ -79,6 +79,6 @@ public class StringAnyAggregator implements Aggregator
   @Override
   public void close()
   {
-
+    // no-op
   }
 }

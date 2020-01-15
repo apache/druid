@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 
 public class StringAnyBufferAggregator implements BufferAggregator
 {
-  private static final int NULL_VALUE = -1;
+  private static final int NULL_STRING_LENGTH = -1;
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
 
@@ -43,7 +43,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   {
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
-    mutationBuffer.putInt(NULL_VALUE);
+    mutationBuffer.putInt(NULL_STRING_LENGTH);
   }
 
   @Override
@@ -101,6 +101,6 @@ public class StringAnyBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-
+    // no-op
   }
 }

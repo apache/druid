@@ -21,24 +21,35 @@ package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.query.aggregation.NullableNumericAggregator;
+import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 
+/**
+ * This Aggregator is created by the {@link FloatAnyAggregatorFactory} which extends from
+ * {@link NullableNumericAggregatorFactory}. If null needs to be handle, then {@link NullableNumericAggregatorFactory}
+ * will wrap this aggregator in {@link NullableNumericAggregator} and can handle all null in that class.
+ * Hence, no null will ever be pass into this aggregator from the valueSelector.
+ */
 public class FloatAnyAggregator implements Aggregator
 {
   private final BaseFloatColumnValueSelector valueSelector;
 
-  private Float foundValue;
+  private float foundValue;
+  private boolean isFound;
 
   public FloatAnyAggregator(BaseFloatColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
-    foundValue = null;
+    this.foundValue = 0;
+    this.isFound = false;
   }
 
   @Override
   public void aggregate()
   {
-    if (foundValue == null && !valueSelector.isNull()) {
+    if (!isFound) {
       foundValue = valueSelector.getFloat();
+      isFound = true;
     }
   }
 
@@ -57,18 +68,18 @@ public class FloatAnyAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return foundValue.longValue();
+    return (long) foundValue;
   }
 
   @Override
   public double getDouble()
   {
-    return foundValue.doubleValue();
+    return (double) foundValue;
   }
 
   @Override
   public void close()
   {
-
+    // no-op
   }
 }

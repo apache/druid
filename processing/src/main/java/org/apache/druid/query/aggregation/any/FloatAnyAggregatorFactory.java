@@ -136,7 +136,7 @@ public class FloatAnyAggregatorFactory extends NullableNumericAggregatorFactory<
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @Override
@@ -159,7 +159,7 @@ public class FloatAnyAggregatorFactory extends NullableNumericAggregatorFactory<
   @Override
   public int getMaxIntermediateSize()
   {
-    return Float.BYTES;
+    return Float.BYTES + Byte.BYTES;
   }
 
   @Override
