@@ -421,7 +421,7 @@ The `dataSchema` is shared across all task types, but each task type has its own
 
 ## Define the input source
 
-Now let's define our input source, which is specified in an `ioConfig` object. Each task type has its own type of `ioConfig`. To read input data, we need to specify an `inputSource`. The the example netflow data we saved earlier needs to be read from a local file, which is configured below:
+Now let's define our input source, which is specified in an `ioConfig` object. Each task type has its own type of `ioConfig`. To read input data, we need to specify an `inputSource`. The example netflow data we saved earlier needs to be read from a local file, which is configured below:
 
 
 ```json
