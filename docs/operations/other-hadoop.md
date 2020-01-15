@@ -55,7 +55,7 @@ Generally, you should only set one of these parameters, not both.
 These properties can be set in either one of the following ways:
 
 - Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [Hadoop batch ingestion documentation](../ingestion/hadoop.md)).
-- Using system properties, e.g. on the MiddleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true` in [middleManager/runtime.properties](../configuration/index.md#middlemanager-configuration).
+- Using system properties, e.g. on the MiddleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true` in [Middle Manager configuration](../configuration/index.md#middlemanager-configuration).
 
 ### Overriding specific classes
 
