@@ -21,8 +21,6 @@ package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.first.StringAggregatorUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
