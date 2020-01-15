@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.query.dimension.VectorColumnProcessorFactory;
+import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;

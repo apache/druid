@@ -17,16 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.query.dimension;
+package org.apache.druid.segment;
 
-import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 /**
  * Class that encapsulates knowledge about how to create vector column processors. Used by
- * {@link org.apache.druid.segment.DimensionHandlerUtils#makeVectorProcessor}.
+ * {@link DimensionHandlerUtils#makeVectorProcessor}.
  *
  * Unlike {@link ColumnProcessorFactory}, this interface does not have a "defaultType" method. The default type is
  * always implicitly STRING. It also does not have a "makeComplexProcessor" method; instead, complex-typed columns
