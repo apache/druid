@@ -27,27 +27,25 @@ import java.nio.ByteBuffer;
 
 public class LongAnyBufferAggregator implements BufferAggregator
 {
+  private static final long NULL_VALUE = 0;
   private final BaseLongColumnValueSelector valueSelector;
-
-  private boolean isValueFound;
 
   public LongAnyBufferAggregator(BaseLongColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
-    isValueFound = false;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
+    buf.putLong(position, NULL_VALUE);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (!isValueFound && !valueSelector.isNull()) {
+    if (buf.getLong(position) == NULL_VALUE && !valueSelector.isNull()) {
       buf.putLong(position, valueSelector.getLong());
-      isValueFound = true;
     }
   }
 

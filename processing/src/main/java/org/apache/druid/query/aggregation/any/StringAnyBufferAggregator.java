@@ -30,36 +30,38 @@ import java.nio.ByteBuffer;
 
 public class StringAnyBufferAggregator implements BufferAggregator
 {
+  private static final int NULL_VALUE = -1;
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
-
-  private boolean isValueFound;
 
   public StringAnyBufferAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes)
   {
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
-    isValueFound = false;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
+    ByteBuffer mutationBuffer = buf.duplicate();
+    mutationBuffer.position(position);
+    mutationBuffer.putInt(NULL_VALUE);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (!isValueFound) {
+    int stringSizeBytes = buf.getInt();
+    if (stringSizeBytes < 0) {
       final Object object = valueSelector.getObject();
       if (object != null) {
         String foundValue = DimensionHandlerUtils.convertObjectToString(object);
         if (foundValue != null) {
           ByteBuffer mutationBuffer = buf.duplicate();
+          mutationBuffer.position(position + Integer.BYTES);
           mutationBuffer.limit(maxStringBytes);
           final int len = StringUtils.toUtf8WithLimit(foundValue, mutationBuffer);
           mutationBuffer.putInt(position, len);
-          isValueFound = true;
         }
       }
     }
@@ -74,7 +76,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
     if (stringSizeBytes >= 0) {
       byte[] valueBytes = new byte[stringSizeBytes];
       copyBuffer.get(valueBytes, 0, stringSizeBytes);
-      return StringAggregatorUtils.chop(StringUtils.fromUtf8(valueBytes), maxStringBytes);
+      return StringUtils.fromUtf8(valueBytes);
     } else {
       return null;
     }
