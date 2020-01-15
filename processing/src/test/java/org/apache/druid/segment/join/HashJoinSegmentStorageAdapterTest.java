@@ -660,6 +660,35 @@ public class HashJoinSegmentStorageAdapterTest
   }
 
   @Test
+  public void test_makeCursors_factToCountryFullWithFilterOnLeftIsNull()
+  {
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL))
+        ).makeCursors(
+            new SelectorDimFilter("channel", null, null).toFilter(),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "countryNumber",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L}
+        )
+    );
+  }
+
+  @Test
   public void test_makeCursors_factToCountryRightWithFilterOnJoinable()
   {
     JoinTestHelper.verifyCursors(

@@ -20,11 +20,9 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -59,50 +57,6 @@ public class ColumnProcessors
         factory -> getColumnType(factory, column),
         factory -> factory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
         factory -> factory.makeColumnValueSelector(column),
-        processorFactory,
-        selectorFactory
-    );
-  }
-
-  /**
-   * Make a processor for a particular dimension spec. If the dimension spec includes an extractionFn or if it
-   * must decorate, then a string selector (DimensionSelector) will always be used. Otherwise, this behaves identically
-   * to {@link ColumnProcessors#makeProcessor(String, ColumnProcessorFactory, ColumnSelectorFactory)}.
-   *
-   * @param dimensionSpec    the dimension spec
-   * @param processorFactory the processor factory
-   * @param selectorFactory  the column selector factory
-   * @param <T>              processor type
-   */
-  public static <T> T makeProcessor(
-      final DimensionSpec dimensionSpec,
-      final ColumnProcessorFactory<T> processorFactory,
-      final ColumnSelectorFactory selectorFactory
-  )
-  {
-    return makeProcessorInternal(
-        factory -> {
-          if (dimensionSpec.getExtractionFn() != null || dimensionSpec.mustDecorate()) {
-            // Currently, all extractionFns output Strings, so the column will return String values via a
-            // DimensionSelector if an extractionFn is present. Additionally, DimensionSpec's "decorate" method only
-            // operates on DimensionSelectors, so if a spec mustDecorate(), we must treat the input as a string
-            // regardless of its actual type.
-            return ValueType.STRING;
-          } else {
-            return getColumnType(factory, dimensionSpec.getDimension());
-          }
-        },
-        factory -> factory.makeDimensionSelector(dimensionSpec),
-        factory -> {
-          Preconditions.checkState(
-              dimensionSpec.getExtractionFn() == null && !dimensionSpec.mustDecorate(),
-              "Uh oh, was about to try to make a value selector for a dimensionSpec of class[%s] that "
-              + "requires decoration. Possible bug.",
-              dimensionSpec.getClass().getName()
-          );
-
-          return factory.makeColumnValueSelector(dimensionSpec.getDimension());
-        },
         processorFactory,
         selectorFactory
     );
