@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.last;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
+import org.apache.druid.query.aggregation.first.StringAggregatorUtils;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
@@ -52,7 +52,7 @@ public class StringLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+    final SerializablePairLongString inPair = StringAggregatorUtils.readPairFromSelectors(
         timeSelector,
         valueSelector
     );
@@ -75,7 +75,7 @@ public class StringLastAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePairLongString(lastTime, StringFirstLastUtils.chop(lastValue, maxStringBytes));
+    return new SerializablePairLongString(lastTime, StringAggregatorUtils.chop(lastValue, maxStringBytes));
   }
 
   @Override

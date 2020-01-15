@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class StringFirstLastUtils
+public class StringAggregatorUtils
 {
   private static final int NULL_VALUE = -1;
 

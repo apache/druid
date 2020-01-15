@@ -54,7 +54,7 @@ public class StringFirstAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+    final SerializablePairLongString inPair = StringAggregatorUtils.readPairFromSelectors(
         timeSelector,
         valueSelector
     );
@@ -72,7 +72,7 @@ public class StringFirstAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePairLongString(firstTime, StringFirstLastUtils.chop(firstValue, maxStringBytes));
+    return new SerializablePairLongString(firstTime, StringAggregatorUtils.chop(firstValue, maxStringBytes));
   }
 
   @Override

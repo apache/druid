@@ -1297,6 +1297,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @Test
+  public void testAnyAggregator() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT "
+        + "ANY(cnt), ANY(m1), ANY(dim1, 10), "
+        + "ANY(cnt + 1), ANY(m1 + 1), ANY(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ValueType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ValueType.FLOAT),
+                      expressionVirtualColumn("v2", "concat(\"dim1\",CAST(\"cnt\", 'STRING'))", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongLastAggregatorFactory("a0", "cnt"),
+                          new FloatLastAggregatorFactory("a1", "m1"),
+                          new StringLastAggregatorFactory("a2", "dim1", 10),
+                          new LongLastAggregatorFactory("a3", "v0"),
+                          new FloatLastAggregatorFactory("a4", "v1"),
+                          new StringLastAggregatorFactory("a5", "v2", 10)
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
+        )
+    );
+  }
+
   @Test
   public void testLatestInSubquery() throws Exception
   {
