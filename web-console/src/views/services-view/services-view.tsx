@@ -348,7 +348,10 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Tier',
-            accessor: 'tier',
+            id: 'tier',
+            accessor: row => {
+              return row.tier ? row.tier : row.worker ? row.worker.category : null;
+            },
             Cell: row => {
               const value = row.value;
               return (

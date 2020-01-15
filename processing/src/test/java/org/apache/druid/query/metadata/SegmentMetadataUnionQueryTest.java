@@ -37,6 +37,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,7 +46,7 @@ import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class SegmentMetadataUnionQueryTest
+public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
 {
   static {
     NullHandling.initializeForTests();
@@ -109,7 +110,7 @@ public class SegmentMetadataUnionQueryTest
                 null
             )
         ),
-        mmap ? 669972 : 672752,
+        mmap ? 800544 : 803324,
         4836,
         null,
         null,

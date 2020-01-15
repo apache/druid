@@ -61,6 +61,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -84,7 +85,7 @@ import java.util.stream.StreamSupport;
 /**
  */
 @RunWith(Parameterized.class)
-public class TimeseriesQueryRunnerTest
+public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
