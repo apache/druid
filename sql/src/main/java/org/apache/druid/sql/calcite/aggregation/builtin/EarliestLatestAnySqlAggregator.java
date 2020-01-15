@@ -69,7 +69,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
   public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(AggregatorType.EARLIEST);
   public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(AggregatorType.LATEST);
-  public static final SqlAggregator ANY = new EarliestLatestAnySqlAggregator(AggregatorType.ANY);
+  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE);
 
   enum AggregatorType
   {
@@ -111,7 +111,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       }
     },
 
-    ANY {
+    ANY_VALUE {
       @Override
       AggregatorFactory createAggregatorFactory(String name, String fieldName, ValueType type, int maxStringBytes)
       {

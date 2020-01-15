@@ -121,7 +121,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new CountSqlAggregator())
           .add(EarliestLatestAnySqlAggregator.EARLIEST)
           .add(EarliestLatestAnySqlAggregator.LATEST)
-          .add(EarliestLatestAnySqlAggregator.ANY)
+          .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
           .add(new MinSqlAggregator())
           .add(new MaxSqlAggregator())
           .add(new SumSqlAggregator())

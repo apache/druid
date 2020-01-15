@@ -43,6 +43,9 @@ import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
@@ -1301,13 +1304,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testAnyAggregator() throws Exception
   {
-    // Cannot vectorize LATEST aggregator.
+    // Cannot vectorize ANY aggregator.
     skipVectorize();
 
     testQuery(
         "SELECT "
-        + "ANY(cnt), ANY(m1), ANY(dim1, 10), "
-        + "ANY(cnt + 1), ANY(m1 + 1), ANY(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "ANY_VALUE(cnt), ANY_VALUE(m1), ANY_VALUE(dim1, 10), "
+        + "ANY_VALUE(cnt + 1), ANY_VALUE(m1 + 1), ANY_VALUE(dim1 || CAST(cnt AS VARCHAR), 10) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1321,19 +1324,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .aggregators(
                       aggregators(
-                          new LongLastAggregatorFactory("a0", "cnt"),
-                          new FloatLastAggregatorFactory("a1", "m1"),
-                          new StringLastAggregatorFactory("a2", "dim1", 10),
-                          new LongLastAggregatorFactory("a3", "v0"),
-                          new FloatLastAggregatorFactory("a4", "v1"),
-                          new StringLastAggregatorFactory("a5", "v2", 10)
+                          new LongAnyAggregatorFactory("a0", "cnt"),
+                          new FloatAnyAggregatorFactory("a1", "m1"),
+                          new StringAnyAggregatorFactory("a2", "dim1", 10),
+                          new LongAnyAggregatorFactory("a3", "v0"),
+                          new FloatAnyAggregatorFactory("a4", "v1"),
+                          new StringAnyAggregatorFactory("a5", "v2", 10)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
+            // Values are basically just from the first row since we skip reading data after value is found
+            // ANY_VALUE(dim1, 10) is 10.1 which is from the second row since first row dim1 value is empty/null
+            new Object[]{1L, 1.0f, "10.1", 2L, 2.0f, "1"}
         )
     );
   }
@@ -1355,6 +1360,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                         .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0:a", "m1")))
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", "a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? 18.0 : 15.0}
+        )
+    );
+  }
+
+  @Test
+  public void testAnyInSubquery() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(m1) AS val FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(new FloatAnyAggregatorFactory("a0:a", "m1")))
                                         .setPostAggregatorSpecs(
                                             ImmutableList.of(
                                                 new FinalizingFieldAccessPostAggregator("a0", "a0:a")
