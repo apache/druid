@@ -31,6 +31,7 @@ const siteConfig = {
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
+    { search: true },
     {href: '/technology', label: 'Technology'},
     {href: '/use-cases', label: 'Use Cases'},
     {href: '/druid-powered', label: 'Powered By'},
