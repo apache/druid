@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -38,53 +39,12 @@ import java.util.Objects;
 /**
  * InputFormat for customized Delimitor Separate Value format of input data(default is TSV).
  */
-public class DelimitedInputFormat implements InputFormat
+public class DelimitedInputFormat extends FlatTextInputFormat
 {
-
-  public enum Format
-  {
-    CSV(',', "comma"),
-    TSV('\t', "tab"),
-    CustomizeSV('|', "");
-
-    private char delimiter;
-    private String literal;
-
-    Format(char delimiter, String literal)
-    {
-      this.delimiter = delimiter;
-      this.literal = literal;
-    }
-
-    public String getDelimiterAsString()
-    {
-      return String.valueOf(delimiter);
-    }
-
-    private void setDelimiter(String delimiter, String literal)
-    {
-      this.delimiter = (delimiter != null && delimiter.length() > 0) ? delimiter.charAt(0) : '\t';
-      this.literal = literal != null ? literal : "customize separator: " + delimiter;
-    }
-
-    public char getDelimiter()
-    {
-      return delimiter;
-    }
-
-    public String getLiteral()
-    {
-      return literal;
-    }
-  }
-
-  private final String listDelimiter;
-  private final List<String> columns;
-  private final boolean findColumnsFromHeader;
-  private final int skipHeaderRows;
-  private final Format format;
+  private static final String DEFAULT_DELIMITER = "\t";
   private final String delimiter;
 
+  @JsonCreator
   public DelimitedInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
       @JsonProperty("listDelimiter") @Nullable String listDelimiter,
@@ -94,79 +54,49 @@ public class DelimitedInputFormat implements InputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    this.listDelimiter = listDelimiter;
-    this.columns = columns == null ? Collections.emptyList() : columns;
-    //noinspection ConstantConditions
-    this.findColumnsFromHeader = Checks.checkOneNotNullOrEmpty(
-        ImmutableList.of(
-            new Property<>("hasHeaderRow", hasHeaderRow),
-            new Property<>("findColumnsFromHeader", findColumnsFromHeader)
-        )
-    ).getValue();
-    this.skipHeaderRows = skipHeaderRows;
-    this.delimiter = delimiter == null ? "\t" : delimiter;
-    this.format = getFormat(this.delimiter);
-    Preconditions.checkArgument(
-        this.delimiter.length() == 1,
-        "The delimiter should be a single character"
+    super(
+        columns,
+        listDelimiter,
+        delimiter == null ? DEFAULT_DELIMITER : delimiter,
+        hasHeaderRow,
+        findColumnsFromHeader,
+        skipHeaderRows
     );
-    Preconditions.checkArgument(
-        !this.delimiter.equals(listDelimiter),
-        "Cannot have same delimiter and list delimiter of [%s]",
-        this.delimiter
-    );
-    if (!this.columns.isEmpty()) {
-      for (String column : this.columns) {
-        Preconditions.checkArgument(
-            !column.contains(format.getDelimiterAsString()),
-            "Column[%s] has a " + format.getLiteral() + ", it cannot",
-            column
-        );
-      }
-    } else {
-      Preconditions.checkArgument(
-          this.findColumnsFromHeader,
-          "If columns field is not set, the first row of your data must have your header"
-          + " and hasHeaderRow must be set to true."
-      );
-    }
+    this.delimiter = delimiter;
   }
 
-  private static Format getFormat(String delimiter)
-  {
-    if (",".equals(delimiter)) {
-      return Format.CSV;
-    } else if ("\t".equals(delimiter)) {
-      return Format.TSV;
-    } else {
-      Format.CustomizeSV.setDelimiter(delimiter, null);
-      return Format.CustomizeSV;
-    }
-  }
-
-
+  @Override
   @JsonProperty
   public List<String> getColumns()
   {
-    return columns;
+    return super.getColumns();
   }
 
+  @Override
   @JsonProperty
   public String getListDelimiter()
   {
-    return listDelimiter;
+    return super.getListDelimiter();
   }
 
+  @JsonProperty("delimiter")
+  public String getDelimiterString()
+  {
+    return delimiter;
+  }
+
+  @Override
   @JsonProperty
   public boolean isFindColumnsFromHeader()
   {
-    return findColumnsFromHeader;
+    return super.isFindColumnsFromHeader();
   }
 
+  @Override
   @JsonProperty
   public int getSkipHeaderRows()
   {
-    return skipHeaderRows;
+    return super.getSkipHeaderRows();
   }
 
   @Override
@@ -182,34 +112,11 @@ public class DelimitedInputFormat implements InputFormat
         inputRowSchema,
         source,
         temporaryDirectory,
-        listDelimiter,
-        columns,
-        findColumnsFromHeader,
-        skipHeaderRows,
-        this.format
+        getListDelimiter(),
+        getColumns(),
+        isFindColumnsFromHeader(),
+        getSkipHeaderRows(),
+        getDelimiter()
     );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DelimitedInputFormat format = (DelimitedInputFormat) o;
-    return findColumnsFromHeader == format.findColumnsFromHeader &&
-           skipHeaderRows == format.skipHeaderRows &&
-           Objects.equals(listDelimiter, format.listDelimiter) &&
-           Objects.equals(columns, format.columns) &&
-           Objects.equals(this.format, format.format);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(listDelimiter, columns, findColumnsFromHeader, skipHeaderRows, format);
   }
 }

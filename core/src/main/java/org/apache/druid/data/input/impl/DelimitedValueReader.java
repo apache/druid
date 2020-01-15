@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
+import org.apache.druid.data.input.impl.FlatTextInputFormat.Delimiter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -77,7 +78,7 @@ public class DelimitedValueReader extends TextReader
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows,
-      DelimitedInputFormat.Format format
+      Delimiter delimiter
   )
   {
     super(inputRowSchema, source, temporaryDirectory);
@@ -86,13 +87,13 @@ public class DelimitedValueReader extends TextReader
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
-    this.parser = createOpenCsvParser(format.getDelimiter());
+    this.parser = createOpenCsvParser(delimiter.getDelimiter());
 
     if (this.columns != null) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
-            !column.contains(format.getDelimiterAsString()),
-            "Column[%s] has a " + format.getLiteral() + ", it cannot",
+            !column.contains(delimiter.getDelimiterAsString()),
+            "Column[%s] has a " + delimiter.getLiteral() + ", it cannot",
             column
         );
       }
