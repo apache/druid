@@ -27,7 +27,6 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class StringFirstLastUtils
 {
