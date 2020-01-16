@@ -546,4 +546,26 @@ public class StringUtils
     return new String(data);
   }
 
+  /**
+   * Returns the string truncated to maxBytes.
+   * If given string input is shorter than maxBytes, then it remains the same.
+   *
+   * @param s The input string to possibly be truncated
+   * @param maxBytes  The max bytes that string input will be truncated to
+   *
+   * @return the string after truncated to maxBytes
+   */
+  @Nullable
+  public static String chop(@Nullable final String s, final int maxBytes)
+  {
+    if (s == null) {
+      return null;
+    } else {
+      // Shorten firstValue to what could fit in maxBytes as UTF-8.
+      final byte[] bytes = new byte[maxBytes];
+      final int len = StringUtils.toUtf8WithLimit(s, ByteBuffer.wrap(bytes));
+      return new String(bytes, 0, len, StandardCharsets.UTF_8);
+    }
+  }
+
 }

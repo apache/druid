@@ -33,7 +33,7 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -90,7 +90,7 @@ public class LikeFilter implements Filter
   {
     return DimensionHandlerUtils.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(likeMatcher.predicateFactory(extractionFn));
   }

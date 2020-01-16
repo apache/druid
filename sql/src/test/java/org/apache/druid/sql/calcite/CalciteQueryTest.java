@@ -43,6 +43,10 @@ import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
@@ -1299,6 +1303,118 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This test the on-heap version of the AnyAggregator (Double/Float/Long/String)
+  @Test
+  public void testAnyAggregator() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT "
+        + "ANY_VALUE(cnt), ANY_VALUE(m1), ANY_VALUE(m2), ANY_VALUE(dim1, 10), "
+        + "ANY_VALUE(cnt + 1), ANY_VALUE(m1 + 1), ANY_VALUE(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ValueType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ValueType.FLOAT),
+                      expressionVirtualColumn("v2", "concat(\"dim1\",CAST(\"cnt\", 'STRING'))", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "cnt"),
+                          new FloatAnyAggregatorFactory("a1", "m1"),
+                          new DoubleAnyAggregatorFactory("a2", "m2"),
+                          new StringAnyAggregatorFactory("a3", "dim1", 10),
+                          new LongAnyAggregatorFactory("a4", "v0"),
+                          new FloatAnyAggregatorFactory("a5", "v1"),
+                          new StringAnyAggregatorFactory("a6", "v2", 10)
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "10.1", 2L, 2.0f, "1"})
+    );
+  }
+
+  // This test the on-heap version of the AnyAggregator (Double/Float/Long) against numeric columns
+  // that have null values (when run in sql compatible null mode)
+  @Test
+  public void testAnyAggregatorsOnHeapNumericNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "l1"),
+                          new DoubleAnyAggregatorFactory("a1", "d1"),
+                          new FloatAnyAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{7L, 1.0, 1.0f}
+        )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
+  // that have null values (when run in sql compatible null mode)
+  @Test
+  public void testAnyAggregatorsOffHeapNumericNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    testQuery(
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                  .setDataSource(CalciteTests.DATASOURCE3)
+                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                  .setGranularity(Granularities.ALL)
+                  .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
+                  .setAggregatorSpecs(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "l1"),
+                          new DoubleAnyAggregatorFactory("a1", "d1"),
+                          new FloatAnyAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .setContext(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{325323L, 1.7, 0.1f},
+            new Object[]{0L, 0.0, 0.0f},
+            new Object[]{7L, 1.0, 1.0f},
+            new Object[]{null, null, null}
+        )
+        : ImmutableList.of(
+            new Object[]{325323L, 1.7, 0.1f},
+            new Object[]{7L, 1.0, 1.0f},
+            new Object[]{0L, 0.0, 0.0f}
+        )
+    );
+  }
+
   // This test the off-heap (buffer) version of the LatestAggregator (Double/Float/Long)
   @Test
   public void testPrimitiveLatestInSubquery() throws Exception
@@ -1451,6 +1567,92 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                         .setAggregatorSpecs(aggregators(new StringFirstAggregatorFactory("a0:a", "dim1", 10)))
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", null, "CAST(\"a0\", 'DOUBLE')", ExprMacroTable.nil())))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 11.1}
+        )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long)
+  @Test
+  public void testPrimitiveAnyInSubquery() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, ANY_VALUE(m1) AS val1, ANY_VALUE(cnt) AS val2, ANY_VALUE(m2) AS val3 FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(
+                                            new FloatAnyAggregatorFactory("a0:a", "m1"),
+                                            new LongAnyAggregatorFactory("a1:a", "cnt"),
+                                            new DoubleAnyAggregatorFactory("a2:a", "m2"))
+                                        )
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a"),
+                                                new FinalizingFieldAccessPostAggregator("a1", "a1:a"),
+                                                new FinalizingFieldAccessPostAggregator("a2", "a2:a")
+
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new DoubleSumAggregatorFactory("_a0", "a0"),
+                            new LongSumAggregatorFactory("_a1", "a1"),
+                            new DoubleSumAggregatorFactory("_a2", "a2")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{11.0, 4L, 11.0}) : ImmutableList.of(new Object[]{8.0, 3L, 8.0})
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (String)
+  @Test
+  public void testStringAnyInSubquery() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(dim1, 10) AS val FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(new StringAnyAggregatorFactory("a0:a", "dim1", 10)))
                                         .setPostAggregatorSpecs(
                                             ImmutableList.of(
                                                 new FinalizingFieldAccessPostAggregator("a0", "a0:a")
