@@ -134,42 +134,36 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "wikipedia",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "channel",
-              "cityName",
-              "comment",
-              "countryIsoCode",
-              "countryName",
-              "isAnonymous",
-              "isMinor",
-              "isNew",
-              "isRobot",
-              "isUnpatrolled",
-              "metroCode",
-              "namespace",
-              "page",
-              "regionIsoCode",
-              "regionName",
-              "user",
-              { "name": "added", "type": "long" },
-              { "name": "deleted", "type": "long" },
-              { "name": "delta", "type": "long" }
-            ]
-          },
-          "timestampSpec": {
-            "column": "time",
-            "format": "iso"
-          }
-        }
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "channel",
+          "cityName",
+          "comment",
+          "countryIsoCode",
+          "countryName",
+          "isAnonymous",
+          "isMinor",
+          "isNew",
+          "isRobot",
+          "isUnpatrolled",
+          "metroCode",
+          "namespace",
+          "page",
+          "regionIsoCode",
+          "regionName",
+          "user",
+          { "name": "added", "type": "long" },
+          { "name": "deleted", "type": "long" },
+          { "name": "delta", "type": "long" }
+        ]
+      },
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
       },
       "metricsSpec" : [],
       "granularitySpec" : {
@@ -181,16 +175,19 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial/",
         "filter" : "wikiticker-2015-09-12-sampled.json.gz"
       },
+      "inputFormat" :  {
+        "type": "json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }

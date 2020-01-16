@@ -91,7 +91,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
 
 ```json
 {
-  "type": "index",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
@@ -128,7 +128,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
       }
     },
     "ioConfig": {
-      "type": "index",
+      "type": "index_parallel",
       "firehose": {
         "type": "sql",
         "database": {
@@ -145,7 +145,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
       }
     },
     "tuningconfig": {
-      "type": "index"
+      "type": "index_parallel"
     }
   }
 }

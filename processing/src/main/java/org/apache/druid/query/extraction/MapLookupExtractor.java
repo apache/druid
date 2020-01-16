@@ -123,6 +123,18 @@ public class MapLookupExtractor extends LookupExtractor
   }
 
   @Override
+  public boolean canIterate()
+  {
+    return true;
+  }
+
+  @Override
+  public Iterable<Map.Entry<String, String>> iterable()
+  {
+    return map.entrySet();
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
