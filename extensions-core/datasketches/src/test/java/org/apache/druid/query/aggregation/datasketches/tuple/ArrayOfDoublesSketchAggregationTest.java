@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -27,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -42,13 +44,11 @@ import java.util.Collection;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class ArrayOfDoublesSketchAggregationTest
+public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandlingTest
 {
-
-  private final AggregationTestHelper helper;
-
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
+  private final AggregationTestHelper helper;
 
   public ArrayOfDoublesSketchAggregationTest(final GroupByQueryConfig config)
   {
@@ -63,7 +63,7 @@ public class ArrayOfDoublesSketchAggregationTest
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[] {config});
+      constructors.add(new Object[]{config});
     }
     return constructors;
   }
@@ -79,7 +79,8 @@ public class ArrayOfDoublesSketchAggregationTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -92,16 +93,20 @@ public class ArrayOfDoublesSketchAggregationTest
             "    },",
             "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024},",
             "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"non_existing_sketch\", \"fieldName\": \"non_existing_sketch\"}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -137,7 +142,9 @@ public class ArrayOfDoublesSketchAggregationTest
             "    }}",
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}"
+        )
+    );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
@@ -161,8 +168,9 @@ public class ArrayOfDoublesSketchAggregationTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data_two_values.tsv")
-            .getFile()),
-        String.join("\n",
+                     .getFile()),
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -175,15 +183,19 @@ public class ArrayOfDoublesSketchAggregationTest
             "    },",
             "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -224,7 +236,9 @@ public class ArrayOfDoublesSketchAggregationTest
             "    }",
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}"
+        )
+    );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
@@ -254,7 +268,8 @@ public class ArrayOfDoublesSketchAggregationTest
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -267,15 +282,19 @@ public class ArrayOfDoublesSketchAggregationTest
             "    },",
             "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [\"value\"], \"nominalEntries\": 1024}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -310,7 +329,9 @@ public class ArrayOfDoublesSketchAggregationTest
             "    }}",
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}"
+        )
+    );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
@@ -334,7 +355,8 @@ public class ArrayOfDoublesSketchAggregationTest
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(
             this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data_two_values.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -347,15 +369,19 @@ public class ArrayOfDoublesSketchAggregationTest
             "    },",
             "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value1\", \"value2\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\" ], \"nominalEntries\": 1024}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -398,7 +424,9 @@ public class ArrayOfDoublesSketchAggregationTest
             "    }",
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}"
+        )
+    );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
@@ -424,11 +452,126 @@ public class ArrayOfDoublesSketchAggregationTest
   }
 
   @Test
+  public void buildingSketchesAtIngestionTimeThreeValuesAndNulls() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(
+            this.getClass()
+                .getClassLoader()
+                .getResource("tuple/array_of_doubles_build_data_three_values_and_nulls.tsv")
+                .getFile()),
+        String.join(
+            "\n",
+            "{",
+            "  \"type\": \"string\",",
+            "  \"parseSpec\": {",
+            "    \"format\": \"tsv\",",
+            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+            "    \"dimensionsSpec\": {",
+            "      \"dimensions\": [\"product\"],",
+            "      \"dimensionExclusions\": [],",
+            "      \"spatialDimensions\": []",
+            "    },",
+            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value1\", \"value2\", \"value3\"]",
+            "  }",
+            "}"
+        ),
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\", \"value3\" ], \"nominalEntries\": 1024}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 3}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"union\",",
+            "      \"operation\": \"UNION\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 3,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"intersection\",",
+            "      \"operation\": \"INTERSECT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 3,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"anotb\",",
+            "      \"operation\": \"NOT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 3,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {",
+            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
+            "      \"name\": \"means\",",
+            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
+            "    },",
+            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch-with-nulls\", \"column\": 3, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
+            "  ],",
+            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", 30.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 30.0, (double) row.get(1), 0);
+    Assert.assertEquals("union", 30.0, (double) row.get(3), 0);
+    Assert.assertEquals("intersection", 30.0, (double) row.get(4), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(5), 0);
+
+    Object meansObj = row.get(6); // means
+    Assert.assertTrue(meansObj instanceof double[]);
+    double[] means = (double[]) meansObj;
+    Assert.assertEquals(3, means.length);
+    Assert.assertEquals(1.0, means[0], 0);
+    Assert.assertEquals(2.0, means[1], 0);
+    Assert.assertEquals(3.0, means[2], 0.1);
+
+    Object obj = row.get(2); // quantiles-sketch
+    Assert.assertTrue(obj instanceof DoublesSketch);
+    DoublesSketch ds = (DoublesSketch) obj;
+    Assert.assertEquals(30, ds.getN());
+    Assert.assertEquals(2.0, ds.getMinValue(), 0);
+    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+
+    Object objSketch2 = row.get(7); // quantiles-sketch-with-nulls
+    Assert.assertTrue(objSketch2 instanceof DoublesSketch);
+    DoublesSketch ds2 = (DoublesSketch) objSketch2;
+    Assert.assertEquals(30, ds2.getN());
+    Assert.assertEquals(3.0, ds2.getMinValue(), 0);
+    Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
+  }
+
+  @Test
   public void buildingSketchesAtQueryTime() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -441,15 +584,19 @@ public class ArrayOfDoublesSketchAggregationTest
             "    },",
             "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         40, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -485,7 +632,9 @@ public class ArrayOfDoublesSketchAggregationTest
             "    }}",
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}"
+        )
+    );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
@@ -507,11 +656,12 @@ public class ArrayOfDoublesSketchAggregationTest
   // Two buckets with statistically significant difference.
   // See GenerateTestData class for details.
   @Test
-  public void buildingSketchesAtQueryTimeAndTTest() throws Exception
+  public void buildingSketchesAtQueryTimeTwoBucketsTest() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/bucket_test_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -522,15 +672,19 @@ public class ArrayOfDoublesSketchAggregationTest
             "    },",
             "    \"columns\": [\"timestamp\", \"label\", \"userid\", \"parameter\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"doubleSum\", \"name\": \"parameter\", \"fieldName\": \"parameter\"}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         2000, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -557,7 +711,9 @@ public class ArrayOfDoublesSketchAggregationTest
             "    }",
             "  ],",
             "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}"
+        )
+    );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
@@ -571,4 +727,132 @@ public class ArrayOfDoublesSketchAggregationTest
     Assert.assertEquals(0, pValue, 0.001);
   }
 
+  // Three buckets with null values
+  @Test
+  public void buildingSketchesAtQueryTimeWithNullsTest() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass()
+                     .getClassLoader()
+                     .getResource("tuple/array_of_doubles_build_data_three_values_and_nulls.tsv")
+                     .getFile()),
+        String.join(
+            "\n",
+            "{",
+            "  \"type\": \"string\",",
+            "  \"parseSpec\": {",
+            "    \"format\": \"tsv\",",
+            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+            "    \"dimensionsSpec\": {",
+            "      \"dimensions\": [\"product\", \"key\"],",
+            "      \"dimensionExclusions\": [],",
+            "      \"spatialDimensions\": []",
+            "    },",
+            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"value1\", \"value2\", \"value3\"]",
+            "  }",
+            "}"
+        ),
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"doubleSum\", \"name\": \"value1\", \"fieldName\": \"value1\"},",
+            "  {\"type\": \"doubleSum\", \"name\": \"value2\", \"fieldName\": \"value2\"},",
+            "  {\"type\": \"doubleSum\", \"name\": \"value3\", \"fieldName\": \"value3\"}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [],",
+            "  \"virtualColumns\": [{\"type\": \"expression\",\"name\": \"nonulls3\",\"expression\": \"nvl(value3, 0.0)\",\"outputType\": \"DOUBLE\"}],",
+            "  \"aggregations\": [",
+            "   {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\", \"value3\" ], \"nominalEntries\": 1024},",
+            "   {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketchNoNulls\", \"fieldName\": \"key\", \"metricColumns\": [ \"value1\", \"value2\", \"nonulls3\" ], \"nominalEntries\": 1024}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimateNoNulls\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchNoNulls\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"union\",",
+            "      \"operation\": \"UNION\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 3,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"intersection\",",
+            "      \"operation\": \"INTERSECT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 3,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"anotb\",",
+            "      \"operation\": \"NOT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 3,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {",
+            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
+            "      \"name\": \"means\",",
+            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
+            "    },",
+            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch-with-nulls\", \"column\": 3, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch-with-no-nulls\", \"column\": 3, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketchNoNulls\"}}",
+            "  ],",
+            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(0), 0);
+    Assert.assertEquals("sketchNoNulls", 40.0, (double) row.get(1), 0);
+    Assert.assertEquals("estimate", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(2), 0);
+    Assert.assertEquals("estimateNoNulls", 40.0, (double) row.get(3), 0);
+    Assert.assertEquals("union", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(5), 0);
+    Assert.assertEquals("intersection", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(6), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(7), 0);
+
+    Object meansObj = row.get(8); // means
+    Assert.assertTrue(meansObj instanceof double[]);
+    double[] means = (double[]) meansObj;
+    Assert.assertEquals(3, means.length);
+    Assert.assertEquals(1.0, means[0], 0);
+    Assert.assertEquals(2.0, means[1], 0);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 2.25 : 3.0, means[2], 0.1);
+
+    Object obj = row.get(4); // quantiles-sketch
+    Assert.assertTrue(obj instanceof DoublesSketch);
+    DoublesSketch ds = (DoublesSketch) obj;
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds.getN());
+    Assert.assertEquals(2.0, ds.getMinValue(), 0);
+    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+
+    Object objSketch2 = row.get(9); // quantiles-sketch-with-nulls
+    Assert.assertTrue(objSketch2 instanceof DoublesSketch);
+    DoublesSketch ds2 = (DoublesSketch) objSketch2;
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds2.getN());
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinValue(), 0);
+    Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
+
+    Object objSketch3 = row.get(10); // quantiles-sketch-no-nulls
+    Assert.assertTrue(objSketch3 instanceof DoublesSketch);
+    DoublesSketch ds3 = (DoublesSketch) objSketch3;
+    Assert.assertEquals(40, ds3.getN());
+    Assert.assertEquals(0.0, ds3.getMinValue(), 0);
+    Assert.assertEquals(3.0, ds3.getMaxValue(), 0);
+  }
 }

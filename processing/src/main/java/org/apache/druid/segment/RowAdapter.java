@@ -17,25 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query.dimension;
+package org.apache.druid.segment;
 
-import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.VectorValueSelector;
+import java.util.function.Function;
+import java.util.function.ToLongFunction;
 
 /**
- * Class that encapsulates knowledge about how to create vector column processors. Used by
- * {@link org.apache.druid.segment.DimensionHandlerUtils#makeVectorProcessor}.
+ * An adapter between arbitrary types and the needs of callers that want to read specific columns out of those
+ * types (treating them as rows).
  */
-public interface VectorColumnStrategizer<T>
+public interface RowAdapter<RowType>
 {
-  T makeSingleValueDimensionStrategy(SingleValueDimensionVectorSelector selector);
+  /**
+   * Returns a function that retrieves timestamps from rows.
+   */
+  ToLongFunction<RowType> timestampFunction();
 
-  T makeMultiValueDimensionStrategy(MultiValueDimensionVectorSelector selector);
-
-  T makeFloatStrategy(VectorValueSelector selector);
-
-  T makeDoubleStrategy(VectorValueSelector selector);
-
-  T makeLongStrategy(VectorValueSelector selector);
+  /**
+   * Returns a function that retrieves the value for column "columnName" from rows.
+   */
+  Function<RowType, Object> columnFunction(String columnName);
 }

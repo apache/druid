@@ -19,51 +19,51 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.druid.query.dimension.VectorColumnStrategizer;
+import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
-public class GroupByVectorColumnStrategizer implements VectorColumnStrategizer<GroupByVectorColumnSelector>
+public class GroupByVectorColumnProcessorFactory implements VectorColumnProcessorFactory<GroupByVectorColumnSelector>
 {
-  private static final GroupByVectorColumnStrategizer INSTANCE = new GroupByVectorColumnStrategizer();
+  private static final GroupByVectorColumnProcessorFactory INSTANCE = new GroupByVectorColumnProcessorFactory();
 
-  private GroupByVectorColumnStrategizer()
+  private GroupByVectorColumnProcessorFactory()
   {
     // Singleton.
   }
 
-  public static GroupByVectorColumnStrategizer instance()
+  public static GroupByVectorColumnProcessorFactory instance()
   {
     return INSTANCE;
   }
 
   @Override
-  public GroupByVectorColumnSelector makeSingleValueDimensionStrategy(final SingleValueDimensionVectorSelector selector)
+  public GroupByVectorColumnSelector makeSingleValueDimensionProcessor(final SingleValueDimensionVectorSelector selector)
   {
     return new SingleValueStringGroupByVectorColumnSelector(selector);
   }
 
   @Override
-  public GroupByVectorColumnSelector makeMultiValueDimensionStrategy(final MultiValueDimensionVectorSelector selector)
+  public GroupByVectorColumnSelector makeMultiValueDimensionProcessor(final MultiValueDimensionVectorSelector selector)
   {
     throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
   }
 
   @Override
-  public GroupByVectorColumnSelector makeFloatStrategy(final VectorValueSelector selector)
+  public GroupByVectorColumnSelector makeFloatProcessor(final VectorValueSelector selector)
   {
     return new FloatGroupByVectorColumnSelector(selector);
   }
 
   @Override
-  public GroupByVectorColumnSelector makeDoubleStrategy(final VectorValueSelector selector)
+  public GroupByVectorColumnSelector makeDoubleProcessor(final VectorValueSelector selector)
   {
     return new DoubleGroupByVectorColumnSelector(selector);
   }
 
   @Override
-  public GroupByVectorColumnSelector makeLongStrategy(final VectorValueSelector selector)
+  public GroupByVectorColumnSelector makeLongProcessor(final VectorValueSelector selector)
   {
     return new LongGroupByVectorColumnSelector(selector);
   }

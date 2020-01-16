@@ -201,6 +201,21 @@ public class LookupDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new LookupDimensionSpec(
+        newDimension,
+        outputName,
+        lookup,
+        retainMissingValue,
+        replaceMissingValueWith,
+        name,
+        optimize,
+        lookupExtractorFactoryContainerProvider
+    );
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

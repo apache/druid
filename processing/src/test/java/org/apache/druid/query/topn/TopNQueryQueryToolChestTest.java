@@ -62,6 +62,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -74,7 +75,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TopNQueryQueryToolChestTest
+public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
 
   private static final SegmentId SEGMENT_ID = SegmentId.dummy("testSegment");

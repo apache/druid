@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
 {
@@ -107,6 +108,12 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(prefixBytes)
                      .array();
+  }
+
+  @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new PrefixFilteredDimensionSpec(delegate.withDimension(newDimension), prefix);
   }
 
   @Override
