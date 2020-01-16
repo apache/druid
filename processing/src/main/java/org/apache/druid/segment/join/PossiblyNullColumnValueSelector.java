@@ -26,6 +26,10 @@ import org.apache.druid.segment.ColumnValueSelector;
 import javax.annotation.Nullable;
 import java.util.function.BooleanSupplier;
 
+/**
+ * A {@link ColumnValueSelector} that wraps a base selector but might also generate null values on demand. This
+ * is used for "righty" joins (see {@link JoinType#isRighty()}), which may need to generate nulls on the left-hand side.
+ */
 public class PossiblyNullColumnValueSelector<T> implements ColumnValueSelector<T>
 {
   private final ColumnValueSelector<T> baseSelector;

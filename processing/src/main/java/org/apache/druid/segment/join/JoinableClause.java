@@ -48,7 +48,15 @@ public class JoinableClause
   }
 
   /**
-   * The prefix to apply to all columns from the Joinable.
+   * The prefix to apply to all columns from the Joinable. The idea is that during a join, any columns that start with
+   * this prefix should be retrieved from our Joinable's {@link JoinMatcher#getColumnSelectorFactory()}. Any other
+   * columns should be returned from the left-hand side of the join.
+   *
+   * The prefix can be any string, as long as it is nonempty and not itself a prefix of the reserved column name
+   * {@code __time}.
+   *
+   * @see #getAvailableColumnsPrefixed() the list of columns from our {@link Joinable} with prefixes attached
+   * @see #unprefix a method for removing prefixes
    */
   public String getPrefix()
   {

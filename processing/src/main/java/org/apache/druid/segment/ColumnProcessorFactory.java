@@ -41,6 +41,9 @@ public interface ColumnProcessorFactory<T>
 {
   /**
    * This default type will be used when the underlying column has an unknown type.
+   *
+   * This allows a column processor factory to specify what type it prefers to deal with (the most 'natural' type for
+   * whatever it is doing) when all else is equal.
    */
   ValueType defaultType();
 
