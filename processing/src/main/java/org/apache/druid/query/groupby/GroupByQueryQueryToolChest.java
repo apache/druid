@@ -677,6 +677,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     };
   }
 
+  @Override
+  public List<String> resultArrayFields(final GroupByQuery query)
+  {
+    return query.getResultRowOrder();
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(final GroupByQuery query, final Sequence<ResultRow> resultSequence)
+  {
+    return resultSequence.map(ResultRow::getArray);
+  }
 
   /**
    * This function checks the query for dimensions which can be optimized by applying the dimension extraction

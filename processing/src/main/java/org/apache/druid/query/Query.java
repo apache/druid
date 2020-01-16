@@ -120,6 +120,7 @@ public interface Query<T>
 
   Query<T> withId(String id);
 
+  @Nullable
   String getId();
 
   default Query<T> withSqlQueryId(String sqlQueryId)

@@ -24,16 +24,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQueryRunners;
@@ -62,6 +65,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -75,6 +79,12 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
 
   private static final SegmentId SEGMENT_ID = SegmentId.dummy("testSegment");
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void testCacheStrategy() throws Exception
@@ -288,6 +298,68 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
       new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query3));
       Assert.assertEquals(2000, mockRunner.query.getThreshold());
     }
+  }
+
+  @Test
+  public void testResultArrayFields()
+  {
+    final TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("col", "dim"))
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .postAggregators(QueryRunnerTestHelper.CONSTANT)
+        .threshold(1)
+        .build();
+
+    Assert.assertEquals(
+        ImmutableList.of("__time", "dim", "rows", "index", "uniques", "const"),
+        new TopNQueryQueryToolChest(null, null).resultArrayFields(query)
+    );
+  }
+
+  @Test
+  public void testResultsAsArrays()
+  {
+    final TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("col", "dim"))
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .postAggregators(QueryRunnerTestHelper.CONSTANT)
+        .threshold(1)
+        .build();
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{DateTimes.of("2000").getMillis(), "foo", 1L, 2L, 3L, 1L},
+            new Object[]{DateTimes.of("2000").getMillis(), "bar", 4L, 5L, 6L, 1L}
+        ),
+        new TopNQueryQueryToolChest(null, null).resultsAsArrays(
+            query,
+            Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2000"),
+                        new TopNResultValue(
+                            ImmutableList.of(
+                                new DimensionAndMetricValueExtractor(
+                                    ImmutableMap.of("dim", "foo", "rows", 1L, "index", 2L, "uniques", 3L, "const", 1L)
+                                ),
+                                new DimensionAndMetricValueExtractor(
+                                    ImmutableMap.of("dim", "bar", "rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
   }
 
   private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType)
