@@ -76,7 +76,7 @@ parsing data will not be as efficient as writing a native Java parser or using a
 
 > The Input Format is a new way to specify the data format of your input data which was introduced in 0.17.0.
 Unfortunately, the Input Format doesn't support all data formats or ingestion methods supported by Druid yet.
-Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser-deprecated).
+Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
 
 All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the `inputFormat` entry in your [`ioConfig`](index.md#ioconfig).
@@ -273,13 +273,11 @@ Each entry in the `fields` list can have the following components:
 * [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing `path`-type expressions.
 * jackson-jq supports a subset of the full [jq](https://stedolan.github.io/jq/) syntax.  Please refer to the [jackson-jq documentation](https://github.com/eiiches/jackson-jq) for details.
 
-## Parser (Deprecated)
+## Parser
 
-> Even though the Parser is deprecated, it is still useful especially
-for particular ingestion methods or data formats. For example, you
-should use the Parser with Hadoop ingestion since the [`inputFormat`](#input-format)
-is not supported yet with Hadoop ingestion.
-Some data formats such as Protocol Buffer or Avro are not supported by the `inputFormat` yet as well.
+> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
+and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+Consider using the [input format](#input-format) instead for these types of ingestion.
 
 This section lists all default and core extension parsers.
 For community extension parsers, please see our [community extensions list](../development/extensions.html#community-extensions).
@@ -287,7 +285,7 @@ For community extension parsers, please see our [community extensions list](../d
 ### String Parser
 
 `string` typed parsers operate on text based inputs that can be split into individual records by newlines.
-Each line can be further parsed using [`parseSpec`](#parsespec-deprecated).
+Each line can be further parsed using [`parseSpec`](#parsespec).
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -1021,12 +1019,11 @@ Sample spec:
 See the [extension description](../development/extensions-core/protobuf.md) for
 more details and examples.
 
-## ParseSpec (Deprecated)
+## ParseSpec
 
-> Even though the ParseSpec is deprecated, it is still useful especially
-for particular ingestion methods or data formats. For example, you
-should use the ParseSpec with Hadoop ingestion since the [`inputFormat`](#input-format)
-is not supported yet with Hadoop ingestion.
+> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
+and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+Consider using the [input format](#input-format) instead for these types of ingestion.
 
 ParseSpecs serve two purposes:
 

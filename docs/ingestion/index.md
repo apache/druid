@@ -296,11 +296,11 @@ Ingestion specs consists of three main components:
 - [`tuningConfig`](#tuningconfig), which controls various tuning parameters specific to each
   [ingestion method](#ingestion-methods).
 
-Example ingestion spec for task type `parallel_index` (native batch):
+Example ingestion spec for task type `index_parallel` (native batch):
 
 ```
 {
-  "type": "parallel_index",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
       "dataSource": "wikipedia",
@@ -329,7 +329,7 @@ Example ingestion spec for task type `parallel_index` (native batch):
       }
     },
     "ioConfig": {
-      "type": "parallel_index",
+      "type": "index_parallel",
       "inputSource": {
         "type": "local",
         "baseDir": "examples/indexing/",
@@ -346,7 +346,7 @@ Example ingestion spec for task type `parallel_index` (native batch):
       }
     },
     "tuningConfig": {
-      "type": "parallel_index"
+      "type": "index_parallel"
     }
   }
 }

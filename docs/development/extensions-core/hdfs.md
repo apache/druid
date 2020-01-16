@@ -130,8 +130,13 @@ Tested with Druid 0.9.0, Hadoop 2.7.2 and gcs-connector jar 1.4.4-hadoop2.
 ### Native batch ingestion
 
 The [HDFS input source](../../ingestion/native-batch.md#hdfs-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md#parallel-task)
-to read files directly from the HDFS Storage. However, we highly recommend to use a proper
-[Input Source](../../ingestion/native-batch.md#input-sources) instead to read objects from Cloud storage.
+to read files directly from the HDFS Storage. You may be able to read objects from cloud storage
+with the HDFS input source, but we highly recommend to use a proper
+[Input Source](../../ingestion/native-batch.md#input-sources) instead if possible because
+it is simple to set up. For now, only the [S3 input source](../../ingestion/native-batch.md#s3-input-source)
+and the [Google Cloud Storage input source](../../ingestion/native-batch.md#google-cloud-storage-input-source)
+are supported for cloud storage types, and so you may still want to use the HDFS input source
+to read from cloud storage other than those two.
 
 ### Hadoop-based ingestion
 

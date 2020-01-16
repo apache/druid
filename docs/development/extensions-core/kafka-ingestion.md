@@ -209,7 +209,7 @@ For Roaring bitmaps:
 
 #### Specifying data format
 
-Kafka indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser-deprecated) to specify the data format.
+Kafka indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
 The `inputFormat` is a new and recommended way to specify the data format for Kafka indexing service,
 but unfortunately, it doesn't support all data formats supported by the legacy `parser`.
 (They will be supported in the future.)
