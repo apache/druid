@@ -43,11 +43,9 @@ public class StringAnyAggregator implements Aggregator
   {
     if (foundValue == null) {
       final Object object = valueSelector.getObject();
-      if (object != null) {
-        foundValue = DimensionHandlerUtils.convertObjectToString(object);
-        if (foundValue != null && foundValue.length() > maxStringBytes) {
-          foundValue = foundValue.substring(0, maxStringBytes);
-        }
+      foundValue = DimensionHandlerUtils.convertObjectToString(object);
+      if (foundValue != null && foundValue.length() > maxStringBytes) {
+        foundValue = foundValue.substring(0, maxStringBytes);
       }
     }
   }
