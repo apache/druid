@@ -1350,10 +1350,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     skipVectorize();
 
     testQuery(
-        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numericdimfirst",
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE6)
+                  .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(
@@ -1380,10 +1380,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize ANY aggregator.
     skipVectorize();
     testQuery(
-        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numericdimfirst GROUP BY dim2",
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo GROUP BY dim2",
         ImmutableList.of(
             GroupByQuery.builder()
-                  .setDataSource(CalciteTests.DATASOURCE6)
+                  .setDataSource(CalciteTests.DATASOURCE3)
                   .setInterval(querySegmentSpec(Filtration.eternity()))
                   .setGranularity(Granularities.ALL)
                   .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))

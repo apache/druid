@@ -149,7 +149,6 @@ public class CalciteTests
   public static final String DATASOURCE3 = "numfoo";
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
-  public static final String DATASOURCE6 = "numericdimfirst";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
@@ -453,82 +452,6 @@ public class CalciteTests
       )
   );
 
-  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS_FIRST = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1", "6.0")
-              .put("m2", "6.0")
-              .put("dim1", "abc")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("d1", 1.0)
-              .put("f1", 1.0f)
-              .put("l1", 7L)
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-02")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("d1", 1.7)
-              .put("f1", 0.1f)
-              .put("l1", 325323L)
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-03")
-              .put("m1", "3.0")
-              .put("m2", "3.0")
-              .put("d1", 0.0)
-              .put("f1", 0.0)
-              .put("l1", 0)
-              .put("dim1", "2")
-              .put("dim2", ImmutableList.of(""))
-              .put("dim3", ImmutableList.of("d"))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-01")
-              .put("m1", "4.0")
-              .put("m2", "4.0")
-              .put("dim1", "1")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of(""))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-02")
-              .put("m1", "5.0")
-              .put("m2", "5.0")
-              .put("dim1", "def")
-              .put("dim2", ImmutableList.of("abc"))
-              .put("dim3", ImmutableList.of())
-              .build(),
-          PARSER_NUMERIC_DIMS
-      )
-  );
-
   public static final List<InputRow> ROWS2 = ImmutableList.of(
       createRow("2000-01-01", "דרואיד", "he", 1.0),
       createRow("2000-01-01", "druid", "en", 1.0),
@@ -799,13 +722,6 @@ public class CalciteTests
         .rows(ROWS_LOTS_OF_COLUMNS)
         .buildMMappedIndex();
 
-    final QueryableIndex indexNumericDimsFirst = IndexBuilder
-        .create()
-        .tmpDir(new File(tmpDir, "6"))
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(INDEX_SCHEMA_NUMERIC_DIMS)
-        .rows(ROWS1_WITH_NUMERIC_DIMS_FIRST)
-        .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
@@ -861,15 +777,6 @@ public class CalciteTests
                    .size(0)
                    .build(),
         indexLotsOfColumns
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATASOURCE6)
-                   .interval(indexNumericDimsFirst.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        indexNumericDimsFirst
     );
   }
 
