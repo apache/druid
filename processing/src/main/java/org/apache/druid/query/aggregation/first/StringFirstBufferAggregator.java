@@ -53,13 +53,13 @@ public class StringFirstBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    StringAggregatorUtils.writePair(buf, position, INIT, maxStringBytes);
+    StringFirstLastUtils.writePair(buf, position, INIT, maxStringBytes);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final SerializablePairLongString inPair = StringAggregatorUtils.readPairFromSelectors(
+    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
         timeSelector,
         valueSelector
     );
@@ -67,7 +67,7 @@ public class StringFirstBufferAggregator implements BufferAggregator
     if (inPair != null && inPair.rhs != null) {
       final long firstTime = buf.getLong(position);
       if (inPair.lhs < firstTime) {
-        StringAggregatorUtils.writePair(
+        StringFirstLastUtils.writePair(
             buf,
             position,
             new SerializablePairLongString(inPair.lhs, inPair.rhs),
@@ -80,7 +80,7 @@ public class StringFirstBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return StringAggregatorUtils.readPair(buf, position);
+    return StringFirstLastUtils.readPair(buf, position);
   }
 
   @Override

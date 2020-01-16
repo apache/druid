@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
@@ -37,7 +38,6 @@ public class DoubleAnyBufferAggregator implements BufferAggregator
 {
   private static final byte BYTE_FLAG_IS_NOT_SET = 0;
   private static final byte BYTE_FLAG_IS_SET = 1;
-  private static final double NULL_VALUE = 0;
   private final BaseDoubleColumnValueSelector valueSelector;
 
   public DoubleAnyBufferAggregator(BaseDoubleColumnValueSelector valueSelector)
@@ -49,15 +49,15 @@ public class DoubleAnyBufferAggregator implements BufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     buf.put(position, BYTE_FLAG_IS_NOT_SET);
-    buf.putDouble(position + Byte.BYTES, NULL_VALUE);
+    buf.putDouble(position + Byte.BYTES, NullHandling.ZERO_DOUBLE);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
     if (buf.get(position) == BYTE_FLAG_IS_NOT_SET) {
-      buf.putDouble(position + Byte.BYTES, valueSelector.getDouble());
       buf.put(position, BYTE_FLAG_IS_SET);
+      buf.putDouble(position + Byte.BYTES, valueSelector.getDouble());
     }
   }
 

@@ -20,10 +20,10 @@
 package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.query.aggregation.NullableNumericAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -56,8 +56,8 @@ public class LongAnyBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     if (buf.get(position) == BYTE_FLAG_IS_NOT_SET) {
-      buf.putLong(position + Byte.BYTES, valueSelector.getLong());
       buf.put(position, BYTE_FLAG_IS_SET);
+      buf.putLong(position + Byte.BYTES, valueSelector.getLong());
     }
   }
 

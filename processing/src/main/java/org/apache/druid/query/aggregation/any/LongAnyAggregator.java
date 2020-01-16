@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.query.aggregation.NullableNumericAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 /**
  * This Aggregator is created by the {@link LongAnyAggregatorFactory} which extends from

@@ -56,8 +56,8 @@ public class FloatAnyBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     if (buf.get(position) == BYTE_FLAG_IS_NOT_SET) {
-      buf.putFloat(position + Byte.BYTES, valueSelector.getFloat());
       buf.put(position, BYTE_FLAG_IS_SET);
+      buf.putFloat(position + Byte.BYTES, valueSelector.getFloat());
     }
   }
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.aggregation.first.StringAggregatorUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
@@ -55,7 +55,7 @@ public class StringAnyAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return StringAggregatorUtils.chop(foundValue, maxStringBytes);
+    return StringUtils.chop(foundValue, maxStringBytes);
   }
 
   @Override

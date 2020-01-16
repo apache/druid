@@ -41,9 +41,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-    mutationBuffer.putInt(NULL_STRING_LENGTH);
+    buf.putInt(position, NULL_STRING_LENGTH);
   }
 
   @Override

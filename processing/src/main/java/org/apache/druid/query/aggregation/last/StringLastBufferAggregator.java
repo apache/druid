@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.last;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.first.StringAggregatorUtils;
+import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -54,13 +54,13 @@ public class StringLastBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    StringAggregatorUtils.writePair(buf, position, INIT, maxStringBytes);
+    StringFirstLastUtils.writePair(buf, position, INIT, maxStringBytes);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final SerializablePairLongString inPair = StringAggregatorUtils.readPairFromSelectors(
+    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
         timeSelector,
         valueSelector
     );
@@ -68,7 +68,7 @@ public class StringLastBufferAggregator implements BufferAggregator
     if (inPair != null && inPair.rhs != null) {
       final long lastTime = buf.getLong(position);
       if (inPair.lhs >= lastTime) {
-        StringAggregatorUtils.writePair(
+        StringFirstLastUtils.writePair(
             buf,
             position,
             new SerializablePairLongString(inPair.lhs, inPair.rhs),
@@ -81,7 +81,7 @@ public class StringLastBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return StringAggregatorUtils.readPair(buf, position);
+    return StringFirstLastUtils.readPair(buf, position);
   }
 
   @Override

@@ -22,28 +22,20 @@ package org.apache.druid.query.aggregation.any;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.FloatMaxAggregator;
-import org.apache.druid.query.aggregation.FloatMaxBufferAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.query.aggregation.SimpleFloatAggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 public class FloatAnyAggregatorFactory extends SimpleFloatAggregatorFactory
 {
@@ -107,16 +99,10 @@ public class FloatAnyAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-
-    byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
-    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
-
-    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
-                     .put(AggregatorUtil.FLOAT_ANY_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(expressionBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.FLOAT_ANY_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(expression)
+        .build();
   }
 
   @Override
