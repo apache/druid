@@ -110,9 +110,9 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   {
     initAggregateStore();
     if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
-      return dimExtractionScanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
+      return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
     } else {
-      return dimExtractionScanAndAggregateWithCardinalityUnknown(query, cursor, selector);
+      return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
     }
   }
 
@@ -122,7 +122,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     this.aggregatesStore = new HashMap<>();
   }
 
-  private long dimExtractionScanAndAggregateWithCardinalityKnown(
+  private long scanAndAggregateWithCardinalityKnown(
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
@@ -155,7 +155,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     return processedRows;
   }
 
-  private long dimExtractionScanAndAggregateWithCardinalityUnknown(
+  private long scanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector
