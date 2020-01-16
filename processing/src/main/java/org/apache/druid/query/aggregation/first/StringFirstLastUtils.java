@@ -83,7 +83,7 @@ public class StringFirstLastUtils
       return false;
     }
 
-    // Check if the reported class could possibly be SerializablePairLongString.
+    // Check if the selector class could possibly be a SerializablePairLongString (either a superclass or subclass).
     final Class<?> clazz = valueSelector.classOfObject();
     return clazz.isAssignableFrom(SerializablePairLongString.class)
            || SerializablePairLongString.class.isAssignableFrom(clazz);
