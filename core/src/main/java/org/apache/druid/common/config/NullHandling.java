@@ -118,6 +118,29 @@ public class NullHandling
     return replaceWithDefault() ? ZERO_DOUBLE : null;
   }
 
+  /**
+   * Returns the default value for an object of the provided class. Will be null in SQL-compatible null handling mode.
+   * May be null or some non-null default value when not in SQL-compatible null handling mode.
+   */
+  @Nullable
+  @SuppressWarnings("unchecked")
+  public static <T> T defaultValueForClass(final Class<T> clazz)
+  {
+    if (clazz == Float.class) {
+      return (T) defaultFloatValue();
+    } else if (clazz == Double.class) {
+      return (T) defaultDoubleValue();
+    } else if (clazz == Long.class) {
+      return (T) defaultLongValue();
+    } else if (clazz == Number.class) {
+      return (T) defaultDoubleValue();
+    } else if (clazz == String.class) {
+      return (T) defaultStringValue();
+    } else {
+      return null;
+    }
+  }
+
   public static boolean isNullOrEquivalent(@Nullable String value)
   {
     return replaceWithDefault() ? Strings.isNullOrEmpty(value) : value == null;

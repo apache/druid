@@ -141,6 +141,7 @@ public class VirtualColumns implements Cacheable
     return getVirtualColumn(columnName) != null;
   }
 
+  @Nullable
   public VirtualColumn getVirtualColumn(String columnName)
   {
     final VirtualColumn vc = withoutDotSupport.get(columnName);
@@ -180,11 +181,18 @@ public class VirtualColumns implements Cacheable
     if (virtualColumn == null) {
       throw new IAE("No such virtual column[%s]", columnName);
     } else {
-      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(columnName, columnSelector) : null;
+      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
+          columnName,
+          columnSelector
+      ) : null;
     }
   }
 
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
+  public DimensionSelector makeDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
   {
     final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
     if (virtualColumn == null) {
@@ -194,7 +202,11 @@ public class VirtualColumns implements Cacheable
     }
   }
 
-  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
@@ -226,6 +238,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -264,7 +277,11 @@ public class VirtualColumns implements Cacheable
 
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
-    return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    if (virtualColumns.isEmpty()) {
+      return baseFactory;
+    } else {
+      return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    }
   }
 
   @Override

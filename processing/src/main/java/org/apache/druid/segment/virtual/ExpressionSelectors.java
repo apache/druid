@@ -210,13 +210,12 @@ public class ExpressionSelectors
   public static DimensionSelector makeDimensionSelector(
       final ColumnSelectorFactory columnSelectorFactory,
       final Expr expression,
-      final ExtractionFn extractionFn
+      @Nullable final ExtractionFn extractionFn
   )
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
     final List<String> columns = exprDetails.getRequiredBindingsList();
-
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
