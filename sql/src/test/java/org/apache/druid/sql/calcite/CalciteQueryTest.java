@@ -1341,6 +1341,78 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This test the on-heap version of the AnyAggregator (Double/Float/Long) against numeric columns
+  // that have null values (when run in sql compatible null mode)
+  @Test
+  public void testAnyAggregatorsOnHeapNumericNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "l1"),
+                          new DoubleAnyAggregatorFactory("a1", "d1"),
+                          new FloatAnyAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{7L, 1.0, 1.0f}
+        )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
+  // that have null values (when run in sql compatible null mode)
+  @Test
+  public void testAnyAggregatorsOffHeapNumericNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    testQuery(
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                  .setDataSource(CalciteTests.DATASOURCE3)
+                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                  .setGranularity(Granularities.ALL)
+                  .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
+                  .setAggregatorSpecs(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "l1"),
+                          new DoubleAnyAggregatorFactory("a1", "d1"),
+                          new FloatAnyAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .setContext(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{325323L, 1.7, 0.1f},
+            new Object[]{0L, 0.0, 0.0f},
+            new Object[]{7L, 1.0, 1.0f},
+            new Object[]{null, null, null}
+        )
+        : ImmutableList.of(
+            new Object[]{325323L, 1.7, 0.1f},
+            new Object[]{7L, 1.0, 1.0f},
+            new Object[]{0L, 0.0, 0.0f}
+        )
+    );
+  }
+
   @Test
   public void testLatestInSubquery() throws Exception
   {

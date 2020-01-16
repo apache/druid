@@ -379,6 +379,15 @@ public class CalciteTests
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
       createRow(
           ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-03")
+              .put("m1", "6.0")
+              .put("m2", "6.0")
+              .put("dim1", "abc")
+              .build(),
+          PARSER_NUMERIC_DIMS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
               .put("t", "2000-01-01")
               .put("m1", "1.0")
               .put("m2", "1.0")
@@ -438,15 +447,6 @@ public class CalciteTests
               .put("dim1", "def")
               .put("dim2", ImmutableList.of("abc"))
               .put("dim3", ImmutableList.of())
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1", "6.0")
-              .put("m2", "6.0")
-              .put("dim1", "abc")
               .build(),
           PARSER_NUMERIC_DIMS
       )
