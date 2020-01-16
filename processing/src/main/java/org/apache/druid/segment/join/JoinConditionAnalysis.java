@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.expression.ExprUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -50,6 +51,9 @@ public class JoinConditionAnalysis
   private final String originalExpression;
   private final List<Equality> equiConditions;
   private final List<Expr> nonEquiConditions;
+  private final boolean anyFalseLiteralNonEquiConditions;
+  private final boolean allTrueLiteralNonEquiConditions;
+  private final boolean canHashJoin;
 
   private JoinConditionAnalysis(
       final String originalExpression,
@@ -58,8 +62,13 @@ public class JoinConditionAnalysis
   )
   {
     this.originalExpression = Preconditions.checkNotNull(originalExpression, "originalExpression");
-    this.equiConditions = equiConditions;
-    this.nonEquiConditions = nonEquiConditions;
+    this.equiConditions = Collections.unmodifiableList(equiConditions);
+    this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
+    anyFalseLiteralNonEquiConditions = nonEquiConditions.stream()
+            .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings()).asBoolean());
+    allTrueLiteralNonEquiConditions = nonEquiConditions.stream()
+            .allMatch(expr -> expr.isLiteral() && expr.eval(ExprUtils.nilBindings()).asBoolean());
+    canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
   }
 
   public static JoinConditionAnalysis forExpression(
@@ -133,8 +142,7 @@ public class JoinConditionAnalysis
    */
   public boolean isAlwaysFalse()
   {
-    return nonEquiConditions.stream()
-                            .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings()).asBoolean());
+    return anyFalseLiteralNonEquiConditions;
   }
 
   /**
@@ -142,9 +150,7 @@ public class JoinConditionAnalysis
    */
   public boolean isAlwaysTrue()
   {
-    return equiConditions.isEmpty() &&
-           nonEquiConditions.stream()
-                            .allMatch(expr -> expr.isLiteral() && expr.eval(ExprUtils.nilBindings()).asBoolean());
+    return equiConditions.isEmpty() && allTrueLiteralNonEquiConditions;
   }
 
   /**
@@ -152,7 +158,7 @@ public class JoinConditionAnalysis
    */
   public boolean canHashJoin()
   {
-    return nonEquiConditions.stream().allMatch(Expr::isLiteral);
+    return canHashJoin;
   }
 
   @Override

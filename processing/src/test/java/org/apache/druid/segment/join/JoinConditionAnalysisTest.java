@@ -267,7 +267,9 @@ public class JoinConditionAnalysisTest
   {
     EqualsVerifier.forClass(JoinConditionAnalysis.class)
                   .usingGetClass()
-                  .withIgnoredFields("equiConditions", "nonEquiConditions")
+                  .withIgnoredFields("equiConditions", "nonEquiConditions",
+                          // These fields are calculated from nonEquiConditions
+                          "anyFalseLiteralNonEquiConditions", "allTrueLiteralNonEquiConditions", "canHashJoin")
                   .verify();
   }
 
