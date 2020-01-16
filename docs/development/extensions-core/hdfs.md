@@ -94,7 +94,7 @@ For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/d
 
 #### Configuration for Google Cloud Storage
 
-To use the Google cloud Storage as the deep storage, you need to configure `druid.storage.storageDirectory` properly.
+To use the Google Cloud Storage as the deep storage, you need to configure `druid.storage.storageDirectory` properly.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -120,6 +120,16 @@ and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/maste
   <name>fs.AbstractFileSystem.gs.impl</name>
   <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
   <description>The AbstractFileSystem for gs: uris.</description>
+</property>
+
+<property>
+  <name>google.cloud.auth.service.account.enable</name>
+  <value>true</value>
+  <description>
+    Whether to use a service account for GCS authorization.
+    Setting this property to `false` will disable use of service accounts for
+    authentication.
+  </description>
 </property>
 ```
 

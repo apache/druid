@@ -173,11 +173,11 @@ public List<? extends Module> getJacksonModules()
 
 This is registering the InputSource with Jackson's polymorphic serialization/deserialization layer.  More concretely, having this will mean that if you specify a `"inputSource": { "type": "s3", ... }` in your IO config, then the system will load this InputSource for your `InputSource` implementation.
 
-Note that inside of Druid, we have made the @JacksonInject annotation for Jackson deserialized objects actually use the base Guice injector to resolve the object to be injected.  So, if your InputSource needs access to some object, you can add a @JacksonInject annotation on a setter and it will get set on instantiation.
+Note that inside of Druid, we have made the `@JacksonInject` annotation for Jackson deserialized objects actually use the base Guice injector to resolve the object to be injected.  So, if your InputSource needs access to some object, you can add a `@JacksonInject` annotation on a setter and it will get set on instantiation.
 
 ### Adding support for a new data format
 
-Adding support for a new data format requires to implement two interfaces, i.e., `InputFormat` and `InputEntityReader`.
+Adding support for a new data format requires implementing two interfaces, i.e., `InputFormat` and `InputEntityReader`.
 `InputFormat` is to define how your data is formatted. `InputEntityReader` is to define how to parse your data and convert into Druid `InputRow`.
 
 There is an example in the `druid-orc-extensions` module with the `OrcInputFormat` and `OrcReader`.

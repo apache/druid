@@ -149,11 +149,12 @@ For example, using the static input paths:
 ```
 
 You can also read from cloud storage such as AWS S3 or Google Cloud Storage.
-To do so, you need to install the necessary library under `${DRUID_HOME}/hadoop-dependencies` in _all MiddleManager or Indexer processes_.
+To do so, you need to install the necessary library under Druid's classpath in _all MiddleManager or Indexer processes_.
 For S3, you can run the below command to install the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
 
 ```bash
 java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
+cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar ${DRUID_HOME}/extensions/druid-hdfs-storage/
 ```
 
 Once you install the Hadoop AWS module in all MiddleManager and Indexer processes, you can put
