@@ -19,15 +19,21 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.FloatMaxAggregator;
+import org.apache.druid.query.aggregation.FloatMaxBufferAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
+import org.apache.druid.query.aggregation.SimpleFloatAggregatorFactory;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -39,49 +45,40 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public class FloatAnyAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
+public class FloatAnyAggregatorFactory extends SimpleFloatAggregatorFactory
 {
-  private static final Comparator<Number> VALUE_COMPARATOR = Comparator.nullsFirst(
-      Comparator.comparingDouble(Number::floatValue)
-  );
-
-  private final String fieldName;
-  private final String name;
-
   @JsonCreator
   public FloatAnyAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
-    this.name = name;
-    this.fieldName = fieldName;
+    super(macroTable, name, fieldName, expression);
   }
 
-  @Override
-  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  public FloatAnyAggregatorFactory(String name, String fieldName)
   {
-    return metricFactory.makeColumnValueSelector(fieldName);
+    this(name, fieldName, null, ExprMacroTable.nil());
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected float nullValue()
+  {
+    return Float.NaN;
+  }
+
+  @Override
+  protected Aggregator buildAggregator(BaseFloatColumnValueSelector selector)
   {
     return new FloatAnyAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected BufferAggregator buildBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     return new FloatAnyBufferAggregator(selector);
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return FloatAnyAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Override
@@ -98,62 +95,28 @@ public class FloatAnyAggregatorFactory extends NullableNumericAggregatorFactory<
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new FloatAnyAggregatorFactory(name, name);
+    return new FloatAnyAggregatorFactory(name, name, null, macroTable);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new FloatAnyAggregatorFactory(fieldName, fieldName));
-  }
-
-  @Override
-  public Object deserialize(Object object)
-  {
-    return object;
-  }
-
-  @Override
-  @Nullable
-  public Object finalizeComputation(@Nullable Object object)
-  {
-    return object;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return Collections.singletonList(fieldName);
+    return Collections.singletonList(new FloatAnyAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+    byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
+    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
+
+    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
                      .put(AggregatorUtil.FLOAT_ANY_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
+                     .put(AggregatorUtil.STRING_SEPARATOR)
+                     .put(expressionBytes)
                      .array();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return "float";
   }
 
   @Override
@@ -163,32 +126,12 @@ public class FloatAnyAggregatorFactory extends NullableNumericAggregatorFactory<
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    FloatAnyAggregatorFactory that = (FloatAnyAggregatorFactory) o;
-
-    return name.equals(that.name) && fieldName.equals(that.fieldName);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, fieldName);
-  }
-
-  @Override
   public String toString()
   {
     return "FloatAnyAggregatorFactory{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
+           "fieldName='" + fieldName + '\'' +
+           ", expression='" + expression + '\'' +
+           ", name='" + name + '\'' +
            '}';
   }
 }

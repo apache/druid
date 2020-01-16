@@ -43,6 +43,7 @@ import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
@@ -1300,7 +1301,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
+  // This test the on-heap version of the AnyAggregator (Double/Float/Long/String)
   @Test
   public void testAnyAggregator() throws Exception
   {
@@ -1309,7 +1310,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT "
-        + "ANY_VALUE(cnt), ANY_VALUE(m1), ANY_VALUE(dim1, 10), "
+        + "ANY_VALUE(cnt), ANY_VALUE(m1), ANY_VALUE(m2), ANY_VALUE(dim1, 10), "
         + "ANY_VALUE(cnt + 1), ANY_VALUE(m1 + 1), ANY_VALUE(dim1 || CAST(cnt AS VARCHAR), 10) "
         + "FROM druid.foo",
         ImmutableList.of(
@@ -1326,20 +1327,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new LongAnyAggregatorFactory("a0", "cnt"),
                           new FloatAnyAggregatorFactory("a1", "m1"),
-                          new StringAnyAggregatorFactory("a2", "dim1", 10),
-                          new LongAnyAggregatorFactory("a3", "v0"),
-                          new FloatAnyAggregatorFactory("a4", "v1"),
-                          new StringAnyAggregatorFactory("a5", "v2", 10)
+                          new DoubleAnyAggregatorFactory("a2", "m2"),
+                          new StringAnyAggregatorFactory("a3", "dim1", 10),
+                          new LongAnyAggregatorFactory("a4", "v0"),
+                          new FloatAnyAggregatorFactory("a5", "v1"),
+                          new StringAnyAggregatorFactory("a6", "v2", 10)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(
-            // Values are basically just from the first row since we skip reading data after value is found
-            // ANY_VALUE(dim1, 10) is 10.1 which is from the second row since first row dim1 value is empty/null
-            new Object[]{1L, 1.0f, "10.1", 2L, 2.0f, "1"}
-        )
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "10.1", 2L, 2.0f, "1"})
     );
   }
 
@@ -1380,6 +1378,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long)
   @Test
   public void testPrimitiveAnyInSubquery() throws Exception
   {
@@ -1387,7 +1386,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     skipVectorize();
 
     testQuery(
-        "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(m1) AS val FROM foo GROUP BY dim2)",
+        "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, ANY_VALUE(m1) AS val1, ANY_VALUE(cnt) AS val2, ANY_VALUE(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -1396,10 +1395,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
-                                        .setAggregatorSpecs(aggregators(new FloatAnyAggregatorFactory("a0:a", "m1")))
+                                        .setAggregatorSpecs(aggregators(
+                                            new FloatAnyAggregatorFactory("a0:a", "m1"),
+                                            new LongAnyAggregatorFactory("a1:a", "cnt"),
+                                            new DoubleAnyAggregatorFactory("a2:a", "m2"))
+                                        )
                                         .setPostAggregatorSpecs(
                                             ImmutableList.of(
-                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a"),
+                                                new FinalizingFieldAccessPostAggregator("a1", "a1:a"),
+                                                new FinalizingFieldAccessPostAggregator("a2", "a2:a")
+
                                             )
                                         )
                                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -1407,16 +1413,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", "a0")))
+                        .setAggregatorSpecs(aggregators(
+                            new DoubleSumAggregatorFactory("_a0", "a0"),
+                            new LongSumAggregatorFactory("_a1", "a1"),
+                            new DoubleSumAggregatorFactory("_a2", "a2")
+                            )
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 11.0 : 8.0}
-        )
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{11.0, 4L, 11.0}) : ImmutableList.of(new Object[]{8.0, 3L, 8.0})
     );
   }
 
+  // This test the off-heap (buffer) version of the AnyAggregator (String)
   @Test
   public void testStringAnyInSubquery() throws Exception
   {

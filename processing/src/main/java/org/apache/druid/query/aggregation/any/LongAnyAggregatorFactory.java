@@ -19,15 +19,21 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.LongMaxAggregator;
+import org.apache.druid.query.aggregation.LongMaxBufferAggregator;
 import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
+import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -39,49 +45,40 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public class LongAnyAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
+public class LongAnyAggregatorFactory extends SimpleLongAggregatorFactory
 {
-  private static final Comparator<Number> VALUE_COMPARATOR = Comparator.nullsFirst(
-      Comparator.comparingLong(Number::longValue)
-  );
-
-  private final String fieldName;
-  private final String name;
-
   @JsonCreator
   public LongAnyAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
-    this.name = name;
-    this.fieldName = fieldName;
+    super(macroTable, name, fieldName, expression);
   }
 
-  @Override
-  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  public LongAnyAggregatorFactory(String name, String fieldName)
   {
-    return metricFactory.makeColumnValueSelector(fieldName);
+    this(name, fieldName, null, ExprMacroTable.nil());
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected long nullValue()
+  {
+    return 0;
+  }
+
+  @Override
+  protected Aggregator buildAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongAnyAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongAnyBufferAggregator(selector);
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return LongAnyAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Override
@@ -98,62 +95,27 @@ public class LongAnyAggregatorFactory extends NullableNumericAggregatorFactory<C
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongAnyAggregatorFactory(name, name);
+    return new LongAnyAggregatorFactory(name, name, null, macroTable);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new LongAnyAggregatorFactory(fieldName, fieldName));
-  }
-
-  @Override
-  public Object deserialize(Object object)
-  {
-    return object;
-  }
-
-  @Override
-  @Nullable
-  public Object finalizeComputation(@Nullable Object object)
-  {
-    return object;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return Collections.singletonList(fieldName);
+    return Collections.singletonList(new LongAnyAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
+    byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
+    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
                      .put(AggregatorUtil.LONG_ANY_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
+                     .put(AggregatorUtil.STRING_SEPARATOR)
+                     .put(expressionBytes)
                      .array();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return "long";
   }
 
   @Override
@@ -163,32 +125,12 @@ public class LongAnyAggregatorFactory extends NullableNumericAggregatorFactory<C
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    LongAnyAggregatorFactory that = (LongAnyAggregatorFactory) o;
-
-    return name.equals(that.name) && fieldName.equals(that.fieldName);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, fieldName);
-  }
-
-  @Override
   public String toString()
   {
     return "LongAnyAggregatorFactory{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
+           "fieldName='" + fieldName + '\'' +
+           ", expression='" + expression + '\'' +
+           ", name='" + name + '\'' +
            '}';
   }
 }
