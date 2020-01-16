@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby;
+package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
@@ -28,14 +28,6 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseSingleValueDimensionSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -53,12 +45,20 @@ import java.util.function.ToLongFunction;
 
 public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
-  public interface RowAdapter<T>
+  private static final RowAdapter<? extends Row> STANDARD_ROW_ADAPTER = new RowAdapter<Row>()
   {
-    ToLongFunction<T> timestampFunction();
+    @Override
+    public ToLongFunction<Row> timestampFunction()
+    {
+      return Row::getTimestampFromEpoch;
+    }
 
-    Function<T, Object> rawFunction(String columnName);
-  }
+    @Override
+    public Function<Row, Object> columnFunction(String columnName)
+    {
+      return r -> r.getRaw(columnName);
+    }
+  };
 
   private final Supplier<T> supplier;
   private final RowAdapter<T> adapter;
@@ -80,22 +80,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       @Nullable final Map<String, ValueType> signature
   )
   {
-    final RowAdapter<RowType> adapter = new RowAdapter<RowType>()
-    {
-      @Override
-      public ToLongFunction<RowType> timestampFunction()
-      {
-        return Row::getTimestampFromEpoch;
-      }
-
-      @Override
-      public Function<RowType, Object> rawFunction(String columnName)
-      {
-        return r -> r.getRaw(columnName);
-      }
-    };
-
-    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature);
+    //noinspection unchecked
+    return new RowBasedColumnSelectorFactory<>(supplier, (RowAdapter<RowType>) STANDARD_ROW_ADAPTER, signature);
   }
 
   public static <RowType> RowBasedColumnSelectorFactory create(
@@ -105,6 +91,23 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   )
   {
     return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature);
+  }
+
+  @Nullable
+  public static ColumnCapabilities getColumnCapabilities(
+      final Map<String, ValueType> rowSignature,
+      final String columnName
+  )
+  {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+      // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
+      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
+    } else {
+      final ValueType valueType = rowSignature.get(columnName);
+
+      // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
+      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType) : null;
+    }
   }
 
   @Override
@@ -143,7 +146,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
       };
     } else {
-      final Function<T, Object> dimFunction = adapter.rawFunction(dimension);
+      final Function<T, Object> dimFunction = adapter.columnFunction(dimension);
 
       return new DimensionSelector()
       {
@@ -360,20 +363,20 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       }
       return new TimeLongColumnSelector();
     } else {
-      final Function<T, Object> rawFunction = adapter.rawFunction(columnName);
+      final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
 
       return new ColumnValueSelector()
       {
         @Override
         public boolean isNull()
         {
-          return rawFunction.apply(supplier.get()) == null;
+          return columnFunction.apply(supplier.get()) == null;
         }
 
         @Override
         public double getDouble()
         {
-          Number metric = Rows.objectToNumber(columnName, rawFunction.apply(supplier.get()));
+          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
           assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).doubleValue();
         }
@@ -381,7 +384,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public float getFloat()
         {
-          Number metric = Rows.objectToNumber(columnName, rawFunction.apply(supplier.get()));
+          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
           assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).floatValue();
         }
@@ -389,7 +392,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public long getLong()
         {
-          Number metric = Rows.objectToNumber(columnName, rawFunction.apply(supplier.get()));
+          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
           assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).longValue();
         }
@@ -398,7 +401,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public Object getObject()
         {
-          return rawFunction.apply(supplier.get());
+          return columnFunction.apply(supplier.get());
         }
 
         @Override
@@ -420,14 +423,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-      // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
-    } else {
-      final ValueType valueType = rowSignature.get(columnName);
-
-      // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType) : null;
-    }
+    return getColumnCapabilities(rowSignature, columnName);
   }
 }

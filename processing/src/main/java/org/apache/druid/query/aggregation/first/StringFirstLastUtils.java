@@ -30,7 +30,6 @@ import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class StringFirstLastUtils
 {
@@ -47,21 +46,6 @@ public class StringFirstLastUtils
       return s;
     } else {
       return s.substring(0, maxBytes);
-    }
-  }
-
-  /**
-   * Shorten "s" to what could fit in "maxBytes" bytes as UTF-8.
-   */
-  @Nullable
-  public static String chop(@Nullable final String s, final int maxBytes)
-  {
-    if (s == null) {
-      return null;
-    } else {
-      final byte[] bytes = new byte[maxBytes];
-      final int len = StringUtils.toUtf8WithLimit(s, ByteBuffer.wrap(bytes));
-      return new String(bytes, 0, len, StandardCharsets.UTF_8);
     }
   }
 
