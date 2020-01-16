@@ -272,7 +272,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
-   * Returns a list of field names in the order than {@link #resultsAsArrays} would return them. The returned list will
+   * Returns a list of field names in the order that {@link #resultsAsArrays} would return them. The returned list will
    * be the same length as each array returned by {@link #resultsAsArrays}.
    *
    * @param query same query passed to {@link #resultsAsArrays}
