@@ -52,12 +52,16 @@ public abstract class FlatTextInputFormat implements InputFormat
     this.listDelimiter = listDelimiter;
     this.delimiter = Preconditions.checkNotNull(delimiter, "delimiter");
     //noinspection ConstantConditions
-    this.findColumnsFromHeader = Checks.checkOneNotNullOrEmpty(
-        ImmutableList.of(
-            new Property<>("hasHeaderRow", hasHeaderRow),
-            new Property<>("findColumnsFromHeader", findColumnsFromHeader)
-        )
-    ).getValue();
+    if (columns == null || columns.isEmpty()) {
+      this.findColumnsFromHeader = Checks.checkOneNotNullOrEmpty(
+          ImmutableList.of(
+              new Property<>("hasHeaderRow", hasHeaderRow),
+              new Property<>("findColumnsFromHeader", findColumnsFromHeader)
+          )
+      ).getValue();
+    } else {
+      this.findColumnsFromHeader = false;
+    }
     this.skipHeaderRows = skipHeaderRows;
     Preconditions.checkArgument(
         !delimiter.equals(listDelimiter),
