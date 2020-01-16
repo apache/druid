@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.topn;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
@@ -30,7 +29,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -86,16 +84,11 @@ public class TopNQueryEngine
                 query.isDescending(),
                 queryMetrics
             ),
-            new Function<Cursor, Result<TopNResultValue>>()
-            {
-              @Override
-              public Result<TopNResultValue> apply(Cursor input)
-              {
-                if (queryMetrics != null) {
-                  queryMetrics.cursor(input);
-                }
-                return mapFn.apply(input, queryMetrics);
+            input -> {
+              if (queryMetrics != null) {
+                queryMetrics.cursor(input);
               }
+              return mapFn.apply(input, queryMetrics);
             }
         ),
         Predicates.notNull()
@@ -125,7 +118,8 @@ public class TopNQueryEngine
     final ColumnCapabilities columnCapabilities = query.getVirtualColumns()
                                                        .getColumnCapabilitiesWithFallback(adapter, dimension);
 
-    final TopNAlgorithm topNAlgorithm;
+
+    final TopNAlgorithm<?, ?> topNAlgorithm;
     if (
         selector.isHasExtractionFn() &&
         // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
@@ -137,15 +131,15 @@ public class TopNQueryEngine
       // currently relies on the dimension cardinality to support lexicographic sorting
       topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isHasExtractionFn()) {
-      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
+      topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
                                                && columnCapabilities.isDictionaryEncoded())) {
       // Use DimExtraction for non-Strings and for non-dictionary-encoded Strings.
-      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
+      topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
       // Use DimExtraction when the dimension output type is a non-String. (It's like an extractionFn: there can be
       // a many-to-one mapping, since numeric types can't represent all possible values of other types.)
-      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
+      topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {

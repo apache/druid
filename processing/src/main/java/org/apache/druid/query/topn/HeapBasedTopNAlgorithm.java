@@ -21,19 +21,22 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.topn.types.HeapBasedTopNColumnAggregatesProcessor;
+import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
 
 /**
- * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle multiple index numerals referencing the same dimension value.
+ * Heap based topn algorithm that handles aggregates on dimension extractions and numeric typed dimension columns.
+ *
+ * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle
+ * multiple index numerals referencing the same dimension value.
  */
-public class DimExtractionTopNAlgorithm
-    extends BaseTopNAlgorithm<Aggregator[][], HeapBasedTopNColumnAggregatesProcessor, TopNParams>
+public class HeapBasedTopNAlgorithm
+    extends BaseTopNAlgorithm<Aggregator[][], TopNColumnAggregatesProcessor, TopNParams>
 {
   private final TopNQuery query;
 
-  public DimExtractionTopNAlgorithm(
+  public HeapBasedTopNAlgorithm(
       StorageAdapter storageAdapter,
       TopNQuery query
   )
@@ -45,7 +48,7 @@ public class DimExtractionTopNAlgorithm
 
   @Override
   public TopNParams makeInitParams(
-      final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus,
+      final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus,
       final Cursor cursor
   )
   {
@@ -62,7 +65,7 @@ public class DimExtractionTopNAlgorithm
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
-    ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
+    ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
     return selectorPlus.getColumnSelectorStrategy().getRowSelector(query, params, storageAdapter);
   }
 
@@ -73,9 +76,9 @@ public class DimExtractionTopNAlgorithm
   }
 
   @Override
-  protected HeapBasedTopNColumnAggregatesProcessor makeDimValAggregateStore(TopNParams params)
+  protected TopNColumnAggregatesProcessor makeDimValAggregateStore(TopNParams params)
   {
-    final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
+    final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
     return selectorPlus.getColumnSelectorStrategy();
   }
 
@@ -83,11 +86,11 @@ public class DimExtractionTopNAlgorithm
   protected long scanAndAggregate(
       TopNParams params,
       Aggregator[][] rowSelector,
-      HeapBasedTopNColumnAggregatesProcessor processor
+      TopNColumnAggregatesProcessor processor
   )
   {
     final Cursor cursor = params.getCursor();
-    final ColumnSelectorPlus<HeapBasedTopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
+    final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
 
     return processor.scanAndAggregate(
         query,
@@ -101,7 +104,7 @@ public class DimExtractionTopNAlgorithm
   protected void updateResults(
       TopNParams params,
       Aggregator[][] aggregators,
-      HeapBasedTopNColumnAggregatesProcessor processor,
+      TopNColumnAggregatesProcessor processor,
       TopNResultBuilder resultBuilder
   )
   {
@@ -109,7 +112,7 @@ public class DimExtractionTopNAlgorithm
   }
 
   @Override
-  protected void closeAggregators(HeapBasedTopNColumnAggregatesProcessor processor)
+  protected void closeAggregators(TopNColumnAggregatesProcessor processor)
   {
     processor.closeAggregators();
   }

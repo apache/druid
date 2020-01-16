@@ -21,23 +21,39 @@ package org.apache.druid.query.topn.types;
 
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
+import org.apache.druid.query.topn.HeapBasedTopNAlgorithm;
 import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
 
-public interface HeapBasedTopNColumnAggregatesProcessor<ValueSelectorType> extends ColumnSelectorStrategy
+import javax.annotation.Nullable;
+
+/**
+ * This {@link ColumnSelectorStrategy} is used by all {@link org.apache.druid.query.topn.TopNAlgorithm} to provide
+ * selector value cardinality to {@link TopNParams} (perhaps unecessarily, but that is another matter), but is primarily
+ * used by {@link HeapBasedTopNAlgorithm} to serve as its value aggregates store.
+ *
+ * Given a query, column value selector, and cursor to process, the aggregates store is populated by calling
+ * {@link #scanAndAggregate} and can be applied to {@link TopNResultBuilder} through {@link #updateResults}.
+ */
+public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends ColumnSelectorStrategy
 {
+  /**
+   * Get value cardinality of underlying {@link ColumnValueSelector}
+   */
   int getCardinality(ValueSelectorType selector);
 
   /**
-   * Used by DimExtractionTopNAlgorithm.
+   * Used by {@link HeapBasedTopNAlgorithm}.
    *
-   * Create an Aggregator[][] using BaseTopNAlgorithm.AggregatorArrayProvider and the given parameters.
+   * Create an Aggregator[][] using {@link org.apache.druid.query.topn.BaseTopNAlgorithm.AggregatorArrayProvider} and
+   * the given parameters.
    *
    * As the Aggregator[][] is used as an integer-based lookup, this method is only applicable for dimension types
-   * that use integer row values.
+   * that use integer row values, e.g. string columns where the value cardinality is known.
    *
    * A dimension type that does not have integer values should return null.
    *
@@ -48,20 +64,23 @@ public interface HeapBasedTopNColumnAggregatesProcessor<ValueSelectorType> exten
    *
    * @return an Aggregator[][] for integer-valued dimensions, null otherwise
    */
+  @Nullable
   Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter);
 
   /**
-   * Used by DimExtractionTopNAlgorithm.
+   * Used by {@link HeapBasedTopNAlgorithm}.
    *
-   * Iterate through the cursor, reading the current row from a dimension value selector, and for each row value:
-   * 1. Retrieve the Aggregator[] for the row value from rowSelector (fast integer lookup) or from
-   * aggregatesStore (slower map).
+   * Iterate through the {@link Cursor}, reading the current row from a dimension value selector, and for each row
+   * value:
+   *  1. Retrieve the Aggregator[] for the row value from rowSelector (fast integer lookup), usable if value cardinality
+   *     is known, or from aggregatesStore (slower map).
    *
-   * 2. If the rowSelector and/or aggregatesStore did not have an entry for a particular row value,
-   * this function should retrieve the current Aggregator[] using BaseTopNAlgorithm.makeAggregators() and the
-   * provided cursor and query, storing them in rowSelector and aggregatesStore
+   *  2. If the rowSelector/aggregatesStore did not have an entry for a particular row value, this function
+   *     should retrieve the current Aggregator[] using
+   *     {@link org.apache.druid.query.topn.BaseTopNAlgorithm#makeAggregators} and the provided cursor and query,
+   *     storing them in rowSelector/aggregatesStore
    *
-   * 3. Call aggregate() on each of the aggregators.
+   * 3. Call {@link Aggregator#aggregate()} on each of the aggregators.
    *
    * If a dimension type doesn't have integer values, it should ignore rowSelector and use the aggregatesStore map only.
    *
@@ -79,9 +98,23 @@ public interface HeapBasedTopNColumnAggregatesProcessor<ValueSelectorType> exten
       Aggregator[][] rowSelector
   );
 
+  /**
+   * Used by {@link HeapBasedTopNAlgorithm}.
+   *
+   * Read entries from the aggregates store, adding the keys and associated values to the resultBuilder, applying the
+   * valueTransformer to the keys if present
+   *
+   * @param resultBuilder   TopN result builder
+   */
   void updateResults(TopNResultBuilder resultBuilder);
 
+  /**
+   * Initializes the underlying aggregates store
+   */
   void initAggregateStore();
 
+  /**
+   * Closes all on heap {@link Aggregator} associated withe the aggregates processor
+   */
   void closeAggregators();
 }

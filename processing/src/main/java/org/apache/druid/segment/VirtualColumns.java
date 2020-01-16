@@ -141,6 +141,7 @@ public class VirtualColumns implements Cacheable
     return getVirtualColumn(columnName) != null;
   }
 
+  @Nullable
   public VirtualColumn getVirtualColumn(String columnName)
   {
     final VirtualColumn vc = withoutDotSupport.get(columnName);
@@ -184,6 +185,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
@@ -194,6 +196,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -226,6 +229,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -240,6 +244,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnCapabilities getColumnCapabilitiesWithFallback(StorageAdapter adapter, String columnName)
   {
     final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(columnName);

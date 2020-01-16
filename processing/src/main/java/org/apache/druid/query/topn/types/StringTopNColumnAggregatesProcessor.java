@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class StringTopNColumnAggregatesProcessor implements HeapBasedTopNColumnAggregatesProcessor<DimensionSelector>
+public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregatesProcessor<DimensionSelector>
 {
   private final Function<Object, Comparable<?>> dimensionValueConverter;
   private HashMap<Comparable<?>, Aggregator[]> aggregatesStore;

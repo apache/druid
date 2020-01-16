@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector extends BaseNullableColumnValueSelector>
-    implements HeapBasedTopNColumnAggregatesProcessor<Selector>
+    implements TopNColumnAggregatesProcessor<Selector>
 {
   private final boolean hasNulls = !NullHandling.replaceWithDefault();
   final Function<Object, Comparable<?>> converter;

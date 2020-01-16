@@ -29,18 +29,18 @@ import org.apache.druid.segment.column.ValueType;
 
 import java.util.function.Function;
 
-public class HeapBasedTopNColumnAggregatesProcessorFactory
-    implements ColumnSelectorStrategyFactory<HeapBasedTopNColumnAggregatesProcessor>
+public class TopNColumnSelectorStrategyFactory
+    implements ColumnSelectorStrategyFactory<TopNColumnAggregatesProcessor<?>>
 {
   private final ValueType dimensionType;
 
-  public HeapBasedTopNColumnAggregatesProcessorFactory(final ValueType dimensionType)
+  public TopNColumnSelectorStrategyFactory(final ValueType dimensionType)
   {
     this.dimensionType = Preconditions.checkNotNull(dimensionType, "dimensionType");
   }
 
   @Override
-  public HeapBasedTopNColumnAggregatesProcessor makeColumnSelectorStrategy(
+  public TopNColumnAggregatesProcessor<?> makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
       ColumnValueSelector selector
   )
