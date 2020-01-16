@@ -45,8 +45,11 @@ public class HashJoinEngine
    * joinable clause's prefix (see {@link JoinableClause#getPrefix()}) will come from the Joinable's column selector
    * factory, and all other columns will come from the leftCursor's column selector factory.
    *
-   * Ensuing that the joinable clause's prefix does not conflict with any columns from "leftCursor" is the
-   * responsibility of the caller.
+   * Ensuring that the joinable clause's prefix does not conflict with any columns from "leftCursor" is the
+   * responsibility of the caller. If there is such a conflict (for example, if the joinable clause's prefix is "j.",
+   * and the leftCursor has a field named "j.j.abrams"), then the field from the leftCursor will be shadowed and will
+   * not be queryable through the returned Cursor. This happens even if the right-hand joinable doesn't actually have a
+   * column with this name.
    */
   public static Cursor makeJoinCursor(final Cursor leftCursor, final JoinableClause joinableClause)
   {
