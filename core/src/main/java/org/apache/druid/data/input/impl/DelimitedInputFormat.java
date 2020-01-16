@@ -22,19 +22,18 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Splitter;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.indexer.Checks;
-import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * InputFormat for customized Delimitor Separate Value format of input data(default is TSV).
@@ -42,7 +41,6 @@ import java.util.Objects;
 public class DelimitedInputFormat extends FlatTextInputFormat
 {
   private static final String DEFAULT_DELIMITER = "\t";
-  private final String delimiter;
 
   @JsonCreator
   public DelimitedInputFormat(
@@ -62,41 +60,6 @@ public class DelimitedInputFormat extends FlatTextInputFormat
         findColumnsFromHeader,
         skipHeaderRows
     );
-    this.delimiter = delimiter;
-  }
-
-  @Override
-  @JsonProperty
-  public List<String> getColumns()
-  {
-    return super.getColumns();
-  }
-
-  @Override
-  @JsonProperty
-  public String getListDelimiter()
-  {
-    return super.getListDelimiter();
-  }
-
-  @JsonProperty("delimiter")
-  public String getDelimiterString()
-  {
-    return delimiter;
-  }
-
-  @Override
-  @JsonProperty
-  public boolean isFindColumnsFromHeader()
-  {
-    return super.isFindColumnsFromHeader();
-  }
-
-  @Override
-  @JsonProperty
-  public int getSkipHeaderRows()
-  {
-    return super.getSkipHeaderRows();
   }
 
   @Override
@@ -111,12 +74,36 @@ public class DelimitedInputFormat extends FlatTextInputFormat
     return new DelimitedValueReader(
         inputRowSchema,
         source,
-        temporaryDirectory,
         getListDelimiter(),
         getColumns(),
         isFindColumnsFromHeader(),
         getSkipHeaderRows(),
-        getDelimiter()
+        line -> splitToList(Splitter.on(getDelimiter()), line)
     );
+  }
+
+  /**
+   * Copied from Guava's {@link Splitter#splitToList(CharSequence)}.
+   * This is to avoid the error of the missing method signature when using an old Guava library.
+   * For example, it may happen when running Druid Hadoop indexing jobs, since we may inherit the version provided by
+   * the Hadoop cluster. See https://github.com/apache/druid/issues/6801.
+   */
+  public static List<String> splitToList(Splitter splitter, String input)
+  {
+    Preconditions.checkNotNull(input);
+
+    Iterator<String> iterator = splitter.split(input).iterator();
+    List<String> result = new ArrayList<>();
+
+    while (iterator.hasNext()) {
+      String splitValue = iterator.next();
+      if (!NullHandling.replaceWithDefault() && splitValue.isEmpty()) {
+        result.add(null);
+      } else {
+        result.add(splitValue);
+      }
+    }
+
+    return Collections.unmodifiableList(result);
   }
 }

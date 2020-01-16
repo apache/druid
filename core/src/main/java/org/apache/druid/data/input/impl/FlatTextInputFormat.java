@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
@@ -32,56 +33,24 @@ import java.util.Objects;
 
 public abstract class FlatTextInputFormat implements InputFormat
 {
-  static class Delimiter
-  {
-    private final char delimiter;
-    private final String literal;
-
-    Delimiter(char delimiter, String literal)
-    {
-      this.delimiter = delimiter;
-      this.literal = literal;
-    }
-
-//    private void setDelimiter(String delimiter, String literal)
-//    {
-//      this.delimiter = (delimiter != null && delimiter.length() > 0) ? delimiter.charAt(0) : '\t';
-//      this.literal = literal != null ? literal : "customize separator: " + delimiter;
-//    }
-
-    public String getDelimiterAsString()
-    {
-      return String.valueOf(delimiter);
-    }
-
-    public char getDelimiter()
-    {
-      return delimiter;
-    }
-
-    public String getLiteral()
-    {
-      return literal;
-    }
-  }
-
-  private final String listDelimiter;
   private final List<String> columns;
+  private final String listDelimiter;
+  private final String delimiter;
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final Delimiter delimiter;
 
   FlatTextInputFormat(
       @Nullable List<String> columns,
       @Nullable String listDelimiter,
-      String stringDelimiter,
+      String delimiter,
       @Nullable Boolean hasHeaderRow,
       @Nullable Boolean findColumnsFromHeader,
       int skipHeaderRows
   )
   {
-    this.listDelimiter = listDelimiter;
     this.columns = columns == null ? Collections.emptyList() : columns;
+    this.listDelimiter = listDelimiter;
+    this.delimiter = Preconditions.checkNotNull(delimiter, "delimiter");
     //noinspection ConstantConditions
     this.findColumnsFromHeader = Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
@@ -90,22 +59,16 @@ public abstract class FlatTextInputFormat implements InputFormat
         )
     ).getValue();
     this.skipHeaderRows = skipHeaderRows;
-//    this.stringDelimiter = delimiter == null ? "\t" : delimiter;
-    this.delimiter = new Delimiter(Preconditions.checkNotNull(stringDelimiter, "stringDelimiter"), )
     Preconditions.checkArgument(
-        this.stringDelimiter.length() == 1,
-        "The delimiter should be a single character"
-    );
-    Preconditions.checkArgument(
-        !this.stringDelimiter.equals(listDelimiter),
+        !delimiter.equals(listDelimiter),
         "Cannot have same delimiter and list delimiter of [%s]",
-        this.delimiter
+        delimiter
     );
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
-            !column.contains(this.delimiter.getDelimiterAsString()),
-            "Column[%s] has a " + this.delimiter.getLiteral() + ", it cannot",
+            !column.contains(delimiter),
+            "Column[%s] cannot have the delimiter[" + delimiter + "] in its name",
             column
         );
       }
@@ -118,38 +81,31 @@ public abstract class FlatTextInputFormat implements InputFormat
     }
   }
 
-//  private static Delimiter getFormat(String delimiter)
-//  {
-//    if (",".equals(delimiter)) {
-//      return Delimiter.COMMA;
-//    } else if ("\t".equals(delimiter)) {
-//      return Delimiter.TAB;
-//    } else {
-//      Delimiter.CUSTOM.setDelimiter(delimiter, null);
-//      return Delimiter.CUSTOM;
-//    }
-//  }
-
-  public Delimiter getDelimiter()
+  @JsonProperty
+  public String getDelimiter()
   {
     return delimiter;
   }
 
+  @JsonProperty
   public List<String> getColumns()
   {
     return columns;
   }
 
+  @JsonProperty
   public String getListDelimiter()
   {
     return listDelimiter;
   }
 
+  @JsonProperty
   public boolean isFindColumnsFromHeader()
   {
     return findColumnsFromHeader;
   }
 
+  @JsonProperty
   public int getSkipHeaderRows()
   {
     return skipHeaderRows;

@@ -41,7 +41,7 @@ public class DelimitedInputFormatTest
     final DelimitedInputFormat format = new DelimitedInputFormat(
         Collections.singletonList("a"),
         "|",
-        null,
+        "delim",
         null,
         true,
         10
