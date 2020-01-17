@@ -60,7 +60,7 @@ public abstract class FlatTextInputFormat implements InputFormat
           )
       ).getValue();
     } else {
-      this.findColumnsFromHeader = false;
+      this.findColumnsFromHeader = findColumnsFromHeader == null ? false : findColumnsFromHeader;
     }
     this.skipHeaderRows = skipHeaderRows;
     Preconditions.checkArgument(
