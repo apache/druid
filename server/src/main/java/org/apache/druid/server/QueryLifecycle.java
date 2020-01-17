@@ -351,6 +351,7 @@ public class QueryLifecycle
       throw new ISE("Not yet initialized");
     }
 
+    //noinspection unchecked
     return toolChest;
   }
 
