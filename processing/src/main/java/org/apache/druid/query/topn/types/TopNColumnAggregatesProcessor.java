@@ -68,7 +68,8 @@ public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends Column
   Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter);
 
   /**
-   * Used by {@link HeapBasedTopNAlgorithm}.
+   * Used by {@link HeapBasedTopNAlgorithm}. The contract of this method requires calling {@link #initAggregateStore()}
+   * prior to calling this method.
    *
    * Iterate through the {@link Cursor}, reading the current row from a dimension value selector, and for each row
    * value:
@@ -109,7 +110,7 @@ public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends Column
   void updateResults(TopNResultBuilder resultBuilder);
 
   /**
-   * Initializes the underlying aggregates store
+   * Initializes the underlying aggregates store to something nice and seleector type appropriate
    */
   void initAggregateStore();
 

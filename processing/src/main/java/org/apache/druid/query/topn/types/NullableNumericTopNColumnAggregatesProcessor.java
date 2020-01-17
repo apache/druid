@@ -32,6 +32,15 @@ import org.apache.druid.segment.StorageAdapter;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * Base {@link TopNColumnAggregatesProcessor} for {@link BaseNullableColumnValueSelector}. Non-null selector values
+ * aggregates are stored in a type appropriate primitive map, created by {@link #initAggregateStore()} and available
+ * via {@link #getAggregatesStore()}, and null valued row aggregates are stored in a separate
+ * {@link #nullValueAggregates} {@link Aggregator} array.
+ *
+ * {@link #updateResults} will combine both the map and null aggregates to populate the {@link TopNResultBuilder} with
+ * the values produced by {@link #scanAndAggregate}.
+ */
 public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector extends BaseNullableColumnValueSelector>
     implements TopNColumnAggregatesProcessor<Selector>
 {
@@ -44,10 +53,21 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
     this.converter = converter;
   }
 
+  /**
+   * Get {@link Aggregator} set for the current {@param Selector} row value for a given {@link Cursor}
+   */
   abstract Aggregator[] getValueAggregators(TopNQuery query, Selector selector, Cursor cursor);
 
+  /**
+   * Get primitive numeric map for value aggregates created by {@link #scanAndAggregate}, to be used by
+   * {@link #updateResults} to apply to the {@link TopNResultBuilder}
+   */
   abstract Map<?, Aggregator[]> getAggregatesStore();
 
+  /**
+   * Method to convert primitive numeric value keys used by {@link #getAggregatesStore} into the correct representation
+   * for the {@link TopNResultBuilder}, called by {@link #updateResults}
+   */
   abstract Comparable<?> convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
 
   @Override
@@ -70,7 +90,6 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
       Aggregator[][] rowSelector
   )
   {
-    initAggregateStore();
     long processedRows = 0;
     while (!cursor.isDone()) {
       if (hasNulls && selector.isNull()) {

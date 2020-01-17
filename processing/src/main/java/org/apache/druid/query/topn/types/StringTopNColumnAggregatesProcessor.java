@@ -108,7 +108,6 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       Aggregator[][] rowSelector
   )
   {
-    initAggregateStore();
     if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
       return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
     } else {

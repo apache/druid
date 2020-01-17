@@ -92,6 +92,7 @@ public class HeapBasedTopNAlgorithm
     final Cursor cursor = params.getCursor();
     final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
 
+    processor.initAggregateStore();
     return processor.scanAndAggregate(
         query,
         selectorPlus.getSelector(),
