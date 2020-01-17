@@ -67,7 +67,7 @@ public class StringLastAggregator implements Aggregator
 
       if (inPair != null && inPair.rhs != null && inPair.lhs >= lastTime) {
         lastTime = inPair.lhs;
-        lastValue = StringFirstLastUtils.fastLooseChop(inPair.rhs, maxStringBytes);
+        lastValue = StringUtils.fastLooseChop(inPair.rhs, maxStringBytes);
       }
     } else {
       final long time = timeSelector.getLong();
@@ -77,7 +77,7 @@ public class StringLastAggregator implements Aggregator
 
         if (value != null) {
           lastTime = time;
-          lastValue = StringFirstLastUtils.fastLooseChop(value, maxStringBytes);
+          lastValue = StringUtils.fastLooseChop(value, maxStringBytes);
         }
       }
     }

@@ -36,20 +36,6 @@ public class StringFirstLastUtils
   private static final int NULL_VALUE = -1;
 
   /**
-   * Shorten "s" to "maxBytes" chars. Fast and loose because these are *chars* not *bytes*. Use
-   * {@link #chop(String, int)} for slower, but accurate chopping.
-   */
-  @Nullable
-  public static String fastLooseChop(@Nullable final String s, final int maxBytes)
-  {
-    if (s == null || s.length() <= maxBytes) {
-      return s;
-    } else {
-      return s.substring(0, maxBytes);
-    }
-  }
-
-  /**
    * Returns whether a given value selector *might* contain SerializablePairLongString objects.
    */
   public static boolean selectorNeedsFoldCheck(
