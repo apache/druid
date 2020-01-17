@@ -36,14 +36,8 @@ import java.util.Set;
 @JsonTypeName("quantile")
 public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
 {
-  static final Comparator COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return Double.compare(((Number) o).doubleValue(), ((Number) o1).doubleValue());
-    }
-  };
+  // this doesn't need to handle nulls because the values come from ApproximateHistogram
+  static final Comparator COMPARATOR = Comparator.comparingDouble(o -> ((Number) o).doubleValue());
 
   private final float probability;
   private final String fieldName;
