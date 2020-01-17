@@ -100,7 +100,7 @@ public class StringFirstLastUtils
 
     if (pair.rhs != null) {
       mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-      mutationBuffer.limit(maxStringBytes);
+      mutationBuffer.limit(position + Long.BYTES + Integer.BYTES + maxStringBytes);
       final int len = StringUtils.toUtf8WithLimit(pair.rhs, mutationBuffer);
       mutationBuffer.putInt(position + Long.BYTES, len);
     } else {
