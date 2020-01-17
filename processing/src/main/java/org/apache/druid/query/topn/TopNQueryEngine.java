@@ -134,17 +134,20 @@ public class TopNQueryEngine
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
                                                && columnCapabilities.isDictionaryEncoded())) {
-      // Use DimExtraction for non-Strings and for non-dictionary-encoded Strings.
+      // Use HeapBasedTopNAlgorithm for non-Strings and for non-dictionary-encoded Strings.
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
-      // Use DimExtraction when the dimension output type is a non-String. (It's like an extractionFn: there can be
+      // Use HeapBasedTopNAlgorithm when the dimension output type is a non-String. (It's like an extractionFn: there can be
       // a many-to-one mapping, since numeric types can't represent all possible values of other types.)
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (selector.isAggregateAllMetrics()) {
+      // sorted by dimension
       topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
+      // high cardinality dimensions with larger result sets
       topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
     } else {
+      // anything else
       topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     }
     if (queryMetrics != null) {
