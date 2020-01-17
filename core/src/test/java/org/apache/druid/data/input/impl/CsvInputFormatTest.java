@@ -61,10 +61,10 @@ public class CsvInputFormatTest
   }
 
   @Test
-  public void testFindColumnsFromHeaderWithColumnsReturningFalse()
+  public void testFindColumnsFromHeaderWithColumnsReturningItsValue()
   {
     final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, true, 0);
-    Assert.assertFalse(format.isFindColumnsFromHeader());
+    Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
   @Test

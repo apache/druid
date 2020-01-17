@@ -76,7 +76,7 @@ public class DelimitedInputFormatTest
   }
 
   @Test
-  public void testFindColumnsFromHeaderWithColumnsReturningFalse()
+  public void testFindColumnsFromHeaderWithColumnsReturningItsValue()
   {
     final DelimitedInputFormat format = new DelimitedInputFormat(
         Collections.singletonList("a"),
@@ -86,7 +86,7 @@ public class DelimitedInputFormatTest
         true,
         0
     );
-    Assert.assertFalse(format.isFindColumnsFromHeader());
+    Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
   @Test
