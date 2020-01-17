@@ -37,6 +37,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
 import org.apache.druid.query.topn.TopNResultValue;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -56,7 +57,7 @@ import java.util.List;
  *
  */
 @RunWith(Parameterized.class)
-public class SketchAggregationWithSimpleDataTest
+public class SketchAggregationWithSimpleDataTest extends InitializedNullHandlingTest
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();

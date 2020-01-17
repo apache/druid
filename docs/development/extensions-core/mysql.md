@@ -112,7 +112,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
 
 ```json
 {
-  "type": "index",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
@@ -149,7 +149,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "ioConfig": {
-      "type": "index",
+      "type": "index_parallel",
       "firehose": {
         "type": "sql",
         "database": {
@@ -166,7 +166,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "tuningconfig": {
-      "type": "index"
+      "type": "index_parallel"
     }
   }
 }

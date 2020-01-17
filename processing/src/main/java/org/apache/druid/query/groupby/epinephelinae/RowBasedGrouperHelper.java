@@ -53,7 +53,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -66,6 +65,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -347,8 +348,8 @@ public class RowBasedGrouperHelper
       final Supplier<ResultRow> supplier
   )
   {
-    final RowBasedColumnSelectorFactory.RowAdapter<ResultRow> adapter =
-        new RowBasedColumnSelectorFactory.RowAdapter<ResultRow>()
+    final RowAdapter<ResultRow> adapter =
+        new RowAdapter<ResultRow>()
         {
           @Override
           public ToLongFunction<ResultRow> timestampFunction()
@@ -362,7 +363,7 @@ public class RowBasedGrouperHelper
           }
 
           @Override
-          public Function<ResultRow, Object> rawFunction(final String columnName)
+          public Function<ResultRow, Object> columnFunction(final String columnName)
           {
             final int columnIndex = query.getResultRowPositionLookup().getInt(columnName);
             if (columnIndex < 0) {

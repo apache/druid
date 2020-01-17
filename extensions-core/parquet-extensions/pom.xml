@@ -35,7 +35,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <parquet.version>1.10.1</parquet.version>
+    <parquet.version>1.11.0</parquet.version>
   </properties>
   <dependencies>
     <dependency>

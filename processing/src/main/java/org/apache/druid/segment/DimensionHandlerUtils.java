@@ -34,7 +34,6 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.dimension.VectorColumnStrategizer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
@@ -119,6 +118,8 @@ public final class DimensionHandlerUtils
    * @param cursor                        Used to create value selectors for columns.
    *
    * @return A ColumnSelectorPlus object
+   *
+   * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
   public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass> createColumnSelectorPlus(
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
@@ -146,6 +147,8 @@ public final class DimensionHandlerUtils
    * @param columnSelectorFactory         Used to create value selectors for columns.
    *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
+   *
+   * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
   public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
   //CHECKSTYLE.OFF: Indentation
@@ -249,11 +252,12 @@ public final class DimensionHandlerUtils
   /**
    * Equivalent to calling makeVectorProcessor(DefaultDimensionSpec.of(column), strategyFactory, selectorFactory).
    *
-   * @see #makeVectorProcessor(DimensionSpec, VectorColumnStrategizer, VectorColumnSelectorFactory)
+   * @see #makeVectorProcessor(DimensionSpec, VectorColumnProcessorFactory, VectorColumnSelectorFactory)
+   * @see ColumnProcessors#makeProcessor the non-vectorized version
    */
   public static <T> T makeVectorProcessor(
       final String column,
-      final VectorColumnStrategizer<T> strategyFactory,
+      final VectorColumnProcessorFactory<T> strategyFactory,
       final VectorColumnSelectorFactory selectorFactory
   )
   {
@@ -269,10 +273,12 @@ public final class DimensionHandlerUtils
    * @param dimensionSpec   dimensionSpec for the input to the processor
    * @param strategyFactory object that encapsulates the knowledge about how to create processors
    * @param selectorFactory column selector factory used for creating the vector processor
+   *
+   * @see ColumnProcessors#makeProcessor the non-vectorized version
    */
   public static <T> T makeVectorProcessor(
       final DimensionSpec dimensionSpec,
-      final VectorColumnStrategizer<T> strategyFactory,
+      final VectorColumnProcessorFactory<T> strategyFactory,
       final VectorColumnSelectorFactory selectorFactory
   )
   {
@@ -285,11 +291,11 @@ public final class DimensionHandlerUtils
 
     if (type == ValueType.STRING) {
       if (capabilities.hasMultipleValues()) {
-        return strategyFactory.makeMultiValueDimensionStrategy(
+        return strategyFactory.makeMultiValueDimensionProcessor(
             selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
         );
       } else {
-        return strategyFactory.makeSingleValueDimensionStrategy(
+        return strategyFactory.makeSingleValueDimensionProcessor(
             selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
         );
       }
@@ -303,15 +309,15 @@ public final class DimensionHandlerUtils
       );
 
       if (type == ValueType.LONG) {
-        return strategyFactory.makeLongStrategy(
+        return strategyFactory.makeLongProcessor(
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.FLOAT) {
-        return strategyFactory.makeFloatStrategy(
+        return strategyFactory.makeFloatProcessor(
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.DOUBLE) {
-        return strategyFactory.makeDoubleStrategy(
+        return strategyFactory.makeDoubleProcessor(
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else {

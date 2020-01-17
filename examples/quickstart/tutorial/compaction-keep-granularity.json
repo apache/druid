@@ -3,7 +3,7 @@
   "dataSource": "compaction-tutorial",
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
-    "type" : "index",
+    "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000
   }

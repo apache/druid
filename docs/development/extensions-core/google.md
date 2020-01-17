@@ -23,7 +23,7 @@ title: "Google Cloud Storage"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` extension and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
 
 ## Deep Storage
 
