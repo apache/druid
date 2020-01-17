@@ -20,13 +20,26 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputRowSchema;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
-public class CsvInputFormat extends DelimitedInputFormat
+public class CsvInputFormat extends FlatTextInputFormat
 {
+  private static final char SEPARATOR = ',';
+  private static final RFC4180Parser PARSER = createOpenCsvParser();
+
   @JsonCreator
   public CsvInputFormat(
       @JsonProperty("columns") @Nullable List<String> columns,
@@ -36,6 +49,42 @@ public class CsvInputFormat extends DelimitedInputFormat
       @JsonProperty("skipHeaderRows") int skipHeaderRows
   )
   {
-    super(columns, listDelimiter, ",", hasHeaderRow, findColumnsFromHeader, skipHeaderRows);
+    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows);
+  }
+
+  @Override
+  @JsonIgnore
+  public String getDelimiter()
+  {
+    return super.getDelimiter();
+  }
+
+  @Override
+  public boolean isSplittable()
+  {
+    return true;
+  }
+
+  @Override
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  {
+    return new DelimitedValueReader(
+        inputRowSchema,
+        source,
+        getListDelimiter(),
+        getColumns(),
+        isFindColumnsFromHeader(),
+        getSkipHeaderRows(),
+        line -> Arrays.asList(PARSER.parseLine(line))
+    );
+  }
+
+  public static RFC4180Parser createOpenCsvParser()
+  {
+    return NullHandling.replaceWithDefault()
+           ? new RFC4180ParserBuilder().withSeparator(SEPARATOR).build()
+           : new RFC4180ParserBuilder().withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
+                                       .withSeparator(SEPARATOR)
+                                       .build();
   }
 }
