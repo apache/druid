@@ -19,11 +19,40 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
+
+import static org.junit.Assert.assertEquals;
 
 public class StringFirstLastUtilsTest
 {
-  @Test
-  public void test_writePair
+  private static final SerializablePairLongString PAIR_TO_WRITE = new SerializablePairLongString(
+      DateTimes.MAX.getMillis(),
+      "asdasddsaasd"
+  );
 
+  private static final int BUFFER_CAPACITY = 100;
+  // PAIR_TO_WRITE Size is 12 so MAX_BYTE_TO_WRITE is set to 15 which is more than enough
+  private static final int MAX_BYTE_TO_WRITE = 15;
+
+  @Test
+  public void testWritePairThenReadPairAtBeginningBuffer() {
+    int positionAtBeginning = 0;
+    ByteBuffer buf = ByteBuffer.allocate(BUFFER_CAPACITY);
+    StringFirstLastUtils.writePair(buf, positionAtBeginning, PAIR_TO_WRITE, MAX_BYTE_TO_WRITE);
+    SerializablePairLongString actual = StringFirstLastUtils.readPair(buf, positionAtBeginning);
+    assertEquals(PAIR_TO_WRITE, actual);
+  }
+
+  @Test
+  public void testWritePairThenReadPairAtMiddleBuffer() {
+    int positionAtMiddle = 60;
+    ByteBuffer buf = ByteBuffer.allocate(BUFFER_CAPACITY);
+    StringFirstLastUtils.writePair(buf, positionAtMiddle, PAIR_TO_WRITE, MAX_BYTE_TO_WRITE);
+    SerializablePairLongString actual = StringFirstLastUtils.readPair(buf, positionAtMiddle);
+    assertEquals(PAIR_TO_WRITE, actual);
+  }
 }
