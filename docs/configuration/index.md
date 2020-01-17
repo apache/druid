@@ -741,7 +741,8 @@ A sample Coordinator dynamic config JSON object is shown below:
   "emitBalancingStats": false,
   "killDataSourceWhitelist": ["wikipedia", "testDatasource"],
   "decommissioningNodes": ["localhost:8182", "localhost:8282"],
-  "decommissioningMaxPercentOfMaxSegmentsToMove": 70
+  "decommissioningMaxPercentOfMaxSegmentsToMove": 70,
+  "pauseCoordinator": false
 }
 ```
 
@@ -763,6 +764,8 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded) |0|
 |`decommissioningNodes`| List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning' servers,  and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `decommissioningMaxPercentOfMaxSegmentsToMove`.|none|
 |`decommissioningMaxPercentOfMaxSegmentsToMove`|  The maximum number of segments that may be moved away from 'decommissioning' servers to non-decommissioning (that is, active) servers during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by `maxSegmentsToMove`. If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, segments will neither be moved from _or to_ 'decommissioning' servers, effectively putting them in a sort of "maintenance" mode that will not participate in balancing or assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place the segments. By leveraging the maximum percent of decommissioning segment movements, an operator can prevent active servers from overload by prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.|70|
+|`pauseCoordinator`| Boolean flag for whether or not the coordinator should execute its various jobs of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. An example of when an admin may want to pause coordination would be if they are doing deepstore maintenatnce on HDFS NameNodes with downtime and don't want the coordinator to be directing Historical Nodes to hit the NameNode with API requests until maintenance is done and the deep store is declared healthy for use again. |false|
+
 
 To view the audit history of Coordinator dynamic config issue a GET request to the URL -
 

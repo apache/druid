@@ -666,9 +666,19 @@ public class DruidCoordinator
                 .withBalancerStrategy(balancerStrategy)
                 .build();
 
+        boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
+        if (coordinationPaused && coordLeaderSelector.isLeader()) {
+          log.info(
+              "Coordination is paused via dynamic configs! I will not be running Coordination Helpers at this time"
+          );
+        }
+
         for (DruidCoordinatorHelper helper : helpers) {
           // Don't read state and run state in the same helper otherwise racy conditions may exist
-          if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+          if (!coordinationPaused
+              && coordLeaderSelector.isLeader()
+              && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+
             params = helper.run(params);
 
             if (params == null) {

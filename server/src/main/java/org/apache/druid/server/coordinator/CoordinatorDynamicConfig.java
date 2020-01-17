@@ -87,6 +87,7 @@ public class CoordinatorDynamicConfig
    * See {@link LoadQueuePeon}, {@link org.apache.druid.server.coordinator.rules.LoadRule#run}
    */
   private final int maxSegmentsInNodeLoadingQueue;
+  private final boolean pauseCoordination;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -116,7 +117,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killPendingSegmentsSkipList") Object dataSourcesToNotKillStalePendingSegmentsIn,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
-      @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove
+      @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
+      @JsonProperty("pauseCoordination") boolean pauseCoordination
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -145,6 +147,7 @@ public class CoordinatorDynamicConfig
           "can't have killUnusedSegmentsInAllDataSources and non-empty specificDataSourcesToKillUnusedSegmentsIn"
       );
     }
+    this.pauseCoordination = pauseCoordination;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -287,6 +290,12 @@ public class CoordinatorDynamicConfig
     return decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
+  @JsonProperty
+  public boolean getPauseCoordination()
+  {
+    return pauseCoordination;
+  }
+
   @Override
   public String toString()
   {
@@ -306,6 +315,7 @@ public class CoordinatorDynamicConfig
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
            ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
+           ", pauseCoordination=" + pauseCoordination +
            '}';
   }
 
@@ -361,6 +371,9 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(decommissioningNodes, that.decommissioningNodes)) {
       return false;
     }
+    if (pauseCoordination != that.pauseCoordination) {
+      return false;
+    }
     return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
@@ -381,7 +394,8 @@ public class CoordinatorDynamicConfig
         specificDataSourcesToKillUnusedSegmentsIn,
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
-        decommissioningMaxPercentOfMaxSegmentsToMove
+        decommissioningMaxPercentOfMaxSegmentsToMove,
+        pauseCoordination
     );
   }
 
@@ -404,6 +418,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_KILL_UNUSED_SEGMENTS_IN_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
+    private static final boolean DEFAULT_PAUSE_COORDINATION = false;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
@@ -419,6 +434,7 @@ public class CoordinatorDynamicConfig
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
+    private Boolean pauseCoordination;
 
     public Builder()
     {
@@ -441,7 +457,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
         @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove")
-        @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove
+        @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
+        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -459,6 +476,7 @@ public class CoordinatorDynamicConfig
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.decommissioningNodes = decommissioningNodes;
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
+      this.pauseCoordination = pauseCoordination;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -539,6 +557,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withPauseCoordination(boolean pauseCoordination)
+    {
+      this.pauseCoordination = pauseCoordination;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -563,7 +587,8 @@ public class CoordinatorDynamicConfig
           decommissioningNodes,
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
-          : decommissioningMaxPercentOfMaxSegmentsToMove
+          : decommissioningMaxPercentOfMaxSegmentsToMove,
+          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination
       );
     }
 
@@ -595,7 +620,8 @@ public class CoordinatorDynamicConfig
           decommissioningNodes == null ? defaults.getDecommissioningNodes() : decommissioningNodes,
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? defaults.getDecommissioningMaxPercentOfMaxSegmentsToMove()
-          : decommissioningMaxPercentOfMaxSegmentsToMove
+          : decommissioningMaxPercentOfMaxSegmentsToMove,
+          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination
       );
     }
   }
