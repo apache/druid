@@ -23,10 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
-import com.opencsv.RFC4180Parser;
-import com.opencsv.RFC4180ParserBuilder;
-import com.opencsv.enums.CSVReaderNullFieldIndicator;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -38,9 +34,7 @@ import org.apache.druid.java.util.common.parsers.ParserUtils;
 import org.apache.druid.java.util.common.parsers.Parsers;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -53,56 +47,32 @@ public class DelimitedValueReader extends TextReader
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Function<String, Object> multiValueFunction;
+  private final DelimitedValueParser parser;
   @Nullable
   private List<String> columns;
-  private final RFC4180Parser parser;
 
-  public static RFC4180Parser createOpenCsvParser(char separator)
+  interface DelimitedValueParser
   {
-    return NullHandling.replaceWithDefault()
-           ? new RFC4180ParserBuilder()
-               .withSeparator(separator)
-               .build()
-           : new RFC4180ParserBuilder().withFieldAsNull(
-               CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
-                                       .withSeparator(separator)
-                                       .build();
+    List<String> parseLine(String line) throws IOException;
   }
 
   DelimitedValueReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
-      File temporaryDirectory,
       @Nullable String listDelimiter,
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows,
-      DelimitedInputFormat.Format format
+      DelimitedValueParser parser
   )
   {
-    super(inputRowSchema, source, temporaryDirectory);
+    super(inputRowSchema, source);
     this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
-    this.parser = createOpenCsvParser(format.getDelimiter());
-
-    if (this.columns != null) {
-      for (String column : this.columns) {
-        Preconditions.checkArgument(
-            !column.contains(format.getDelimiterAsString()),
-            "Column[%s] has a " + format.getLiteral() + ", it cannot",
-            column
-        );
-      }
-    } else {
-      Preconditions.checkArgument(
-          findColumnsFromHeader,
-          "If columns field is not set, the first row of your data must have your header"
-          + " and hasHeaderRow must be set to true."
-      );
-    }
+    this.parser = parser;
   }
 
   @Override
@@ -120,10 +90,10 @@ public class DelimitedValueReader extends TextReader
 
   private Map<String, Object> parseLine(String line) throws IOException
   {
-    final String[] parsed = parser.parseLine(line);
+    final List<String> parsed = parser.parseLine(line);
     return Utils.zipMapPartial(
         Preconditions.checkNotNull(columns, "columns"),
-        Iterables.transform(Arrays.asList(parsed), multiValueFunction)
+        Iterables.transform(parsed, multiValueFunction)
     );
   }
 
@@ -145,7 +115,7 @@ public class DelimitedValueReader extends TextReader
     if (!findColumnsFromHeader) {
       throw new ISE("Don't call this if findColumnsFromHeader = false");
     }
-    columns = findOrCreateColumnNames(Arrays.asList(parser.parseLine(line)));
+    columns = findOrCreateColumnNames(parser.parseLine(line));
     if (columns.isEmpty()) {
       throw new ISE("Empty columns");
     }
