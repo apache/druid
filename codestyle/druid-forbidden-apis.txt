@@ -33,6 +33,8 @@ java.lang.String#replaceFirst(java.lang.String,java.lang.String) @ Use String.in
 java.nio.file.Files#createTempDirectory(java.lang.String prefix,java.nio.file.FileAttribute...) @ Use org.apache.druid.java.util.common.FileUtils.createTempDir()
 java.util.HashMap#<init>(int) @ Use com.google.common.collect.Maps#newHashMapWithExpectedSize(int) instead
 java.util.HashMap#<init>(int, float) @ Use com.google.common.collect.Maps#newHashMapWithExpectedSize(int) instead
+java.util.LinkedHashMap#<init>(int) @ Use org.apache.druid.utils.CollectionUtils#newLinkedHashMapWithExpectedSize(int) instead
+java.util.LinkedHashMap#<init>(int, float) @ Use org.apache.druid.utils.CollectionUtils#newLinkedHashMapWithExpectedSize(int) instead
 java.util.HashSet#<init>(int) @ Use com.google.collect.Sets#newHashSetWithExpectedSize(int) instead
 java.util.HashSet#<init>(int, float) @ Use com.google.collect.Sets#newHashSetWithExpectedSize(int) instead
 java.util.LinkedHashSet#<init>(int) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
