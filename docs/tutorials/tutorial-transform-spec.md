@@ -48,25 +48,19 @@ We will ingest the sample data using the following spec, which demonstrates the 
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "transform-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "animal",
-              { "name": "location", "type": "long" }
-            ]
-          },
-          "timestampSpec": {
-            "column": "timestamp",
-            "format": "iso"
-          }
-        }
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "animal",
+          { "name": "location", "type": "long" }
+        ]
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -104,16 +98,19 @@ We will ingest the sample data using the following spec, which demonstrates the 
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial",
         "filter" : "transform-data.json"
       },
+      "inputFormat" : {
+        "type" :"json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }
