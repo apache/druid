@@ -60,22 +60,16 @@ A sample supervisor spec is shown below:
   "type": "kafka",
   "dataSchema": {
     "dataSource": "metrics-kafka",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": [],
-          "dimensionExclusions": [
-            "timestamp",
-            "value"
-          ]
-        }
-      }
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": [],
+      "dimensionExclusions": [
+        "timestamp",
+        "value"
+      ]
     },
     "metricsSpec": [
       {
@@ -110,6 +104,9 @@ A sample supervisor spec is shown below:
   },
   "ioConfig": {
     "topic": "metrics",
+    "inputFormat": {
+      "type": "json"
+    },
     "consumerProperties": {
       "bootstrap.servers": "localhost:9092"
     },
@@ -196,6 +193,7 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
+|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [the below section](#specifying-data-format) for details about specifying the input format.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`. For SSL connections, the `keystore`, `truststore` and `key` passwords can be provided as a [Password Provider](../../operations/password-provider.md) or String password.|yes|
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
@@ -208,6 +206,19 @@ For Roaring bitmaps:
 |`lateMessageRejectionStartDateTime`|ISO8601 DateTime|Configure tasks to reject messages with timestamps earlier than this date time; for example if this is set to `2016-01-01T11:00Z` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline). Please note that only one of `lateMessageRejectionPeriod` or `lateMessageRejectionStartDateTime` can be specified.|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
+
+#### Specifying data format
+
+Kafka indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
+The `inputFormat` is a new and recommended way to specify the data format for Kafka indexing service,
+but unfortunately, it doesn't support all data formats supported by the legacy `parser`.
+(They will be supported in the future.)
+
+The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
+[`delimited`](../../ingestion/data-formats.md#tsv-delimited), and [`json`](../../ingestion/data-formats.md#json).
+You can also read [`avro_stream`](../../ingestion/data-formats.md#avro-stream-parser),
+[`protobuf`](../../ingestion/data-formats.md#protobuf-parser),
+and [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 ## Operations
 
