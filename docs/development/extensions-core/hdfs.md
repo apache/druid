@@ -101,12 +101,17 @@ To use the Google Cloud Storage as the deep storage, you need to configure `drui
 |`druid.storage.type`|hdfs||Must be set.|
 |`druid.storage.storageDirectory`|gs://bucket/example/directory|Path to the deep storage|Must be set.|
 
-All services that need to access GCS need to have the [GCS connector jar](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md) in their class path.
+All services that need to access GCS need to have the [GCS connector jar](https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage#other_sparkhadoop_clusters) in their class path.
+Please read the [install instructions](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
+to properly set up the necessary libraries and configurations.
 One option is to place this jar in `${DRUID_HOME}/lib/` and `${DRUID_HOME}/extensions/druid-hdfs-storage/`.
 
-Finally, you need to add the below properties in the `core-site.xml`.
-For more configurations, see the [instructions to configure Hadoop](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop),
-[GCS core default](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/conf/gcs-core-default.xml)
+Finally, you need to configure the `core-site.xml` file with the filesystem
+and authentication properties needed for GCS. You may want to copy the below
+example properties. Please follow the instructions at
+[https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
+for more details.
+For more configurations, [GCS core default](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/conf/gcs-core-default.xml)
 and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
 
 ```xml
@@ -131,9 +136,18 @@ and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/maste
     authentication.
   </description>
 </property>
+
+<property>
+  <name>google.cloud.auth.service.account.json.keyfile</name>
+  <value>/path/to/keyfile</value>
+  <description>
+    The JSON key file of the service account used for GCS
+    access when google.cloud.auth.service.account.enable is true.
+  </description>
+</property>
 ```
 
-Tested with Druid 0.9.0, Hadoop 2.7.2 and gcs-connector jar 1.4.4-hadoop2.
+Tested with Druid 0.17.0, Hadoop 2.8.5 and gcs-connector jar 2.0.0-hadoop2.
 
 ## Reading data from HDFS or Cloud Storage
 
