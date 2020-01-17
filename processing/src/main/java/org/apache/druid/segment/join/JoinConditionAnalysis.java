@@ -64,7 +64,7 @@ public class JoinConditionAnalysis
     this.originalExpression = Preconditions.checkNotNull(originalExpression, "originalExpression");
     this.equiConditions = Collections.unmodifiableList(equiConditions);
     this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
-    // if any nonEquiConditions is an expression and it evaluates to false
+    // if any nonEquiCondition is an expression and it evaluates to false
     isAlwaysFalse = nonEquiConditions.stream()
             .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings()).asBoolean());
     // if there are no equiConditions and all nonEquiConditions are literals and the evaluate to true
