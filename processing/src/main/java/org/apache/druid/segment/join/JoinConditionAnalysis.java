@@ -51,8 +51,8 @@ public class JoinConditionAnalysis
   private final String originalExpression;
   private final List<Equality> equiConditions;
   private final List<Expr> nonEquiConditions;
-  private final boolean anyFalseLiteralNonEquiConditions;
-  private final boolean allTrueLiteralNonEquiConditions;
+  private final boolean isAlwaysFalse;
+  private final boolean isAlwaysTrue;
   private final boolean canHashJoin;
 
   private JoinConditionAnalysis(
@@ -64,9 +64,11 @@ public class JoinConditionAnalysis
     this.originalExpression = Preconditions.checkNotNull(originalExpression, "originalExpression");
     this.equiConditions = Collections.unmodifiableList(equiConditions);
     this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
-    anyFalseLiteralNonEquiConditions = nonEquiConditions.stream()
+    // if any nonEquiConditions is an expression and it evaluates to false
+    isAlwaysFalse = nonEquiConditions.stream()
             .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings()).asBoolean());
-    allTrueLiteralNonEquiConditions = nonEquiConditions.stream()
+    // if there are no equiConditions and all nonEquiConditions are literals and the evaluate to true
+    isAlwaysTrue = equiConditions.isEmpty() && nonEquiConditions.stream()
             .allMatch(expr -> expr.isLiteral() && expr.eval(ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
   }
@@ -142,7 +144,7 @@ public class JoinConditionAnalysis
    */
   public boolean isAlwaysFalse()
   {
-    return anyFalseLiteralNonEquiConditions;
+    return isAlwaysFalse;
   }
 
   /**
@@ -150,7 +152,7 @@ public class JoinConditionAnalysis
    */
   public boolean isAlwaysTrue()
   {
-    return equiConditions.isEmpty() && allTrueLiteralNonEquiConditions;
+    return isAlwaysTrue;
   }
 
   /**
