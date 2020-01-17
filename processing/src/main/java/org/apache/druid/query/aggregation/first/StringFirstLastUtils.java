@@ -24,6 +24,9 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -32,10 +35,34 @@ public class StringFirstLastUtils
 {
   private static final int NULL_VALUE = -1;
 
+  /**
+   * Returns whether a given value selector *might* contain SerializablePairLongString objects.
+   */
+  public static boolean selectorNeedsFoldCheck(
+      final BaseObjectColumnValueSelector<?> valueSelector,
+      @Nullable final ColumnCapabilities valueSelectorCapabilities
+  )
+  {
+    if (valueSelectorCapabilities != null && valueSelectorCapabilities.getType() != ValueType.COMPLEX) {
+      // Known, non-complex type.
+      return false;
+    }
+
+    if (valueSelector instanceof NilColumnValueSelector) {
+      // Nil column, definitely no SerializablePairLongStrings.
+      return false;
+    }
+
+    // Check if the selector class could possibly be a SerializablePairLongString (either a superclass or subclass).
+    final Class<?> clazz = valueSelector.classOfObject();
+    return clazz.isAssignableFrom(SerializablePairLongString.class)
+           || SerializablePairLongString.class.isAssignableFrom(clazz);
+  }
+
   @Nullable
   public static SerializablePairLongString readPairFromSelectors(
       final BaseLongColumnValueSelector timeSelector,
-      final BaseObjectColumnValueSelector valueSelector
+      final BaseObjectColumnValueSelector<?> valueSelector
   )
   {
     final long time;

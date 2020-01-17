@@ -550,8 +550,8 @@ public class StringUtils
    * Returns the string truncated to maxBytes.
    * If given string input is shorter than maxBytes, then it remains the same.
    *
-   * @param s The input string to possibly be truncated
-   * @param maxBytes  The max bytes that string input will be truncated to
+   * @param s        The input string to possibly be truncated
+   * @param maxBytes The max bytes that string input will be truncated to
    *
    * @return the string after truncated to maxBytes
    */
@@ -568,4 +568,17 @@ public class StringUtils
     }
   }
 
+  /**
+   * Shorten "s" to "maxBytes" chars. Fast and loose because these are *chars* not *bytes*. Use
+   * {@link #chop(String, int)} for slower, but accurate chopping.
+   */
+  @Nullable
+  public static String fastLooseChop(@Nullable final String s, final int maxBytes)
+  {
+    if (s == null || s.length() <= maxBytes) {
+      return s;
+    } else {
+      return s.substring(0, maxBytes);
+    }
+  }
 }
