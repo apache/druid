@@ -58,6 +58,7 @@ Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
 Dropwizard
 dropwizard
+DruidInputSource
 DruidSQL
 EC2
 EC2ContainerCredentialsProviderWrapper
@@ -67,6 +68,7 @@ EMRFS
 ETL
 Elasticsearch
 FirehoseFactory
+FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.POSITIVE_INFINITY
 ForwardedRequestCustomizer
@@ -77,6 +79,7 @@ GUIs
 GroupBy
 Guice
 HDFS
+HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -92,6 +95,7 @@ IndexSpec
 IndexTask
 InfluxDB
 InputFormat
+InputSource
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -103,6 +107,7 @@ JMX
 JRE
 JS
 JSON
+JsonPath
 JVM
 JVMs
 Joda
@@ -220,7 +225,10 @@ e.g.
 encodings
 endian
 enum
+expr
 failover
+featureSpec
+findColumnsFromHeader
 filenames
 filesystem
 firefox
@@ -243,6 +251,7 @@ influxdb
 injective
 inlined
 interruptible
+jackson-jq
 javadoc
 kerberos
 keystore
@@ -329,6 +338,7 @@ searchable
 servlet
 sharded
 sharding
+skipHeaderRows
 smooshed
 splittable
 stdout
@@ -362,6 +372,7 @@ unparseable
 unparsed
 uptime
 uris
+useFieldDiscovery
 v1
 v2
 vCPUs
