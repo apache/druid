@@ -3,46 +3,46 @@
   "spec" : {
     "dataSchema": {
       "dataSource": "wikipedia",
+      "timestampSpec": {
+        "column": "time",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "channel",
+          "cityName",
+          "comment",
+          "countryIsoCode",
+          "countryName",
+          "isAnonymous",
+          "isMinor",
+          "isNew",
+          "isRobot",
+          "isUnpatrolled",
+          "metroCode",
+          "namespace",
+          "page",
+          "regionIsoCode",
+          "regionName",
+          "user",
+          {
+            "name": "added",
+            "type": "long"
+          },
+          {
+            "name": "deleted",
+            "type": "long"
+          },
+          {
+            "name": "delta",
+            "type": "long"
+          }
+        ]
+      },
       "parser": {
         "type": "string",
         "parseSpec": {
-          "format": "json",
-          "timestampSpec": {
-            "column": "time",
-            "format": "auto"
-          },
-          "dimensionsSpec": {
-            "dimensions": [
-              "channel",
-              "cityName",
-              "comment",
-              "countryIsoCode",
-              "countryName",
-              "isAnonymous",
-              "isMinor",
-              "isNew",
-              "isRobot",
-              "isUnpatrolled",
-              "metroCode",
-              "namespace",
-              "page",
-              "regionIsoCode",
-              "regionName",
-              "user",
-              {
-                "name": "added",
-                "type": "long"
-              },
-              {
-                "name": "deleted",
-                "type": "long"
-              },
-              {
-                "name": "delta",
-                "type": "long"
-              }
-            ]
-          }
+          "format": "json"
         }
       },
       "metricsSpec": [],
@@ -59,6 +59,9 @@
     },
     "ioConfig": {
       "topic": "wikipedia",
+      "inputFormat": {
+        "type": "json"
+      },
       "replicas": 1,
       "taskDuration": "PT10M",
       "completionTimeout": "PT20M",
