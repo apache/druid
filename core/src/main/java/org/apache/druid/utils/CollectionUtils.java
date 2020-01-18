@@ -41,7 +41,7 @@ import java.util.stream.Stream;
 
 public final class CollectionUtils
 {
-  public static final int MAX_EXPECTED_SIZE = (1 << 30);
+  private static final int MAX_EXPECTED_SIZE = (1 << 30);
 
   /**
    * Returns a lazy collection from a stream supplier and a size. {@link Collection#iterator()} of the returned
