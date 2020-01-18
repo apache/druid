@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 
@@ -118,20 +119,24 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringFirstAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName),
-        maxStringBytes
+        valueSelector,
+        maxStringBytes,
+        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName),
-        maxStringBytes
+        valueSelector,
+        maxStringBytes,
+        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
     );
   }
 

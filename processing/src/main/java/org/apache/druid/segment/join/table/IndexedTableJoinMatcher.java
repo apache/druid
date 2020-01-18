@@ -75,7 +75,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     if (condition.isAlwaysTrue()) {
       this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, table.numRows()));
     } else if (condition.isAlwaysFalse()) {
-      this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, 0));
+      this.conditionMatchers = Collections.singletonList(() -> IntIterators.EMPTY_ITERATOR);
     } else if (condition.getNonEquiConditions().isEmpty()) {
       this.conditionMatchers = condition.getEquiConditions()
                                         .stream()

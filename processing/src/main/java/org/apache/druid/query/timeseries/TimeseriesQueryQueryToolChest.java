@@ -50,8 +50,10 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -400,6 +402,47 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     return makeComputeManipulatorFn(query, fn, true);
+  }
+
+  @Override
+  public List<String> resultArrayFields(TimeseriesQuery query)
+  {
+    final List<String> fields = new ArrayList<>(
+        1 + query.getAggregatorSpecs().size() + query.getPostAggregatorSpecs().size()
+    );
+
+    fields.add(ColumnHolder.TIME_COLUMN_NAME);
+    query.getAggregatorSpecs().stream().map(AggregatorFactory::getName).forEach(fields::add);
+    query.getPostAggregatorSpecs().stream().map(PostAggregator::getName).forEach(fields::add);
+
+    return fields;
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(
+      final TimeseriesQuery query,
+      final Sequence<Result<TimeseriesResultValue>> resultSequence
+  )
+  {
+    final List<String> fields = resultArrayFields(query);
+
+    return Sequences.map(
+        resultSequence,
+        result -> {
+          final Object[] retVal = new Object[fields.size()];
+
+          // Position 0 is always __time.
+          retVal[0] = result.getTimestamp().getMillis();
+
+          // Add other fields.
+          final Map<String, Object> resultMap = result.getValue().getBaseObject();
+          for (int i = 1; i < fields.size(); i++) {
+            retVal[i] = resultMap.get(fields.get(i));
+          }
+
+          return retVal;
+        }
+    );
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(

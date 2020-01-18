@@ -73,6 +73,14 @@ public class JoinConditionAnalysis
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
   }
 
+  /**
+   * Analyze a join condition.
+   *
+   * @param condition   the condition expression
+   * @param rightPrefix prefix for the right-hand side of the join; will be used to determine which identifiers in
+   *                    the condition come from the right-hand side and which come from the left-hand side
+   * @param macroTable  macro table for parsing the condition expression
+   */
   public static JoinConditionAnalysis forExpression(
       final String condition,
       final String rightPrefix,
