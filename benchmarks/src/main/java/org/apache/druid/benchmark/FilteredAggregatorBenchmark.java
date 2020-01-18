@@ -197,9 +197,7 @@ public class FilteredAggregatorBenchmark
     qIndex = INDEX_IO.loadIndex(indexFile);
 
     factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new TimeseriesQueryQueryToolChest(),
         new TimeseriesQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );

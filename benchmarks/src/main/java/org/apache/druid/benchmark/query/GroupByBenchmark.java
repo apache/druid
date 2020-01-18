@@ -572,10 +572,7 @@ public class GroupByBenchmark
 
     factory = new GroupByQueryRunnerFactory(
         strategySelector,
-        new GroupByQueryQueryToolChest(
-            strategySelector,
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector)
     );
   }
 

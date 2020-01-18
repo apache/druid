@@ -228,13 +228,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
-  @Deprecated
-  @Override
-  public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
-  {
-    return reportMillisTimeMetric("query/intervalChunk/time", timeNs);
-  }
-
   @Override
   public QueryMetrics<QueryType> reportCpuTime(long timeNs)
   {

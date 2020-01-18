@@ -209,12 +209,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
-  public QueryMetrics reportIntervalChunkTime(long timeNs)
-  {
-    return delegateQueryMetrics.reportIntervalChunkTime(timeNs);
-  }
-
-  @Override
   public QueryMetrics reportCpuTime(long timeNs)
   {
     return delegateQueryMetrics.reportCpuTime(timeNs);

@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -91,28 +90,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
   private final GroupByStrategySelector strategySelector;
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public GroupByQueryQueryToolChest(
-      GroupByStrategySelector strategySelector,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
-  )
+  public GroupByQueryQueryToolChest(GroupByStrategySelector strategySelector)
   {
-    this(strategySelector, intervalChunkingQueryRunnerDecorator, DefaultGroupByQueryMetricsFactory.instance());
+    this(strategySelector, DefaultGroupByQueryMetricsFactory.instance());
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       GroupByQueryMetricsFactory queryMetricsFactory
   )
   {
     this.strategySelector = strategySelector;
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -497,16 +489,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
               }
             }
 
-            return strategySelector.strategize(delegateGroupByQuery)
-                                   .createIntervalChunkingRunner(
-                                       intervalChunkingQueryRunnerDecorator,
-                                       runner,
-                                       GroupByQueryQueryToolChest.this
-                                   )
-                                   .run(
-                                       queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
-                                       responseContext
-                                   );
+            return runner.run(
+                queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
+                responseContext
+            );
           }
         }
     );

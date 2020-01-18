@@ -115,10 +115,7 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
   {
     return new SearchQueryRunnerFactory(
         new SearchStrategySelector(Suppliers.ofInstance(config)),
-        new SearchQueryQueryToolChest(
-            config,
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new SearchQueryQueryToolChest(config),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
   }

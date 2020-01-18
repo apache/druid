@@ -282,11 +282,6 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 
   /**
-   * Registers "interval chunk time" metric.
-   */
-  QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs);
-
-  /**
    * Registers "cpu time" metric.
    */
   QueryMetrics<QueryType> reportCpuTime(long timeNs);

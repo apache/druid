@@ -1234,7 +1234,6 @@ TimeseriesQuery
 D1
 D2
 D3
-chunkPeriod
 druid.query.groupBy.defaultStrategy
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
@@ -1560,7 +1559,6 @@ allowAll
 array_mod
 batch_index_task
 cgroup
-chunkPeriod
 classloader
 com.metamx
 common.runtime.properties
