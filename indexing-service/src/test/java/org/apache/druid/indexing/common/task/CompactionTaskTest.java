@@ -19,7 +19,11 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -44,6 +48,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -53,10 +58,12 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.CompactionTask.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
+import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -97,6 +104,8 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -118,6 +127,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -421,6 +431,128 @@ public class CompactionTaskTest
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
     final CompactionTask fromJson = OBJECT_MAPPER.readValue(bytes, CompactionTask.class);
     assertEquals(task, fromJson);
+  }
+
+  @Test
+  public void testSerdeWithOldTuningConfigSuccessfullyDeserializeToNewOne() throws IOException
+  {
+    final OldCompactionTaskWithAnyTuningConfigType oldTask = new OldCompactionTaskWithAnyTuningConfigType(
+        null,
+        null,
+        DATA_SOURCE,
+        null,
+        SEGMENTS,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new IndexTuningConfig(
+            null,
+            null, // null to compute maxRowsPerSegment automatically
+            500000,
+            1000000L,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new IndexSpec(
+                new RoaringBitmapSerdeFactory(true),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.LZF,
+                LongEncodingStrategy.LONGS
+            ),
+            null,
+            null,
+            true,
+            false,
+            5000L,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null,
+        OBJECT_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        ROW_INGESTION_METERS_FACTORY,
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY,
+        APPENDERATORS_MANAGER
+    );
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        OBJECT_MAPPER,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        ROW_INGESTION_METERS_FACTORY,
+        INDEXING_SERVICE_CLIENT,
+        COORDINATOR_CLIENT,
+        segmentLoaderFactory,
+        RETRY_POLICY_FACTORY,
+        APPENDERATORS_MANAGER
+    );
+
+    final CompactionTask expectedFromJson = builder
+        .segments(SEGMENTS)
+        .tuningConfig(CompactionTask.getTuningConfig(oldTask.getTuningConfig()))
+        .build();
+
+    final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) OBJECT_MAPPER);
+    mapper.registerSubtypes(
+        new NamedType(OldCompactionTaskWithAnyTuningConfigType.class, "compact"),
+        new NamedType(IndexTuningConfig.class, "index")
+    );
+    final byte[] bytes = mapper.writeValueAsBytes(oldTask);
+    final CompactionTask fromJson = mapper.readValue(bytes, CompactionTask.class);
+    assertEquals(expectedFromJson, fromJson);
+  }
+
+  @Test
+  public void testSerdeWithUnknownTuningConfigThrowingError() throws IOException
+  {
+    final OldCompactionTaskWithAnyTuningConfigType taskWithUnknownTuningConfig =
+        new OldCompactionTaskWithAnyTuningConfigType(
+            null,
+            null,
+            DATA_SOURCE,
+            null,
+            SEGMENTS,
+            null,
+            null,
+            null,
+            null,
+            null,
+            RealtimeTuningConfig.makeDefaultTuningConfig(null),
+            null,
+            OBJECT_MAPPER,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            null,
+            ROW_INGESTION_METERS_FACTORY,
+            COORDINATOR_CLIENT,
+            segmentLoaderFactory,
+            RETRY_POLICY_FACTORY,
+            APPENDERATORS_MANAGER
+        );
+
+    final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) OBJECT_MAPPER);
+    mapper.registerSubtypes(
+        new NamedType(OldCompactionTaskWithAnyTuningConfigType.class, "compact"),
+        new NamedType(RealtimeTuningConfig.class, "realtime")
+    );
+    final byte[] bytes = mapper.writeValueAsBytes(taskWithUnknownTuningConfig);
+
+    expectedException.expect(ValueInstantiationException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IllegalStateException.class));
+    expectedException.expectMessage(
+        "Unknown tuningConfig type: [org.apache.druid.segment.indexing.RealtimeTuningConfig]"
+    );
+    mapper.readValue(bytes, CompactionTask.class);
   }
 
   private static void assertEquals(CompactionTask expected, CompactionTask actual)
@@ -1346,6 +1478,132 @@ public class CompactionTaskTest
     public SpatialIndex getSpatialIndex()
     {
       return null;
+    }
+  }
+
+  /**
+   * The compaction task spec in 0.16.0 except for the tuningConfig.
+   * The original spec accepts only {@link IndexTuningConfig}, but this class acceps any type of tuningConfig for
+   * testing.
+   */
+  private static class OldCompactionTaskWithAnyTuningConfigType extends AbstractTask
+  {
+    private final Interval interval;
+    private final List<DataSegment> segments;
+    @Nullable
+    private final DimensionsSpec dimensionsSpec;
+    @Nullable
+    private final AggregatorFactory[] metricsSpec;
+    @Nullable
+    private final Granularity segmentGranularity;
+    @Nullable
+    private final Long targetCompactionSizeBytes;
+    @Nullable
+    private final TuningConfig tuningConfig;
+
+    @JsonCreator
+    public OldCompactionTaskWithAnyTuningConfigType(
+        @JsonProperty("id") final String id,
+        @JsonProperty("resource") final TaskResource taskResource,
+        @JsonProperty("dataSource") final String dataSource,
+        @JsonProperty("interval") @Nullable final Interval interval,
+        @JsonProperty("segments") @Nullable final List<DataSegment> segments,
+        @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
+        @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
+        @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
+        @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
+        @JsonProperty("targetCompactionSizeBytes") @Nullable final Long targetCompactionSizeBytes,
+        @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
+        @JsonProperty("context") @Nullable final Map<String, Object> context,
+        @JacksonInject ObjectMapper jsonMapper,
+        @JacksonInject AuthorizerMapper authorizerMapper,
+        @JacksonInject ChatHandlerProvider chatHandlerProvider,
+        @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+        @JacksonInject CoordinatorClient coordinatorClient,
+        @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
+        @JacksonInject RetryPolicyFactory retryPolicyFactory,
+        @JacksonInject AppenderatorsManager appenderatorsManager
+    )
+    {
+      super(getOrMakeId(id, "compact", dataSource), null, taskResource, dataSource, context);
+      this.interval = interval;
+      this.segments = segments;
+      this.dimensionsSpec = dimensionsSpec;
+      this.metricsSpec = metricsSpec;
+      this.segmentGranularity = segmentGranularity;
+      this.targetCompactionSizeBytes = targetCompactionSizeBytes;
+      this.tuningConfig = tuningConfig;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "compact";
+    }
+
+    @JsonProperty
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    @JsonProperty
+    public List<DataSegment> getSegments()
+    {
+      return segments;
+    }
+
+    @JsonProperty
+    @Nullable
+    public DimensionsSpec getDimensionsSpec()
+    {
+      return dimensionsSpec;
+    }
+
+    @JsonProperty
+    @Nullable
+    public AggregatorFactory[] getMetricsSpec()
+    {
+      return metricsSpec;
+    }
+
+    @JsonProperty
+    @Nullable
+    public Granularity getSegmentGranularity()
+    {
+      return segmentGranularity;
+    }
+
+    @Nullable
+    @JsonProperty
+    public Long getTargetCompactionSizeBytes()
+    {
+      return targetCompactionSizeBytes;
+    }
+
+    @Nullable
+    @JsonProperty
+    public TuningConfig getTuningConfig()
+    {
+      return tuningConfig;
+    }
+
+    @Override
+    public boolean isReady(TaskActionClient taskActionClient)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void stopGracefully(TaskConfig taskConfig)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TaskStatus run(TaskToolbox toolbox)
+    {
+      throw new UnsupportedOperationException();
     }
   }
 }
