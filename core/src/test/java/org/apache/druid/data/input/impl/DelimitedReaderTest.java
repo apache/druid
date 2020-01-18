@@ -20,13 +20,11 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -38,7 +36,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -201,105 +198,11 @@ public class DelimitedReaderTest
   }
 
   @Test
-  public void testQuotes() throws IOException
-  {
-    final ByteEntity source = writeData(
-        ImmutableList.of(
-            "3\t\"Lets do some \"\"normal\"\" quotes\"\t2018-05-05T10:00:00Z",
-            "34\t\"Lets do some \"\"normal\"\", quotes with comma\"\t2018-05-06T10:00:00Z",
-            "343\t\"Lets try \\\"\"it\\\"\" with slash quotes\"\t2018-05-07T10:00:00Z",
-            "545\t\"Lets try \\\"\"it\\\"\", with slash quotes and comma\"\t2018-05-08T10:00:00Z",
-            "65\tHere I write \\n slash n\t2018-05-09T10:00:00Z"
-        )
-    );
-    final List<InputRow> expectedResults = ImmutableList.of(
-        new MapBasedInputRow(
-            DateTimes.of("2018-05-05T10:00:00Z"),
-            ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
-                "3",
-                "Comment",
-                "Lets do some \"normal\" quotes",
-                "Timestamp",
-                "2018-05-05T10:00:00Z"
-            )
-        ),
-        new MapBasedInputRow(
-            DateTimes.of("2018-05-06T10:00:00Z"),
-            ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
-                "34",
-                "Comment",
-                "Lets do some \"normal\", quotes with comma",
-                "Timestamp",
-                "2018-05-06T10:00:00Z"
-            )
-        ),
-        new MapBasedInputRow(
-            DateTimes.of("2018-05-07T10:00:00Z"),
-            ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
-                "343",
-                "Comment",
-                "Lets try \\\"it\\\" with slash quotes",
-                "Timestamp",
-                "2018-05-07T10:00:00Z"
-            )
-        ),
-        new MapBasedInputRow(
-            DateTimes.of("2018-05-08T10:00:00Z"),
-            ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
-                "545",
-                "Comment",
-                "Lets try \\\"it\\\", with slash quotes and comma",
-                "Timestamp",
-                "2018-05-08T10:00:00Z"
-            )
-        ),
-        new MapBasedInputRow(
-            DateTimes.of("2018-05-09T10:00:00Z"),
-            ImmutableList.of("Timestamp"),
-            ImmutableMap.of("Value", "65", "Comment", "Here I write \\n slash n", "Timestamp", "2018-05-09T10:00:00Z")
-        )
-    );
-    final DelimitedInputFormat format = new DelimitedInputFormat(
-        ImmutableList.of("Value", "Comment", "Timestamp"),
-        null,
-        null,
-        null,
-        false,
-        0
-    );
-    final InputEntityReader reader = format.createReader(
-        new InputRowSchema(
-            new TimestampSpec("Timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
-            Collections.emptyList()
-        ),
-        source,
-        null
-    );
-
-    try (CloseableIterator<InputRow> iterator = reader.read()) {
-      final Iterator<InputRow> expectedRowIterator = expectedResults.iterator();
-      while (iterator.hasNext()) {
-        Assert.assertTrue(expectedRowIterator.hasNext());
-        Assert.assertEquals(expectedRowIterator.next(), iterator.next());
-      }
-    }
-  }
-
-  @Test
   public void testRussianTextMess() throws IOException
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "2019-01-01T00:00:10Z\tname_1\t\"Как говорится: \\\"\"всё течет\t всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
+            "2019-01-01T00:00:10Z\tname_1\tКак говорится: \\\"всё течет всё изменяется\\\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева"
         )
     );
     final DelimitedInputFormat format = new DelimitedInputFormat(
@@ -317,7 +220,7 @@ public class DelimitedReaderTest
       Assert.assertEquals(DateTimes.of("2019-01-01T00:00:10Z"), row.getTimestamp());
       Assert.assertEquals("name_1", Iterables.getOnlyElement(row.getDimension("name")));
       Assert.assertEquals(
-          "Как говорится: \\\"всё течет\t всё изменяется\\\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева",
+          "Как говорится: \\\"всё течет всё изменяется\\\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева",
           Iterables.getOnlyElement(row.getDimension("Comment"))
       );
       Assert.assertFalse(iterator.hasNext());

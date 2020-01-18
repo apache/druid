@@ -42,48 +42,48 @@ demonstrates the "simple" (single-task) mode.
 ## Parallel task
 
 The Parallel task (type `index_parallel`) is a task for parallel batch indexing. This task only uses Druid's resource and
-doesn't depend on other external systems like Hadoop. `index_parallel` task is a supervisor task which basically generates
+doesn't depend on other external systems like Hadoop. `index_parallel` task is a supervisor task which basically creates
 multiple worker tasks and submits them to the Overlord. Each worker task reads input data and creates segments. Once they
 successfully generate segments for all input data, they report the generated segment list to the supervisor task. 
 The supervisor task periodically checks the status of worker tasks. If one of them fails, it retries the failed task
-until the number of retries reaches the configured limit. If all worker tasks succeed, then it publishes the reported segments at once.
+until the number of retries reaches to the configured limit. If all worker tasks succeed, then it publishes the reported segments at once and finalize the ingestion.
 
-The parallel Index Task can run in two different modes depending on `forceGuaranteedRollup` in `tuningConfig`.
-If `forceGuaranteedRollup` = false, it's executed in a single phase. In this mode,
-each sub task creates segments individually and reports them to the supervisor task.
+The detailed behavior of the Parallel task is different depending on the [`partitionsSpec`](#partitionsspec).
+See each `partitionsSpec` for more details.
 
-If `forceGuaranteedRollup` = true, it's executed in two phases with data shuffle which is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
-In the first phase, each sub task partitions input data based on `segmentGranularity` (primary partition key) in `granularitySpec`
-and `partitionDimension` or `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
-the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md)
-where the first phase tasks ran. In the second phase, each sub task fetches
-partitioned data from MiddleManagers or indexers and merges them to create the final segments.
-As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
+To use this task, the [`inputSource`](#input-sources) in the `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set to larger than 1 in the `tuningConfig`.
+Otherwise, this task runs sequentially; the `index_paralllel` task reads each input file one by one and creates segments by itself.
+The supported splittable input formats for now are:
 
-To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
-Otherwise, this task runs sequentially. Here is the list of currently splittable firehoses.
+- [`s3`](#s3-input-source) reads data from AWS S3 storage.
+- [`gs`](#google-cloud-storage-input-source) reads data from Google Cloud Storage.
+- [`hdfs`](#hdfs-input-source) reads data from HDFS storage.
+- [`http`](#http-input-source) reads data from HTTP servers.
+- [`local`](#local-input-source) reads data from local storage.
+- [`druid`](#druid-input-source) reads data from a Druid datasource.
 
-- [`local`](#local-firehose)
-- [`ingestSegment`](#segment-firehose)
-- [`http`](#http-firehose)
-- [`s3`](../development/extensions-core/s3.md#firehose)
-- [`hdfs`](../development/extensions-core/hdfs.md#firehose)
+Some other cloud storage types are supported with the legacy [`firehose`](#firehoses-deprecated).
+The below `firehose` types are also splittable. Note that only text formats are supported
+with the `firehose`.
+
 - [`static-azure-blobstore`](../development/extensions-contrib/azure.md#firehose)
-- [`static-google-blobstore`](../development/extensions-core/google.md#firehose)
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
-The splittable firehose is responsible for generating _splits_. The supervisor task generates _worker task specs_ containing a split
+The splittable `inputSource` (and `firehose`) types are responsible for generating _splits_.
+The supervisor task generates _worker task specs_ containing a split
 and submits worker tasks using those specs. As a result, the number of worker tasks depends on
-the implementation of splittable firehoses. Please note that multiple tasks can be created for the same worker task spec
+the implementation of the splittable `inputSource`. For now, all implementations create one split per input file
+except for the Druid Input Source. Please note that multiple worker tasks can be created for the same worker task spec
 if one of them fails.
 
 You may want to consider the below things:
 
-- The number of concurrent tasks run in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
-  The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` no matter how many task slots are currently available.
+- The number of concurrent worker tasks in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
+  The supervisor task checks the number of current running worker tasks and creates more if it's smaller than `maxNumConcurrentSubTasks`
+  no matter how many task slots are currently available.
   This may affect to other ingestion performance. See the below [Capacity Planning](#capacity-planning) section for more details.
 - By default, batch ingestion replaces all data (in your `granularitySpec`'s intervals) in any segment that it writes to.
-  If you'd like to add to the segment instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces
+  If you'd like to add to the segment instead, set the `appendToExisting` flag in the `ioConfig`. Note that it only replaces
   data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
   no data written by this task, they will be left alone. If any existing segments partially overlap with the
   `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
@@ -98,6 +98,25 @@ A sample task is shown below:
   "spec": {
     "dataSchema": {
       "dataSource": "wikipedia_parallel_index_test",
+      "timestampSpec": {
+        "column": "timestamp"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "page",
+          "language",
+          "user",
+          "unpatrolled",
+          "newPage",
+          "robot",
+          "anonymous",
+          "namespace",
+          "continent",
+          "country",
+          "region",
+          "city"
+        ]
+      },
       "metricsSpec": [
         {
           "type": "count",
@@ -123,38 +142,17 @@ A sample task is shown below:
           "segmentGranularity": "DAY",
           "queryGranularity": "second",
           "intervals" : [ "2013-08-31/2013-09-02" ]
-        },
-        "parser": {
-          "parseSpec": {
-            "format" : "json",
-            "timestampSpec": {
-              "column": "timestamp"
-            },
-            "dimensionsSpec": {
-              "dimensions": [
-                "page",
-                "language",
-                "user",
-                "unpatrolled",
-                "newPage",
-                "robot",
-                "anonymous",
-                "namespace",
-                "continent",
-                "country",
-                "region",
-                "city"
-              ]
-            }
-          }
         }
     },
     "ioConfig": {
         "type": "index_parallel",
-        "firehose": {
+        "inputSource": {
           "type": "local",
           "baseDir": "examples/indexing/",
           "filter": "wikipedia_index_data*"
+        },
+        "inputFormat": {
+          "type": "json"
         }
     },
     "tuningconfig": {
@@ -178,7 +176,7 @@ This field is required.
 
 See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
 
-If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
+If you specify `intervals` explicitly in your dataSchema's `granularitySpec`, batch ingestion will lock the full intervals
 specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
 tasks (e.g., Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
 learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
@@ -191,7 +189,7 @@ that range if there's some stray data with unexpected timestamps.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
-|firehose|Specify a [Firehose](#firehoses) here.|none|yes|
+|inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
 
 ### `tuningConfig`
@@ -206,7 +204,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of firehose. See [SplitHintSpec](#splithintspec) for more details.|null|no|
+|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [SplitHintSpec](#splithintspec) for more details.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
 |indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
@@ -215,7 +213,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|maxNumConcurrentSubTasks|Maximum number of sub tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
+|maxNumConcurrentSubTasks|Maximum number of worker tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
 |totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
@@ -226,13 +224,13 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 ### `splitHintSpec`
 
 `SplitHintSpec` is used to give a hint when the supervisor task creates input splits.
-Note that each sub task processes a single input split. You can control the amount of data each sub task will read during the first phase.
+Note that each worker task processes a single input split. You can control the amount of data each worker task will read during the first phase.
 
 Currently only one splitHintSpec, i.e., `segments`, is available.
 
 #### `SegmentsSplitHintSpec`
 
-`SegmentsSplitHintSpec` is used only for `IngestSegmentFirehose`.
+`SegmentsSplitHintSpec` is used only for [`DruidInputSource`](#druid-input-source) (and legacy [`IngestSegmentFirehose`](#ingestsegmentfirehose)).
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -246,32 +244,22 @@ You should use different partitionsSpec depending on the [rollup mode](../ingest
 For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
 `single_dim` (based on ranges of a single dimension). For best-effort rollup, you should use `dynamic`.
 
-The three `partitionsSpec` types have different pros and cons:
-- `dynamic`: Fastest ingestion speed. Guarantees a well-balanced distribution in segment size. Only best-effort rollup.
-- `hashed`: Moderate ingestion speed. Creates a well-balanced distribution in segment size. Allows perfect rollup. 
-- `single_dim`: Slowest ingestion speed. Segment sizes may be skewed depending on the partition key, but the broker can
-   use the partition information to efficiently prune segments early to speed up queries. Allows perfect rollup.
+The three `partitionsSpec` types have different characteristics.
 
-#### Hash-based partitioning
+| PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Segment pruning at query time |
+|----------------|-----------------|---------------------|-----------------------|-------------------------------|
+| `dynamic` | Fastest  | Partitioning based on number of rows in segment. | Best-effort rollup | N/A |
+| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | N/A |
+| `single_dim` | Slowest | Range partitioning based on the value of the partition dimension. Segment sizes may be skewed depending on the partition key distribution. This may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
 
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should always be `hashed`|none|yes|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `targetRowsPerSegment` is set.|null|yes|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
-
-#### Single-dimension range partitioning
-
-> Because single-range partitioning makes two passes over the input, the index task may fail if the input changes
-> in between the two passes. 
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should always be `single_dim`|none|yes|
-|partitionDimension|The dimension to partition on. Only rows with a single dimension value are allowed.|none|yes|
-|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
-|maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetRowsPerSegment`.|none|either this or `targetRowsPerSegment`|
-|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+The recommended use case for each partitionsSpec is:
+- If your data has a uniformly distributed column which is frequently used in your queries,
+consider using `single_dim` partitionsSpec to maximize the performance of most of your queries.
+- If your data doesn't a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
+when you roll up with some dimensions, consider using `hashed` partitionsSpec.
+It could reduce the size of datasource and query latency by improving data locality.
+- If the above two scenarios are not the case or you don't need to roll up your datasource,
+consider using `dynamic` partitionsSpec. 
 
 #### Dynamic partitioning
 
@@ -279,7 +267,83 @@ The three `partitionsSpec` types have different pros and cons:
 |--------|-----------|-------|---------|
 |type|This should always be `dynamic`|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+|maxTotalRows|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+
+With the Dynamic partitioning, the parallel index task runs in a single phase:
+it will spawn multiple worker tasks (type `single_phase_sub_task`), each of which creates segments.
+How the worker task creates segments is:
+
+- The task creates a new segment whenever the number of rows in the current segment exceeds
+  `maxRowsPerSegment`.
+- Once the total number of rows in all segments across all time chunks reaches to `maxTotalRows`,
+  the task pushes all segments created so far to the deep storage and creates new ones.
+
+#### Hash-based partitioning
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `hashed`|none|yes|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data.|null|yes|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+
+The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
+The task runs in 2 phases, i.e., `partial segment generation` and `partial segment merge`.
+- In the `partial segment generation` phase, just like the Map phase in MapReduce,
+the Parallel task splits the input data (currently one split for
+each input file or based on `splitHintSpec` for `DruidInputSource`)
+and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split,
+and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
+and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
+The partitioned data is stored in local storage of 
+the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+- The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
+The Parallel task spawns a new set of worker tasks (type `partial_index_merge`) to merge the partitioned data
+created in the previous phase. Here, the partitioned data is shuffled based on
+the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data
+falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges
+them to create the final segments. Finally, they push the final segments to the deep storage at once.
+
+#### Single-dimension range partitioning
+
+> Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+Try set `maxNumConcurrentSubTasks` to larger than 1 to use this partitioning.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `single_dim`|none|yes|
+|partitionDimension|The dimension to partition on. Only rows with a single dimension value are allowed.|none|yes|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
+|maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
+|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
+
+With `single-dim` partitioning, the Parallel task runs in 3 phases,
+i.e., `partial dimension distribution`, `partial segment generation`, and `partial segment merge`.
+The first phase is to collect some statistics to find
+the best partitioning and the other 2 phases are to create partial segments
+and to merge them, respectively, as in hash-based partitioning.
+- In the `partial dimension distribution` phase, the Parallel task splits the input data and
+assigns them to worker tasks (currently one split for
+each input file or based on `splitHintSpec` for `DruidInputSource`). Each worker task (type `partial_dimension_distribution`) reads
+the assigned split and builds a histogram for `partitionDimension`.
+The Parallel task collects those histograms from worker tasks and finds
+the best range partitioning based on `partitionDimension` to evenly
+distribute rows across partitions. Note that either `targetRowsPerSegment`
+or `maxRowsPerSegment` will be used to find the best partitioning.
+- In the `partial segment generation` phase, the Parallel task spawns new worker tasks (type `partial_range_index_generate`)
+to create partitioned data. Each worker task reads a split created as in the previous phase,
+partitions rows by the time chunk from the `segmentGranularity` (primary partition key) in the `granularitySpec`
+and then by the range partitioning found in the previous phase.
+The partitioned data is stored in local storage of
+the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+- In the `partial segment merge` phase, the parallel index task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned
+data created in the previous phase. Here, the partitioned data is shuffled based on
+the time chunk and the value of `partitionDimension`; each worker task reads the segments
+falling in the same partition of the same range from multiple MiddleManager/Indexer processes and merges
+them to create the final segments. Finally, they push the final segments to the deep storage.
+
+> Because the task with single-dimension range partitioning makes two passes over the input
+> in `partial dimension distribution` and `partial segment generation` phases,
+> the task may fail if the input changes in between the two passes.
 
 ### HTTP status endpoints
 
@@ -350,50 +414,25 @@ An example of the result is
     "ingestionSpec": {
       "dataSchema": {
         "dataSource": "lineitem",
-        "parser": {
-          "type": "hadoopyString",
-          "parseSpec": {
-            "format": "tsv",
-            "delimiter": "|",
-            "timestampSpec": {
-              "column": "l_shipdate",
-              "format": "yyyy-MM-dd"
-            },
-            "dimensionsSpec": {
-              "dimensions": [
-                "l_orderkey",
-                "l_partkey",
-                "l_suppkey",
-                "l_linenumber",
-                "l_returnflag",
-                "l_linestatus",
-                "l_shipdate",
-                "l_commitdate",
-                "l_receiptdate",
-                "l_shipinstruct",
-                "l_shipmode",
-                "l_comment"
-              ]
-            },
-            "columns": [
-              "l_orderkey",
-              "l_partkey",
-              "l_suppkey",
-              "l_linenumber",
-              "l_quantity",
-              "l_extendedprice",
-              "l_discount",
-              "l_tax",
-              "l_returnflag",
-              "l_linestatus",
-              "l_shipdate",
-              "l_commitdate",
-              "l_receiptdate",
-              "l_shipinstruct",
-              "l_shipmode",
-              "l_comment"
-            ]
-          }
+        "timestampSpec": {
+          "column": "l_shipdate",
+          "format": "yyyy-MM-dd"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
+            "l_orderkey",
+            "l_partkey",
+            "l_suppkey",
+            "l_linenumber",
+            "l_returnflag",
+            "l_linestatus",
+            "l_shipdate",
+            "l_commitdate",
+            "l_receiptdate",
+            "l_shipinstruct",
+            "l_shipmode",
+            "l_comment"
+          ]
         },
         "metricsSpec": [
           {
@@ -443,11 +482,32 @@ An example of the result is
       },
       "ioConfig": {
         "type": "index_parallel",
-        "firehose": {
+        "inputSource": {
           "type": "local",
           "baseDir": "/path/to/data/",
-          "filter": "lineitem.tbl.5",
-          "parser": null
+          "filter": "lineitem.tbl.5"
+        },
+        "inputFormat": {
+          "format": "tsv",
+          "delimiter": "|",
+          "columns": [
+            "l_orderkey",
+            "l_partkey",
+            "l_suppkey",
+            "l_linenumber",
+            "l_quantity",
+            "l_extendedprice",
+            "l_discount",
+            "l_tax",
+            "l_returnflag",
+            "l_linestatus",
+            "l_shipdate",
+            "l_commitdate",
+            "l_receiptdate",
+            "l_shipinstruct",
+            "l_shipmode",
+            "l_comment"
+          ]
         },
         "appendToExisting": false
       },
@@ -548,20 +608,13 @@ A sample task is shown below:
   "spec" : {
     "dataSchema" : {
       "dataSource" : "wikipedia",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "timestampSpec" : {
-            "column" : "timestamp",
-            "format" : "auto"
-          },
-          "dimensionsSpec" : {
-            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
-            "dimensionExclusions" : [],
-            "spatialDimensions" : []
-          }
-        }
+      "timestampSpec" : {
+        "column" : "timestamp",
+        "format" : "auto"
+      },
+      "dimensionsSpec" : {
+        "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+        "dimensionExclusions" : []
       },
       "metricsSpec" : [
         {
@@ -593,10 +646,13 @@ A sample task is shown below:
     },
     "ioConfig" : {
       "type" : "index",
-      "firehose" : {
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "examples/indexing/",
         "filter" : "wikipedia_data.json"
+       },
+       "inputFormat": {
+         "type": "json"
        }
     },
     "tuningConfig" : {
@@ -632,7 +688,7 @@ that range if there's some stray data with unexpected timestamps.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
-|firehose|Specify a [Firehose](#firehoses) here.|none|yes|
+|inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
 
 ### `tuningConfig`
@@ -679,7 +735,7 @@ For best-effort rollup, you should use `dynamic`.
 |--------|-----------|-------|---------|
 |type|This should always be `dynamic`|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+|maxTotalRows|Total number of rows in segments waiting for being pushed.|20000000|no|
 
 ### `segmentWriteOutMediumFactory`
 
@@ -706,19 +762,573 @@ continues to ingest remaining data.
 To enable bulk pushing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot
 be used with `appendToExisting` of IOConfig.
 
-Firehoses are pluggable and thus the configuration schema can and will vary based on the `type` of the firehose.
+## Input Sources
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | Specifies the type of firehose. Each value will have its own configuration schema, firehoses packaged with Druid are described below. | yes |
+The input source is the place to define from where your index task reads data.
+Only the native Parallel task and Simple task support the input source. 
 
-## Firehoses
+### S3 Input Source
 
+> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source. 
+
+The S3 input source is to support reading objects directly from S3.
+Objects can be specified either via a list of S3 URI strings or a list of
+S3 location prefixes, which will attempt to list the contents and ingest
+all objects contained in the locations. The S3 input source is splittable
+and can be used by the [Parallel task](#parallel-task),
+where each worker task of `index_parallel` will read a single object.
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "prefixes": ["s3://foo/bar", "s3://bar/foo"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "objects": [
+          { "bucket": "foo", "path": "bar/file1.json"},
+          { "bucket": "bar", "path": "foo/file2.json"}
+        ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `s3`.|None|yes|
+|uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+
+S3 Object:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|bucket|Name of the S3 bucket|None|yes|
+|path|The path where data is located.|None|yes|
+
+### Google Cloud Storage Input Source
+
+> You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+
+The Google Cloud Storage input source is to support reading objects directly
+from Google Cloud Storage. Objects can be specified as list of Google
+Cloud Storage URI strings. The Google Cloud Storage input source is splittable
+and can be used by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read a single object.
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "prefixes": ["gs://foo/bar", "gs://bar/foo"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "google",
+        "objects": [
+          { "bucket": "foo", "path": "bar/file1.json"},
+          { "bucket": "bar", "path": "foo/file2.json"}
+        ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `google`.|None|yes|
+|uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+
+Google Cloud Storage object:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|bucket|Name of the Google Cloud Storage bucket|None|yes|
+|path|The path where data is located.|None|yes|
+
+### HDFS Input Source
+
+> You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+
+The HDFS input source is to support reading files directly
+from HDFS storage. File paths can be specified as an HDFS URI string or a list
+of HDFS URI strings. The HDFS input source is splittable and can be used by the [Parallel task](#parallel-task),
+where each worker task of `index_parallel` will read a single file.
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "hdfs",
+        "paths": "hdfs://foo/bar/", "hdfs://bar/foo"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "hdfs",
+        "paths": ["hdfs://foo/bar", "hdfs://bar/foo"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "hdfs",
+        "paths": "hdfs://foo/bar/file.json", "hdfs://bar/foo/file2.json"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "hdfs",
+        "paths": ["hdfs://foo/bar/file.json", "hdfs://bar/foo/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `hdfs`.|None|yes|
+|paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths.|None|yes|
+
+You can also ingest from cloud storage using the HDFS input source.
+However, if you want to read from AWS S3 or Google Cloud Storage, consider using
+the [S3 input source](#s3-input-source) or the [Google Cloud Storage input source](#google-cloud-storage-input-source) instead.
+
+### HTTP Input Source
+
+The HDFS input source is to support reading files directly
+from remote sites via HTTP.
+The HDFS input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
+where each worker task of `index_parallel` will read a file.
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "http",
+        "uris": ["http://example.com/uri1", "http://example2.com/uri2"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+Example with authentication fields using the DefaultPassword provider (this requires the password to be in the ingestion spec):
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "http",
+        "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
+        "httpAuthenticationUsername": "username",
+        "httpAuthenticationPassword": "password123"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+You can also use the other existing Druid PasswordProviders. Here is an example using the EnvironmentVariablePasswordProvider:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "http",
+        "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
+        "httpAuthenticationUsername": "username",
+        "httpAuthenticationPassword": {
+          "type": "environment",
+          "variable": "HTTP_INPUT_SOURCE_PW"
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+}
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `http`|None|yes|
+|uris|URIs of the input files.|None|yes|
+|httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
+|httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
+
+### Inline Input Source
+
+The Inline input source can be used to read the data inlined in its own spec.
+It can be used for demos or for quickly testing out parsing and schema.
+
+Sample spec:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "0,values,formatted\n1,as,CSV"
+      },
+      "inputFormat": {
+        "type": "csv"
+      },
+      ...
+    },
+...
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "inline".|yes|
+|data|Inlined data to ingest.|yes|
+
+### Local Input Source
+
+The Local input source is to support reading files directly from local storage,
+and is mainly intended for proof-of-concept testing.
+The Local input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
+where each worker task of `index_parallel` will read a file.
+
+Sample spec:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "filter" : "*.csv",
+        "baseDir": "/data/directory"
+      },
+      "inputFormat": {
+        "type": "csv"
+      },
+      ...
+    },
+...
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "local".|yes|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
+|baseDir|directory to search recursively for files to be ingested. |yes|
+
+### Druid Input Source
+
+The Druid input source is to support reading data directly from existing Druid segments,
+potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
+The Druid input source is _splittable_ and can be used by the [Parallel task](#parallel-task).
+This input source has a fixed input format for reading from Druid segments;
+no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "druid".|yes|
+|dataSource|A String defining the Druid datasource to fetch rows from|yes|
+|interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
+|dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
+|metrics|The list of Strings containing the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
+|filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
+
+A minimal example DruidInputSource spec is shown below:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "druid",
+        "dataSource": "wikipedia",
+        "interval": "2013-01-01/2013-01-02"
+      }
+      ...
+    },
+...
+```
+
+The spec above will read all existing dimension and metric columns from
+the `wikipedia` datasource, including all rows with a timestamp (the `__time` column)
+within the interval `2013-01-01/2013-01-02`.
+
+A spec that applies a filter and reads a subset of the original datasource's columns is shown below.
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "druid",
+        "dataSource": "wikipedia",
+        "interval": "2013-01-01/2013-01-02",
+        "dimensions": [
+          "page",
+          "user"
+        ],
+        "metrics": [
+          "added"
+        ],
+        "filter": {
+          "type": "selector",
+          "dimension": "page",
+          "value": "Druid"
+        }
+      }
+      ...
+    },
+...
+```
+
+This spec above will only return the `page`, `user` dimensions and `added` metric.
+Only rows where `page` = `Druid` will be returned.
+
+## Firehoses (Deprecated)
+
+Firehoses are deprecated in 0.17.0. It's highly recommended to use the [Input source](#input-sources) instead.
 There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
 
-For additional firehoses, please see our [extensions list](../development/extensions.md).
+### StaticS3Firehose
 
-<a name="local-firehose"></a>
+> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the StaticS3Firehose.
+
+This firehose ingests events from a predefined list of S3 objects.
+This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
+Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
+
+Sample spec:
+
+```json
+"firehose" : {
+    "type" : "static-s3",
+    "uris": ["s3://foo/bar/file.gz", "s3://bar/foo/file2.gz"]
+}
+```
+
+This firehose provides caching and prefetching features. In the Simple task, a firehose can be read twice if intervals or
+shardSpecs are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scan of objects is slow.
+Note that prefetching or caching isn't that useful in the Parallel task.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `static-s3`.|None|yes|
+|uris|JSON array of URIs where s3 files to be ingested are located.|None|`uris` or `prefixes` must be set|
+|prefixes|JSON array of URI prefixes for the locations of s3 files to be ingested.|None|`uris` or `prefixes` must be set|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|no|
+|prefetchTriggerBytes|Threshold to trigger prefetching s3 objects.|maxFetchCapacityBytes / 2|no|
+|fetchTimeout|Timeout for fetching an s3 object.|60000|no|
+|maxFetchRetry|Maximum retry for fetching an s3 object.|3|no|
+
+#### StaticGoogleBlobStoreFirehose
+
+> You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the StaticGoogleBlobStoreFirehose.
+
+This firehose ingests events, similar to the StaticS3Firehose, but from an Google Cloud Store.
+
+As with the S3 blobstore, it is assumed to be gzipped if the extension ends in .gz
+
+This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
+Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
+
+Sample spec:
+
+```json
+"firehose" : {
+    "type" : "static-google-blobstore",
+    "blobs": [
+        {
+          "bucket": "foo",
+          "path": "/path/to/your/file.json"
+        },
+        {
+          "bucket": "bar",
+          "path": "/another/path.json"
+        }
+    ]
+}
+```
+
+This firehose provides caching and prefetching features. In the Simple task, a firehose can be read twice if intervals or
+shardSpecs are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scan of objects is slow.
+Note that prefetching or caching isn't that useful in the Parallel task.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `static-google-blobstore`.|None|yes|
+|blobs|JSON array of Google Blobs.|None|yes|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|no|
+|prefetchTriggerBytes|Threshold to trigger prefetching Google Blobs.|maxFetchCapacityBytes / 2|no|
+|fetchTimeout|Timeout for fetching a Google Blob.|60000|no|
+|maxFetchRetry|Maximum retry for fetching a Google Blob.|3|no|
+
+Google Blobs:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|bucket|Name of the Google Cloud bucket|None|yes|
+|path|The path where data is located.|None|yes|
+
+### HDFSFirehose
+
+> You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFSFirehose.
+
+This firehose ingests events from a predefined list of files from the HDFS storage.
+This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
+Since each split represents an HDFS file, each worker task of `index_parallel` will read a file.
+
+Sample spec:
+
+```json
+"firehose" : {
+    "type" : "hdfs",
+    "paths": "/foo/bar,/foo/baz"
+}
+```
+
+This firehose provides caching and prefetching features. During native batch indexing, a firehose can be read twice if
+`intervals` are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scanning
+of files is slow.
+Note that prefetching or caching isn't that useful in the Parallel task.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|type|This should be `hdfs`.|none (required)|
+|paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths.|none (required)|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|
+|prefetchTriggerBytes|Threshold to trigger prefetching files.|maxFetchCapacityBytes / 2|
+|fetchTimeout|Timeout for fetching each file.|60000|
+|maxFetchRetry|Maximum number of retries for fetching each file.|3|
 
 ### LocalFirehose
 
@@ -791,6 +1401,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 ```
 
 The below configurations can optionally be used for tuning the Firehose performance.
+Note that prefetching or caching isn't that useful in the Parallel task.
 
 |property|description|default|
 |--------|-----------|-------|
@@ -874,8 +1485,6 @@ Requires one of the following extensions:
 |type|The type of database to query. Valid values are `mysql` and `postgresql`_||Yes|
 |connectorConfig|Specify the database connection properties via `connectURI`, `user` and `password`||Yes|
 
-<a name="inline-firehose"></a>
-
 ### InlineFirehose
 
 This Firehose can be used to read the data inlined in its own spec.
@@ -894,8 +1503,6 @@ A sample inline Firehose spec is shown below:
 |type|This should be "inline".|yes|
 |data|Inlined data to ingest.|yes|
 
-<a name="combining-firehose"></a>
-
 ### CombiningFirehose
 
 This Firehose can be used to combine and merge data from a list of different Firehoses.
@@ -911,57 +1518,3 @@ This Firehose can be used to combine and merge data from a list of different Fir
 |--------|-----------|---------|
 |type|This should be "combining"|yes|
 |delegates|List of Firehoses to combine data from|yes|
-
-
-## Input Sources
-
-### DruidInputSource
-
-This InputSource can be used to read data from existing Druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-This InputSource is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
-This InputSource has a fixed InputFormat for reading from Druid segments; no InputFormat needs to be specified in the ingestion spec when using this InputSource.
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "druid".|yes|
-|dataSource|A String defining the Druid datasource to fetch rows from|yes|
-|interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
-|dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
-|metrics|The list of Strings containing the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
-|filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
-
-A minimal example DruidInputSource spec is shown below:
-
-```json
-{
-    "type": "druid",
-    "dataSource": "wikipedia",
-    "interval": "2013-01-01/2013-01-02"
-}
-```
-
-The spec above will read all existing dimension and metric columns from the `wikipedia` datasource, including all rows with a timestamp (the `__time` column) within the interval `2013-01-01/2013-01-02`.
-
-A spec that applies a filter and reads a subset of the original datasource's columns is shown below.
-
-```json
-{
-    "type": "druid",
-    "dataSource": "wikipedia",
-    "interval": "2013-01-01/2013-01-02",
-    "dimensions": [
-      "page",
-      "user"
-    ],
-    "metrics": [
-      "added"
-    ],
-    "filter": {
-      "type": "selector",
-      "dimension": "page",
-      "value": "Druid"
-    }
-}
-```
-
-This spec above will only return the `page`, `user` dimensions and `added` metric. Only rows where `page` = `Druid` will be returned.
