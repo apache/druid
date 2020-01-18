@@ -32,15 +32,15 @@ public class LongLastBufferAggregator extends NumericLastBufferAggregator<BaseLo
   }
 
   @Override
-  public void initValue(ByteBuffer buf, int position)
+  void initValue(ByteBuffer buf, int position)
   {
-    buf.putLong(position + VALUE_OFFSET, 0);
+    buf.putLong(position, 0);
   }
 
   @Override
-  public void putValue(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position)
   {
-    buf.putLong(position + VALUE_OFFSET, valueSelector.getLong());
+    buf.putLong(position, valueSelector.getLong());
   }
 
   @Override

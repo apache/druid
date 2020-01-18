@@ -1258,7 +1258,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, NullHandling.sqlCompatible() ? "" : "10.1", 2L, 2.0f, "1"}
+            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1"}
         )
     );
   }
@@ -1582,7 +1582,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 11.1}
+            // default mode subquery results:
+            //[, 10.1]
+            //[a, ]
+            //[abc, def]
+            // sql compatible mode subquery results:
+            //[null, 10.1]
+            //[, 2]
+            //[a, ]
+            //[abc, def]
+            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 10.1}
         )
     );
   }
@@ -1727,6 +1736,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{NullHandling.defaultLongValue(), NullHandling.defaultDoubleValue(), NullHandling.defaultFloatValue()}
+        )
+    );
+  }
+
+  @Test
+  public void testFirstLatestAggregatorsSkipNulls() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    final DimFilter filter;
+    if (useDefault) {
+      filter = not(selector("dim1", null, null));
+    } else {
+      filter = and(
+          not(selector("dim1", null, null)),
+          not(selector("l1", null, null)),
+          not(selector("d1", null, null)),
+          not(selector("f1", null, null))
+      );
+    }
+    testQuery(
+        "SELECT EARLIEST(dim1, 32), LATEST(l1), LATEST(d1), LATEST(f1) "
+        + "FROM druid.numfoo "
+        + "WHERE dim1 IS NOT NULL AND l1 IS NOT NULL AND d1 IS NOT NULL AND f1 is NOT NULL",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(filter)
+                  .aggregators(
+                      aggregators(
+                          new StringFirstAggregatorFactory("a0", "dim1", 32),
+                          new LongLastAggregatorFactory("a1", "l1"),
+                          new DoubleLastAggregatorFactory("a2", "d1"),
+                          new FloatLastAggregatorFactory("a3", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            // first row of dim1 is empty string, which is null in default mode, last non-null numeric rows are zeros
+            new Object[]{useDefault ? "10.1" : "", 0L, 0.0, 0.0f}
         )
     );
   }

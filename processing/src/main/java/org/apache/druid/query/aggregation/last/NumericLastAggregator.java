@@ -24,14 +24,19 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
+/**
+ * Base type for on heap 'last' aggregator for primitive numeric column selectors..
+ *
+ * This could probably share a base class with {@link org.apache.druid.query.aggregation.first.NumericFirstAggregator}
+ */
 public abstract class NumericLastAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
 {
-  final boolean useDefault = NullHandling.replaceWithDefault();
-  final BaseLongColumnValueSelector timeSelector;
-  final TSelector valueSelector;
+  private final boolean useDefault = NullHandling.replaceWithDefault();
+  private final BaseLongColumnValueSelector timeSelector;
 
-  protected long lastTime;
-  protected boolean rhsNull;
+  final TSelector valueSelector;
+  long lastTime;
+  boolean rhsNull;
 
   public NumericLastAggregator(BaseLongColumnValueSelector timeSelector, TSelector valueSelector)
   {
@@ -41,8 +46,6 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
     lastTime = Long.MIN_VALUE;
     rhsNull = !useDefault;
   }
-
-  abstract void setCurrentValue();
 
   @Override
   public void aggregate()
@@ -64,4 +67,9 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
   {
     // nothing to close
   }
+
+  /**
+   * Store the current primitive typed 'first' value
+   */
+  abstract void setCurrentValue();
 }

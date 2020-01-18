@@ -25,7 +25,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 public class DoubleLastAggregator extends NumericLastAggregator<BaseDoubleColumnValueSelector>
 {
-  protected double lastValue;
+  double lastValue;
 
   public DoubleLastAggregator(BaseLongColumnValueSelector timeSelector, BaseDoubleColumnValueSelector valueSelector)
   {

@@ -156,7 +156,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
           public void putValue(ByteBuffer buf, int position)
           {
             SerializablePair<Long, Double> pair = selector.getObject();
-            buf.putDouble(position + VALUE_OFFSET, pair.rhs);
+            buf.putDouble(position, pair.rhs);
           }
 
           @Override
@@ -239,16 +239,14 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    if (storeDoubleAsFloat) {
-      return "float";
-    }
-    return "double";
+    return "serializablePairLongDouble";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Double.BYTES + 1;
+    // timestamp, is null, value
+    return Long.BYTES + Byte.BYTES + Double.BYTES;
   }
 
   @Override

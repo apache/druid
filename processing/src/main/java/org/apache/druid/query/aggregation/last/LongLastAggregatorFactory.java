@@ -149,7 +149,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
           public void putValue(ByteBuffer buf, int position)
           {
             SerializablePair<Long, Long> pair = selector.getObject();
-            buf.putLong(position + VALUE_OFFSET, pair.rhs);
+            buf.putLong(position, pair.rhs);
           }
 
           @Override
@@ -232,13 +232,14 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "long";
+    return "serializablePairLongLong";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return 1 + Long.BYTES * 2;
+    // timestamp, is null, value
+    return Long.BYTES + Byte.BYTES + Long.BYTES;
   }
 
   @Override

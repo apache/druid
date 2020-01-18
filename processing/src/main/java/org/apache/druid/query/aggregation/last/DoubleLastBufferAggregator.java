@@ -38,13 +38,13 @@ public class DoubleLastBufferAggregator extends NumericLastBufferAggregator<Base
   @Override
   void initValue(ByteBuffer buf, int position)
   {
-    buf.putDouble(position + VALUE_OFFSET, 0);
+    buf.putDouble(position, 0);
   }
 
   @Override
   void putValue(ByteBuffer buf, int position)
   {
-    buf.putDouble(position + VALUE_OFFSET, valueSelector.getDouble());
+    buf.putDouble(position, valueSelector.getDouble());
   }
 
   @Override

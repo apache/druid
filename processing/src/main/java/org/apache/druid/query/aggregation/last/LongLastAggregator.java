@@ -24,7 +24,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 public class LongLastAggregator extends NumericLastAggregator<BaseLongColumnValueSelector>
 {
-  protected long lastValue;
+  long lastValue;
 
   public LongLastAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
   {

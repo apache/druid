@@ -38,15 +38,14 @@ public class FloatLastBufferAggregator extends NumericLastBufferAggregator<BaseF
   @Override
   void initValue(ByteBuffer buf, int position)
   {
-    buf.putFloat(position + VALUE_OFFSET, 0);
+    buf.putFloat(position, 0);
   }
 
   @Override
   void putValue(ByteBuffer buf, int position)
   {
-    buf.putFloat(position + VALUE_OFFSET, valueSelector.getFloat());
+    buf.putFloat(position, valueSelector.getFloat());
   }
-
 
   @Override
   public Object get(ByteBuffer buf, int position)

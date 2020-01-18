@@ -150,7 +150,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
           public void putValue(ByteBuffer buf, int position)
           {
             SerializablePair<Long, Float> pair = selector.getObject();
-            buf.putFloat(position + VALUE_OFFSET, pair.rhs);
+            buf.putFloat(position, pair.rhs);
           }
 
           @Override
@@ -234,13 +234,14 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "serializablePairLongFloat";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Float.BYTES + 1;
+    // timestamp, is null, value
+    return Long.BYTES + Byte.BYTES + Float.BYTES;
   }
 
   @Override

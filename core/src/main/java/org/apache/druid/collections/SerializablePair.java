@@ -55,13 +55,13 @@ public class SerializablePair<T1, T2> extends Pair<T1, T2>
     final int firstIsNull = nullsFirst ? -1 : 1;
     final int secondIsNull = nullsFirst ? 1 : -1;
     return (o1, o2) -> {
-      if (o1.rhs == null) {
-        if (o2.rhs == null) {
+      if (o1 == null || o1.rhs == null) {
+        if (o2 == null || o2.rhs == null) {
           return 0;
         }
         return firstIsNull;
       }
-      if (o2.rhs == null) {
+      if (o2 == null || o2.rhs == null) {
         return secondIsNull;
       }
       return delegate.compare(o1.rhs, o2.rhs);

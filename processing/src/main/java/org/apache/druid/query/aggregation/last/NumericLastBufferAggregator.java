@@ -27,17 +27,21 @@ import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Base type for buffer based 'last' aggregator for primitive numeric column selectors
+ *
+ * This could probably share a base type with
+ * {@link org.apache.druid.query.aggregation.first.NumericFirstBufferAggregator} ...
+ */
 public abstract class NumericLastBufferAggregator<TSelector extends BaseNullableColumnValueSelector>
     implements BufferAggregator
 {
   static final int NULL_OFFSET = Long.BYTES;
   static final int VALUE_OFFSET = NULL_OFFSET + Byte.BYTES;
-  static byte RHS_NOT_NULL = 0x00;
-  static byte RHS_NULL = 0x01;
 
-  final boolean useDefault = NullHandling.replaceWithDefault();
+  private final boolean useDefault = NullHandling.replaceWithDefault();
+  private final BaseLongColumnValueSelector timeSelector;
 
-  final BaseLongColumnValueSelector timeSelector;
   final TSelector valueSelector;
 
   public NumericLastBufferAggregator(BaseLongColumnValueSelector timeSelector, TSelector valueSelector)
@@ -46,34 +50,40 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
     this.valueSelector = valueSelector;
   }
 
+  /**
+   * Initialize the buffer value at the position of {@link #VALUE_OFFSET}
+   */
   abstract void initValue(ByteBuffer buf, int position);
 
+  /**
+   * Place the primitive value in the buffer at the position of {@link #VALUE_OFFSET}
+   */
   abstract void putValue(ByteBuffer buf, int position);
 
   boolean isValueNull(ByteBuffer buf, int position)
   {
-    return buf.get(position + NULL_OFFSET) == 1;
+    return buf.get(position + NULL_OFFSET) == NullHandling.IS_NULL_BYTE;
   }
 
   void updateTimeWithValue(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
-    putValue(buf, position);
-    buf.put(position + NULL_OFFSET, RHS_NOT_NULL);
+    buf.put(position + NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    putValue(buf, position + VALUE_OFFSET);
   }
 
   void updateTimeWithNull(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
-    buf.put(position + NULL_OFFSET, RHS_NULL);
+    buf.put(position + NULL_OFFSET, NullHandling.IS_NULL_BYTE);
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MIN_VALUE);
-    buf.put(position + NULL_OFFSET, useDefault ? RHS_NOT_NULL : RHS_NULL);
-    initValue(buf, position);
+    buf.put(position + NULL_OFFSET, useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
+    initValue(buf, position + VALUE_OFFSET);
   }
 
   @Override
