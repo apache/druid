@@ -36,12 +36,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class StringTopNColumnSelectorStrategy
-    implements TopNColumnSelectorStrategy<DimensionSelector, Map<Comparable<?>, Aggregator[]>>
+public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregatesProcessor<DimensionSelector>
 {
   private final Function<Object, Comparable<?>> dimensionValueConverter;
+  private HashMap<Comparable<?>, Aggregator[]> aggregatesStore;
 
-  public StringTopNColumnSelectorStrategy(final ValueType dimensionType)
+  public StringTopNColumnAggregatesProcessor(final ValueType dimensionType)
   {
     this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(ValueType.STRING, dimensionType);
   }
@@ -53,7 +53,7 @@ public class StringTopNColumnSelectorStrategy
   }
 
   @Override
-  public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
+  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
   {
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
@@ -74,34 +74,9 @@ public class StringTopNColumnSelectorStrategy
   }
 
   @Override
-  public Map<Comparable<?>, Aggregator[]> makeDimExtractionAggregateStore()
+  public void updateResults(TopNResultBuilder resultBuilder)
   {
-    return new HashMap<>();
-  }
-
-  @Override
-  public long dimExtractionScanAndAggregate(
-      TopNQuery query,
-      DimensionSelector selector,
-      Cursor cursor,
-      Aggregator[][] rowSelector,
-      Map<Comparable<?>, Aggregator[]> aggregatesStore
-  )
-  {
-    if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
-      return dimExtractionScanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector, aggregatesStore);
-    } else {
-      return dimExtractionScanAndAggregateWithCardinalityUnknown(query, cursor, selector, aggregatesStore);
-    }
-  }
-
-  @Override
-  public void updateDimExtractionResults(
-      final Map<Comparable<?>, Aggregator[]> aggregatesStore,
-      final TopNResultBuilder resultBuilder
-  )
-  {
-    for (Map.Entry<Comparable<?>, Aggregator[]> entry : aggregatesStore.entrySet()) {
+    for (Map.Entry<?, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null) {
         Object[] vals = new Object[aggs.length];
@@ -115,12 +90,42 @@ public class StringTopNColumnSelectorStrategy
     }
   }
 
-  private long dimExtractionScanAndAggregateWithCardinalityKnown(
+  @Override
+  public void closeAggregators()
+  {
+    for (Aggregator[] aggregators : aggregatesStore.values()) {
+      for (Aggregator agg : aggregators) {
+        agg.close();
+      }
+    }
+  }
+
+  @Override
+  public long scanAndAggregate(
+      TopNQuery query,
+      DimensionSelector selector,
+      Cursor cursor,
+      Aggregator[][] rowSelector
+  )
+  {
+    if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
+      return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
+    } else {
+      return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
+    }
+  }
+
+  @Override
+  public void initAggregateStore()
+  {
+    this.aggregatesStore = new HashMap<>();
+  }
+
+  private long scanAndAggregateWithCardinalityKnown(
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
-      Aggregator[][] rowSelector,
-      Map<Comparable<?>, Aggregator[]> aggregatesStore
+      Aggregator[][] rowSelector
   )
   {
     long processedRows = 0;
@@ -128,18 +133,17 @@ public class StringTopNColumnSelectorStrategy
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
-        Aggregator[] theAggregators = rowSelector[dimIndex];
-        if (theAggregators == null) {
+        Aggregator[] aggs = rowSelector[dimIndex];
+        if (aggs == null) {
           final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-          theAggregators = aggregatesStore.get(key);
-          if (theAggregators == null) {
-            theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-            aggregatesStore.put(key, theAggregators);
-          }
-          rowSelector[dimIndex] = theAggregators;
+          aggs = aggregatesStore.computeIfAbsent(
+              key,
+              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+          );
+          rowSelector[dimIndex] = aggs;
         }
 
-        for (Aggregator aggregator : theAggregators) {
+        for (Aggregator aggregator : aggs) {
           aggregator.aggregate();
         }
       }
@@ -149,11 +153,10 @@ public class StringTopNColumnSelectorStrategy
     return processedRows;
   }
 
-  private long dimExtractionScanAndAggregateWithCardinalityUnknown(
+  private long scanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,
-      DimensionSelector selector,
-      Map<Comparable<?>, Aggregator[]> aggregatesStore
+      DimensionSelector selector
   )
   {
     long processedRows = 0;
@@ -162,13 +165,11 @@ public class StringTopNColumnSelectorStrategy
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
         final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-
-        Aggregator[] theAggregators = aggregatesStore.get(key);
-        if (theAggregators == null) {
-          theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-          aggregatesStore.put(key, theAggregators);
-        }
-        for (Aggregator aggregator : theAggregators) {
+        Aggregator[] aggs = aggregatesStore.computeIfAbsent(
+            key,
+            k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+        );
+        for (Aggregator aggregator : aggs) {
           aggregator.aggregate();
         }
       }

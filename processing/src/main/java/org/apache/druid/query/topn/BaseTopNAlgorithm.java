@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.topn.types.TopNColumnSelectorStrategy;
 import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -79,7 +78,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       @Nullable TopNQueryMetrics queryMetrics
   )
   {
-    if (params.getCardinality() != TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN) {
+    if (params.getCardinality() != TopNParams.CARDINALITY_UNKNOWN) {
       runWithCardinalityKnown(params, resultBuilder, dimValSelector, queryMetrics);
     } else {
       runWithCardinalityUnknown(params, resultBuilder, queryMetrics);
