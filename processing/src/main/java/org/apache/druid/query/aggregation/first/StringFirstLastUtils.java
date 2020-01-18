@@ -61,19 +61,6 @@ public class StringFirstLastUtils
   }
 
   @Nullable
-  public static String chop(@Nullable final String s, final int maxBytes)
-  {
-    if (s == null) {
-      return null;
-    } else {
-      // Shorten firstValue to what could fit in maxBytes as UTF-8.
-      final byte[] bytes = new byte[maxBytes];
-      final int len = StringUtils.toUtf8WithLimit(s, ByteBuffer.wrap(bytes));
-      return new String(bytes, 0, len, StandardCharsets.UTF_8);
-    }
-  }
-
-  @Nullable
   public static SerializablePairLongString readPairFromSelectors(
       final BaseLongColumnValueSelector timeSelector,
       final BaseObjectColumnValueSelector<?> valueSelector
