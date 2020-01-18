@@ -189,7 +189,7 @@ public class StringFirstBufferAggregatorTest
 
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
-    Assert.assertEquals(1526724600L, (long) sp.lhs);
-    Assert.assertEquals("2.0", sp.rhs);
+    Assert.assertEquals(1526724000L, (long) sp.lhs);
+    Assert.assertEquals(null, sp.rhs);
   }
 }
