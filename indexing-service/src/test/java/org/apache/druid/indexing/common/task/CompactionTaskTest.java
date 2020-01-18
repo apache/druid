@@ -48,6 +48,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
@@ -272,6 +273,7 @@ public class CompactionTaskTest
     objectMapper.registerModule(
         new SimpleModule().registerSubtypes(new NamedType(NumberedShardSpec.class, "NumberedShardSpec"))
     );
+    objectMapper.registerModules(new IndexingServiceTuningConfigModule().getJacksonModules());
     return objectMapper;
   }
 
@@ -504,10 +506,7 @@ public class CompactionTaskTest
         .build();
 
     final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) OBJECT_MAPPER);
-    mapper.registerSubtypes(
-        new NamedType(OldCompactionTaskWithAnyTuningConfigType.class, "compact"),
-        new NamedType(IndexTuningConfig.class, "index")
-    );
+    mapper.registerSubtypes(new NamedType(OldCompactionTaskWithAnyTuningConfigType.class, "compact"));
     final byte[] bytes = mapper.writeValueAsBytes(oldTask);
     final CompactionTask fromJson = mapper.readValue(bytes, CompactionTask.class);
     assertEquals(expectedFromJson, fromJson);

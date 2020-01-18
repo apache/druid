@@ -1171,7 +1171,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  @JsonTypeName("index")
   public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   {
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
