@@ -30,7 +30,6 @@ import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class StringFirstLastUtils
 {
