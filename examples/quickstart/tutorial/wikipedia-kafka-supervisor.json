@@ -39,12 +39,6 @@
           }
         ]
       },
-      "parser": {
-        "type": "string",
-        "parseSpec": {
-          "format": "json"
-        }
-      },
       "metricsSpec": [],
       "granularitySpec": {
         "type": "uniform",
