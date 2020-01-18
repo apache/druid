@@ -133,18 +133,17 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
-        Aggregator[] theAggregators = rowSelector[dimIndex];
-        if (theAggregators == null) {
+        Aggregator[] aggs = rowSelector[dimIndex];
+        if (aggs == null) {
           final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-          theAggregators = aggregatesStore.get(key);
-          if (theAggregators == null) {
-            theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-            aggregatesStore.put(key, theAggregators);
-          }
-          rowSelector[dimIndex] = theAggregators;
+          aggs = aggregatesStore.computeIfAbsent(
+              key,
+              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+          );
+          rowSelector[dimIndex] = aggs;
         }
 
-        for (Aggregator aggregator : theAggregators) {
+        for (Aggregator aggregator : aggs) {
           aggregator.aggregate();
         }
       }
@@ -166,11 +165,10 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
         final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-        Aggregator[] aggs = aggregatesStore.get(key);
-        if (aggs == null) {
-          aggs = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-          aggregatesStore.put(key, aggs);
-        }
+        Aggregator[] aggs = aggregatesStore.computeIfAbsent(
+            key,
+            k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+        );
         for (Aggregator aggregator : aggs) {
           aggregator.aggregate();
         }

@@ -48,12 +48,10 @@ public class DoubleTopNColumnAggregatesProcessor
   )
   {
     long key = Double.doubleToLongBits(selector.getDouble());
-    Aggregator[] aggs = aggregatesStore.get(key);
-    if (aggs == null) {
-      aggs = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-      aggregatesStore.put(key, aggs);
-    }
-    return aggs;
+    return aggregatesStore.computeIfAbsent(
+        key,
+        k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+    );
   }
 
   @Override

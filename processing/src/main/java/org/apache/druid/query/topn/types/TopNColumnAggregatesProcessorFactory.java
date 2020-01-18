@@ -29,12 +29,12 @@ import org.apache.druid.segment.column.ValueType;
 
 import java.util.function.Function;
 
-public class TopNColumnSelectorStrategyFactory
+public class TopNColumnAggregatesProcessorFactory
     implements ColumnSelectorStrategyFactory<TopNColumnAggregatesProcessor<?>>
 {
   private final ValueType dimensionType;
 
-  public TopNColumnSelectorStrategyFactory(final ValueType dimensionType)
+  public TopNColumnAggregatesProcessorFactory(final ValueType dimensionType)
   {
     this.dimensionType = Preconditions.checkNotNull(dimensionType, "dimensionType");
   }
