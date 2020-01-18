@@ -2684,6 +2684,126 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testNullDoubleTopN() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{1.7, 1L},
+          new Object[]{1.0, 1L},
+          new Object[]{0.0, 4L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{1.7, 1L},
+          new Object[]{1.0, 1L},
+          new Object[]{0.0, 1L}
+      );
+    }
+    testQuery(
+        "SELECT d1, COUNT(*) FROM druid.numfoo GROUP BY d1 ORDER BY d1 DESC LIMIT 10",
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("d1", "_d0", ValueType.DOUBLE))
+                .threshold(10)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testNullFloatTopN() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{1.0f, 1L},
+          new Object[]{0.1f, 1L},
+          new Object[]{0.0f, 4L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{1.0f, 1L},
+          new Object[]{0.1f, 1L},
+          new Object[]{0.0f, 1L}
+      );
+    }
+    testQuery(
+        "SELECT f1, COUNT(*) FROM druid.numfoo GROUP BY f1 ORDER BY f1 DESC LIMIT 10",
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("f1", "_d0", ValueType.FLOAT))
+                .threshold(10)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testNullLongTopN() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{325323L, 1L},
+          new Object[]{7L, 1L},
+          new Object[]{0L, 4L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{325323L, 1L},
+          new Object[]{7L, 1L},
+          new Object[]{0L, 1L}
+      );
+    }
+    testQuery(
+        "SELECT l1, COUNT(*) FROM druid.numfoo GROUP BY l1 ORDER BY l1 DESC LIMIT 10",
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("l1", "_d0", ValueType.LONG))
+                .threshold(10)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
   public void testEmptyStringEquality() throws Exception
   {
     if (NullHandling.replaceWithDefault()) {
