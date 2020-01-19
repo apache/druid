@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.ZKPathsUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
@@ -54,7 +55,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Announces things on Zookeeper.
+ * {@link NodeAnnouncer} announces single node on Zookeeper and only watches this node,
+ * while {@link Announcer} watches all child paths, not only this node.
  */
 public class Announcer
 {
@@ -242,8 +244,7 @@ public class Announcer
                   switch (event.getType()) {
                     case CHILD_REMOVED:
                       final ChildData child = event.getData();
-                      final ZKPaths.PathAndNode childPath = ZKPaths.getPathAndNode(child.getPath());
-                      final byte[] value = finalSubPaths.get(childPath.getNode());
+                      final byte[] value = finalSubPaths.get(ZKPathsUtils.getParentNode(child.getPath()));
                       if (value != null) {
                         log.info("Node[%s] dropped, reinstating.", child.getPath());
                         createAnnouncement(child.getPath(), value);
@@ -432,20 +433,6 @@ public class Announcer
     }
     catch (Exception e) {
       log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
-    }
-  }
-
-  private static class Announceable
-  {
-    final String path;
-    final byte[] bytes;
-    final boolean removeParentsIfCreated;
-
-    public Announceable(String path, byte[] bytes, boolean removeParentsIfCreated)
-    {
-      this.path = path;
-      this.bytes = bytes;
-      this.removeParentsIfCreated = removeParentsIfCreated;
     }
   }
 }

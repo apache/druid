@@ -42,11 +42,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * NodeAnnouncer announces single node on Zookeeper and only watches this node,
- * while {@link Announcer} watches all child paths, not only this node
+ * {@link NodeAnnouncer} announces single node on Zookeeper and only watches this node,
+ * while {@link Announcer} watches all child paths, not only this node.
  */
 public class NodeAnnouncer
 {
@@ -68,10 +67,13 @@ public class NodeAnnouncer
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
   /**
-   * Only the one created the parent path can drop the parent path, so should remember these created parents.
+   * Only the one created the parent path can drop it, so should remember these created parents.
+   * This comment sounds confusing, shouldn't one of "parent path" occurrences in it be something else?
    */
-  private final List<String> pathsCreatedInThisAnnouncer = new CopyOnWriteArrayList<>();
+  @GuardedBy("toAnnounce")
+  private final List<String> pathsCreatedInThisAnnouncer = new ArrayList<>();
 
+  @GuardedBy("toAnnounce")
   private boolean started = false;
 
   public NodeAnnouncer(CuratorFramework curator)
@@ -187,7 +189,7 @@ public class NodeAnnouncer
         }
       }
       catch (Exception e) {
-        log.debug(e, "Problem checking if the parent existed, ignoring.");
+        log.debug(e, "Problem checking if the parent path doesn't exist, ignoring.");
       }
 
       // Synchronize to make sure that I only create a listener once.
@@ -320,6 +322,7 @@ public class NodeAnnouncer
     }
   }
 
+  @GuardedBy("toAnnounce")
   private void createPath(String parentPath, boolean removeParentsIfCreated)
   {
     try {
@@ -331,20 +334,6 @@ public class NodeAnnouncer
     }
     catch (Exception e) {
       log.error(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
-    }
-  }
-
-  private static class Announceable
-  {
-    final String path;
-    final byte[] bytes;
-    final boolean removeParentsIfCreated;
-
-    public Announceable(String path, byte[] bytes, boolean removeParentsIfCreated)
-    {
-      this.path = path;
-      this.bytes = bytes;
-      this.removeParentsIfCreated = removeParentsIfCreated;
     }
   }
 }
