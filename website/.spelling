@@ -1114,7 +1114,6 @@ SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
 bufferPoolName
-chunkInterval
 cms
 cpuName
 cpuTime

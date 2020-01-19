@@ -157,12 +157,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void chunkInterval(Interval interval)
-  {
-    setDimension("chunkInterval", interval.toString());
-  }
-
-  @Override
   public void preFilters(List<Filter> preFilters)
   {
     // Emit nothing by default.
