@@ -22,15 +22,15 @@ title: "ORC Extension"
   ~ under the License.
   -->
 
+## ORC extension
 
-This Apache Druid module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
-Apache ORC files.
+This Apache Druid extension enables Druid to ingest and understand the Apache ORC data format.
 
-To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-orc-extensions`.
-
-The `druid-orc-extensions` provides the [ORC input format](../../ingestion/data-formats.md#orc) and the [ORC Hadoop parser](../../ingestion/data-formats.md#orc-hadoop-parser)
+The extension provides the [ORC input format](../../ingestion/data-formats.md#orc) and the [ORC Hadoop parser](../../ingestion/data-formats.md#orc-hadoop-parser)
 for [native batch ingestion](../../ingestion/native-batch.md) and [Hadoop batch ingestion](../../ingestion/hadoop.md), respectively.
 Please see corresponding docs for details.
+
+To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-orc-extensions`.
 
 ### Migration from 'contrib' extension
 This extension, first available in version 0.15.0, replaces the previous 'contrib' extension which was available until
