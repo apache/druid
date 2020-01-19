@@ -100,6 +100,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -5832,9 +5833,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("longNumericNull", 10L)
                         .build(),
-                    makeNumericNullRowHelper("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
-                    makeNumericNullRowHelper("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
-                    makeNumericNullRowHelper("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
+                    makeRowWithNulls("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeRowWithNulls("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeRowWithNulls("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
                 )
             )
         )
@@ -5900,9 +5901,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("floatNumericNull", 10f)
                         .build(),
-                    makeNumericNullRowHelper("index_alias", 114L, "floatNumericNull", NullHandling.defaultFloatValue()),
-                    makeNumericNullRowHelper("index_alias", 126L, "floatNumericNull", NullHandling.defaultFloatValue()),
-                    makeNumericNullRowHelper("index_alias", 166L, "floatNumericNull", NullHandling.defaultFloatValue())
+                    makeRowWithNulls("index_alias", 114L, "floatNumericNull", NullHandling.defaultFloatValue()),
+                    makeRowWithNulls("index_alias", 126L, "floatNumericNull", NullHandling.defaultFloatValue()),
+                    makeRowWithNulls("index_alias", 166L, "floatNumericNull", NullHandling.defaultFloatValue())
                 )
             )
         )
@@ -5968,9 +5969,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("doubleNumericNull", 10d)
                         .build(),
-                    makeNumericNullRowHelper("index_alias", 114L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
-                    makeNumericNullRowHelper("index_alias", 126L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
-                    makeNumericNullRowHelper("index_alias", 166L, "doubleNumericNull", NullHandling.defaultDoubleValue())
+                    makeRowWithNulls("index_alias", 114L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
+                    makeRowWithNulls("index_alias", 126L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
+                    makeRowWithNulls("index_alias", 166L, "doubleNumericNull", NullHandling.defaultDoubleValue())
                 )
             )
         )
@@ -5978,16 +5979,113 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResults(expectedResults, query);
   }
 
-  private static Map<String, Object> makeNumericNullRowHelper(
+
+  @Test
+  public void testAggregateOnLongNumericNull()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("longNumericNull", "dim", ValueType.LONG))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(10000)
+        .aggregators(new CountAggregatorFactory("count"))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    makeRowWithNulls("dim", NullHandling.defaultLongValue(), "count", 279L),
+                    makeRowWithNulls("dim", 10L, "count", 93L),
+                    makeRowWithNulls("dim", 20L, "count", 93L),
+                    makeRowWithNulls("dim", 40L, "count", 93L),
+                    makeRowWithNulls("dim", 50L, "count", 279L),
+                    makeRowWithNulls("dim", 70L, "count", 279L),
+                    makeRowWithNulls("dim", 80L, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testAggregateOnDoubleNumericNull()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("doubleNumericNull", "dim", ValueType.DOUBLE))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(10000)
+        .aggregators(new CountAggregatorFactory("count"))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    makeRowWithNulls("dim", NullHandling.defaultDoubleValue(), "count", 279L),
+                    makeRowWithNulls("dim", 10.0, "count", 93L),
+                    makeRowWithNulls("dim", 20.0, "count", 93L),
+                    makeRowWithNulls("dim", 40.0, "count", 93L),
+                    makeRowWithNulls("dim", 50.0, "count", 279L),
+                    makeRowWithNulls("dim", 70.0, "count", 279L),
+                    makeRowWithNulls("dim", 80.0, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testAggregateOnFloatNumericNull()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("floatNumericNull", "dim", ValueType.FLOAT))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(10000)
+        .aggregators(new CountAggregatorFactory("count"))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    makeRowWithNulls("dim", NullHandling.defaultFloatValue(), "count", 279L),
+                    makeRowWithNulls("dim", 10.0f, "count", 93L),
+                    makeRowWithNulls("dim", 20.0f, "count", 93L),
+                    makeRowWithNulls("dim", 40.0f, "count", 93L),
+                    makeRowWithNulls("dim", 50.0f, "count", 279L),
+                    makeRowWithNulls("dim", 70.0f, "count", 279L),
+                    makeRowWithNulls("dim", 80.0f, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  private static Map<String, Object> makeRowWithNulls(
       String dimName,
-      Object dimValue,
-      String nameOfColumnWithNull,
-      Object defaultNullValue
+      @Nullable Object dimValue,
+      String metric,
+      @Nullable Object metricVal
   )
   {
     Map<String, Object> nullRow = new HashMap<>();
     nullRow.put(dimName, dimValue);
-    nullRow.put(nameOfColumnWithNull, defaultNullValue);
+    nullRow.put(metric, metricVal);
     return nullRow;
   }
 }

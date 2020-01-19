@@ -188,6 +188,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public DimensionSelector makeDimensionSelector(
       DimensionSpec dimensionSpec,
       ColumnSelector columnSelector,
@@ -202,6 +203,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnValueSelector<?> makeColumnValueSelector(
       String columnName,
       ColumnSelector columnSelector,
@@ -253,6 +255,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnCapabilities getColumnCapabilitiesWithFallback(StorageAdapter adapter, String columnName)
   {
     final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(columnName);
