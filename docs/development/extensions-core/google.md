@@ -22,23 +22,36 @@ title: "Google Cloud Storage"
   ~ under the License.
   -->
 
+## Google Cloud Storage Extension
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` extension and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
+This extension allows you to do 2 things:
+* [Ingest data](#reading-data-from-google-cloud-storage) from files stored in Google Cloud Storage.
+* Write segments to [deep storage](#deep-storage) in S3.
 
-## Deep Storage
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` extension.
+
+### Required Configuration
+
+To configure connectivity to google cloud, run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
+
+### Reading data from Google Cloud Storage
+
+The [Google Cloud Storage input source](../../ingestion/native-batch.md#google-cloud-storage-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md#parallel-task)
+to read objects directly from Google Cloud Storage. If you use the [Hadoop task](../../ingestion/hadoop.md),
+you can read data from Google Cloud Storage by specifying the paths in your [`inputSpec`](../../ingestion/hadoop.md#inputspec).
+
+Objects can also be read directly from Google Cloud Storage via the [StaticGoogleBlobStoreFirehose](../../ingestion/native-batch.md#staticgoogleblobstorefirehose)
+
+### Deep Storage
 
 Deep storage can be written to Google Cloud Storage either via this extension or the [druid-hdfs-storage extension](../extensions-core/hdfs.md).
 
-### Configuration
+#### Configuration
+
+To configure connectivity to google cloud, run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|google||Must be set.|
 |`druid.google.bucket`||GCS bucket name.|Must be set.|
 |`druid.google.prefix`||GCS prefix.|No-prefix|
-
-## Reading data from Google Cloud Storage
-
-The [Google Cloud Storage input source](../../ingestion/native-batch.md#google-cloud-storage-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md#parallel-task)
-to read objects directly from Google Cloud Storage. If you use the [Hadoop task](../../ingestion/hadoop.md),
-you can read data from Google Cloud Storage by specifying the paths in your [`inputSpec`](../../ingestion/hadoop.md#inputspec).
