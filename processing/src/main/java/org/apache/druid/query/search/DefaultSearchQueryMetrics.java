@@ -26,7 +26,6 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
-import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -137,12 +136,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
-  public void chunkInterval(Interval interval)
-  {
-    delegateQueryMetrics.chunkInterval(interval);
-  }
-
-  @Override
   public void preFilters(List<Filter> preFilters)
   {
     delegateQueryMetrics.preFilters(preFilters);
@@ -206,12 +199,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportSegmentAndCacheTime(long timeNs)
   {
     return delegateQueryMetrics.reportSegmentAndCacheTime(timeNs);
-  }
-
-  @Override
-  public QueryMetrics reportIntervalChunkTime(long timeNs)
-  {
-    return delegateQueryMetrics.reportIntervalChunkTime(timeNs);
   }
 
   @Override

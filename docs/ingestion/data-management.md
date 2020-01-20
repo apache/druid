@@ -143,7 +143,7 @@ To control the number of result segments per time chunk, you can set [maxRowsPer
 Please note that you can run multiple compactionTasks at the same time. For example, you can run 12 compactionTasks per month instead of running a single task for the entire year.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
-For example, its `firehose` is always the [ingestSegmentFirehose](native-batch.md#segment-firehose), and `dimensionsSpec` and `metricsSpec`
+For example, its `inputSource` is always the [DruidInputSource](native-batch.md#druid-input-source), and `dimensionsSpec` and `metricsSpec`
 include all dimensions and metrics of the input segments by default.
 
 Compaction tasks will exit with a failure status code, without doing anything, if the interval you specify has no
@@ -233,7 +233,7 @@ There are other types of `inputSpec` to enable reindexing and delta ingestion.
 ### Reindexing with Native Batch Ingestion
 
 This section assumes the reader understands how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md),
-which uses a "firehose" to know where and how to read the input data. The [`ingestSegment` firehose](native-batch.md#segment-firehose)
+which uses an `inputSource` to know where and how to read the input data. The [`DruidInputSource`](native-batch.md#druid-input-source)
 can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as
 it has to do all processing inside a single process and can't scale. Please use Hadoop batch ingestion for production
 scenarios dealing with more than 1GB of data.

@@ -143,6 +143,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   }
 
   @Override
+  @JsonProperty
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
