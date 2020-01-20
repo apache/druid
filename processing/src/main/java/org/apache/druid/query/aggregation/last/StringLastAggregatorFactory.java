@@ -36,9 +36,11 @@ import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -48,6 +50,34 @@ import java.util.Objects;
 @JsonTypeName("stringLast")
 public class StringLastAggregatorFactory extends AggregatorFactory
 {
+  private static final Aggregator NIL_AGGREGATOR = new StringLastAggregator(
+      NilColumnValueSelector.instance(),
+      NilColumnValueSelector.instance(),
+      0,
+      false
+  )
+  {
+    @Override
+    public void aggregate()
+    {
+      // no-op
+    }
+  };
+
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new StringLastBufferAggregator(
+      NilColumnValueSelector.instance(),
+      NilColumnValueSelector.instance(),
+      0,
+      false
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
+
   private final String fieldName;
   private final String name;
   protected final int maxStringBytes;
@@ -77,24 +107,32 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return new StringLastAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        valueSelector,
-        maxStringBytes,
-        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
-    );
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_AGGREGATOR;
+    } else {
+      return new StringLastAggregator(
+          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          valueSelector,
+          maxStringBytes,
+          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+      );
+    }
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return new StringLastBufferAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        valueSelector,
-        maxStringBytes,
-        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
-    );
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_BUFFER_AGGREGATOR;
+    } else {
+      return new StringLastBufferAggregator(
+          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          valueSelector,
+          maxStringBytes,
+          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+      );
+    }
   }
 
   @Override
