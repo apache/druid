@@ -161,10 +161,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
                 defaultPool,
-                new TopNQueryQueryToolChest(
-                    new TopNQueryConfig(),
-                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-                ),
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
@@ -173,10 +170,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
                 customPool,
-                new TopNQueryQueryToolChest(
-                    new TopNQueryConfig(),
-                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-                ),
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
@@ -259,10 +253,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
         chest.mergeResults(runner),
         chest
@@ -919,118 +910,6 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     assertExpectedResults(expectedResults, query);
-  }
-
-  @Test
-  public void testTopNOverFirstLastAggregatorChunkPeriod()
-  {
-    TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .granularity(QueryRunnerTestHelper.MONTH_GRAN)
-        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
-        .metric("last")
-        .threshold(3)
-        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-        .aggregators(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
-        )
-        .context(ImmutableMap.of("chunkPeriod", "P1D"))
-        .build();
-
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<>(
-            DateTimes.of("2011-01-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1000L)
-                        .put("last", 1127L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 800L)
-                        .put("last", 943L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 100L)
-                        .put("last", 155L)
-                        .build()
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-02-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1203L)
-                        .put("last", 1292L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 1667L)
-                        .put("last", 1101L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 132L)
-                        .put("last", 114L)
-                        .build()
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-03-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1124L)
-                        .put("last", 1366L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 1166L)
-                        .put("last", 1063L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 153L)
-                        .put("last", 125L)
-                        .build()
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1314L)
-                        .put("last", 1029L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 1447L)
-                        .put("last", 780L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 135L)
-                        .put("last", 120L)
-                        .build()
-                )
-            )
-        )
-    );
-
-    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(query);
-    TestHelper.assertExpectedResults(expectedResults, retval);
   }
 
   @Test
