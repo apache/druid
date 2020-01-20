@@ -71,7 +71,7 @@ public class StringFirstBufferAggregator implements BufferAggregator
           valueSelector
       );
 
-      if (inPair != null && inPair.rhs != null) {
+      if (inPair != null) {
         final long firstTime = buf.getLong(position);
         if (inPair.lhs < firstTime) {
           StringFirstLastUtils.writePair(
@@ -89,14 +89,12 @@ public class StringFirstBufferAggregator implements BufferAggregator
       if (time < firstTime) {
         final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
 
-        if (value != null) {
-          StringFirstLastUtils.writePair(
-              buf,
-              position,
-              new SerializablePairLongString(time, value),
-              maxStringBytes
-          );
-        }
+        StringFirstLastUtils.writePair(
+            buf,
+            position,
+            new SerializablePairLongString(time, value),
+            maxStringBytes
+        );
       }
     }
   }
