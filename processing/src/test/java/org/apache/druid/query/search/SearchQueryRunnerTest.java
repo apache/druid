@@ -78,10 +78,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(SearchQueryRunnerTest.class);
   private static final SearchQueryConfig CONFIG = new SearchQueryConfig();
-  private static final SearchQueryQueryToolChest TOOL_CHEST = new SearchQueryQueryToolChest(
-      CONFIG,
-      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-  );
+  private static final SearchQueryQueryToolChest TOOL_CHEST = new SearchQueryQueryToolChest(CONFIG);
   private static final SearchStrategySelector SELECTOR = new SearchStrategySelector(Suppliers.ofInstance(CONFIG));
 
   @Parameterized.Parameters(name = "{0}")

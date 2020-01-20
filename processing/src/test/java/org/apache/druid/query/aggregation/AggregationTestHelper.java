@@ -177,9 +177,7 @@ public class AggregationTestHelper implements Closeable
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest();
 
     TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         toolchest,
@@ -218,10 +216,7 @@ public class AggregationTestHelper implements Closeable
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",

@@ -37,7 +37,6 @@ import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -240,13 +239,7 @@ public class AppenderatorTester implements AutoCloseable
         new DefaultQueryRunnerFactoryConglomerate(
             ImmutableMap.of(
                 TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(
-                        new IntervalChunkingQueryRunnerDecorator(
-                            queryExecutor,
-                            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-                            emitter
-                        )
-                    ),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 ),

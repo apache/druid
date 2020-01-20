@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -73,28 +72,21 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   };
 
   private final TopNQueryConfig config;
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TopNQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public TopNQueryQueryToolChest(
-      TopNQueryConfig config,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
-  )
+  public TopNQueryQueryToolChest(TopNQueryConfig config)
   {
-    this(config, intervalChunkingQueryRunnerDecorator, DefaultTopNQueryMetricsFactory.instance());
+    this(config, DefaultTopNQueryMetricsFactory.instance());
   }
 
   @Inject
   public TopNQueryQueryToolChest(
       TopNQueryConfig config,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       TopNQueryMetricsFactory queryMetricsFactory
   )
   {
     this.config = config;
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -431,38 +423,27 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public QueryRunner<Result<TopNResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TopNResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(
-        new QueryRunner<Result<TopNResultValue>>()
-        {
-          @Override
-          public Sequence<Result<TopNResultValue>> run(
-              QueryPlus<Result<TopNResultValue>> queryPlus,
-              ResponseContext responseContext
-          )
-          {
-            TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
-            if (topNQuery.getDimensionsFilter() != null) {
-              topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
-            }
-            final TopNQuery delegateTopNQuery = topNQuery;
-            if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
-              final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
-              QueryPlus<Result<TopNResultValue>> delegateQueryPlus = queryPlus.withQuery(
-                  delegateTopNQuery.withDimensionSpec(
-                      new DefaultDimensionSpec(
-                          dimensionSpec.getDimension(),
-                          dimensionSpec.getOutputName()
-                      )
-                  )
-              );
-              return runner.run(delegateQueryPlus, responseContext);
-            } else {
-              return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
-            }
-          }
-        },
-        this
-    );
+    return (queryPlus, responseContext) -> {
+      TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
+      if (topNQuery.getDimensionsFilter() != null) {
+        topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
+      }
+      final TopNQuery delegateTopNQuery = topNQuery;
+      if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
+        final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
+        QueryPlus<Result<TopNResultValue>> delegateQueryPlus = queryPlus.withQuery(
+            delegateTopNQuery.withDimensionSpec(
+                new DefaultDimensionSpec(
+                    dimensionSpec.getDimension(),
+                    dimensionSpec.getOutputName()
+                )
+            )
+        );
+        return runner.run(delegateQueryPlus, responseContext);
+      } else {
+        return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
+      }
+    };
   }
 
   @Override

@@ -113,13 +113,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -177,13 +175,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -243,13 +239,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -331,13 +325,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -426,13 +418,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -493,13 +483,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -584,10 +572,7 @@ public class GroupByQueryQueryToolChestTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null);
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(

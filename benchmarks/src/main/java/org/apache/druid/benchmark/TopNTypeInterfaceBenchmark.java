@@ -301,10 +301,7 @@ public class TopNTypeInterfaceBenchmark
             0,
             Integer.MAX_VALUE
         ),
-        new TopNQueryQueryToolChest(
-            new TopNQueryConfig(),
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new TopNQueryQueryToolChest(new TopNQueryConfig()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }
