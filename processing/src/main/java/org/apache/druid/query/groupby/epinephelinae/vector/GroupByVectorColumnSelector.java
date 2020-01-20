@@ -27,7 +27,8 @@ public interface GroupByVectorColumnSelector
 {
   int getGroupingKeySize();
 
-  @SuppressWarnings("unused")  // false positive unused inspection warning for "keySize"
+  // False positive unused inspection warning for "keySize": https://youtrack.jetbrains.com/issue/IDEA-231034
+  @SuppressWarnings("unused")
   void writeKeys(int[] keySpace, int keySize, int keyOffset, int startRow, int endRow);
 
   void writeKeyToResultRow(
