@@ -88,11 +88,7 @@ import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -2753,26 +2749,11 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()
   {
-    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
-        null,
-        null,
-        null
-    )
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(
-          QueryRunner<T> delegate,
-          QueryToolChest<T, ? extends Query<T>> toolChest
-      )
-      {
-        return delegate;
-      }
-    };
     return new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 (query, future) -> {
                   // do nothing

@@ -180,6 +180,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'killDataSourceWhitelist',
               type: 'string-array',
+              emptyValue: [],
               info: (
                 <>
                   List of dataSources for which kill tasks are sent if property{' '}
@@ -191,6 +192,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'killPendingSegmentsSkipList',
               type: 'string-array',
+              emptyValue: [],
               info: (
                 <>
                   List of dataSources for which pendingSegments are NOT cleaned up if property{' '}
@@ -259,6 +261,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'decommissioningNodes',
               type: 'string-array',
+              emptyValue: [],
               info: (
                 <>
                   List of historical services to 'decommission'. Coordinator will not assign new

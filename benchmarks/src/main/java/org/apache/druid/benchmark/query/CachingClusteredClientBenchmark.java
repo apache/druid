@@ -260,9 +260,7 @@ public class CachingClusteredClientBenchmark
             .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -274,10 +272,7 @@ public class CachingClusteredClientBenchmark
                         "TopNQueryRunnerFactory-bufferPool",
                         () -> ByteBuffer.allocate(PROCESSING_BUFFER_SIZE)
                     ),
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
@@ -374,14 +369,8 @@ public class CachingClusteredClientBenchmark
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        strategySelector,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-    );
-    return new GroupByQueryRunnerFactory(
-        strategySelector,
-        toolChest
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
+    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 
   @TearDown(Level.Trial)

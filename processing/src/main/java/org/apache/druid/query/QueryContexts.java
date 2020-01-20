@@ -43,9 +43,6 @@ public class QueryContexts
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
-
-  @Deprecated
-  public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
   public static final String VECTORIZE_KEY = "vectorize";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
 
@@ -219,12 +216,6 @@ public class QueryContexts
   public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
   {
     return parseInt(query, BROKER_PARALLELISM, defaultValue);
-  }
-
-  @Deprecated
-  public static <T> String getChunkPeriod(Query<T> query)
-  {
-    return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

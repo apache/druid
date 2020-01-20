@@ -43,12 +43,18 @@ import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
@@ -1252,7 +1258,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, NullHandling.sqlCompatible() ? "" : "10.1", 2L, 2.0f, "1"}
+            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1"}
         )
     );
   }
@@ -1297,14 +1303,127 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This test the on-heap version of the AnyAggregator (Double/Float/Long/String)
   @Test
-  public void testLatestInSubquery() throws Exception
+  public void testAnyAggregator() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT "
+        + "ANY_VALUE(cnt), ANY_VALUE(m1), ANY_VALUE(m2), ANY_VALUE(dim1, 10), "
+        + "ANY_VALUE(cnt + 1), ANY_VALUE(m1 + 1), ANY_VALUE(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ValueType.LONG),
+                      expressionVirtualColumn("v1", "(\"m1\" + 1)", ValueType.FLOAT),
+                      expressionVirtualColumn("v2", "concat(\"dim1\",CAST(\"cnt\", 'STRING'))", ValueType.STRING)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "cnt"),
+                          new FloatAnyAggregatorFactory("a1", "m1"),
+                          new DoubleAnyAggregatorFactory("a2", "m2"),
+                          new StringAnyAggregatorFactory("a3", "dim1", 10),
+                          new LongAnyAggregatorFactory("a4", "v0"),
+                          new FloatAnyAggregatorFactory("a5", "v1"),
+                          new StringAnyAggregatorFactory("a6", "v2", 10)
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "10.1", 2L, 2.0f, "1"})
+    );
+  }
+
+  // This test the on-heap version of the AnyAggregator (Double/Float/Long) against numeric columns
+  // that have null values (when run in sql compatible null mode)
+  @Test
+  public void testAnyAggregatorsOnHeapNumericNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "l1"),
+                          new DoubleAnyAggregatorFactory("a1", "d1"),
+                          new FloatAnyAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{7L, 1.0, 1.0f}
+        )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
+  // that have null values (when run in sql compatible null mode)
+  @Test
+  public void testAnyAggregatorsOffHeapNumericNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    testQuery(
+        "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                  .setDataSource(CalciteTests.DATASOURCE3)
+                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                  .setGranularity(Granularities.ALL)
+                  .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
+                  .setAggregatorSpecs(
+                      aggregators(
+                          new LongAnyAggregatorFactory("a0", "l1"),
+                          new DoubleAnyAggregatorFactory("a1", "d1"),
+                          new FloatAnyAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .setContext(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{325323L, 1.7, 0.1f},
+            new Object[]{0L, 0.0, 0.0f},
+            new Object[]{7L, 1.0, 1.0f},
+            new Object[]{null, null, null}
+        )
+        : ImmutableList.of(
+            new Object[]{325323L, 1.7, 0.1f},
+            new Object[]{7L, 1.0, 1.0f},
+            new Object[]{0L, 0.0, 0.0f}
+        )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the LatestAggregator (Double/Float/Long)
+  @Test
+  public void testPrimitiveLatestInSubquery() throws Exception
   {
     // Cannot vectorize LATEST aggregator.
     skipVectorize();
 
     testQuery(
-        "SELECT SUM(val) FROM (SELECT dim2, LATEST(m1) AS val FROM foo GROUP BY dim2)",
+        "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, LATEST(m1) AS val1, LATEST(cnt) AS val2, LATEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -1313,7 +1432,103 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
-                                        .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0:a", "m1")))
+                                        .setAggregatorSpecs(aggregators(
+                                            new FloatLastAggregatorFactory("a0:a", "m1"),
+                                            new LongLastAggregatorFactory("a1:a", "cnt"),
+                                            new DoubleLastAggregatorFactory("a2:a", "m2"))
+                                        )
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a"),
+                                                new FinalizingFieldAccessPostAggregator("a1", "a1:a"),
+                                                new FinalizingFieldAccessPostAggregator("a2", "a2:a")
+
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new DoubleSumAggregatorFactory("_a0", "a0"),
+                            new LongSumAggregatorFactory("_a1", "a1"),
+                            new DoubleSumAggregatorFactory("_a2", "a2")
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{18.0, 4L, 18.0}) : ImmutableList.of(new Object[]{15.0, 3L, 15.0})
+    );
+  }
+
+  // This test the off-heap (buffer) version of the EarliestAggregator (Double/Float/Long)
+  @Test
+  public void testPrimitiveEarliestInSubquery() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(
+                                            new FloatFirstAggregatorFactory("a0:a", "m1"),
+                                            new LongFirstAggregatorFactory("a1:a", "cnt"),
+                                            new DoubleFirstAggregatorFactory("a2:a", "m2"))
+                                        )
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a"),
+                                                new FinalizingFieldAccessPostAggregator("a1", "a1:a"),
+                                                new FinalizingFieldAccessPostAggregator("a2", "a2:a")
+
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new DoubleSumAggregatorFactory("_a0", "a0"),
+                            new LongSumAggregatorFactory("_a1", "a1"),
+                            new DoubleSumAggregatorFactory("_a2", "a2")
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{11.0, 4L, 11.0}) : ImmutableList.of(new Object[]{8.0, 3L, 8.0})
+    );
+  }
+
+  // This test the off-heap (buffer) version of the LatestAggregator (String)
+  @Test
+  public void testStringLatestInSubquery() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(new StringLastAggregatorFactory("a0:a", "dim1", 10)))
                                         .setPostAggregatorSpecs(
                                             ImmutableList.of(
                                                 new FinalizingFieldAccessPostAggregator("a0", "a0:a")
@@ -1324,13 +1539,532 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", "a0")))
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", null, "CAST(\"a0\", 'DOUBLE')", ExprMacroTable.nil())))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 18.0 : 15.0}
+            new Object[]{NullHandling.sqlCompatible() ? 3 : 1.0}
         )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the EarliestAggregator (String)
+  @Test
+  public void testStringEarliestInSubquery() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(new StringFirstAggregatorFactory("a0:a", "dim1", 10)))
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", null, "CAST(\"a0\", 'DOUBLE')", ExprMacroTable.nil())))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            // default mode subquery results:
+            //[, 10.1]
+            //[a, ]
+            //[abc, def]
+            // sql compatible mode subquery results:
+            //[null, 10.1]
+            //[, 2]
+            //[a, ]
+            //[abc, def]
+            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 10.1}
+        )
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long)
+  @Test
+  public void testPrimitiveAnyInSubquery() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, ANY_VALUE(m1) AS val1, ANY_VALUE(cnt) AS val2, ANY_VALUE(m2) AS val3 FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(
+                                            new FloatAnyAggregatorFactory("a0:a", "m1"),
+                                            new LongAnyAggregatorFactory("a1:a", "cnt"),
+                                            new DoubleAnyAggregatorFactory("a2:a", "m2"))
+                                        )
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a"),
+                                                new FinalizingFieldAccessPostAggregator("a1", "a1:a"),
+                                                new FinalizingFieldAccessPostAggregator("a2", "a2:a")
+
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new DoubleSumAggregatorFactory("_a0", "a0"),
+                            new LongSumAggregatorFactory("_a1", "a1"),
+                            new DoubleSumAggregatorFactory("_a2", "a2")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{11.0, 4L, 11.0}) : ImmutableList.of(new Object[]{8.0, 3L, 8.0})
+    );
+  }
+
+  // This test the off-heap (buffer) version of the AnyAggregator (String)
+  @Test
+  public void testStringAnyInSubquery() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(dim1, 10) AS val FROM foo GROUP BY dim2)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                        .setAggregatorSpecs(aggregators(new StringAnyAggregatorFactory("a0:a", "dim1", 10)))
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", null, "CAST(\"a0\", 'DOUBLE')", ExprMacroTable.nil())))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 11.1}
+        )
+    );
+  }
+
+  @Test
+  public void testEarliestAggregatorsNumericNulls() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongFirstAggregatorFactory("a0", "l1"),
+                          new DoubleFirstAggregatorFactory("a1", "d1"),
+                          new FloatFirstAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{7L, 1.0, 1.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testLatestAggregatorsNumericNull() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT LATEST(l1), LATEST(d1), LATEST(f1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new LongLastAggregatorFactory("a0", "l1"),
+                          new DoubleLastAggregatorFactory("a1", "d1"),
+                          new FloatLastAggregatorFactory("a2", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultLongValue(), NullHandling.defaultDoubleValue(), NullHandling.defaultFloatValue()}
+        )
+    );
+  }
+
+  @Test
+  public void testFirstLatestAggregatorsSkipNulls() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+
+    final DimFilter filter;
+    if (useDefault) {
+      filter = not(selector("dim1", null, null));
+    } else {
+      filter = and(
+          not(selector("dim1", null, null)),
+          not(selector("l1", null, null)),
+          not(selector("d1", null, null)),
+          not(selector("f1", null, null))
+      );
+    }
+    testQuery(
+        "SELECT EARLIEST(dim1, 32), LATEST(l1), LATEST(d1), LATEST(f1) "
+        + "FROM druid.numfoo "
+        + "WHERE dim1 IS NOT NULL AND l1 IS NOT NULL AND d1 IS NOT NULL AND f1 is NOT NULL",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(filter)
+                  .aggregators(
+                      aggregators(
+                          new StringFirstAggregatorFactory("a0", "dim1", 32),
+                          new LongLastAggregatorFactory("a1", "l1"),
+                          new DoubleLastAggregatorFactory("a2", "d1"),
+                          new FloatLastAggregatorFactory("a3", "f1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            // first row of dim1 is empty string, which is null in default mode, last non-null numeric rows are zeros
+            new Object[]{useDefault ? "10.1" : "", 0L, 0.0, 0.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testOrderByEarliestFloat() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0f},
+          new Object[]{"2", 0.0f},
+          new Object[]{"abc", 0.0f},
+          new Object[]{"def", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    }
+    testQuery(
+        "SELECT dim1, EARLIEST(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                  .aggregators(
+                      aggregators(
+                          new FloatFirstAggregatorFactory("a0", "f1")
+                      )
+                  )
+                  .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                  .threshold(10)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByEarliestDouble() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0},
+          new Object[]{"2", 0.0},
+          new Object[]{"abc", 0.0},
+          new Object[]{"def", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    }
+    testQuery(
+        "SELECT dim1, EARLIEST(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new DoubleFirstAggregatorFactory("a0", "d1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByEarliestLong() throws Exception
+  {
+    // Cannot vectorize EARLIEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0L},
+          new Object[]{"2", 0L},
+          new Object[]{"abc", 0L},
+          new Object[]{"def", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, EARLIEST(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new LongFirstAggregatorFactory("a0", "l1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByLatestFloat() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0f},
+          new Object[]{"2", 0.0f},
+          new Object[]{"abc", 0.0f},
+          new Object[]{"def", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    }
+
+    testQuery(
+        "SELECT dim1, LATEST(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new FloatLastAggregatorFactory("a0", "f1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByLatestDouble() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0},
+          new Object[]{"2", 0.0},
+          new Object[]{"abc", 0.0},
+          new Object[]{"def", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    }
+    testQuery(
+        "SELECT dim1, LATEST(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new DoubleLastAggregatorFactory("a0", "d1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByLatestLong() throws Exception
+  {
+    // Cannot vectorize LATEST aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0L},
+          new Object[]{"2", 0L},
+          new Object[]{"abc", 0L},
+          new Object[]{"def", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null},
+          new Object[]{"2", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    }
+    testQuery(
+        "SELECT dim1, LATEST(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new LongLastAggregatorFactory("a0", "l1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
     );
   }
 
@@ -2341,6 +3075,126 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             useDefault ? new Object[]{0L} : new Object[]{3L}
         )
+    );
+  }
+
+  @Test
+  public void testNullDoubleTopN() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{1.7, 1L},
+          new Object[]{1.0, 1L},
+          new Object[]{0.0, 4L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{1.7, 1L},
+          new Object[]{1.0, 1L},
+          new Object[]{0.0, 1L}
+      );
+    }
+    testQuery(
+        "SELECT d1, COUNT(*) FROM druid.numfoo GROUP BY d1 ORDER BY d1 DESC LIMIT 10",
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("d1", "_d0", ValueType.DOUBLE))
+                .threshold(10)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testNullFloatTopN() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{1.0f, 1L},
+          new Object[]{0.1f, 1L},
+          new Object[]{0.0f, 4L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{1.0f, 1L},
+          new Object[]{0.1f, 1L},
+          new Object[]{0.0f, 1L}
+      );
+    }
+    testQuery(
+        "SELECT f1, COUNT(*) FROM druid.numfoo GROUP BY f1 ORDER BY f1 DESC LIMIT 10",
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("f1", "_d0", ValueType.FLOAT))
+                .threshold(10)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testNullLongTopN() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{325323L, 1L},
+          new Object[]{7L, 1L},
+          new Object[]{0L, 4L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null, 3L},
+          new Object[]{325323L, 1L},
+          new Object[]{7L, 1L},
+          new Object[]{0L, 1L}
+      );
+    }
+    testQuery(
+        "SELECT l1, COUNT(*) FROM druid.numfoo GROUP BY l1 ORDER BY l1 DESC LIMIT 10",
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("l1", "_d0", ValueType.LONG))
+                .threshold(10)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .metric(
+                    new InvertedTopNMetricSpec(
+                        new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
     );
   }
 

@@ -144,14 +144,6 @@ On the Broker, the amount of direct memory needed depends on how many merge buff
 - `druid.processing.numThreads`: set this to 1 (the minimum allowed)
 - `druid.processing.numMergeBuffers`: set this to the same value as on Historicals or a bit higher
 
-##### Note on the deprecated `chunkPeriod`
-
-There is one exception to the Broker not needing processing threads and processing buffers:
-
-If the deprecated `chunkPeriod` property in the [query context](../querying/query-context.md) is set, GroupBy V1 queries will use processing threads and processing buffers on the Broker.
-
-Both `chunkPeriod` and GroupBy V1 are deprecated (use GroupBy V2 instead) and will be removed in the future, we do not recommend using them. The presence of the deprecated `chunkPeriod` feature is why a minimum of 1 processing thread must be configured, even if it's unused.
-
 #### Connection pool sizing
 
 Please see the [General Connection Pool Guidelines](#connection-pool) section for an overview of connection pool configuration.
