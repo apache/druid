@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -45,7 +45,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonTypeName("stringFirst")
-public class StringFirstAggregatorFactory extends NullableAggregatorFactory<BaseObjectColumnValueSelector>
+public class StringFirstAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
 
@@ -104,34 +104,39 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+
+    if (maxStringBytes != null && maxStringBytes < 0) {
+      throw new IAE("maxStringBytes must be greater than 0");
+    }
+
     this.name = name;
     this.fieldName = fieldName;
-    this.maxStringBytes = maxStringBytes == null ? DEFAULT_MAX_STRING_SIZE : maxStringBytes;
+    this.maxStringBytes = maxStringBytes == null
+                          ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
+                          : maxStringBytes;
   }
 
   @Override
-  protected BaseObjectColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return metricFactory.makeColumnValueSelector(fieldName);
-  }
-
-  @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
-  {
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringFirstAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
-        maxStringBytes
+        valueSelector,
+        maxStringBytes,
+        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
-        maxStringBytes
+        valueSelector,
+        maxStringBytes,
+        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
     );
   }
 
@@ -156,7 +161,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringFirstFoldingAggregatorFactory(name, name, maxStringBytes);
+    return new StringFirstAggregatorFactory(name, name, maxStringBytes);
   }
 
   @Override
@@ -234,25 +239,25 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     StringFirstAggregatorFactory that = (StringFirstAggregatorFactory) o;
-
-    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
+    return maxStringBytes == that.maxStringBytes &&
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes);
   }
 
   @Override
   public String toString()
   {
     return "StringFirstAggregatorFactory{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
-           ", maxStringBytes=" + maxStringBytes + '\'' +
+           "fieldName='" + fieldName + '\'' +
+           ", name='" + name + '\'' +
+           ", maxStringBytes=" + maxStringBytes +
            '}';
   }
 }

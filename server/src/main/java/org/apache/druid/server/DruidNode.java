@@ -32,10 +32,13 @@ import org.apache.druid.java.util.common.ISE;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Objects;
 
 /**
+ *
  */
 public class DruidNode
 {
@@ -57,7 +60,7 @@ public class DruidNode
   /**
    * This property is now deprecated, this is present just so that JsonConfigurator does not fail if this is set.
    * Please use {@link DruidNode#plaintextPort} instead, which if set will be used and hence this has -1 as default value.
-   * */
+   */
   @Deprecated
   @JsonProperty
   @Max(0xffff)
@@ -105,7 +108,6 @@ public class DruidNode
    * host = "[2001:db8:85a3::8a2e:370:7334]", port = 123 -> host = 2001:db8:85a3::8a2e:370:7334, port = 123
    * host = "2001:db8:85a3::8a2e:370:7334", port = 123 -> host = 2001:db8:85a3::8a2e:370:7334, port = 123
    * host = null     , port = 123  -> host = _default_, port = 123
-   *
    */
   @JsonCreator
   public DruidNode(
@@ -130,7 +132,15 @@ public class DruidNode
     );
   }
 
-  private void init(String serviceName, String host, boolean bindOnHost, Integer plainTextPort, Integer tlsPort, boolean enablePlaintextPort, boolean enableTlsPort)
+  private void init(
+      String serviceName,
+      String host,
+      boolean bindOnHost,
+      Integer plainTextPort,
+      Integer tlsPort,
+      boolean enablePlaintextPort,
+      boolean enableTlsPort
+  )
   {
     Preconditions.checkNotNull(serviceName);
 
@@ -159,7 +169,7 @@ public class DruidNode
     }
 
     if (enablePlaintextPort && enableTlsPort && ((plainTextPort == null || tlsPort == null)
-                                                               || plainTextPort.equals(tlsPort))) {
+                                                 || plainTextPort.equals(tlsPort))) {
       // If both plainTExt and tls are enabled then do not allow plaintextPort to be null or
       throw new IAE("plaintextPort and tlsPort cannot be null or same if both http and https connectors are enabled");
     }
@@ -271,6 +281,16 @@ public class DruidNode
   public String getHostAndPortToUse()
   {
     return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
+  }
+
+  public URI getUriToUse()
+  {
+    try {
+      return new URI(getServiceScheme(), null, host, getPortToUse(), null, null, null);
+    }
+    catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static String getDefaultHost()

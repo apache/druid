@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -50,7 +50,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   private static File createNewBasePersistDirectory()
   {
-    return Files.createTempDir();
+    return FileUtils.createTempDir("druid-realtime-persist");
   }
 
   private final int maxRowsInMemory;
@@ -143,6 +143,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   }
 
   @Override
+  @JsonProperty
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;

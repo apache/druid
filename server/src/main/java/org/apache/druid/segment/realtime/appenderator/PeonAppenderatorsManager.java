@@ -64,7 +64,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       AppenderatorConfig config,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
+      ObjectMapper jsonMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       QueryRunnerFactoryConglomerate conglomerate,
@@ -82,11 +82,12 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       throw new ISE("A batch appenderator was already created for this peon's task.");
     } else {
       realtimeAppenderator = Appenderators.createRealtime(
+          taskId,
           schema,
           config,
           metrics,
           dataSegmentPusher,
-          objectMapper,
+          jsonMapper,
           indexIO,
           indexMerger,
           conglomerate,
@@ -119,6 +120,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       throw new ISE("A realtime appenderator was already created for this peon's task.");
     } else {
       batchAppenderator = Appenderators.createOffline(
+          taskId,
           schema,
           config,
           storeCompactionState,

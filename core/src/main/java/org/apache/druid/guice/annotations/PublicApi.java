@@ -43,6 +43,7 @@ import java.lang.annotation.Target;
  * as well).
  *
  * @see ExtensionPoint
+ * @see UnstableApi
  */
 @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR})
 @Retention(RetentionPolicy.SOURCE)

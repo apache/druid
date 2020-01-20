@@ -30,20 +30,21 @@ import io.airlift.airline.Command;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.NodeTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
@@ -135,7 +136,7 @@ public class CliIndexer extends ServerRunnable
                   .to(UnifiedIndexerAppenderatorsManager.class)
                   .in(LazySingleton.class);
 
-            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.INDEXER_EXECUTOR));
+            binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.INDEXER_EXECUTOR));
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
@@ -148,17 +149,14 @@ public class CliIndexer extends ServerRunnable
 
             binder.bind(SegmentLoadDropHandler.class).toProvider(Providers.of(null));
 
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider.builder(NodeType.INDEXER)
-                                            .serviceClasses(
-                                                ImmutableList.of(
-                                                    LookupNodeService.class,
-                                                    WorkerNodeService.class,
-                                                    DataNodeService.class
-                                                )
-                                            )
-                                            .build()
+                DiscoverySideEffectsProvider
+                    .builder(NodeRole.INDEXER)
+                    .serviceClasses(
+                        ImmutableList.of(LookupNodeService.class, WorkerNodeService.class, DataNodeService.class)
+                    )
+                    .build()
             );
           }
 
@@ -201,6 +199,7 @@ public class CliIndexer extends ServerRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
+        new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),

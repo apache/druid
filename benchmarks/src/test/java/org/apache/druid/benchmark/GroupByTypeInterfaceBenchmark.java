@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
@@ -33,8 +31,10 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -108,6 +108,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 30)
 public class GroupByTypeInterfaceBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final SegmentId Q_INDEX_SEGMENT_ID = SegmentId.dummy("qIndex");
 
   @Param({"4"})
@@ -286,7 +290,7 @@ public class GroupByTypeInterfaceBenchmark
         rowsPerSegment
     );
 
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     log.info("Using temp dir: %s", tmpDir.getAbsolutePath());
 
     // queryableIndexes   -> numSegments worth of on-disk segments
@@ -405,10 +409,7 @@ public class GroupByTypeInterfaceBenchmark
 
     factory = new GroupByQueryRunnerFactory(
         strategySelector,
-        new GroupByQueryQueryToolChest(
-            strategySelector,
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector)
     );
   }
 

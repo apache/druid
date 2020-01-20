@@ -271,7 +271,7 @@ public class LikeDimFilter implements DimFilter
         }
       }
 
-      return new LikeMatcher(suffixMatch, prefix.toString(), Pattern.compile(regex.toString()));
+      return new LikeMatcher(suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
     }
 
     private static void addPatternCharacter(final StringBuilder patternBuilder, final char c)

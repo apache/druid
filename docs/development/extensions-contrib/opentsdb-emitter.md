@@ -23,7 +23,7 @@ title: "OpenTSDB Emitter"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `opentsdb-emitter` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `opentsdb-emitter` extension.
 
 ## Introduction
 

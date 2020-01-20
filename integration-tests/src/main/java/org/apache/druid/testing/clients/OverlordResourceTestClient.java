@@ -36,7 +36,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -180,7 +180,7 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID, final int millisEach, final int numTimes)
   {
-    RetryUtil.retryUntil(
+    ITRetryUtil.retryUntil(
         new Callable<Boolean>()
         {
           @Override

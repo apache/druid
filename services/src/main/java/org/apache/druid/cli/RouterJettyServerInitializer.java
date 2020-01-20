@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -47,33 +46,18 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.resource.Resource;
 
 import javax.servlet.Servlet;
 import java.util.List;
 
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
-  private static final List<String> UNSECURED_PATHS = Lists.newArrayList(
+  private static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/status/health",
       // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
       // performing the auth checks.
       DruidAvaticaHandler.AVATICA_PATH
-  );
-
-  protected static final List<String> UNSECURED_PATHS_FOR_UI = ImmutableList.of(
-      "/",
-      "/coordinator-console/*",
-      "/assets/*",
-      "/public/*",
-      "/old-console/*",
-      "/pages/*",
-      "/unified-console.html",
-      "/favicon.png",
-      "/console.html",
-      "/index.html",
-      "/console-config.js"
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
@@ -109,9 +93,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-    root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
-    // index.html is the welcome file for old-console
-    root.setWelcomeFiles(new String[]{"unified-console.html", "index.html"});
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
@@ -129,9 +110,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       root.addServlet(managementForwardingServletHolder, "/proxy/*");
     }
 
-    if (managementProxyConfig.isEnabled()) {
-      root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
-    }
 
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
@@ -140,9 +118,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization/authentication for these resources
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
-    if (managementProxyConfig.isEnabled()) {
-      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
-    }
+    WebConsoleJettyServerInitializer.intializeServerForWebConsoleRoot(root);
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
@@ -167,6 +143,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
         new Handler[]{
+            WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
             JettyServerInitUtils.getJettyRequestLogHandler(),
             JettyServerInitUtils.wrapWithDefaultGzipHandler(
                 root,

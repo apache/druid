@@ -58,6 +58,7 @@ Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
 Dropwizard
 dropwizard
+DruidInputSource
 DruidSQL
 EC2
 EC2ContainerCredentialsProviderWrapper
@@ -67,8 +68,10 @@ EMRFS
 ETL
 Elasticsearch
 FirehoseFactory
+FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.POSITIVE_INFINITY
+ForwardedRequestCustomizer
 GC
 GPG
 GSSAPI
@@ -76,6 +79,7 @@ GUIs
 GroupBy
 Guice
 HDFS
+HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -90,6 +94,8 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InputFormat
+InputSource
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -101,6 +107,7 @@ JMX
 JRE
 JS
 JSON
+JsonPath
 JVM
 JVMs
 Joda
@@ -109,6 +116,7 @@ KMS
 Kerberized
 Kerberos
 Kinesis
+Kubernetes
 LRU
 LZ4
 LZO
@@ -168,6 +176,7 @@ aggregator
 aggregators
 ambari
 analytics
+async
 authorizer
 authorizers
 autocomplete
@@ -216,7 +225,10 @@ e.g.
 encodings
 endian
 enum
+expr
 failover
+featureSpec
+findColumnsFromHeader
 filenames
 filesystem
 firefox
@@ -239,6 +251,7 @@ influxdb
 injective
 inlined
 interruptible
+jackson-jq
 javadoc
 kerberos
 keystore
@@ -322,8 +335,10 @@ rsync
 runtime
 schemas
 searchable
+servlet
 sharded
 sharding
+skipHeaderRows
 smooshed
 splittable
 stdout
@@ -356,6 +371,8 @@ unmerged
 unparseable
 unparsed
 uptime
+uris
+useFieldDiscovery
 v1
 v2
 vCPUs
@@ -368,6 +385,7 @@ whitelist
 whitelisted
 whitespace
 wildcard
+wildcards
 xml
 znode
 znodes
@@ -483,12 +501,14 @@ doubleMax
 doubleMean
 doubleMeanNoNulls
 doubleMin
+doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
 longMean
 longMeanNoNulls
 longMin
+longSum
 movingAverage
 postAggregations
 postAveragers
@@ -663,6 +683,8 @@ taskDuration
 9.2dist
 KinesisSupervisorIOConfig
 KinesisSupervisorTuningConfig
+Resharding
+resharding
 LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcisetyperoaringcompressRunOnSerializationtruetypestreamendpointreplicastaskCounttaskCount
 deaggregate
 druid-kinesis-indexing-service
@@ -931,6 +953,8 @@ forceGuaranteedRollup
 httpAuthenticationPassword
 httpAuthenticationUsername
 ingestSegment
+InputSource
+DruidInputSource
 maxInputSegmentBytesPerTask
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
@@ -1101,7 +1125,6 @@ SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
 bufferPoolName
-chunkInterval
 cms
 cpuName
 cpuTime
@@ -1221,7 +1244,6 @@ TimeseriesQuery
 D1
 D2
 D3
-chunkPeriod
 druid.query.groupBy.defaultStrategy
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
@@ -1281,10 +1303,14 @@ druid.broker.cache.useCache
 druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
+enableParallelMerge
 floatSum
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
+parallelMergeInitialYieldRows
+parallelMergeParallelism
+parallelMergeSmallBatchRows
 populateCache
 populateResultLevelCache
 queryId
@@ -1543,7 +1569,6 @@ allowAll
 array_mod
 batch_index_task
 cgroup
-chunkPeriod
 classloader
 com.metamx
 common.runtime.properties

@@ -23,25 +23,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.server.lookup.DataFetcher;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionCallback;
-import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 public class JdbcDataFetcher implements DataFetcher<String, String>
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final Logger LOGGER = new Logger(JdbcDataFetcher.class);
   private static final int DEFAULT_STREAMING_FETCH_SIZE = 1000;
 
@@ -61,12 +66,12 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
   private final String reverseFetchQuery;
   private final DBI dbi;
 
-  public JdbcDataFetcher(
+  JdbcDataFetcher(
       @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
       @JsonProperty("table") String table,
       @JsonProperty("keyColumn") String keyColumn,
       @JsonProperty("valueColumn") String valueColumn,
-      @JsonProperty("streamingFetchSize") Integer streamingFetchSize
+      @JsonProperty("streamingFetchSize") @Nullable Integer streamingFetchSize
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
@@ -105,29 +110,20 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
   @Override
   public Iterable<Map.Entry<String, String>> fetchAll()
   {
-    return inReadOnlyTransaction((handle, status) -> {
-      return handle.createQuery(fetchAllQuery)
-                   .setFetchSize(streamingFetchSize)
-                   .map(new KeyValueResultSetMapper(keyColumn, valueColumn))
-                   .list();
-    });
+    return inReadOnlyTransaction((handle, status) -> handle.createQuery(fetchAllQuery)
+                                                           .setFetchSize(streamingFetchSize)
+                                                           .map(new KeyValueResultSetMapper(keyColumn, valueColumn))
+                                                           .list());
   }
 
   @Override
   public String fetch(final String key)
   {
     List<String> pairs = inReadOnlyTransaction(
-        new TransactionCallback<List<String>>()
-        {
-          @Override
-          public List<String> inTransaction(Handle handle, TransactionStatus status)
-          {
-            return handle.createQuery(fetchQuery)
-                         .bind("val", key)
-                         .map(StringMapper.FIRST)
-                         .list();
-          }
-        }
+        (handle, status) -> handle.createQuery(fetchQuery)
+                                  .bind("val", key)
+                                  .map(StringMapper.FIRST)
+                                  .list()
     );
     if (pairs.isEmpty()) {
       return null;
@@ -138,25 +134,21 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
   @Override
   public Iterable<Map.Entry<String, String>> fetch(final Iterable<String> keys)
   {
-    QueryKeys queryKeys = dbi.onDemand(QueryKeys.class);
-    return queryKeys.findNamesForIds(Lists.newArrayList(keys), table, keyColumn, valueColumn);
+    return runWithMissingJdbcJarHandler(
+        () -> {
+          QueryKeys queryKeys = dbi.onDemand(QueryKeys.class);
+          return queryKeys.findNamesForIds(Lists.newArrayList(keys), table, keyColumn, valueColumn);
+        }
+    );
   }
 
   @Override
   public List<String> reverseFetchKeys(final String value)
   {
-    List<String> results = inReadOnlyTransaction(new TransactionCallback<List<String>>()
-    {
-      @Override
-      public List<String> inTransaction(Handle handle, TransactionStatus status)
-      {
-        return handle.createQuery(reverseFetchQuery)
-                     .bind("val", value)
-                     .map(StringMapper.FIRST)
-                     .list();
-      }
-    });
-    return results;
+    return inReadOnlyTransaction((handle, status) -> handle.createQuery(reverseFetchQuery)
+                                                           .bind("val", value)
+                                                           .map(StringMapper.FIRST)
+                                                           .list());
   }
 
   @Override
@@ -207,30 +199,44 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
 
   private <T> T inReadOnlyTransaction(final TransactionCallback<T> callback)
   {
-    return getDbi().withHandle(
-        new HandleCallback<T>()
-        {
-          @Override
-          public T withHandle(Handle handle) throws Exception
-          {
-            final Connection connection = handle.getConnection();
-            final boolean readOnly = connection.isReadOnly();
-            connection.setReadOnly(true);
-            try {
-              return handle.inTransaction(callback);
-            }
-            finally {
-              try {
-                connection.setReadOnly(readOnly);
-              }
-              catch (SQLException e) {
-                // at least try to log it so we don't swallow exceptions
-                LOGGER.error(e, "Unable to reset connection read-only state");
-              }
-            }
-          }
-        }
+    return runWithMissingJdbcJarHandler(
+        () ->
+            getDbi().withHandle(
+                handle -> {
+                  final Connection connection = handle.getConnection();
+                  final boolean readOnly = connection.isReadOnly();
+                  connection.setReadOnly(true);
+                  try {
+                    return handle.inTransaction(callback);
+                  }
+                  finally {
+                    try {
+                      connection.setReadOnly(readOnly);
+                    }
+                    catch (SQLException e) {
+                      // at least try to log it so we don't swallow exceptions
+                      LOGGER.error(e, "Unable to reset connection read-only state");
+                    }
+                  }
+                }
+            )
     );
   }
 
+  private <T> T runWithMissingJdbcJarHandler(Supplier<T> supplier)
+  {
+    try {
+      return supplier.get();
+    }
+    catch (UnableToObtainConnectionException e) {
+      if (e.getMessage().contains("No suitable driver found")) {
+        throw new ISE(
+            e,
+            "JDBC driver JAR files missing from extensions/druid-lookups-cached-single directory"
+        );
+      } else {
+        throw e;
+      }
+    }
+  }
 }

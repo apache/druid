@@ -18,37 +18,33 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import classNames from 'classnames';
 import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
+import { HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
-import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
+import { QueryManager } from './utils';
+import { Capabilities } from './utils/capabilities';
 import {
   DatasourcesView,
   HomeView,
+  IngestionView,
   LoadDataView,
   LookupsView,
   QueryView,
   SegmentsView,
-  ServersView,
-  TasksView,
+  ServicesView,
 } from './views';
 
 import './console-application.scss';
 
-type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
-
 export interface ConsoleApplicationProps {
-  hideLegacy: boolean;
   exampleManifestsUrl?: string;
 }
 
 export interface ConsoleApplicationState {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
   capabilitiesLoading: boolean;
 }
 
@@ -56,64 +52,25 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  static STATUS_TIMEOUT = 2000;
-
   private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
-  static async discoverCapabilities(): Promise<Capabilities> {
-    const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return capabilitiesOverride as Capabilities;
-
-    try {
-      await axios.post(
-        '/druid/v2/sql',
-        { query: 'SELECT 1337', context: { timeout: ConsoleApplication.STATUS_TIMEOUT } },
-        { timeout: ConsoleApplication.STATUS_TIMEOUT },
-      );
-    } catch (e) {
-      const { response } = e;
-      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
-        return 'working-with-sql'; // other failure
-      }
-      try {
-        await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
-      } catch (e) {
-        return 'broken'; // total failure
-      }
-      // Status works but SQL 405s => the SQL endpoint is disabled
-      return 'working-without-sql';
-    }
-    return 'working-with-sql';
-  }
-
-  static shownNotifications(capabilities: string) {
-    let message: JSX.Element = <></>;
-
-    if (capabilities === 'working-without-sql') {
-      message = (
-        <>
-          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
-          in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink>{' '}
-          to enable the SQL endpoint.
-        </>
-      );
-    } else if (capabilities === 'broken') {
-      message = (
-        <>It appears that the Druid is not responding. Data cannot be retrieved right now</>
-      );
-    }
-
+  static shownNotifications() {
     AppToaster.show({
       icon: IconNames.ERROR,
       intent: Intent.DANGER,
       timeout: 120000,
-      message: message,
+      message: (
+        <>
+          It appears that the the service serving this console is not responding. The console will
+          not function at the moment
+        </>
+      ),
     });
   }
 
   private supervisorId?: string;
   private taskId?: string;
+  private taskGroupId?: string;
   private openDialog?: string;
   private datasource?: string;
   private onlyUnavailable?: boolean;
@@ -123,21 +80,19 @@ export class ConsoleApplication extends React.PureComponent<
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      noSqlMode: false,
+      capabilities: Capabilities.FULL,
       capabilitiesLoading: true,
     };
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
-        const capabilities = await ConsoleApplication.discoverCapabilities();
-        if (capabilities !== 'working-with-sql') {
-          ConsoleApplication.shownNotifications(capabilities);
-        }
-        return capabilities;
+        const capabilities = await Capabilities.detectCapabilities();
+        if (!capabilities) ConsoleApplication.shownNotifications();
+        return capabilities || Capabilities.FULL;
       },
       onStateChange: ({ result, loading }) => {
         this.setState({
-          noSqlMode: result !== 'working-with-sql',
+          capabilities: result || Capabilities.FULL,
           capabilitiesLoading: loading,
         });
       },
@@ -155,6 +110,7 @@ export class ConsoleApplication extends React.PureComponent<
   private resetInitialsWithDelay() {
     setTimeout(() => {
       this.taskId = undefined;
+      this.taskGroupId = undefined;
       this.supervisorId = undefined;
       this.openDialog = undefined;
       this.datasource = undefined;
@@ -184,23 +140,23 @@ export class ConsoleApplication extends React.PureComponent<
     this.resetInitialsWithDelay();
   };
 
-  private goToTaskWithTaskId = (taskId?: string, openDialog?: string) => {
-    this.taskId = taskId;
+  private goToIngestionWithTaskGroupId = (taskGroupId?: string, openDialog?: string) => {
+    this.taskGroupId = taskGroupId;
     if (openDialog) this.openDialog = openDialog;
-    window.location.hash = 'tasks';
+    window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
-  private goToTaskWithDatasource = (datasource?: string, openDialog?: string) => {
+  private goToIngestionWithDatasource = (datasource?: string, openDialog?: string) => {
     this.datasource = datasource;
     if (openDialog) this.openDialog = openDialog;
-    window.location.hash = 'tasks';
+    window.location.hash = 'ingestion';
     this.resetInitialsWithDelay();
   };
 
   private goToMiddleManager = (middleManager: string) => {
     this.middleManager = middleManager;
-    window.location.hash = 'servers';
+    window.location.hash = 'services';
     this.resetInitialsWithDelay();
   };
 
@@ -215,19 +171,19 @@ export class ConsoleApplication extends React.PureComponent<
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' = 'normal',
   ) => {
-    const { hideLegacy } = this.props;
+    const { capabilities } = this.state;
 
     return (
       <>
-        <HeaderBar active={active} hideLegacy={hideLegacy} />
+        <HeaderBar active={active} capabilities={capabilities} />
         <div className={classNames('view-container', classType)}>{el}</div>
       </>
     );
   };
 
   private wrappedHomeView = () => {
-    const { noSqlMode } = this.state;
-    return this.wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode} />);
+    const { capabilities } = this.state;
+    return this.wrapInViewContainer(null, <HomeView capabilities={capabilities} />);
   };
 
   private wrappedLoadDataView = () => {
@@ -239,7 +195,7 @@ export class ConsoleApplication extends React.PureComponent<
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
         exampleManifestsUrl={exampleManifestsUrl}
-        goToTask={this.goToTaskWithTaskId}
+        goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',
     );
@@ -250,58 +206,58 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private wrappedDatasourcesView = () => {
-    const { noSqlMode } = this.state;
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
         initDatasource={this.datasource}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTaskWithDatasource}
+        goToTask={this.goToIngestionWithDatasource}
         goToSegments={this.goToSegments}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
 
   private wrappedSegmentsView = () => {
-    const { noSqlMode } = this.state;
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'segments',
       <SegmentsView
         datasource={this.datasource}
         onlyUnavailable={this.onlyUnavailable}
         goToQuery={this.goToQuery}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
 
-  private wrappedTasksView = () => {
-    const { noSqlMode } = this.state;
+  private wrappedIngestionView = () => {
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
-      'tasks',
-      <TasksView
-        taskId={this.taskId}
+      'ingestion',
+      <IngestionView
+        taskGroupId={this.taskGroupId}
         datasourceId={this.datasource}
         openDialog={this.openDialog}
         goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
         goToMiddleManager={this.goToMiddleManager}
         goToLoadData={this.goToLoadData}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
 
-  private wrappedServersView = () => {
-    const { noSqlMode } = this.state;
+  private wrappedServicesView = () => {
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
-      'servers',
-      <ServersView
+      'services',
+      <ServicesView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTaskWithTaskId}
-        noSqlMode={noSqlMode}
+        goToTask={this.goToIngestionWithTaskGroupId}
+        capabilities={capabilities}
       />,
     );
   };
@@ -316,7 +272,7 @@ export class ConsoleApplication extends React.PureComponent<
     if (capabilitiesLoading) {
       return (
         <div className="loading-capabilities">
-          <Loader loadingText="" loading={capabilitiesLoading} />
+          <Loader loadingText="" loading />
         </div>
       );
     }
@@ -326,12 +282,13 @@ export class ConsoleApplication extends React.PureComponent<
         <div className="console-application">
           <Switch>
             <Route path="/load-data" component={this.wrappedLoadDataView} />
-            <Route path="/query" component={this.wrappedQueryView} />
 
+            <Route path="/ingestion" component={this.wrappedIngestionView} />
             <Route path="/datasources" component={this.wrappedDatasourcesView} />
             <Route path="/segments" component={this.wrappedSegmentsView} />
-            <Route path="/tasks" component={this.wrappedTasksView} />
-            <Route path="/servers" component={this.wrappedServersView} />
+            <Route path="/services" component={this.wrappedServicesView} />
+
+            <Route path="/query" component={this.wrappedQueryView} />
 
             <Route path="/lookups" component={this.wrappedLookupsView} />
             <Route component={this.wrappedHomeView} />

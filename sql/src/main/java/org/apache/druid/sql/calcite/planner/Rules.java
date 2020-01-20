@@ -30,6 +30,7 @@ import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.rules.AggregateCaseToFilterRule;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
@@ -71,7 +72,6 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
-import org.apache.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidSemiJoinRule;
@@ -237,7 +237,7 @@ public class Rules
     }
 
     rules.add(SortCollapseRule.instance());
-    rules.add(CaseFilteredAggregatorRule.instance());
+    rules.add(AggregateCaseToFilterRule.INSTANCE);
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
 
     return rules.build();

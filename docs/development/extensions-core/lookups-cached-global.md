@@ -25,7 +25,7 @@ title: "Globally Cached Lookups"
 
 > Lookups are an [experimental](../experimental.md) feature.
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-global` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-global` as an extension.
 
 ## Configuration
 > Static configuration is no longer supported. Lookups can be configured through
@@ -367,6 +367,12 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
   "pollPeriod":600000
 }
 ```
+
+> If using JDBC, you will need to add your database's client JAR files to the extension's directory.
+> For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/, and for Postgres, from
+> https://jdbc.postgresql.org/download.html or from `extensions/postgresql-metadata-storage/`.
+> Copy or symlink the downloaded file to
+> `extensions/druid-lookups-cached-global` under the distribution root directory.
 
 ## Introspection
 

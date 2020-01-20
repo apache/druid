@@ -22,9 +22,11 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
@@ -51,6 +53,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   @JsonCreator
   public KinesisSupervisorIOConfig(
       @JsonProperty("stream") String stream,
+      @JsonProperty("inputFormat") InputFormat inputFormat,
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("region") KinesisRegion region,
       @JsonProperty("replicas") Integer replicas,
@@ -62,6 +65,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
+      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
@@ -71,6 +75,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   {
     super(
         Preconditions.checkNotNull(stream, "stream"),
+        inputFormat,
         replicas,
         taskCount,
         taskDuration,
@@ -79,7 +84,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         useEarliestSequenceNumber,
         completionTimeout,
         lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime
     );
     this.endpoint = endpoint != null
                     ? endpoint
@@ -146,6 +152,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", completionTimeout=" + getCompletionTimeout() +
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
+           ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +

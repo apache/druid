@@ -35,9 +35,12 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 You will need:
 
-* Java 8 (8u92+)
+* **Java 8 (8u92+)**
 * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
+> **Warning:** Java 8 is required to run Druid. While Druid will start with a higher version of Java it will not function correctly.
+>
+> If needed, you can specify where to find Java using the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the verify-java script.
 
 ### Hardware
 
@@ -52,7 +55,7 @@ configuration than `micro-quickstart`.
 
 ## Getting started
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+[Download](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
 the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
@@ -64,29 +67,13 @@ cd apache-druid-{{DRUIDVERSION}}
 
 In the package, you should find:
 
-* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
+* `LICENSE` and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
 * `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
 * `quickstart/*` - configuration files, sample data, and other files for the quickstart tutorials
-
-## Download Zookeeper
-
-Druid has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll
-need to download and run Zookeeper.
-
-In the package root, run the following commands:
-
-```bash
-curl https://archive.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -o zookeeper-3.4.14.tar.gz
-tar -xzf zookeeper-3.4.14.tar.gz
-mv zookeeper-3.4.14 zk
-```
-
-The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the
-apache-druid-{{DRUIDVERSION}} package root.
 
 ## Start up Druid services
 
@@ -100,7 +87,7 @@ From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 ./bin/start-micro-quickstart
 ```
 
-This will bring up instances of Zookeeper and the Druid services, all running on the local machine, e.g.:
+This will bring up instances of ZooKeeper and the Druid services, all running on the local machine, e.g.:
 
 ```bash
 $ ./bin/start-micro-quickstart
@@ -200,7 +187,7 @@ Once every service has started, you are now ready to load data.
 
 If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.md) and wish to reset the cluster state, you should additionally clear out any Kafka state.
 
-Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
+Shut down the Kafka broker with CTRL-C before stopping ZooKeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
 
 ```bash
 rm -rf /tmp/kafka-logs

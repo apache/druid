@@ -23,7 +23,7 @@ title: "Aggregations"
   -->
 
 
-Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid (incubating).
+Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid.
 Aggregations can also be specified as part of many queries at query time.
 
 Available aggregations are:
@@ -233,6 +233,61 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "fieldName" : <metric_name>,
   "maxStringBytes" : <integer> # (optional, defaults to 1024),
   "filterNullValues" : <boolean> # (optional, defaults to false)
+}
+```
+
+### ANY aggregator
+
+(Double/Float/Long/String) ANY aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+
+If `druid.generic.useDefaultValueForNull=true` aggregation can returns the default value for null and does not prefer "non-null" values over the default value for null. If `druid.generic.useDefaultValueForNull=false`, then aggregation will returns any non-null value.
+
+#### `doubleAny` aggregator
+
+`doubleAny` returns any double metric value
+
+```json
+{
+  "type" : "doubleAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `floatAny` aggregator
+
+`floatAny` returns any float metric value
+
+```json
+{
+  "type" : "floatAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `longAny` aggregator
+
+`longAny` returns any long metric value
+
+```json
+{
+  "type" : "longAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+}
+```
+
+#### `stringAny` aggregator
+
+`stringAny` returns any string metric value
+
+```json
+{
+  "type" : "stringAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
 }
 ```
 

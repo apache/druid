@@ -77,6 +77,7 @@ import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.After;
@@ -92,7 +93,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class BloomFilterSqlAggregatorTest
+public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;
   private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
@@ -185,6 +186,7 @@ public class BloomFilterSqlAggregatorTest
                    .interval(index.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index
     );

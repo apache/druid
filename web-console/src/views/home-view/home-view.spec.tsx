@@ -19,11 +19,23 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
+import { Capabilities } from '../../utils/capabilities';
+
 import { HomeView } from './home-view';
 
 describe('home view', () => {
-  it('matches snapshot', () => {
-    const homeView = shallow(<HomeView noSqlMode={false} />);
+  it('matches snapshot (full)', () => {
+    const homeView = shallow(<HomeView capabilities={Capabilities.FULL} />);
+    expect(homeView).toMatchSnapshot();
+  });
+
+  it('matches snapshot (coordiantor)', () => {
+    const homeView = shallow(<HomeView capabilities={Capabilities.COORDINATOR} />);
+    expect(homeView).toMatchSnapshot();
+  });
+
+  it('matches snapshot (overlord)', () => {
+    const homeView = shallow(<HomeView capabilities={Capabilities.OVERLORD} />);
     expect(homeView).toMatchSnapshot();
   });
 });

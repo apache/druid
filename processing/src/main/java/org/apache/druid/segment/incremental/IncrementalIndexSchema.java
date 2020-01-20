@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class IncrementalIndexSchema
@@ -125,18 +127,6 @@ public class IncrementalIndexSchema
       return this;
     }
 
-    public Builder withTimestampSpec(InputRowParser parser)
-    {
-      if (parser != null
-          && parser.getParseSpec() != null
-          && parser.getParseSpec().getTimestampSpec() != null) {
-        this.timestampSpec = parser.getParseSpec().getTimestampSpec();
-      } else {
-        this.timestampSpec = new TimestampSpec(null, null, null);
-      }
-      return this;
-    }
-
     public Builder withQueryGranularity(Granularity gran)
     {
       this.gran = gran;
@@ -149,13 +139,14 @@ public class IncrementalIndexSchema
       return this;
     }
 
-    public Builder withDimensionsSpec(DimensionsSpec dimensionsSpec)
+    public Builder withDimensionsSpec(@Nullable DimensionsSpec dimensionsSpec)
     {
       this.dimensionsSpec = dimensionsSpec == null ? DimensionsSpec.EMPTY : dimensionsSpec;
       return this;
     }
 
-    public Builder withDimensionsSpec(InputRowParser parser)
+    @Deprecated
+    public Builder withDimensionsSpec(@Nullable InputRowParser parser)
     {
       if (parser != null
           && parser.getParseSpec() != null

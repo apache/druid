@@ -25,6 +25,22 @@ const START_MARKER_LINE = '# Web console modules start';
 const END_MARKER_LINE = '# Web console modules end';
 const SEPARATOR = '\n\n---\n\n';
 
+const extraLinesForLib = {
+  tslib: `notice: |
+  /*! *****************************************************************************
+  Copyright (c) Microsoft Corporation. All rights reserved.
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+  this file except in compliance with the License. You may obtain a copy of the
+  License at http://www.apache.org/licenses/LICENSE-2.0
+  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+  MERCHANTABLITY OR NON-INFRINGEMENT.
+  See the Apache Version 2.0 License for specific language governing permissions
+  and limitations under the License.
+  ***************************************************************************** */`
+}
+
 function injectConsoleLicenses(consoleLicenses) {
   const text = fs.readFileSync(LICENSES_FILE, 'utf-8');
   const textLines = text.split('\n');
@@ -75,13 +91,16 @@ checker.init(
       return;
     }
 
+    const seen = {};
     const mapped = Object.keys(packages)
       .sort()
       .map(p => {
         const m = p.match(/^(.+)@(\d+\.\d+\.\d+.*)$/);
         if (!m) throw new Error(`Malformed name@version`);
         const name = m[1];
-        if (name === 'web-console') return null; // This is me!
+        if (name === 'web-console') return; // This is me!
+        if (seen[name]) return; // Dedupe
+        seen[name] = true;
 
         const version = m[2];
         const meta = packages[p];
@@ -164,9 +183,10 @@ checker.init(
           `license_category: binary`,
           `module: web-console`,
           `license_name: ${properLicenseName}`,
-          publisher ? `copyright: ${publisher}` : null,
+          publisher ? `copyright: ${publisher}` : undefined,
           `version: ${version}`,
-          hasLicense ? `license_file_path: ${licenseDest}` : null,
+          hasLicense ? `license_file_path: ${licenseDest}` : undefined,
+          extraLinesForLib[name],
         ];
 
         return lines.filter(Boolean).join('\n');

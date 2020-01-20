@@ -23,21 +23,22 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -45,7 +46,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonTypeName("stringLast")
-public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseObjectColumnValueSelector>
+public class StringLastAggregatorFactory extends AggregatorFactory
 {
   private final String fieldName;
   private final String name;
@@ -60,6 +61,11 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+
+    if (maxStringBytes != null && maxStringBytes < 0) {
+      throw new IAE("maxStringBytes must be greater than 0");
+    }
+
     this.name = name;
     this.fieldName = fieldName;
     this.maxStringBytes = maxStringBytes == null
@@ -68,28 +74,26 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
   }
 
   @Override
-  protected BaseObjectColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return metricFactory.makeColumnValueSelector(fieldName);
-  }
-
-  @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
-  {
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringLastAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
-        maxStringBytes
+        valueSelector,
+        maxStringBytes,
+        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringLastBufferAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
-        maxStringBytes
+        valueSelector,
+        maxStringBytes,
+        StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
     );
   }
 
@@ -114,7 +118,7 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringLastFoldingAggregatorFactory(name, name, maxStringBytes);
+    return new StringLastAggregatorFactory(name, name, maxStringBytes);
   }
 
   @Override
@@ -159,7 +163,7 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return ImmutableList.of(ColumnHolder.TIME_COLUMN_NAME, fieldName);
   }
 
   @Override
@@ -192,25 +196,25 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
-
-    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
+    return maxStringBytes == that.maxStringBytes &&
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes);
   }
 
   @Override
   public String toString()
   {
-    return "StringFirstAggregatorFactory{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
-           ", maxStringBytes=" + maxStringBytes + '\'' +
+    return "StringLastAggregatorFactory{" +
+           "fieldName='" + fieldName + '\'' +
+           ", name='" + name + '\'' +
+           ", maxStringBytes=" + maxStringBytes +
            '}';
   }
 }

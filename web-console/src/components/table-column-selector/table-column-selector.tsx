@@ -30,7 +30,9 @@ interface TableColumnSelectorProps {
   tableColumnsHidden: string[];
 }
 
-export function TableColumnSelector(props: TableColumnSelectorProps) {
+export const TableColumnSelector = React.memo(function TableColumnSelector(
+  props: TableColumnSelectorProps,
+) {
   const { columns, onChange, tableColumnsHidden } = props;
   const checkboxes = (
     <Menu className="table-column-selector-menu">
@@ -54,4 +56,4 @@ export function TableColumnSelector(props: TableColumnSelectorProps) {
       <Button rightIcon={IconNames.CARET_DOWN} text="Columns" />
     </Popover>
   );
-}
+});

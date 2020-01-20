@@ -27,7 +27,7 @@ export interface RefreshButtonProps {
   localStorageKey?: LocalStorageKeys;
 }
 
-export function RefreshButton(props: RefreshButtonProps) {
+export const RefreshButton = React.memo(function RefreshButton(props: RefreshButtonProps) {
   const { onRefresh, localStorageKey } = props;
   const intervals = [
     { label: '5 seconds', value: 5000 },
@@ -49,4 +49,4 @@ export function RefreshButton(props: RefreshButtonProps) {
       localStorageKey={localStorageKey}
     />
   );
-}
+});

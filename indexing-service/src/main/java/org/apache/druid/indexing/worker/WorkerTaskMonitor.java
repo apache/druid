@@ -102,7 +102,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
         registerRunListener();
         pathChildrenCache.start();
 
-        log.info("Started WorkerTaskMonitor.");
+        log.debug("Started WorkerTaskMonitor.");
         started = true;
       }
       catch (InterruptedException e) {
@@ -131,10 +131,11 @@ public class WorkerTaskMonitor extends WorkerTaskManager
           }
 
           if (completionStatus != null) {
-            log.info("Cleaning up stale announcement for task [%s]. New status is [%s].",
-                     announcement.getTaskStatus().getId(),
-                     completionStatus.getStatusCode()
-                     );
+            log.info(
+                "Cleaning up stale announcement for task [%s]. New status is [%s].",
+                announcement.getTaskStatus().getId(),
+                completionStatus.getStatusCode()
+            );
             workerCuratorCoordinator.updateTaskStatusAnnouncement(
                 TaskAnnouncement.create(
                     announcement.getTaskStatus().getId(),
@@ -186,7 +187,7 @@ public class WorkerTaskMonitor extends WorkerTaskManager
         started = false;
         pathChildrenCache.close();
 
-        log.info("Stopped WorkerTaskMonitor.");
+        log.debug("Stopped WorkerTaskMonitor.");
       }
       catch (Exception e) {
         log.makeAlert(e, "Exception stopping WorkerTaskMonitor")

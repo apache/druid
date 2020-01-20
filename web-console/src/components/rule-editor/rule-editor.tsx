@@ -25,6 +25,7 @@ import {
   HTMLSelect,
   InputGroup,
   NumericInput,
+  Switch,
   TagInput,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -43,13 +44,10 @@ export interface RuleEditorProps {
   moveDown: (() => void) | null;
 }
 
-export function RuleEditor(props: RuleEditorProps) {
+export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
   const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
   if (!rule) return null;
-
-  const ruleLoadType = RuleUtil.getLoadType(rule);
-  const ruleTimeType = RuleUtil.getTimeType(rule);
 
   function removeTier(key: string) {
     const newTierReplicants = Object.assign({}, rule.tieredReplicants);
@@ -71,14 +69,12 @@ export function RuleEditor(props: RuleEditorProps) {
       }
     }
 
-    onChange(RuleUtil.changeTierReplication(rule, newTierName, 1));
+    onChange(RuleUtil.addTieredReplicant(rule, newTierName, 1));
   }
 
   function renderTiers() {
-    if (RuleUtil.getLoadType(rule) !== 'load') return null;
-
     const tieredReplicants = rule.tieredReplicants;
-    if (!tieredReplicants) return null;
+    if (!tieredReplicants) return;
 
     const ruleTiers = Object.keys(tieredReplicants).sort();
     return ruleTiers.map(tier => {
@@ -91,7 +87,7 @@ export function RuleEditor(props: RuleEditorProps) {
             value={tieredReplicants[tier]}
             onValueChange={(v: number) => {
               if (isNaN(v)) return;
-              onChange(RuleUtil.changeTierReplication(rule, tier, v));
+              onChange(RuleUtil.addTieredReplicant(rule, tier, v));
             }}
             min={1}
             max={256}
@@ -102,7 +98,9 @@ export function RuleEditor(props: RuleEditorProps) {
           <HTMLSelect
             fill
             value={tier}
-            onChange={(e: any) => onChange(RuleUtil.changeTier(rule, tier, e.target.value))}
+            onChange={(e: any) =>
+              onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
+            }
           >
             {tiers
               .filter(t => t === tier || !tieredReplicants[t])
@@ -126,27 +124,13 @@ export function RuleEditor(props: RuleEditorProps) {
 
   function renderTierAdder() {
     const { rule, tiers } = props;
-    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return null;
+    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return;
 
     return (
       <FormGroup className="right">
         <Button onClick={addTier} minimal icon={IconNames.PLUS}>
           Add a tier
         </Button>
-      </FormGroup>
-    );
-  }
-
-  function renderColocatedDataSources() {
-    const { rule, onChange } = props;
-
-    return (
-      <FormGroup label="Colocated datasources:">
-        <TagInput
-          values={rule.colocatedDataSources || []}
-          onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
-          fill
-        />
       </FormGroup>
     );
   }
@@ -173,26 +157,20 @@ export function RuleEditor(props: RuleEditorProps) {
           <FormGroup>
             <ControlGroup>
               <HTMLSelect
-                value={ruleLoadType}
+                value={rule.type}
                 onChange={(e: any) =>
-                  onChange(RuleUtil.changeLoadType(rule, e.target.value as any))
+                  onChange(RuleUtil.changeRuleType(rule, e.target.value as any))
                 }
               >
-                <option value="load">Load</option>
-                <option value="drop">Drop</option>
-                <option value="broadcast">Broadcast</option>
+                {RuleUtil.TYPES.map(type => {
+                  return (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  );
+                })}
               </HTMLSelect>
-              <HTMLSelect
-                value={ruleTimeType}
-                onChange={(e: any) =>
-                  onChange(RuleUtil.changeTimeType(rule, e.target.value as any))
-                }
-              >
-                <option value="Forever">forever</option>
-                <option value="ByPeriod">by period</option>
-                <option value="ByInterval">by interval</option>
-              </HTMLSelect>
-              {ruleTimeType === 'ByPeriod' && (
+              {RuleUtil.hasPeriod(rule) && (
                 <InputGroup
                   value={rule.period || ''}
                   onChange={(e: any) =>
@@ -201,7 +179,17 @@ export function RuleEditor(props: RuleEditorProps) {
                   placeholder="P1D"
                 />
               )}
-              {ruleTimeType === 'ByInterval' && (
+              {RuleUtil.hasIncludeFuture(rule) && (
+                <Switch
+                  className="include-future"
+                  checked={rule.includeFuture || false}
+                  label="Include future"
+                  onChange={() => {
+                    onChange(RuleUtil.changeIncludeFuture(rule, !rule.includeFuture));
+                  }}
+                />
+              )}
+              {RuleUtil.hasInterval(rule) && (
                 <InputGroup
                   value={rule.interval || ''}
                   onChange={(e: any) =>
@@ -212,15 +200,23 @@ export function RuleEditor(props: RuleEditorProps) {
               )}
             </ControlGroup>
           </FormGroup>
-          {ruleLoadType === 'load' && (
+          {RuleUtil.hasTieredReplicants(rule) && (
             <FormGroup>
               {renderTiers()}
               {renderTierAdder()}
             </FormGroup>
           )}
-          {ruleLoadType === 'broadcast' && <FormGroup>{renderColocatedDataSources()}</FormGroup>}
+          {RuleUtil.hasColocatedDataSources(rule) && (
+            <FormGroup label="Colocated datasources">
+              <TagInput
+                values={rule.colocatedDataSources || []}
+                onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
+                fill
+              />
+            </FormGroup>
+          )}
         </Card>
       </Collapse>
     </div>
   );
-}
+});

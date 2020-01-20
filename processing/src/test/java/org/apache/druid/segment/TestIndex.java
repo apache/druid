@@ -75,6 +75,9 @@ public class TestIndex
       "qualityFloat",
       "qualityDouble",
       "qualityNumericString",
+      "longNumericNull",
+      "floatNumericNull",
+      "doubleNumericNull",
       "placement",
       "placementish",
       "index",
@@ -84,18 +87,6 @@ public class TestIndex
       "indexMin",
       "indexMaxPlusTen"
   };
-  public static final String[] DIMENSIONS = new String[]{
-      "market",
-      "quality",
-      "qualityLong",
-      "qualityFloat",
-      "qualityDouble",
-      "qualityNumericString",
-      "placement",
-      "placementish",
-      "partial_null_column",
-      "null_column"
-  };
 
   public static final List<DimensionSchema> DIMENSION_SCHEMAS = Arrays.asList(
       new StringDimensionSchema("market"),
@@ -104,6 +95,9 @@ public class TestIndex
       new FloatDimensionSchema("qualityFloat"),
       new DoubleDimensionSchema("qualityDouble"),
       new StringDimensionSchema("qualityNumericString"),
+      new LongDimensionSchema("longNumericNull"),
+      new FloatDimensionSchema("floatNumericNull"),
+      new DoubleDimensionSchema("doubleNumericNull"),
       new StringDimensionSchema("placement"),
       new StringDimensionSchema("placementish"),
       new StringDimensionSchema("partial_null_column"),
@@ -117,6 +111,9 @@ public class TestIndex
       new FloatDimensionSchema("qualityFloat"),
       new DoubleDimensionSchema("qualityDouble"),
       new StringDimensionSchema("qualityNumericString", null, false),
+      new LongDimensionSchema("longNumericNull"),
+      new FloatDimensionSchema("floatNumericNull"),
+      new DoubleDimensionSchema("doubleNumericNull"),
       new StringDimensionSchema("placement", null, false),
       new StringDimensionSchema("placementish", null, false),
       new StringDimensionSchema("partial_null_column", null, false),
@@ -266,13 +263,18 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup, boolean bitmap)
   {
+    CharSource stream = getResourceCharSource(resourceFilename);
+    return makeRealtimeIndex(stream, rollup, bitmap);
+  }
+
+  public static CharSource getResourceCharSource(final String resourceFilename)
+  {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
-    CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
-    return makeRealtimeIndex(stream, rollup, bitmap);
+    return Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
   }
 
   public static IncrementalIndex makeRealtimeIndex(final CharSource source)

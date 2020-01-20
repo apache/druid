@@ -21,15 +21,15 @@ package org.apache.druid.benchmark.query.timecompare;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -119,6 +119,7 @@ public class TimeCompareBenchmark
   protected static final Map<String, String> SCRIPT_DOUBLE_SUM = new HashMap<>();
 
   static {
+    NullHandling.initializeForTests();
     SCRIPT_DOUBLE_SUM.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     SCRIPT_DOUBLE_SUM.put("fnReset", "function reset() { return 0 }");
     SCRIPT_DOUBLE_SUM.put("fnCombine", "function combine(a,b) { return a + b }");
@@ -229,10 +230,7 @@ public class TimeCompareBenchmark
               0,
               Integer.MAX_VALUE
           ),
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
     }
@@ -273,7 +271,7 @@ public class TimeCompareBenchmark
 
       timeseriesQuery = timeseriesQueryBuilder.build();
       timeseriesFactory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
@@ -329,7 +327,7 @@ public class TimeCompareBenchmark
       incIndexes.add(incIndex);
     }
 
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
     qIndexes = new ArrayList<>();

@@ -47,7 +47,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -66,6 +66,7 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -84,6 +85,7 @@ import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -134,12 +136,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1, jvmArgsAppend = "-XX:+UseG1GC")
-@Warmup(iterations = 15)
-@Measurement(iterations = 30)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 public class CachingClusteredClientBenchmark
 {
   private static final Logger LOG = new Logger(CachingClusteredClientBenchmark.class);
@@ -147,22 +150,30 @@ public class CachingClusteredClientBenchmark
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
-  @Param({"8"})
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
+  @Param({"8", "24"})
   private int numServers;
 
-  @Param({"4", "2", "1"})
-  private int numProcessingThreads;
+  @Param({"0", "1", "4"})
+  private int parallelism;
 
   @Param({"75000"})
   private int rowsPerSegment;
 
-  @Param({"all"})
+  @Param({"all", "minute"})
   private String queryGranularity;
 
   private QueryToolChestWarehouse toolChestWarehouse;
   private QueryRunnerFactoryConglomerate conglomerate;
   private CachingClusteredClient cachingClusteredClient;
   private ExecutorService processingPool;
+  private ForkJoinPool forkJoinPool;
+
+  private boolean parallelCombine;
 
   private Query query;
 
@@ -172,6 +183,8 @@ public class CachingClusteredClientBenchmark
   private final QuerySegmentSpec basicSchemaIntervalSpec = new MultipleIntervalSegmentSpec(
       Collections.singletonList(basicSchema.getDataInterval())
   );
+
+  private final int numProcessingThreads = 4;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -188,6 +201,8 @@ public class CachingClusteredClientBenchmark
   {
     final String schemaName = "basic";
 
+    parallelCombine = parallelism > 0;
+
     BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
 
     Map<DataSegment, QueryableIndex> queryableIndexes = new HashMap<>(numServers);
@@ -199,6 +214,7 @@ public class CachingClusteredClientBenchmark
                                                  .interval(schemaInfo.getDataInterval())
                                                  .version("1")
                                                  .shardSpec(new LinearShardSpec(i))
+                                                 .size(0)
                                                  .build();
       final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
       LOG.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
@@ -231,6 +247,12 @@ public class CachingClusteredClientBenchmark
       {
         return numProcessingThreads;
       }
+
+      @Override
+      public boolean useParallelMergePool()
+      {
+        return true;
+      }
     };
 
     conglomerate = new DefaultQueryRunnerFactoryConglomerate(
@@ -238,9 +260,7 @@ public class CachingClusteredClientBenchmark
             .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -252,10 +272,7 @@ public class CachingClusteredClientBenchmark
                         "TopNQueryRunnerFactory-bufferPool",
                         () -> ByteBuffer.allocate(PROCESSING_BUFFER_SIZE)
                     ),
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
@@ -297,6 +314,12 @@ public class CachingClusteredClientBenchmark
     }
 
     processingPool = Execs.multiThreaded(processingConfig.getNumThreads(), "caching-clustered-client-benchmark");
+    forkJoinPool = new ForkJoinPool(
+        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75),
+        ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+        null,
+        true
+    );
     cachingClusteredClient = new CachingClusteredClient(
         toolChestWarehouse,
         serverView,
@@ -304,7 +327,9 @@ public class CachingClusteredClientBenchmark
         JSON_MAPPER,
         new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), 0),
         new CacheConfig(),
-        new DruidHttpClientConfig()
+        new DruidHttpClientConfig(),
+        processingConfig,
+        forkJoinPool
     );
   }
 
@@ -344,14 +369,8 @@ public class CachingClusteredClientBenchmark
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        strategySelector,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-    );
-    return new GroupByQueryRunnerFactory(
-        strategySelector,
-        toolChest
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
+    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 
   @TearDown(Level.Trial)
@@ -359,6 +378,7 @@ public class CachingClusteredClientBenchmark
   {
     closer.close();
     processingPool.shutdown();
+    forkJoinPool.shutdownNow();
   }
 
   @Benchmark
@@ -371,6 +391,12 @@ public class CachingClusteredClientBenchmark
                   .intervals(basicSchemaIntervalSpec)
                   .aggregators(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
                   .granularity(Granularity.fromString(queryGranularity))
+                  .context(
+                      ImmutableMap.of(
+                          QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
+                          QueryContexts.BROKER_PARALLELISM, parallelism
+                      )
+                  )
                   .build();
 
     final List<Result<TimeseriesResultValue>> results = runQuery();
@@ -388,11 +414,17 @@ public class CachingClusteredClientBenchmark
     query = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .intervals(basicSchemaIntervalSpec)
-        .dimension(new DefaultDimensionSpec("dimUniform", null))
+        .dimension(new DefaultDimensionSpec("dimZipf", null))
         .aggregators(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
         .granularity(Granularity.fromString(queryGranularity))
         .metric("sumLongSequential")
         .threshold(10_000) // we are primarily measuring 'broker' merge time, so collect a significant number of results
+        .context(
+            ImmutableMap.of(
+                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
+                QueryContexts.BROKER_PARALLELISM, parallelism
+            )
+        )
         .build();
 
     final List<Result<TopNResultValue>> results = runQuery();
@@ -412,16 +444,22 @@ public class CachingClusteredClientBenchmark
         .setDataSource(DATA_SOURCE)
         .setQuerySegmentSpec(basicSchemaIntervalSpec)
         .setDimensions(
-            new DefaultDimensionSpec("dimUniform", null),
-            new DefaultDimensionSpec("dimZipf", null)
+            new DefaultDimensionSpec("dimZipf", null),
+            new DefaultDimensionSpec("dimSequential", null)
         )
         .setAggregatorSpecs(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
         .setGranularity(Granularity.fromString(queryGranularity))
+        .setContext(
+            ImmutableMap.of(
+                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
+                QueryContexts.BROKER_PARALLELISM, parallelism
+            )
+        )
         .build();
 
-    final List<Row> results = runQuery();
+    final List<ResultRow> results = runQuery();
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -429,7 +467,7 @@ public class CachingClusteredClientBenchmark
   private <T> List<T> runQuery()
   {
     //noinspection unchecked
-    QueryRunner<T> theRunner = new FluentQueryRunnerBuilder<>(toolChestWarehouse.getToolChest(query))
+    QueryRunner<T> theRunner = new FluentQueryRunnerBuilder<T>(toolChestWarehouse.getToolChest(query))
         .create(cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals()))
         .applyPreMergeDecoration()
         .mergeResults()

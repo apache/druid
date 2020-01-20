@@ -28,6 +28,7 @@ import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.FileIteratingFirehose;
+import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -58,10 +59,10 @@ import java.util.concurrent.TimeUnit;
  * <br/>
  * - Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
  * them.  For the performance reason, prefetch technique is used, that is, when the size of remaining fetched data is
- * smaller than {@link PrefetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
+ * smaller than {@link FetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
  * objects.
  * <br/>
- * - Retry: if an exception occurs while downloading an object, it retries again up to {@link #maxFetchRetry}.
+ * - Retry: if an exception occurs while downloading an object, it retries again up to {@link FetchConfig#maxFetchRetry}.
  * <p/>
  * <p>
  * This implementation can be useful when the cost for reading input objects is large as reading from AWS S3 because
@@ -92,34 +93,31 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
 
   private static final CacheManager DISABLED_CACHE_MANAGER = new CacheManager(0);
-  private static final PrefetchConfig DISABLED_PREFETCH_CONFIG = new PrefetchConfig(0L, 0L, 0L, 0L);
-
-  public static final int DEFAULT_MAX_FETCH_RETRY = 3;
+  private static final FetchConfig DISABLED_PREFETCH_CONFIG = new FetchConfig(0L, 0L, 0L, 0L, 0);
 
   private final CacheManager<T> cacheManager;
-  private final PrefetchConfig prefetchConfig;
+  private final FetchConfig fetchConfig;
 
   private List<T> objects;
-  private final int maxFetchRetry;
 
   public PrefetchableTextFilesFirehoseFactory(
-      Long maxCacheCapacityBytes,
-      Long maxFetchCapacityBytes,
-      Long prefetchTriggerBytes,
-      Long fetchTimeout,
-      Integer maxFetchRetry
+      @Nullable Long maxCacheCapacityBytes,
+      @Nullable Long maxFetchCapacityBytes,
+      @Nullable Long prefetchTriggerBytes,
+      @Nullable Long fetchTimeout,
+      @Nullable Integer maxFetchRetry
   )
   {
-    this.prefetchConfig = new PrefetchConfig(
+    this.fetchConfig = new FetchConfig(
         maxCacheCapacityBytes,
         maxFetchCapacityBytes,
         prefetchTriggerBytes,
-        fetchTimeout
+        fetchTimeout,
+        maxFetchRetry
     );
     this.cacheManager = new CacheManager<>(
-        prefetchConfig.getMaxCacheCapacityBytes()
+        fetchConfig.getMaxCacheCapacityBytes()
     );
-    this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
   }
 
   @JsonProperty
@@ -131,25 +129,25 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   @JsonProperty
   public long getMaxFetchCapacityBytes()
   {
-    return prefetchConfig.getMaxFetchCapacityBytes();
+    return fetchConfig.getMaxFetchCapacityBytes();
   }
 
   @JsonProperty
   public long getPrefetchTriggerBytes()
   {
-    return prefetchConfig.getPrefetchTriggerBytes();
+    return fetchConfig.getPrefetchTriggerBytes();
   }
 
   @JsonProperty
   public long getFetchTimeout()
   {
-    return prefetchConfig.getFetchTimeout();
+    return fetchConfig.getFetchTimeout();
   }
 
   @JsonProperty
   public int getMaxFetchRetry()
   {
-    return maxFetchRetry;
+    return fetchConfig.getMaxFetchRetry();
   }
 
   @VisibleForTesting
@@ -161,7 +159,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, @Nullable File temporaryDirectory) throws IOException
   {
-    return connectInternal(firehoseParser, temporaryDirectory, this.prefetchConfig, this.cacheManager);
+    return connectInternal(firehoseParser, temporaryDirectory, this.fetchConfig, this.cacheManager);
   }
 
   @Override
@@ -173,7 +171,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   private Firehose connectInternal(
       StringInputRowParser firehoseParser,
       @Nullable File temporaryDirectory,
-      PrefetchConfig prefetchConfig,
+      FetchConfig fetchConfig,
       CacheManager cacheManager
   ) throws IOException
   {
@@ -181,7 +179,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
     }
 
-    if (cacheManager.isEnabled() || prefetchConfig.getMaxFetchCapacityBytes() > 0) {
+    if (cacheManager.isEnabled() || fetchConfig.getMaxFetchCapacityBytes() > 0) {
       Preconditions.checkNotNull(temporaryDirectory, "temporaryDirectory");
       Preconditions.checkArgument(
           temporaryDirectory.exists(),
@@ -204,7 +202,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         objects,
         fetchExecutor,
         temporaryDirectory,
-        prefetchConfig,
+        fetchConfig,
         new ObjectOpenFunction<T>()
         {
           @Override
@@ -219,8 +217,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
             return openObjectStream(object, start);
           }
         },
-        getRetryCondition(),
-        getMaxFetchRetry()
+        getRetryCondition()
     );
 
     return new FileIteratingFirehose(
@@ -239,19 +236,19 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
               throw new NoSuchElementException();
             }
 
-            final OpenedObject<T> openedObject = fetcher.next();
+            final OpenObject<T> openObject = fetcher.next();
             try {
               return new ResourceCloseableLineIterator(
                   new InputStreamReader(
-                      wrapObjectStream(openedObject.getObject(), openedObject.getObjectStream()),
+                      wrapObjectStream(openObject.getObject(), openObject.getObjectStream()),
                       StandardCharsets.UTF_8
                   ),
-                  openedObject.getResourceCloser()
+                  openObject.getResourceCloser()
               );
             }
             catch (IOException e) {
               try {
-                openedObject.getResourceCloser().close();
+                openObject.getResourceCloser().close();
               }
               catch (Throwable t) {
                 e.addSuppressed(t);
@@ -265,7 +262,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
           fetchExecutor.shutdownNow();
           try {
             Preconditions.checkState(fetchExecutor.awaitTermination(
-                prefetchConfig.getFetchTimeout(),
+                fetchConfig.getFetchTimeout(),
                 TimeUnit.MILLISECONDS
             ));
           }

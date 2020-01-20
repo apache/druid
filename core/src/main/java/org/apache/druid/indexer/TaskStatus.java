@@ -67,9 +67,11 @@ public class TaskStatus
     return new TaskStatus(taskId, code, -1, null, null);
   }
 
-  // The error message can be large, so truncate it to avoid storing large objects in zookeeper/metadata storage.
-  // The full error message will be available via a TaskReport.
-  private static String truncateErrorMsg(String errorMsg)
+  /**
+   * The error message can be large, so truncate it to avoid storing large objects in zookeeper/metadata storage.
+   * The full error message will be available via a TaskReport.
+   */
+  private static @Nullable String truncateErrorMsg(@Nullable String errorMsg)
   {
     if (errorMsg != null && errorMsg.length() > MAX_ERROR_MSG_LENGTH) {
       return errorMsg.substring(0, MAX_ERROR_MSG_LENGTH) + "...";
@@ -81,7 +83,7 @@ public class TaskStatus
   private final String id;
   private final TaskState status;
   private final long duration;
-  private final String errorMsg;
+  private final @Nullable String errorMsg;
   private final TaskLocation location;
 
   @JsonCreator
@@ -89,7 +91,7 @@ public class TaskStatus
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration,
-      @JsonProperty("errorMsg") String errorMsg,
+      @JsonProperty("errorMsg") @Nullable String errorMsg,
       @Nullable @JsonProperty("location") TaskLocation location
   )
   {
@@ -122,6 +124,7 @@ public class TaskStatus
     return duration;
   }
 
+  @Nullable
   @JsonProperty("errorMsg")
   public String getErrorMsg()
   {

@@ -25,6 +25,7 @@ import { ActionIcon } from '../action-icon/action-icon';
 import './table-cell.scss';
 
 const MAX_CHARS_TO_SHOW = 50;
+const ABSOLUTE_MAX_CHARS_TO_SHOW = 5000;
 
 interface ShortParts {
   prefix: string;
@@ -46,13 +47,12 @@ function shortenString(str: string): ShortParts {
 }
 
 export interface TableCellProps {
-  value?: any;
-  timestamp?: boolean;
-  unparseable?: boolean;
+  value: any;
+  unlimited?: boolean;
 }
 
-export function TableCell(props: TableCellProps): JSX.Element {
-  const { value, timestamp, unparseable } = props;
+export const TableCell = React.memo(function TableCell(props: TableCellProps) {
+  const { value, unlimited } = props;
   const [showValue, setShowValue] = useState();
 
   function renderShowValueDialog(): JSX.Element | undefined {
@@ -62,7 +62,19 @@ export function TableCell(props: TableCellProps): JSX.Element {
   }
 
   function renderTruncated(str: string): JSX.Element {
-    if (str.length <= MAX_CHARS_TO_SHOW) return <span className="table-cell plain">{str}</span>;
+    if (str.length <= MAX_CHARS_TO_SHOW) {
+      return <span className="table-cell plain">{str}</span>;
+    }
+
+    if (unlimited) {
+      return (
+        <span className="table-cell plain">
+          {str.length < ABSOLUTE_MAX_CHARS_TO_SHOW
+            ? str
+            : `${str.substr(0, ABSOLUTE_MAX_CHARS_TO_SHOW)}...`}
+        </span>
+      );
+    }
 
     const { prefix, omitted, suffix } = shortenString(str);
     return (
@@ -76,25 +88,21 @@ export function TableCell(props: TableCellProps): JSX.Element {
     );
   }
 
-  if (unparseable) {
-    return <span className="table-cell unparseable">error</span>;
-  } else if (value !== '' && value != null) {
-    if (timestamp) {
+  if (value !== '' && value != null) {
+    if (value instanceof Date) {
       return (
-        <span className="table-cell timestamp" title={value}>
-          {new Date(value).toISOString()}
+        <span className="table-cell timestamp" title={String(value.valueOf())}>
+          {value.toISOString()}
         </span>
       );
     } else if (Array.isArray(value)) {
       return renderTruncated(`[${value.join(', ')}]`);
+    } else if (typeof value === 'object') {
+      return renderTruncated(JSON.stringify(value));
     } else {
       return renderTruncated(String(value));
     }
   } else {
-    if (timestamp) {
-      return <span className="table-cell unparseable">unparseable timestamp</span>;
-    } else {
-      return <span className="table-cell null">null</span>;
-    }
+    return <span className="table-cell null">null</span>;
   }
-}
+});

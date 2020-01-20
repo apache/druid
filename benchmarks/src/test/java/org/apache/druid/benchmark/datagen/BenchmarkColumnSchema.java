@@ -19,6 +19,12 @@
 
 package org.apache.druid.benchmark.datagen;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
@@ -142,6 +148,22 @@ public class BenchmarkColumnSchema
   public BenchmarkColumnValueGenerator makeGenerator(long seed)
   {
     return new BenchmarkColumnValueGenerator(this, seed);
+  }
+
+  public DimensionSchema getDimensionSchema()
+  {
+    switch (type) {
+      case LONG:
+        return new LongDimensionSchema(name);
+      case FLOAT:
+        return new FloatDimensionSchema(name);
+      case DOUBLE:
+        return new DoubleDimensionSchema(name);
+      case STRING:
+        return new StringDimensionSchema(name);
+      default:
+        throw new IAE("unable to make dimension schema for %s", type);
+    }
   }
 
   public String getName()

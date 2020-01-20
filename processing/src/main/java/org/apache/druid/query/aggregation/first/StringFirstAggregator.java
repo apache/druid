@@ -19,61 +19,65 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 
 public class StringFirstAggregator implements Aggregator
 {
-
-  private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
+  private final BaseObjectColumnValueSelector<?> valueSelector;
   private final int maxStringBytes;
+  private final boolean needsFoldCheck;
 
   protected long firstTime;
   protected String firstValue;
 
   public StringFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
-      BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      BaseObjectColumnValueSelector<?> valueSelector,
+      int maxStringBytes,
+      boolean needsFoldCheck
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
+    this.needsFoldCheck = needsFoldCheck;
 
-    firstTime = Long.MAX_VALUE;
+    firstTime = DateTimes.MAX.getMillis();
     firstValue = null;
   }
 
   @Override
   public void aggregate()
   {
-    long time = timeSelector.getLong();
-    if (time < firstTime) {
-      firstTime = time;
-      Object value = valueSelector.getObject();
+    if (needsFoldCheck) {
+      // Less efficient code path when folding is a possibility (we must read the value selector first just in case
+      // it's a foldable object).
+      final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+          timeSelector,
+          valueSelector
+      );
 
-      if (value != null) {
-        if (value instanceof String) {
-          firstValue = (String) value;
-        } else if (value instanceof SerializablePairLongString) {
-          firstValue = ((SerializablePairLongString) value).rhs;
-        } else {
-          throw new ISE(
-              "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-              value.getClass().getName()
-          );
-        }
+      if (inPair != null && inPair.rhs != null && inPair.lhs < firstTime) {
+        firstTime = inPair.lhs;
+        firstValue = StringUtils.fastLooseChop(inPair.rhs, maxStringBytes);
+      }
+    } else {
+      final long time = timeSelector.getLong();
 
-        if (firstValue != null && firstValue.length() > maxStringBytes) {
-          firstValue = firstValue.substring(0, maxStringBytes);
+      if (time < firstTime) {
+        final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
+
+        if (value != null) {
+          firstTime = time;
+          firstValue = StringUtils.fastLooseChop(value, maxStringBytes);
         }
-      } else {
-        firstValue = null;
       }
     }
   }
@@ -81,7 +85,7 @@ public class StringFirstAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePairLongString(firstTime, firstValue);
+    return new SerializablePairLongString(firstTime, StringUtils.chop(firstValue, maxStringBytes));
   }
 
   @Override

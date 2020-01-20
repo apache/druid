@@ -19,6 +19,7 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
+import { Capabilities } from '../../utils/capabilities';
 import { SegmentsView } from '../segments-view/segments-view';
 
 describe('segments-view', () => {
@@ -28,7 +29,7 @@ describe('segments-view', () => {
         datasource={'test'}
         onlyUnavailable={false}
         goToQuery={() => {}}
-        noSqlMode={false}
+        capabilities={Capabilities.FULL}
       />,
     );
     expect(segmentsView).toMatchSnapshot();

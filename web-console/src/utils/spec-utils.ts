@@ -26,10 +26,10 @@ export function computeFlattenPathsForData(
   exprType: ExprType,
   arrayHandling: ArrayHandling,
 ): FlattenField[] {
-  return computeFlattenExprsForData(data, exprType, arrayHandling).map((expr, i) => {
+  return computeFlattenExprsForData(data, exprType, arrayHandling).map(expr => {
     return {
+      name: expr.replace(/^\$?\./, ''),
       type: exprType,
-      name: `expr_${i}`,
       expr,
     };
   });

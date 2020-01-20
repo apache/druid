@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.junit.BeforeClass;
 
@@ -28,5 +29,6 @@ public abstract class CalciteTestBase
   public static void setupCalciteProperties()
   {
     Calcites.setSystemProperties();
+    NullHandling.initializeForTests();
   }
 }

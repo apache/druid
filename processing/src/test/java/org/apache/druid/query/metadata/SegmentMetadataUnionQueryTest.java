@@ -21,6 +21,7 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -36,6 +37,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,8 +46,12 @@ import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class SegmentMetadataUnionQueryTest
+public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final QueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -104,7 +110,7 @@ public class SegmentMetadataUnionQueryTest
                 null
             )
         ),
-        mmap ? 669972 : 672752,
+        mmap ? 800544 : 803324,
         4836,
         null,
         null,

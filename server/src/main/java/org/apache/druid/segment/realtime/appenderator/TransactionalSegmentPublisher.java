@@ -68,6 +68,15 @@ public interface TransactionalSegmentPublisher
     );
   }
 
+  /**
+   * @return true if this publisher has action to take when publishing with an empty segment set.
+   *         The publisher used by the seekable stream tasks is an example where this is true.
+   */
+  default boolean supportsEmptyPublish()
+  {
+    return false;
+  }
+
   static Set<DataSegment> annotateAtomicUpdateGroupSize(Set<DataSegment> segments)
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();

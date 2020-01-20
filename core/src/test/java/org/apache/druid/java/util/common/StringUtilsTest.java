@@ -57,6 +57,32 @@ public class StringUtilsTest
   }
 
   @Test
+  public void toUtf8WithLimitTest()
+  {
+    final ByteBuffer smallBuffer = ByteBuffer.allocate(4);
+    final ByteBuffer mediumBuffer = ByteBuffer.allocate(6);
+    final ByteBuffer bigBuffer = ByteBuffer.allocate(8);
+
+    final int smallBufferResult = StringUtils.toUtf8WithLimit("🚀🌔", smallBuffer);
+    Assert.assertEquals(4, smallBufferResult);
+    final byte[] smallBufferByteArray = new byte[smallBufferResult];
+    smallBuffer.get(smallBufferByteArray);
+    Assert.assertEquals("🚀", StringUtils.fromUtf8(smallBufferByteArray));
+
+    final int mediumBufferResult = StringUtils.toUtf8WithLimit("🚀🌔", mediumBuffer);
+    Assert.assertEquals(4, mediumBufferResult);
+    final byte[] mediumBufferByteArray = new byte[mediumBufferResult];
+    mediumBuffer.get(mediumBufferByteArray);
+    Assert.assertEquals("🚀", StringUtils.fromUtf8(mediumBufferByteArray));
+
+    final int bigBufferResult = StringUtils.toUtf8WithLimit("🚀🌔", bigBuffer);
+    Assert.assertEquals(8, bigBufferResult);
+    final byte[] bigBufferByteArray = new byte[bigBufferResult];
+    bigBuffer.get(bigBufferByteArray);
+    Assert.assertEquals("🚀🌔", StringUtils.fromUtf8(bigBufferByteArray));
+  }
+
+  @Test
   public void fromUtf8ByteBufferHeap()
   {
     ByteBuffer bytes = ByteBuffer.wrap(new byte[]{'a', 'b', 'c', 'd'});
@@ -181,7 +207,7 @@ public class StringUtilsTest
     expectedException.expectMessage("count is negative, -1");
     Assert.assertEquals("", StringUtils.repeat("foo", -1));
   }
-  
+
   @Test
   public void testLpad()
   {
@@ -220,4 +246,32 @@ public class StringUtilsTest
     Assert.assertEquals(s5, null);
   }
 
+  @Test
+  public void testChop()
+  {
+    Assert.assertEquals("foo", StringUtils.chop("foo", 5));
+    Assert.assertEquals("fo", StringUtils.chop("foo", 2));
+    Assert.assertEquals("", StringUtils.chop("foo", 0));
+    Assert.assertEquals("smile 🙂 for", StringUtils.chop("smile 🙂 for the camera", 14));
+    Assert.assertEquals("smile 🙂", StringUtils.chop("smile 🙂 for the camera", 10));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 9));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 8));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 7));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 6));
+    Assert.assertEquals("smile", StringUtils.chop("smile 🙂 for the camera", 5));
+  }
+
+  @Test
+  public void testFastLooseChop()
+  {
+    Assert.assertEquals("foo", StringUtils.fastLooseChop("foo", 5));
+    Assert.assertEquals("fo", StringUtils.fastLooseChop("foo", 2));
+    Assert.assertEquals("", StringUtils.fastLooseChop("foo", 0));
+    Assert.assertEquals("smile 🙂 for", StringUtils.fastLooseChop("smile 🙂 for the camera", 12));
+    Assert.assertEquals("smile 🙂 ", StringUtils.fastLooseChop("smile 🙂 for the camera", 9));
+    Assert.assertEquals("smile 🙂", StringUtils.fastLooseChop("smile 🙂 for the camera", 8));
+    Assert.assertEquals("smile \uD83D", StringUtils.fastLooseChop("smile 🙂 for the camera", 7));
+    Assert.assertEquals("smile ", StringUtils.fastLooseChop("smile 🙂 for the camera", 6));
+    Assert.assertEquals("smile", StringUtils.fastLooseChop("smile 🙂 for the camera", 5));
+  }
 }

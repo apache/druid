@@ -23,12 +23,10 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import org.apache.commons.io.IOUtils;
@@ -59,10 +57,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.select.SelectQueryConfig;
-import org.apache.druid.query.select.SelectQueryEngine;
-import org.apache.druid.query.select.SelectQueryQueryToolChest;
-import org.apache.druid.query.select.SelectQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
@@ -176,60 +170,6 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public static AggregationTestHelper createSelectQueryAggregationTestHelper(
-      List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
-  )
-  {
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.setInjectableValues(
-        new InjectableValues.Std().addValue(
-            SelectQueryConfig.class,
-            new SelectQueryConfig(true)
-        )
-    );
-
-    Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
-
-    SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
-        TestHelper.makeJsonMapper(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
-
-    SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
-        new SelectQueryQueryToolChest(
-            TestHelper.makeJsonMapper(),
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        ),
-        new SelectQueryEngine(
-        ),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
-    );
-
-    IndexIO indexIO = new IndexIO(
-        mapper,
-        new ColumnConfig()
-        {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
-        }
-    );
-
-    return new AggregationTestHelper(
-        mapper,
-        new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
-        indexIO,
-        toolchest,
-        factory,
-        tempFolder,
-        jsonModulesToRegister,
-        Closer.create()
-    );
-  }
-
   public static AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
@@ -237,9 +177,7 @@ public class AggregationTestHelper implements Closeable
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest();
 
     TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         toolchest,
@@ -278,10 +216,7 @@ public class AggregationTestHelper implements Closeable
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
@@ -498,6 +433,7 @@ public class AggregationTestHelper implements Closeable
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
+                  .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
                   .withRollup(rollup)
@@ -518,6 +454,7 @@ public class AggregationTestHelper implements Closeable
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(minTimestamp)
+                      .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                       .withQueryGranularity(gran)
                       .withMetrics(metrics)
                       .withRollup(rollup)

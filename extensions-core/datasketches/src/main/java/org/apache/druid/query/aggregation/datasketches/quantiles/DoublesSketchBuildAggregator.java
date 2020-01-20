@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -43,6 +43,9 @@ public class DoublesSketchBuildAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
+    if (valueSelector.isNull()) {
+      return;
+    }
     sketch.update(valueSelector.getDouble());
   }
 

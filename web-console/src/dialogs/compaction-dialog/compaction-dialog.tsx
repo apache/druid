@@ -20,6 +20,7 @@ import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { AutoForm, ExternalLink } from '../../components';
+import { DRUID_DOCS_VERSION } from '../../variables';
 
 import './compaction-dialog.scss';
 
@@ -33,7 +34,6 @@ export interface CompactionDialogProps {
 
 export interface CompactionDialogState {
   currentConfig?: Record<string, any>;
-  allJsonValid: boolean;
 }
 
 export class CompactionDialog extends React.PureComponent<
@@ -44,9 +44,7 @@ export class CompactionDialog extends React.PureComponent<
 
   constructor(props: CompactionDialogProps) {
     super(props);
-    this.state = {
-      allJsonValid: true,
-    };
+    this.state = {};
   }
 
   componentDidMount(): void {
@@ -69,7 +67,7 @@ export class CompactionDialog extends React.PureComponent<
 
   render(): JSX.Element {
     const { onClose, onDelete, datasource, compactionConfig } = this.props;
-    const { currentConfig, allJsonValid } = this.state;
+    const { currentConfig } = this.state;
 
     return (
       <Dialog
@@ -125,7 +123,9 @@ export class CompactionDialog extends React.PureComponent<
               type: 'json',
               info: (
                 <p>
-                  <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/tasks.html#task-context">
+                  <ExternalLink
+                    href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/tasks.html#task-context`}
+                  >
                     Task context
                   </ExternalLink>{' '}
                   for compaction tasks.
@@ -143,7 +143,9 @@ export class CompactionDialog extends React.PureComponent<
               type: 'json',
               info: (
                 <p>
-                  <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#compact-task-tuningconfig">
+                  <ExternalLink
+                    href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/configuration/index.html#compact-task-tuningconfig`}
+                  >
                     Tuning config
                   </ExternalLink>{' '}
                   for compaction tasks.
@@ -153,7 +155,6 @@ export class CompactionDialog extends React.PureComponent<
           ]}
           model={currentConfig}
           onChange={m => this.setState({ currentConfig: m })}
-          updateJsonValidity={e => this.setState({ allJsonValid: e })}
         />
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -168,7 +169,7 @@ export class CompactionDialog extends React.PureComponent<
               text="Submit"
               intent={Intent.PRIMARY}
               onClick={this.handleSubmit}
-              disabled={!currentConfig || !allJsonValid}
+              disabled={!currentConfig}
             />
           </div>
         </div>

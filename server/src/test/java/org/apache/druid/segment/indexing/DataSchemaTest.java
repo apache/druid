@@ -92,7 +92,7 @@ public class DataSchemaTest
 
     Assert.assertEquals(
         ImmutableSet.of("time", "col1", "col2", "metric1", "metric2"),
-        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+        schema.getDimensionsSpec().getDimensionExclusions()
     );
   }
 
@@ -282,7 +282,7 @@ public class DataSchemaTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
     expectedException.expectMessage(
-        "Instantiation of [simple type, class org.apache.druid.data.input.impl.StringInputRowParser] value failed: parseSpec"
+        "Cannot construct instance of `org.apache.druid.data.input.impl.StringInputRowParser`, problem: parseSpec"
     );
 
     // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
@@ -360,7 +360,6 @@ public class DataSchemaTest
       Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
     }
   }
-
 
   @Test
   public void testSerde() throws Exception
@@ -471,13 +470,15 @@ public class DataSchemaTest
 
     TestModifiedDataSchema originalSchema = new TestModifiedDataSchema(
         "test",
-        parser,
+        null,
+        null,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
             },
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
+        parser,
         jsonMapper,
         "some arbitrary string"
     );

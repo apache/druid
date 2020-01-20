@@ -52,7 +52,7 @@ export interface SchemaTableProps {
   ) => void;
 }
 
-export function SchemaTable(props: SchemaTableProps) {
+export const SchemaTable = React.memo(function SchemaTable(props: SchemaTableProps) {
   const {
     sampleBundle,
     columnFilter,
@@ -147,7 +147,7 @@ export function SchemaTable(props: SchemaTableProps) {
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
+            Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
           };
         }
       })}
@@ -156,4 +156,4 @@ export function SchemaTable(props: SchemaTableProps) {
       sortable={false}
     />
   );
-}
+});

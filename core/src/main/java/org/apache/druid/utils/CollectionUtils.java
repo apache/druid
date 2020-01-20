@@ -23,11 +23,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.TreeSet;
@@ -114,6 +116,11 @@ public final class CollectionUtils
       }
     });
     return result;
+  }
+
+  public static boolean isNullOrEmpty(@Nullable List<?> list)
+  {
+    return list == null || list.isEmpty();
   }
 
   private CollectionUtils()

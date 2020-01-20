@@ -157,12 +157,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void chunkInterval(Interval interval)
-  {
-    setDimension("chunkInterval", interval.toString());
-  }
-
-  @Override
   public void preFilters(List<Filter> preFilters)
   {
     // Emit nothing by default.
@@ -182,6 +176,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public void vectorized(final boolean vectorized)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void parallelMergeParallelism(final int parallelism)
   {
     // Emit nothing by default.
   }
@@ -222,13 +222,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
-  @Deprecated
-  @Override
-  public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
-  {
-    return reportMillisTimeMetric("query/intervalChunk/time", timeNs);
-  }
-
   @Override
   public QueryMetrics<QueryType> reportCpuTime(long timeNs)
   {
@@ -252,18 +245,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public QueryMetrics<QueryType> reportNodeTime(long timeNs)
   {
     return reportMillisTimeMetric("query/node/time", timeNs);
-  }
-
-  private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
-  {
-    return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
-  }
-
-  protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
-  {
-    checkModifiedFromOwnerThread();
-    metrics.put(metricName, value);
-    return this;
   }
 
   @Override
@@ -294,6 +275,48 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportParallelMergeParallelism(int parallelism)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeInputSequences(long numSequences)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeInputRows(long numRows)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeOutputRows(long numRows)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeTaskCount(long numTasks)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
   public void emit(ServiceEmitter emitter)
   {
     checkModifiedFromOwnerThread();
@@ -301,5 +324,17 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
       emitter.emit(builder.build(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
+  }
+
+  protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
+  {
+    checkModifiedFromOwnerThread();
+    metrics.put(metricName, value);
+    return this;
+  }
+
+  private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
+  {
+    return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
   }
 }

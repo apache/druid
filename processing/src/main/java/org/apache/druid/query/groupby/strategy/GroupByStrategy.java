@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby.strategy;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -72,15 +71,6 @@ public interface GroupByStrategy
   boolean doMergeResults(GroupByQuery query);
 
   /**
-   * Decorate a runner with an interval chunking decorator.
-   */
-  QueryRunner<ResultRow> createIntervalChunkingRunner(
-      IntervalChunkingQueryRunnerDecorator decorator,
-      QueryRunner<ResultRow> runner,
-      GroupByQueryQueryToolChest toolChest
-  );
-
-  /**
    * Runs a provided {@link QueryRunner} on a provided {@link GroupByQuery}, which is assumed to return rows that are
    * properly sorted (by timestamp and dimensions) but not necessarily fully merged (that is, there may be adjacent
    * rows with the same timestamp and dimensions) and without PostAggregators computed. This method will fully merge
@@ -113,7 +103,7 @@ public interface GroupByStrategy
   @Nullable
   default BinaryOperator<ResultRow> createMergeFn(Query<ResultRow> query)
   {
-    throw new UOE("%s doesn't provide a merge function", this.getClass().getName());
+    return null;
   }
 
   /**

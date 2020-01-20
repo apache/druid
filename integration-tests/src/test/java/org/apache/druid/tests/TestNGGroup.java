@@ -29,6 +29,7 @@ public class TestNGGroup
   public static final String HADOOP_INDEX = "hadoop-index";
   public static final String KAFKA_INDEX = "kafka-index";
   public static final String OTHER_INDEX = "other-index";
+  public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
   public static final String QUERY = "query";
   public static final String REALTIME_INDEX = "realtime-index";
   public static final String SECURITY = "security";

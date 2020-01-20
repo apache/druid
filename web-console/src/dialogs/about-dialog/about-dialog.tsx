@@ -32,7 +32,7 @@ export interface AboutDialogProps {
   onClose: () => void;
 }
 
-export function AboutDialog(props: AboutDialogProps) {
+export const AboutDialog = React.memo(function AboutDialog(props: AboutDialogProps) {
   const { onClose } = props;
 
   return (
@@ -46,9 +46,7 @@ export function AboutDialog(props: AboutDialogProps) {
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
-          <strong>
-            Apache Druid (incubating) is a high performance real-time analytics database.
-          </strong>
+          <strong>Apache Druid is a high performance real-time analytics database.</strong>
         </p>
         <p>
           For help and support with Druid, please refer to the{' '}
@@ -71,4 +69,4 @@ export function AboutDialog(props: AboutDialogProps) {
       </div>
     </Dialog>
   );
-}
+});

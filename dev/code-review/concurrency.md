@@ -108,6 +108,8 @@ Testing
  https://github.com/code-review-checklists/java-concurrency#coordinate-test-workers)
  - [There are more test threads than CPUs (if possible for the test)?](
  https://github.com/code-review-checklists/java-concurrency#test-workers-interleavings)
+ - [Assertions in parallel threads and asynchronous code are handled properly?](
+ https://github.com/code-review-checklists/java-concurrency#concurrent-assert)
 
 Locks
  - [Can use `LifecycleLock` instead of a standard lock in a lifecycled object?](#use-lifecycle-lock)
@@ -149,7 +151,7 @@ Improving scalability
  https://github.com/code-review-checklists/java-concurrency#long-adder-for-hot-fields)
  - [Considered queues from JCTools instead of the standard concurrent queues?](
  https://github.com/code-review-checklists/java-concurrency#jctools)
- - [Caffeine cache is used instead of Guava?](https://github.com/apache/incubator-druid/issues/8399)
+ - [Caffeine cache is used instead of Guava?](https://github.com/apache/druid/issues/8399)
  - [Can apply speculation (optimistic concurrency) technique?](
  https://github.com/code-review-checklists/java-concurrency#speculation)
 

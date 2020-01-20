@@ -57,7 +57,7 @@ There are currently no configuration properties specific to Moving Average.
 ## Limitations
 * movingAverage is missing support for the following groupBy properties: `subtotalsSpec`, `virtualColumns`.
 * movingAverage is missing support for the following timeseries properties: `descending`.
-* movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/incubator-druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error).
+* movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error).
 
 ##Query spec:
 * Most properties in the query spec derived from  [groupBy query](../../querying/groupbyquery.md) / [timeseries](../../querying/timeseriesquery.md), see documentation for these query types.
@@ -100,10 +100,12 @@ These are properties which are common to all Averagers:
 * [Standard averagers](#standard-averagers):
   * doubleMean
   * doubleMeanNoNulls
+  * doubleSum
   * doubleMax
   * doubleMin
   * longMean
   * longMeanNoNulls
+  * longSum
   * longMax
   * longMin
 
@@ -113,6 +115,7 @@ These averagers offer four functions:
 
 * Mean (Average)
 * MeanNoNulls (Ignores empty buckets).
+* Sum
 * Max
 * Min
 

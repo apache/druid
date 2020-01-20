@@ -22,9 +22,8 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
@@ -40,6 +39,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 
 /**
+ *
  */
 public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 {
@@ -58,15 +58,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
   private static File createNewBasePersistDirectory()
   {
-    try {
-      return Files.createTempDir();
-    }
-    catch (IllegalStateException e) {
-      String messageTemplate = "Failed to create temporary directory in [%s]! " +
-              "Make sure the `java.io.tmpdir` property is set to an existing and writable directory " +
-              "with enough free space.";
-      throw new ISE(e, messageTemplate, System.getProperty("java.io.tmpdir"));
-    }
+    return FileUtils.createTempDir("druid-realtime-persist");
   }
 
   // Might make sense for this to be a builder
@@ -182,6 +174,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   }
 
   @Override
+  @JsonProperty
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
