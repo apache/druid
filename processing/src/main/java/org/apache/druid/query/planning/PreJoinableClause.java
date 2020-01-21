@@ -31,8 +31,6 @@ import java.util.Objects;
  * Like {@link org.apache.druid.segment.join.JoinableClause}, but contains a {@link DataSource} instead of a
  * {@link org.apache.druid.segment.join.Joinable}. This is useful because when analyzing joins, we don't want to
  * actually create Joinables, since that can be an expensive operation.
- *
- * Converted into {@link org.apache.druid.segment.join.JoinableClause} by {@link Joinables#createSegmentMapFn}.
  */
 public class PreJoinableClause
 {
