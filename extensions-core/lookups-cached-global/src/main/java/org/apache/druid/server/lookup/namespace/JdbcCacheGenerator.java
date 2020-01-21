@@ -61,7 +61,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
     final Long lastDBUpdate;
-    final List<Pair<String, String>> pairs;
+    final List<Pair<String, String>> newCacheEntries;
     final long dbQueryStart;
     final boolean doIncrementalLoad;
 
@@ -71,10 +71,10 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         return null;
       }
       dbQueryStart = System.currentTimeMillis();
-       doIncrementalLoad = lastDBUpdate != null && !Strings.isNullOrEmpty(namespace.getTsColumn())
+      doIncrementalLoad = lastDBUpdate != null && !Strings.isNullOrEmpty(namespace.getTsColumn())
           && lastVersion != null;
       LOG.debug("Updating %s", entryId);
-      pairs = getLookupPairs(entryId, namespace, doIncrementalLoad, lastCheck);
+      newCacheEntries = getLookupEntries(entryId, namespace, doIncrementalLoad, lastCheck);
     }
     catch (UnableToObtainConnectionException e) {
       if (e.getMessage().contains("No suitable driver found")) {
@@ -87,13 +87,10 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       }
     }
 
-
     final String newVersion;
-    CacheScheduler.VersionedCache versionedCache = null;
-    List<Pair<String, String>> newCacheEntries = getEntriesFromDB(doIncrementalLoad, namespace, entryId, lastCheck);
     if (doIncrementalLoad) {
       newVersion = StringUtils.format("%d", lastDBUpdate);
-      versionedCache = entryId.createFromExistingCache(entryId, newVersion, newCacheEntries);
+      CacheScheduler.VersionedCache versionedCache = entryId.createFromExistingCache(entryId, newVersion, newCacheEntries);
       LOG.info("Finished loading %d new incremental values in last %s for %s ",
           newCacheEntries.size(),
           PeriodFormat.getDefault().print(new Period(lastCheck, lastDBUpdate)),
@@ -103,6 +100,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       // its preferable to have stale entries for incremental load rather than closing the cache altogether.
       return versionedCache;
     } else {
+      CacheScheduler.VersionedCacheBuilder versionedCacheBuilder = null;
       try {
         LOG.debug("Not doing incremental load because either " +
                 "namespace.getTsColumn() is not set or this is the first load." +
@@ -118,7 +116,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         } else {
           newVersion = StringUtils.format("%d", dbQueryStart);
         }
-        versionedCache = scheduler.createVersionedCache(entryId, newVersion, null);
+        versionedCacheBuilder = scheduler.createVersionedCache(entryId, newVersion, null);
+        CacheScheduler.VersionedCache versionedCache = versionedCacheBuilder.getVersionedCache();
         final Map<String, String> cache = versionedCache.getCache();
         for (Pair<String, String> pair : newCacheEntries) {
           cache.put(pair.lhs, pair.rhs);
@@ -128,8 +127,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       }
       catch (Throwable t) {
         try {
-          if (versionedCache != null) {
-            versionedCache.close();
+          if (versionedCacheBuilder != null) {
+            versionedCacheBuilder.close();
           }
         }
         catch (Exception e) {
@@ -140,7 +139,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     }
   }
 
-  private List<Pair<String, String>> getLookupPairs(
+  private List<Pair<String, String>> getLookupEntries(
       final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
       final JdbcExtractionNamespace namespace,
       boolean doIncrementalLoad,

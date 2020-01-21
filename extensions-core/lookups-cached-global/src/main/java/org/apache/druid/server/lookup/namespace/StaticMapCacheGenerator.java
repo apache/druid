@@ -46,14 +46,15 @@ public final class StaticMapCacheGenerator implements CacheGenerator<StaticMapEx
           "StaticMapCacheGenerator could only be configured for a namespace which is scheduled "
           + "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
-    CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version, null);
+    CacheScheduler.VersionedCacheBuilder versionedCacheBuilder = scheduler.createVersionedCache(id, version, null);
+    CacheScheduler.VersionedCache versionedCache = versionedCacheBuilder.getVersionedCache();
     try {
       versionedCache.getCache().putAll(namespace.getMap());
       return versionedCache;
     }
     catch (Throwable t) {
       try {
-        versionedCache.close();
+        versionedCacheBuilder.close();
       }
       catch (Exception e) {
         t.addSuppressed(e);
