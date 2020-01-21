@@ -72,7 +72,7 @@ public class StringLastBufferAggregator implements BufferAggregator
           valueSelector
       );
 
-      if (inPair != null && inPair.rhs != null) {
+      if (inPair != null) {
         final long lastTime = buf.getLong(position);
         if (inPair.lhs >= lastTime) {
           StringFirstLastUtils.writePair(
@@ -90,14 +90,12 @@ public class StringLastBufferAggregator implements BufferAggregator
       if (time >= lastTime) {
         final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
 
-        if (value != null) {
-          StringFirstLastUtils.writePair(
-              buf,
-              position,
-              new SerializablePairLongString(time, value),
-              maxStringBytes
-          );
-        }
+        StringFirstLastUtils.writePair(
+            buf,
+            position,
+            new SerializablePairLongString(time, value),
+            maxStringBytes
+        );
       }
     }
   }

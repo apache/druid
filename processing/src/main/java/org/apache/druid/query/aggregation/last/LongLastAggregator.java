@@ -20,46 +20,28 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
-public class LongLastAggregator implements Aggregator
+public class LongLastAggregator extends NumericLastAggregator<BaseLongColumnValueSelector>
 {
-  private final BaseLongColumnValueSelector valueSelector;
-  private final BaseLongColumnValueSelector timeSelector;
-
-  protected long lastTime;
-  protected long lastValue;
+  long lastValue;
 
   public LongLastAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
   {
-    this.valueSelector = valueSelector;
-    this.timeSelector = timeSelector;
-
-    lastTime = Long.MIN_VALUE;
+    super(timeSelector, valueSelector);
     lastValue = 0;
   }
 
   @Override
-  public void aggregate()
+  void setCurrentValue()
   {
-    long time = timeSelector.getLong();
-    if (time >= lastTime) {
-      lastTime = time;
-      lastValue = valueSelector.getLong();
-    }
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) lastValue;
+    lastValue = valueSelector.getLong();
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
   }
 
   @Override
@@ -69,14 +51,14 @@ public class LongLastAggregator implements Aggregator
   }
 
   @Override
-  public long getLong()
+  public double getDouble()
   {
-    return lastValue;
+    return (double) lastValue;
   }
 
   @Override
-  public void close()
+  public long getLong()
   {
-
+    return lastValue;
   }
 }
