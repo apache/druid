@@ -85,8 +85,8 @@ public class InlineDataSourceTest
   @Test
   public void test_getTableNames()
   {
-    Assert.assertEquals(Collections.emptyList(), listDataSource.getTableNames());
-    Assert.assertEquals(Collections.emptyList(), iterableDataSource.getTableNames());
+    Assert.assertEquals(Collections.emptySet(), listDataSource.getTableNames());
+    Assert.assertEquals(Collections.emptySet(), iterableDataSource.getTableNames());
   }
 
   @Test

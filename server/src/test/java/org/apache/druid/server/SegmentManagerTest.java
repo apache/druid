@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -384,7 +385,10 @@ public class SegmentManagerTest
   @Test
   public void testGetNonExistingTimeline()
   {
-    Assert.assertNull(segmentManager.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource("nonExisting"))));
+    Assert.assertEquals(
+        Optional.empty(),
+        segmentManager.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource("nonExisting")))
+    );
   }
 
   @Test
@@ -450,7 +454,10 @@ public class SegmentManagerTest
     dataSources.forEach(
         (sourceName, dataSourceState) -> {
           Assert.assertEquals(expectedDataSourceCounts.get(sourceName).longValue(), dataSourceState.getNumSegments());
-          Assert.assertEquals(expectedDataSourceSizes.get(sourceName).longValue(), dataSourceState.getTotalSegmentSize());
+          Assert.assertEquals(
+              expectedDataSourceSizes.get(sourceName).longValue(),
+              dataSourceState.getTotalSegmentSize()
+          );
           Assert.assertEquals(
               expectedDataSources.get(sourceName).getAllTimelineEntries(),
               dataSourceState.getTimeline().getAllTimelineEntries()

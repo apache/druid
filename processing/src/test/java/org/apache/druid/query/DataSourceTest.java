@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -53,7 +54,10 @@ public class DataSourceTest
   @Test
   public void testTableDataSource() throws IOException
   {
-    DataSource dataSource = JSON_MAPPER.readValue("{\"type\":\"table\", \"name\":\"somedatasource\"}", DataSource.class);
+    DataSource dataSource = JSON_MAPPER.readValue(
+        "{\"type\":\"table\", \"name\":\"somedatasource\"}",
+        DataSource.class
+    );
     Assert.assertEquals(new TableDataSource("somedatasource"), dataSource);
   }
 
@@ -88,8 +92,8 @@ public class DataSourceTest
         Lists.newArrayList(((UnionDataSource) dataSource).getDataSources())
     );
     Assert.assertEquals(
-        Lists.newArrayList("ds1", "ds2"),
-        Lists.newArrayList(dataSource.getTableNames())
+        ImmutableSet.of("ds1", "ds2"),
+        dataSource.getTableNames()
     );
 
     final DataSource serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(dataSource), DataSource.class);
