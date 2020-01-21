@@ -212,7 +212,8 @@ public class InlineDataSourceTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot accept children");
 
-    listDataSource.withChildren(ImmutableList.of(new TableDataSource("foo")));
+    // Workaround so "withChildren" isn't flagged as unused in the DataSource interface.
+    ((DataSource) listDataSource).withChildren(ImmutableList.of(new TableDataSource("foo")));
   }
 
   @Test
