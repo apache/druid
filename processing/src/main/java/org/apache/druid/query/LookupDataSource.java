@@ -21,35 +21,45 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-@JsonTypeName("table")
-public class TableDataSource implements DataSource
+/**
+ * Represents a lookup.
+ *
+ * Currently, this datasource is not actually queryable, and attempts to do so will lead to errors. It is here as a
+ * placeholder for a future time in which it will become queryable.
+ *
+ * The "lookupName" referred to here should be provided by a
+ * {@link org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider}.
+ */
+public class LookupDataSource implements DataSource
 {
-  private final String name;
+  private final String lookupName;
 
   @JsonCreator
-  public TableDataSource(@JsonProperty("name") String name)
+  public LookupDataSource(
+      @JsonProperty("lookup") String lookupName
+  )
   {
-    this.name = Preconditions.checkNotNull(name, "'name' must be nonnull");
-  }
-
-  @JsonProperty
-  public String getName()
-  {
-    return name;
+    this.lookupName = Preconditions.checkNotNull(lookupName, "lookup");
   }
 
   @Override
   public Set<String> getTableNames()
   {
-    return Collections.singleton(name);
+    return Collections.emptySet();
+  }
+
+  @JsonProperty("lookup")
+  public String getLookupName()
+  {
+    return lookupName;
   }
 
   @Override
@@ -71,49 +81,45 @@ public class TableDataSource implements DataSource
   @Override
   public boolean isCacheable()
   {
-    return true;
+    return false;
   }
 
   @Override
   public boolean isGlobal()
   {
-    return false;
+    return true;
   }
 
   @Override
   public boolean isConcrete()
   {
-    return true;
+    return false;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LookupDataSource that = (LookupDataSource) o;
+    return Objects.equals(lookupName, that.lookupName);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(lookupName);
   }
 
   @Override
   public String toString()
   {
-    return name;
-  }
-
-  @Override
-  public final boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof TableDataSource)) {
-      return false;
-    }
-
-    TableDataSource that = (TableDataSource) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public final int hashCode()
-  {
-    return name.hashCode();
+    return "LookupDataSource{" +
+           "lookupName='" + lookupName + '\'' +
+           '}';
   }
 }

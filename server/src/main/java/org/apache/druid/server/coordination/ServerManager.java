@@ -20,8 +20,6 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
@@ -35,7 +33,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
@@ -52,7 +49,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -60,18 +57,18 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * Query handler for Historical processes (see CliHistorical).
  */
 public class ServerManager implements QuerySegmentWalker
 {
@@ -112,105 +109,46 @@ public class ServerManager implements QuerySegmentWalker
     this.serverConfig = serverConfig;
   }
 
-  private DataSource getInnerMostDataSource(DataSource dataSource)
-  {
-    if (dataSource instanceof QueryDataSource) {
-      return getInnerMostDataSource(((QueryDataSource) dataSource).getQuery().getDataSource());
-    }
-    return dataSource;
-  }
-
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    if (factory == null) {
-      throw new ISE("Unknown query type[%s].", query.getClass());
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
+    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
+        segmentManager.getTimeline(analysis);
+
+    if (maybeTimeline.isPresent()) {
+      timeline = maybeTimeline.get();
+    } else {
+      // Note: this is not correct when there's a right or full outer join going on.
+      // See https://github.com/apache/druid/issues/9229 for details.
+      return new NoopQueryRunner<>();
     }
 
-    final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
-
-    DataSource dataSource = getInnerMostDataSource(query.getDataSource());
-    if (!(dataSource instanceof TableDataSource)) {
-      throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
-    }
-    String dataSourceName = getDataSourceName(dataSource);
-
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = segmentManager.getTimeline(
-        dataSourceName
-    );
-
-    if (timeline == null) {
-      return new NoopQueryRunner<T>();
-    }
-
-    FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
+    FunctionalIterable<SegmentDescriptor> segmentDescriptors = FunctionalIterable
         .create(intervals)
+        .transformCat(timeline::lookup)
         .transformCat(
-            new Function<Interval, Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>>>()
-            {
-              @Override
-              public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
-              {
-                return timeline.lookup(input);
+            holder -> {
+              if (holder == null) {
+                return null;
               }
-            }
-        )
-        .transformCat(
-            new Function<TimelineObjectHolder<String, ReferenceCountingSegment>, Iterable<QueryRunner<T>>>()
-            {
-              @Override
-              public Iterable<QueryRunner<T>> apply(
-                  @Nullable
-                  final TimelineObjectHolder<String, ReferenceCountingSegment> holder
-              )
-              {
-                if (holder == null) {
-                  return null;
-                }
 
-                return FunctionalIterable
-                    .create(holder.getObject())
-                    .transform(
-                        new Function<PartitionChunk<ReferenceCountingSegment>, QueryRunner<T>>()
-                        {
-                          @Override
-                          public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
-                          {
-                            return buildAndDecorateQueryRunner(
-                                factory,
-                                toolChest,
-                                input.getObject(),
-                                new SegmentDescriptor(
-                                    holder.getInterval(),
-                                    holder.getVersion(),
-                                    input.getChunkNumber()
-                                ),
-                                cpuTimeAccumulator
-                            );
-                          }
-                        }
-                    );
-              }
+              return FunctionalIterable
+                  .create(holder.getObject())
+                  .transform(
+                      partitionChunk ->
+                          new SegmentDescriptor(
+                              holder.getInterval(),
+                              holder.getVersion(),
+                              partitionChunk.getChunkNumber()
+                          )
+                  );
             }
         );
 
-    return CPUTimeMetricQueryRunner.safeBuild(
-        new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
-            toolChest
-        ),
-        toolChest,
-        emitter,
-        cpuTimeAccumulator,
-        true
-    );
-  }
-
-  private String getDataSourceName(DataSource dataSource)
-  {
-    return Iterables.getOnlyElement(dataSource.getNames());
+    return getQueryRunnerForSegments(query, segmentDescriptors);
   }
 
   @Override
@@ -221,52 +159,63 @@ public class ServerManager implements QuerySegmentWalker
       log.makeAlert("Unknown query type, [%s]", query.getClass())
          .addData("dataSource", query.getDataSource())
          .emit();
-      return new NoopQueryRunner<T>();
+      return new NoopQueryRunner<>();
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    String dataSourceName = getDataSourceName(query.getDataSource());
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
+    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
+        segmentManager.getTimeline(analysis);
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = segmentManager.getTimeline(
-        dataSourceName
-    );
-
-    if (timeline == null) {
-      return new NoopQueryRunner<T>();
+    // Make sure this query type can handle the subquery, if present.
+    if (analysis.isQuery() && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
+      throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
 
-    final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
+    if (maybeTimeline.isPresent()) {
+      timeline = maybeTimeline.get();
+    } else {
+      // Note: this is not correct when there's a right or full outer join going on.
+      // See https://github.com/apache/druid/issues/9229 for details.
+      return new NoopQueryRunner<>();
+    }
+
+    // We can't actually handle joins yet; throw an error if they are present.
+    if (!analysis.getPreJoinableClauses().isEmpty()) {
+      throw new ISE("Cannot handle 'join' dataSource");
+    }
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
         .transformCat(
-            new Function<SegmentDescriptor, Iterable<QueryRunner<T>>>()
-            {
-              @Override
-              @SuppressWarnings("unchecked")
-              public Iterable<QueryRunner<T>> apply(SegmentDescriptor input)
-              {
+            descriptor -> {
+              final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+                  descriptor.getInterval(),
+                  descriptor.getVersion()
+              );
 
-                final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
-                    input.getInterval(), input.getVersion()
-                );
-
-                if (entry == null) {
-                  return Collections.singletonList(
-                      new ReportTimelineMissingSegmentQueryRunner<T>(input));
-                }
-
-                final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());
-                if (chunk == null) {
-                  return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
-                }
-
-                final ReferenceCountingSegment adapter = chunk.getObject();
-                return Collections.singletonList(
-                    buildAndDecorateQueryRunner(factory, toolChest, adapter, input, cpuTimeAccumulator)
-                );
+              if (entry == null) {
+                return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
               }
+
+              final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
+              if (chunk == null) {
+                return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
+              }
+
+              final ReferenceCountingSegment segment = chunk.getObject();
+              return Collections.singletonList(
+                  buildAndDecorateQueryRunner(
+                      factory,
+                      toolChest,
+                      segment,
+                      descriptor,
+                      cpuTimeAccumulator
+                  )
+              );
             }
         );
 

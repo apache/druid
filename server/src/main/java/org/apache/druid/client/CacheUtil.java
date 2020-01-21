@@ -99,7 +99,8 @@ public class CacheUtil
     return QueryContexts.isUseCache(query)
            && strategy != null
            && cacheConfig.isUseCache()
-           && cacheConfig.isQueryCacheable(query);
+           && cacheConfig.isQueryCacheable(query)
+           && query.getDataSource().isCacheable();
   }
 
   private static <T> boolean populateCache(
@@ -111,7 +112,8 @@ public class CacheUtil
     return QueryContexts.isPopulateCache(query)
            && strategy != null
            && cacheConfig.isPopulateCache()
-           && cacheConfig.isQueryCacheable(query);
+           && cacheConfig.isQueryCacheable(query)
+           && query.getDataSource().isCacheable();
   }
 
 }

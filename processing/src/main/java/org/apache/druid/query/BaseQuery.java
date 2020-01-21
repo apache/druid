@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -117,17 +118,11 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @VisibleForTesting
-  public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery query)
+  public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
   {
-    if (query.getDataSource() instanceof QueryDataSource) {
-      QueryDataSource ds = (QueryDataSource) query.getDataSource();
-      Query subquery = ds.getQuery();
-      if (subquery instanceof BaseQuery) {
-        return getQuerySegmentSpecForLookUp((BaseQuery) subquery);
-      }
-      throw new IllegalStateException("Invalid subquery type " + subquery.getClass());
-    }
-    return query.getQuerySegmentSpec();
+    return DataSourceAnalysis.forDataSource(query.getDataSource())
+                             .getBaseQuerySegmentSpec()
+                             .orElse(query.getQuerySegmentSpec());
   }
 
   @Override
@@ -270,14 +265,13 @@ public abstract class BaseQuery<T> implements Query<T>
            Objects.equals(dataSource, baseQuery.dataSource) &&
            Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
-           Objects.equals(duration, baseQuery.duration) &&
+           Objects.equals(getDuration(), baseQuery.getDuration()) &&
            Objects.equals(granularity, baseQuery.granularity);
   }
 
   @Override
   public int hashCode()
   {
-
-    return Objects.hash(dataSource, descending, context, querySegmentSpec, duration, granularity);
+    return Objects.hash(dataSource, descending, context, querySegmentSpec, getDuration(), granularity);
   }
 }

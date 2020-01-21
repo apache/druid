@@ -49,7 +49,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -62,6 +61,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -84,6 +84,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
@@ -305,9 +306,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new TimelineServerView()
         {
           @Override
-          public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+          public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
           {
-            return null;
+            return Optional.empty();
           }
 
           @Override

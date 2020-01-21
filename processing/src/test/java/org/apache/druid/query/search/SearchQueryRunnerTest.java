@@ -72,6 +72,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class SearchQueryRunnerTest extends InitializedNullHandlingTest
@@ -167,11 +168,15 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
               ResponseContext responseContext
           )
           {
-            final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-01-12/2011-02-28")))
+            final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-01-12/2011-02-28")))
+                )
             );
-            final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-03-01/2011-04-15")))
+            final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-03-01/2011-04-15")))
+                )
             );
             return Sequences.concat(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext));
           }

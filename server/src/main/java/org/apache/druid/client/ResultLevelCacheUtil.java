@@ -73,7 +73,8 @@ public class ResultLevelCacheUtil
     return QueryContexts.isUseResultLevelCache(query)
            && strategy != null
            && cacheConfig.isUseResultLevelCache()
-           && cacheConfig.isQueryCacheable(query);
+           && cacheConfig.isQueryCacheable(query)
+           && query.getDataSource().isCacheable();
   }
 
   private static <T> boolean populateResultLevelCache(
@@ -85,6 +86,7 @@ public class ResultLevelCacheUtil
     return QueryContexts.isPopulateResultLevelCache(query)
            && strategy != null
            && cacheConfig.isPopulateResultLevelCache()
-           && cacheConfig.isQueryCacheable(query);
+           && cacheConfig.isQueryCacheable(query)
+           && query.getDataSource().isCacheable();
   }
 }

@@ -89,7 +89,7 @@ public class DataSourceTest
     );
     Assert.assertEquals(
         Lists.newArrayList("ds1", "ds2"),
-        Lists.newArrayList(dataSource.getNames())
+        Lists.newArrayList(dataSource.getTableNames())
     );
 
     final DataSource serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(dataSource), DataSource.class);

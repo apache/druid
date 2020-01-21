@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.AbstractSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -382,7 +384,7 @@ public class SegmentManagerTest
   @Test
   public void testGetNonExistingTimeline()
   {
-    Assert.assertNull(segmentManager.getTimeline("nonExisting"));
+    Assert.assertNull(segmentManager.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource("nonExisting"))));
   }
 
   @Test
