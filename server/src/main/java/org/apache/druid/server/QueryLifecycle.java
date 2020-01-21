@@ -189,7 +189,7 @@ public class QueryLifecycle
         AuthorizationUtils.authorizeAllResourceActions(
             authenticationResult,
             Iterables.transform(
-                baseQuery.getDataSource().getNames(),
+                baseQuery.getDataSource().getTableNames(),
                 AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
             ),
             authorizerMapper
@@ -213,7 +213,7 @@ public class QueryLifecycle
         AuthorizationUtils.authorizeAllResourceActions(
             req,
             Iterables.transform(
-                baseQuery.getDataSource().getNames(),
+                baseQuery.getDataSource().getTableNames(),
                 AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
             ),
             authorizerMapper

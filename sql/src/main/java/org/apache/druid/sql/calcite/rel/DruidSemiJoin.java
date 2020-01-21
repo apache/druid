@@ -171,13 +171,13 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
     final DruidRel<?> druidRight = (DruidRel) this.right;
-    Set<String> datasourceNames = new LinkedHashSet<>();
-    datasourceNames.addAll(left.getDataSourceNames());
-    datasourceNames.addAll(druidRight.getDataSourceNames());
-    return new ArrayList<>(datasourceNames);
+    Set<String> dataSourceNames = new LinkedHashSet<>();
+    dataSourceNames.addAll(left.getDataSourceNames());
+    dataSourceNames.addAll(druidRight.getDataSourceNames());
+    return dataSourceNames;
   }
 
   @Override

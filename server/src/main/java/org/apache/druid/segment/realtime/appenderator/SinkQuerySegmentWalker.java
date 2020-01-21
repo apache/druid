@@ -53,6 +53,7 @@ import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
@@ -166,6 +167,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
          .addData("dataSource", query.getDataSource())
          .emit();
       return new NoopQueryRunner<>();
+    }
+
+    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    if (!analysis.getPreJoinableClauses().isEmpty()) {
+      throw new ISE("Cannot handle join dataSource");
     }
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);

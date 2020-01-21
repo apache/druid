@@ -522,7 +522,7 @@ public class CachingClusteredClientBenchmark
     @Override
     public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
     {
-      final String table = Iterables.getOnlyElement(dataSource.getNames());
+      final String table = Iterables.getOnlyElement(dataSource.getTableNames());
       return timelines.get(table);
     }
 
