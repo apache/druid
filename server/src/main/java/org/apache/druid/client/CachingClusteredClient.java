@@ -241,8 +241,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.toolChest = warehouse.getToolChest(query);
       this.strategy = toolChest.getCacheStrategy(query);
 
-      this.useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
-      this.populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
+      this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
+      this.populateCache = CacheUtil.isPopulateSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
       this.isBySegment = QueryContexts.isBySegment(query);
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108

@@ -70,7 +70,7 @@ public class InlineDataSource implements DataSource
    * non-Jackson callers should use {@link #fromIterable}.
    */
   @JsonCreator
-  public static InlineDataSource fromJson(
+  private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
       @JsonProperty("columnTypes") List<ValueType> columnTypes,
       @JsonProperty("rows") List<Object[]> rows
@@ -232,7 +232,7 @@ public class InlineDataSource implements DataSource
   @Override
   public String toString()
   {
-    // Don't include 'rows' in stringificatione, because it might be long and/or lazy.
+    // Don't include 'rows' in stringification, because it might be long and/or lazy.
     return "InlineDataSource{" +
            "columnNames=" + columnNames +
            ", columnTypes=" + columnTypes +

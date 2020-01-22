@@ -226,6 +226,14 @@ public class InlineDataSourceTest
   }
 
   @Test
+  public void test_toString_iterable()
+  {
+    // Verify that toString does not iterate the rows.
+    final String ignored = iterableDataSource.toString();
+    Assert.assertEquals(0, iterationCounter.get());
+  }
+
+  @Test
   public void test_serde_list() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();

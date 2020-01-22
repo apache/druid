@@ -35,8 +35,8 @@ public class Joinables
    */
   public static String validatePrefix(@Nullable final String prefix)
   {
-    if (prefix == null) {
-      throw new IAE("Join clause cannot have null prefix");
+    if (prefix == null || prefix.isEmpty()) {
+      throw new IAE("Join clause cannot have null or empty prefix");
     } else if (isPrefixedBy(ColumnHolder.TIME_COLUMN_NAME, prefix) || ColumnHolder.TIME_COLUMN_NAME.equals(prefix)) {
       throw new IAE(
           "Join clause cannot have prefix[%s], since it would shadow %s",

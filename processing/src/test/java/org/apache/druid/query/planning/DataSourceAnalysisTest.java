@@ -20,6 +20,7 @@
 package org.apache.druid.query.planning;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -36,14 +37,17 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 public class DataSourceAnalysisTest
 {
+  private static final List<Interval> MILLENIUM_INTERVALS = ImmutableList.of(Intervals.of("2000/3000"));
   private static final TableDataSource TABLE_FOO = new TableDataSource("foo");
   private static final TableDataSource TABLE_BAR = new TableDataSource("bar");
   private static final LookupDataSource LOOKUP_LOOKYLOO = new LookupDataSource("lookyloo");
@@ -100,7 +104,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
     Assert.assertEquals(
-        Optional.of(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000")))),
+        Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -121,7 +125,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(unionDataSource, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
     Assert.assertEquals(
-        Optional.of(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000")))),
+        Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -146,14 +150,7 @@ public class DataSourceAnalysisTest
   @Test
   public void testQueryOnLookup()
   {
-    final QueryDataSource queryDataSource = new QueryDataSource(
-        GroupByQuery.builder()
-                    .setDataSource(LOOKUP_LOOKYLOO)
-                    .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/3000"))))
-                    .setGranularity(Granularities.ALL)
-                    .build()
-    );
-
+    final QueryDataSource queryDataSource = subquery(LOOKUP_LOOKYLOO);
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(queryDataSource);
 
     Assert.assertFalse(analysis.isConcreteBased());
@@ -164,7 +161,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(LOOKUP_LOOKYLOO, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
     Assert.assertEquals(
-        Optional.of(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000")))),
+        Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -358,7 +355,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
     Assert.assertEquals(
-        Optional.of(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000")))),
+        Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(
@@ -425,6 +422,15 @@ public class DataSourceAnalysisTest
     );
   }
 
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(DataSourceAnalysis.class)
+                  .usingGetClass()
+                  .withNonnullFields("dataSource", "baseDataSource", "preJoinableClauses")
+                  .verify();
+  }
+
   /**
    * Generate a datasource that joins on a column named "x" on both sides.
    */
@@ -468,7 +474,7 @@ public class DataSourceAnalysisTest
     return new QueryDataSource(
         GroupByQuery.builder()
                     .setDataSource(dataSource)
-                    .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/3000"))))
+                    .setInterval(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS))
                     .setGranularity(Granularities.ALL)
                     .build()
     );
