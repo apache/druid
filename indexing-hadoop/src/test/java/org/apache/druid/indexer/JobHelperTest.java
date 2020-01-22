@@ -41,6 +41,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Progressable;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,13 +53,21 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  */
 public class JobHelperTest
 {
+  String VALID_DRUID_PROP = "druid.javascript.enableTest";
+  String VALID_HADOOP_PREFIX = "hadoop.";
+  String VALID_HADOOP_PROP = "test.enableTest";
+  String INVALID_PROP = "invalid.test.enableTest";
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -140,7 +149,18 @@ public class JobHelperTest
             )
         )
     );
+    HadoopDruidIndexerConfig.PROPERTIES.setProperty(VALID_DRUID_PROP, "true");
+    HadoopDruidIndexerConfig.PROPERTIES.setProperty(VALID_HADOOP_PREFIX + VALID_HADOOP_PROP, "true");
+    HadoopDruidIndexerConfig.PROPERTIES.setProperty(INVALID_PROP, "true");
   }
+
+  @After
+  public void teardown() {
+    HadoopDruidIndexerConfig.PROPERTIES.remove(VALID_DRUID_PROP);
+    HadoopDruidIndexerConfig.PROPERTIES.remove(VALID_HADOOP_PREFIX + VALID_HADOOP_PROP);
+    HadoopDruidIndexerConfig.PROPERTIES.remove(INVALID_PROP);
+  }
+
 
   @Test
   public void testEnsurePathsAddsProperties()
@@ -158,6 +178,22 @@ public class JobHelperTest
         "THISISMYACCESSKEY",
         jobProperties.get("fs.s3.awsAccessKeyId")
     );
+  }
+
+  @Test
+  public void testInjectSystemProperties() throws Exception {
+    ArrayList<String> allowedHadoopPrefix = new ArrayList<>();
+    allowedHadoopPrefix.add("druid.storage");
+    allowedHadoopPrefix.add("druid.javascript");
+    Configuration config = new Configuration();
+    JobHelper.injectSystemProperties(config, allowedHadoopPrefix);
+
+    // This should be injected
+    assertNotNull(config.get(VALID_DRUID_PROP));
+    // This should be injected
+    assertNotNull(config.get(VALID_HADOOP_PROP));
+    // This should not be injected
+    assertNull(config.get(INVALID_PROP));
   }
 
   @Test
