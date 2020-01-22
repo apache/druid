@@ -59,6 +59,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @ManageLifecycle
 public class BrokerServerView implements TimelineServerView
@@ -293,7 +294,7 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
-    String table = Iterables.getOnlyElement(dataSource.getNames());
+    String table = Iterables.getOnlyElement(dataSource.getTableNames());
     synchronized (lock) {
       return timelines.get(table);
     }

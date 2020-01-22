@@ -266,18 +266,20 @@ public abstract class BaseQuery<T> implements Query<T>
       return false;
     }
     BaseQuery<?> baseQuery = (BaseQuery<?>) o;
+
+    // Must use getDuration() instead of "duration" because duration is lazily computed.
     return descending == baseQuery.descending &&
            Objects.equals(dataSource, baseQuery.dataSource) &&
            Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
-           Objects.equals(duration, baseQuery.duration) &&
+           Objects.equals(getDuration(), baseQuery.getDuration()) &&
            Objects.equals(granularity, baseQuery.granularity);
   }
 
   @Override
   public int hashCode()
   {
-
-    return Objects.hash(dataSource, descending, context, querySegmentSpec, duration, granularity);
+    // Must use getDuration() instead of "duration" because duration is lazily computed.
+    return Objects.hash(dataSource, descending, context, querySegmentSpec, getDuration(), granularity);
   }
 }
