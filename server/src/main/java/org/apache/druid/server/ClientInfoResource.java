@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.LocatedSegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -64,12 +65,14 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
+ *
  */
 @Path("/druid/v2/datasources")
 public class ClientInfoResource
@@ -152,12 +155,12 @@ public class ClientInfoResource
       theInterval = Intervals.of(interval);
     }
 
-    TimelineLookup<String, ServerSelector> timeline = timelineServerView.getTimeline(new TableDataSource(dataSourceName));
-    Iterable<TimelineObjectHolder<String, ServerSelector>> serversLookup = timeline != null ? timeline.lookup(
-        theInterval
-    ) : null;
-    if (serversLookup == null || Iterables.isEmpty(serversLookup)) {
-      return Collections.EMPTY_MAP;
+    final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline =
+        timelineServerView.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource(dataSourceName)));
+    final Optional<Iterable<TimelineObjectHolder<String, ServerSelector>>> maybeServersLookup =
+        maybeTimeline.map(timeline -> timeline.lookup(theInterval));
+    if (!maybeServersLookup.isPresent() || Iterables.isEmpty(maybeServersLookup.get())) {
+      return Collections.emptyMap();
     }
     Map<Interval, Object> servedIntervals = new TreeMap<>(
         new Comparator<Interval>()
@@ -174,7 +177,7 @@ public class ClientInfoResource
         }
     );
 
-    for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
+    for (TimelineObjectHolder<String, ServerSelector> holder : maybeServersLookup.get()) {
       final Set<Object> dimensions = new HashSet<>();
       final Set<Object> metrics = new HashSet<>();
       final PartitionHolder<ServerSelector> partitionHolder = holder.getObject();
