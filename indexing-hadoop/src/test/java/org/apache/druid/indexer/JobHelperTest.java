@@ -57,9 +57,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 /**
  */
 public class JobHelperTest
@@ -155,7 +152,8 @@ public class JobHelperTest
   }
 
   @After
-  public void teardown() {
+  public void teardown()
+  {
     HadoopDruidIndexerConfig.PROPERTIES.remove(VALID_DRUID_PROP);
     HadoopDruidIndexerConfig.PROPERTIES.remove(VALID_HADOOP_PREFIX + VALID_HADOOP_PROP);
     HadoopDruidIndexerConfig.PROPERTIES.remove(INVALID_PROP);
@@ -181,7 +179,8 @@ public class JobHelperTest
   }
 
   @Test
-  public void testInjectSystemProperties() throws Exception {
+  public void testInjectSystemProperties()
+  {
     ArrayList<String> allowedHadoopPrefix = new ArrayList<>();
     allowedHadoopPrefix.add("druid.storage");
     allowedHadoopPrefix.add("druid.javascript");
@@ -189,11 +188,11 @@ public class JobHelperTest
     JobHelper.injectSystemProperties(config, allowedHadoopPrefix);
 
     // This should be injected
-    assertNotNull(config.get(VALID_DRUID_PROP));
+    Assert.assertNotNull(config.get(VALID_DRUID_PROP));
     // This should be injected
-    assertNotNull(config.get(VALID_HADOOP_PROP));
+    Assert.assertNotNull(config.get(VALID_HADOOP_PROP));
     // This should not be injected
-    assertNull(config.get(INVALID_PROP));
+    Assert.assertNull(config.get(INVALID_PROP));
   }
 
   @Test
