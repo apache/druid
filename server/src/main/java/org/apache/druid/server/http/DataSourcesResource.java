@@ -44,7 +44,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.SegmentsMetadata;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
@@ -98,7 +98,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
 
   private final CoordinatorServerView serverInventoryView;
-  private final SegmentsMetadata segmentsMetadata;
+  private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthorizerMapper authorizerMapper;
@@ -106,14 +106,14 @@ public class DataSourcesResource
   @Inject
   public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
-      SegmentsMetadata segmentsMetadata,
+      SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.segmentsMetadata = segmentsMetadata;
+    this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataRuleManager = metadataRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authorizerMapper = authorizerMapper;
@@ -177,7 +177,7 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    MarkSegments markSegments = () -> segmentsMetadata.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
     return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
   }
 
@@ -193,10 +193,10 @@ public class DataSourcesResource
     MarkSegments markSegments = () -> {
       final Interval interval = payload.getInterval();
       if (interval != null) {
-        return segmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+        return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
       } else {
         final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadata.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+        return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
       }
     };
     return doMarkSegmentsWithPayload("markAsUsedNonOvershadowedSegments", dataSourceName, payload, markSegments);
@@ -215,10 +215,10 @@ public class DataSourcesResource
     MarkSegments markSegments = () -> {
       final Interval interval = payload.getInterval();
       if (interval != null) {
-        return segmentsMetadata.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
       } else {
         final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadata.markSegmentsAsUnused(dataSourceName, segmentIds);
+        return segmentsMetadataManager.markSegmentsAsUnused(dataSourceName, segmentIds);
       }
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
@@ -301,7 +301,7 @@ public class DataSourcesResource
     if (killSegments) {
       return killUnusedSegmentsInInterval(dataSourceName, interval);
     } else {
-      MarkSegments markSegments = () -> segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
+      MarkSegments markSegments = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
       return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
     }
   }
@@ -502,7 +502,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(segmentId);
+    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUnused(segmentId);
     return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
@@ -515,7 +515,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUsed(segmentId);
+    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUsed(segmentId);
     return Response.ok().entity(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 

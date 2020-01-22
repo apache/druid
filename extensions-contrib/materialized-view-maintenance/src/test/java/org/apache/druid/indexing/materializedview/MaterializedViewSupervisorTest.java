@@ -41,7 +41,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlSegmentsMetadata;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -79,7 +79,7 @@ public class MaterializedViewSupervisorTest
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private MetadataSupervisorManager metadataSupervisorManager;
-  private SqlSegmentsMetadata sqlSegmentsMetadata;
+  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private String derivativeDatasourceName;
@@ -99,7 +99,7 @@ public class MaterializedViewSupervisorTest
         derbyConnector
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
-    sqlSegmentsMetadata = EasyMock.createMock(SqlSegmentsMetadata.class);
+    sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);
     taskQueue = EasyMock.createMock(TaskQueue.class);
     taskQueue.start();
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
@@ -118,7 +118,7 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadata,
+        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),
@@ -335,7 +335,7 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadata,
+        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),

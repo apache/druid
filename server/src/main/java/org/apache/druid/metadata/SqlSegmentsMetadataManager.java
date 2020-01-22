@@ -84,9 +84,9 @@ import java.util.stream.StreamSupport;
  *
  */
 @ManageLifecycle
-public class SqlSegmentsMetadata implements SegmentsMetadata
+public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 {
-  private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadata.class);
+  private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadataManager.class);
 
   /**
    * Marker interface for objects stored in {@link #latestDatabasePoll}. See the comment for that field for details.
@@ -107,7 +107,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   }
 
   /**
-   * Represents on-demand {@link #poll} initiated at periods of time when SqlSegmentsMetadata doesn't poll the database
+   * Represents on-demand {@link #poll} initiated at periods of time when SqlSegmentsMetadataManager doesn't poll the database
    * periodically.
    */
   private static class OnDemandDatabasePoll implements DatabasePoll
@@ -127,7 +127,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * called at the same time if two different threads are calling them. This might be possible if Coordinator gets and
    * drops leadership repeatedly in quick succession.
    *
-   * This lock is also used to synchronize {@link #awaitOrPerformDatabasePoll} for times when SqlSegmentsMetadata
+   * This lock is also used to synchronize {@link #awaitOrPerformDatabasePoll} for times when SqlSegmentsMetadataManager
    * is not polling the database periodically (in other words, when the Coordinator is not the leader).
    */
   private final ReentrantReadWriteLock startStopPollLock = new ReentrantReadWriteLock();
@@ -155,7 +155,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * easy to forget to do.
    *
    * This field may be updated from {@link #exec}, or from whatever thread calling {@link #doOnDemandPoll} via {@link
-   * #awaitOrPerformDatabasePoll()} via one of the public methods of SqlSegmentsMetadata.
+   * #awaitOrPerformDatabasePoll()} via one of the public methods of SqlSegmentsMetadataManager.
    */
   private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
 
@@ -164,7 +164,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * periodically (see {@link PeriodicDatabasePoll}, {@link #startPollingDatabasePeriodically}, {@link
    * #stopPollingDatabasePeriodically}) or "on demand" (see {@link OnDemandDatabasePoll}), when one of the methods that
    * accesses {@link #dataSourcesSnapshot}'s state (such as {@link #getImmutableDataSourceWithUsedSegments}) is
-   * called when the Coordinator is not the leader and therefore SqlSegmentsMetadata isn't polling the database
+   * called when the Coordinator is not the leader and therefore SqlSegmentsMetadataManager isn't polling the database
    * periodically.
    *
    * Note that if there is a happens-before relationship between a call to {@link #startPollingDatabasePeriodically()}
@@ -182,7 +182,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
    * #dataSourcesSnapshot}-accessing methods should be generally "wait free" for database polls.
    *
    * The notion and the complexity of "on demand" database polls was introduced to simplify the interface of {@link
-   * SegmentsMetadata} and guarantee that it always returns consistent and relatively up-to-date data from methods
+   * SegmentsMetadataManager} and guarantee that it always returns consistent and relatively up-to-date data from methods
    * like {@link #getImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive polls. The last part
    * is achieved via "hooking on" other polls by awaiting on {@link PeriodicDatabasePoll#firstPollCompletionFuture} or
    * {@link OnDemandDatabasePoll#pollCompletionFuture}, see {@link #awaitOrPerformDatabasePoll} method
@@ -207,7 +207,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   private long startPollingCount = 0;
 
   /**
-   * Equal to the current {@link #startPollingCount} value if the SqlSegmentsMetadata is currently started; -1 if
+   * Equal to the current {@link #startPollingCount} value if the SqlSegmentsMetadataManager is currently started; -1 if
    * currently stopped.
    *
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
@@ -225,9 +225,9 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   private @Nullable ScheduledExecutorService exec = null;
 
   @Inject
-  public SqlSegmentsMetadata(
+  public SqlSegmentsMetadataManager(
       ObjectMapper jsonMapper,
-      Supplier<SegmentsMetadataConfig> config,
+      Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector
   )
@@ -240,7 +240,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
 
   /**
    * Don't confuse this method with {@link #startPollingDatabasePeriodically}. This is a lifecycle starting method to
-   * be executed just once for an instance of SqlSegmentsMetadata.
+   * be executed just once for an instance of SqlSegmentsMetadataManager.
    */
   @LifecycleStart
   public void start()
@@ -260,7 +260,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
 
   /**
    * Don't confuse this method with {@link #stopPollingDatabasePeriodically}. This is a lifecycle stopping method to
-   * be executed just once for an instance of SqlSegmentsMetadata.
+   * be executed just once for an instance of SqlSegmentsMetadataManager.
    */
   @LifecycleStop
   public void stop()
@@ -315,7 +315,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       // isPollingDatabasePeriodically() to ensure that when stopPollingDatabasePeriodically() exits, poll() won't
       // actually run anymore after that (it could only enter the synchronized section and exit immediately because the
       // localStartedOrder doesn't match the new currentStartPollingOrder). It's needed to avoid flakiness in
-      // SqlSegmentsMetadataTest. See https://github.com/apache/incubator-druid/issues/6028
+      // SqlSegmentsMetadataManagerTest. See https://github.com/apache/incubator-druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopPollLock.readLock();
       lock.lock();
       try {
@@ -327,7 +327,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
         }
       }
       catch (Throwable t) {
-        log.makeAlert(t, "Uncaught exception in %s's polling thread", SqlSegmentsMetadata.class).emit();
+        log.makeAlert(t, "Uncaught exception in %s's polling thread", SqlSegmentsMetadataManager.class).emit();
         // Swallow the exception, so that scheduled polling goes on. Leave firstPollFutureSinceLastStart uncompleted
         // for now, so that it may be completed during the next poll.
         if (!(t instanceof Exception)) {
@@ -371,7 +371,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       periodicPollTaskFuture.cancel(false);
       latestDatabasePoll = null;
 
-      // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadata
+      // NOT nulling dataSourcesSnapshot, allowing to query the latest polled data even when this SegmentsMetadataManager
       // object is stopped.
 
       currentStartPollingOrder = -1;
@@ -457,7 +457,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       // segment into the respective data source, because we don't have it fetched from the database. It's probably not
       // worth complicating the implementation and making two database queries just to add the segment because it will
       // be anyway fetched during the next poll(). Segment putting that is done in the bulk markAsUsed methods is a nice
-      // to have thing, but doesn't formally affects the external guarantees of SegmentsMetadata class.
+      // to have thing, but doesn't formally affects the external guarantees of SegmentsMetadataManager class.
       return numUpdatedDatabaseEntries > 0;
     }
     catch (RuntimeException e) {
@@ -950,7 +950,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     );
 
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
-    // segments are marked as used or unused directly (via markAs...() methods in SegmentsMetadata), the
+    // segments are marked as used or unused directly (via markAs...() methods in SegmentsMetadataManager), the
     // dataSourcesSnapshot can become invalid until the next database poll.
     // DataSourcesSnapshot computes the overshadowed segments, which makes it an expensive operation if the
     // snapshot was invalidated on each segment mark as unused or used, especially if a user issues a lot of single

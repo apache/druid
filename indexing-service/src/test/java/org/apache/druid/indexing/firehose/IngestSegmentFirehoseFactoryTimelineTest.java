@@ -335,7 +335,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         }
 
         @Override
-        public DataSegment fetchSegment(String dataSource, String segmentId)
+        public DataSegment fetchUsedSegment(String dataSource, String segmentId)
         {
           return testCase.segments
               .stream()

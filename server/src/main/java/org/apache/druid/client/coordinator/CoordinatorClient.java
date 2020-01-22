@@ -158,7 +158,7 @@ public class CoordinatorClient
     }
   }
 
-  public DataSegment fetchSegment(String dataSource, String segmentId)
+  public DataSegment fetchUsedSegment(String dataSource, String segmentId)
   {
     try {
       StringFullResponseHolder response = druidLeaderClient.go(

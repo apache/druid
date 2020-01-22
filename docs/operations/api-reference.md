@@ -126,7 +126,8 @@ Returns a list of all segments for a datasource with the full segment metadata a
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}`
 
-Returns full segment metadata for a specific segment as stored in the metadata store.
+Returns full segment metadata for a specific segment as stored in the metadata store, if the segment is used. If the
+segment is unused, or is unknown, a 404 response is returned.
 
 ##### POST
 

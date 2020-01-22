@@ -112,10 +112,10 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       }
 
       @Override
-      public DataSegment fetchSegment(String dataSource, String segmentId)
+      public DataSegment fetchUsedSegment(String dataSource, String segmentId)
       {
         ImmutableDruidDataSource druidDataSource =
-            getSegmentsMetadata().getImmutableDataSourceWithUsedSegments(dataSource);
+            getSegmentsMetadataManager().getImmutableDataSourceWithUsedSegments(dataSource);
         if (druidDataSource == null) {
           throw new ISE("Unknown datasource[%s]", dataSource);
         }

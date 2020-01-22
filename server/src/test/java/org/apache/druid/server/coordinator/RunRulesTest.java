@@ -30,7 +30,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.SegmentsMetadata;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.duty.RunRules;
@@ -68,7 +68,7 @@ public class RunRulesTest
   private RunRules ruleRunner;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
-  private SegmentsMetadata segmentsMetadata;
+  private SegmentsMetadataManager segmentsMetadataManager;
 
   @Before
   public void setUp()
@@ -78,7 +78,7 @@ public class RunRulesTest
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    segmentsMetadata = EasyMock.createNiceMock(SegmentsMetadata.class);
+    segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
 
     DateTime start = DateTimes.of("2012-01-01");
     usedSegments = new ArrayList<>();
@@ -1072,7 +1072,7 @@ public class RunRulesTest
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
     coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(coordinator, segmentsMetadata);
+    EasyMock.replay(coordinator, segmentsMetadataManager);
   }
 
   private void mockEmptyPeon()

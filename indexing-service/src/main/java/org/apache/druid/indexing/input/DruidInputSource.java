@@ -407,7 +407,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         Comparators.intervalsByStartThenEnd()
     );
     for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds, "segmentIds")) {
-      final DataSegment segment = coordinatorClient.fetchSegment(
+      final DataSegment segment = coordinatorClient.fetchUsedSegment(
           dataSource,
           windowedSegmentId.getSegmentId()
       );

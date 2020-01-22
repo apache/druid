@@ -23,8 +23,8 @@ import com.google.inject.Provider;
 
 /**
  */
-public interface SegmentsMetadataProvider extends Provider<SegmentsMetadata>
+public interface SegmentsMetadataManagerProvider extends Provider<SegmentsMetadataManager>
 {
   @Override
-  SegmentsMetadata get();
+  SegmentsMetadataManager get();
 }

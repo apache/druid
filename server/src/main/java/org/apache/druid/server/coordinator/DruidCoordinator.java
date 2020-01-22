@@ -59,7 +59,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.SegmentsMetadata;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -129,7 +129,7 @@ public class DruidCoordinator
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
-  private final SegmentsMetadata segmentsMetadata;
+  private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
   private final CuratorFramework curator;
@@ -155,7 +155,7 @@ public class DruidCoordinator
       DruidCoordinatorConfig config,
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
-      SegmentsMetadata segmentsMetadata,
+      SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
       CuratorFramework curator,
@@ -176,7 +176,7 @@ public class DruidCoordinator
         config,
         zkPaths,
         configManager,
-        segmentsMetadata,
+        segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
         curator,
@@ -199,7 +199,7 @@ public class DruidCoordinator
       DruidCoordinatorConfig config,
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
-      SegmentsMetadata segmentsMetadata,
+      SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
       CuratorFramework curator,
@@ -221,7 +221,7 @@ public class DruidCoordinator
     this.zkPaths = zkPaths;
     this.configManager = configManager;
 
-    this.segmentsMetadata = segmentsMetadata;
+    this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
     this.curator = curator;
@@ -263,7 +263,7 @@ public class DruidCoordinator
       return underReplicationCountsPerDataSourcePerTier;
     }
 
-    final Iterable<DataSegment> dataSegments = segmentsMetadata.iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
 
     final DateTime now = DateTimes.nowUtc();
 
@@ -299,7 +299,7 @@ public class DruidCoordinator
 
     final Object2IntOpenHashMap<String> numsUnavailableUsedSegmentsPerDataSource = new Object2IntOpenHashMap<>();
 
-    final Iterable<DataSegment> dataSegments = segmentsMetadata.iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
 
     for (DataSegment segment : dataSegments) {
       if (segmentReplicantLookup.getLoadedReplicants(segment.getId()) == 0) {
@@ -316,7 +316,7 @@ public class DruidCoordinator
   {
     final Map<String, Double> loadStatus = new HashMap<>();
     final Collection<ImmutableDruidDataSource> dataSources =
-        segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments();
+        segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
 
     for (ImmutableDruidDataSource dataSource : dataSources) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
@@ -362,7 +362,7 @@ public class DruidCoordinator
   public void markSegmentAsUnused(DataSegment segment)
   {
     log.debug("Marking segment[%s] as unused", segment.getId());
-    segmentsMetadata.markSegmentAsUnused(segment.getId().toString());
+    segmentsMetadataManager.markSegmentAsUnused(segment.getId().toString());
   }
 
   public String getCurrentLeader()
@@ -396,8 +396,8 @@ public class DruidCoordinator
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }
 
-      // get segment information from SegmentsMetadata instead of getting it from fromServer's.
-      // This is useful when SegmentsMetadata and fromServer DataSegment's are different for same
+      // get segment information from SegmentsMetadataManager instead of getting it from fromServer's.
+      // This is useful when SegmentsMetadataManager and fromServer DataSegment's are different for same
       // identifier (say loadSpec differs because of deep storage migration).
       final DataSegment segmentToLoad = dataSource.getSegment(segment.getId());
       if (segmentToLoad == null) {
@@ -525,7 +525,7 @@ public class DruidCoordinator
           config.getCoordinatorStartDelay()
       );
 
-      segmentsMetadata.startPollingDatabasePeriodically();
+      segmentsMetadataManager.startPollingDatabasePeriodically();
       metadataRuleManager.start();
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
@@ -590,7 +590,7 @@ public class DruidCoordinator
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
-      segmentsMetadata.stopPollingDatabasePeriodically();
+      segmentsMetadataManager.stopPollingDatabasePeriodically();
     }
   }
 
@@ -647,7 +647,7 @@ public class DruidCoordinator
         }
 
         List<Boolean> allStarted = Arrays.asList(
-            segmentsMetadata.isPollingDatabasePeriodically(),
+            segmentsMetadataManager.isPollingDatabasePeriodically(),
             serverInventoryView.isStarted()
         );
         for (Boolean aBoolean : allStarted) {
@@ -665,7 +665,7 @@ public class DruidCoordinator
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
-        DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadata.getSnapshotOfDataSourcesWithAllUsedSegments();
+        DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
 
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams

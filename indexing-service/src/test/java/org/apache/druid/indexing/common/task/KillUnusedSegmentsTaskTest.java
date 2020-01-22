@@ -63,12 +63,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, announced);
 
     Assert.assertTrue(
-        getSegmentsMetadata().markSegmentAsUnused(
+        getSegmentsMetadataManager().markSegmentAsUnused(
             newSegment(Intervals.of("2019-02-01/2019-03-01"), version).getId().toString()
         )
     );
     Assert.assertTrue(
-        getSegmentsMetadata().markSegmentAsUnused(
+        getSegmentsMetadataManager().markSegmentAsUnused(
             newSegment(Intervals.of("2019-03-01/2019-04-01"), version).getId().toString()
         )
     );

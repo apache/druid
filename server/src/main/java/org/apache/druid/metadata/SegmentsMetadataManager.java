@@ -37,7 +37,7 @@ import java.util.Set;
  * resides in Coordinator's memory, while org.apache.druid.sql.calcite.schema.MetadataSegmentView resides in Broker's
  * memory.
  */
-public interface SegmentsMetadata
+public interface SegmentsMetadataManager
 {
   void startPollingDatabasePeriodically();
 

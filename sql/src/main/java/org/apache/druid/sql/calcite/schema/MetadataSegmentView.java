@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -60,9 +61,9 @@ import java.util.concurrent.TimeUnit;
  * This class polls the Coordinator in background to keep the latest published segments.
  * Provides {@link #getPublishedSegments()} for others to get segments in metadata store.
  *
- * The difference between this class and {@link org.apache.druid.metadata.SegmentsMetadata} is that this class resides
- * in Broker's memory, while {@link org.apache.druid.metadata.SegmentsMetadata} resides in Coordinator's memory. In
- * fact, this class polls the data from {@link org.apache.druid.metadata.SegmentsMetadata} object in the memory of the
+ * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
+ * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
+ * fact, this class polls the data from {@link SegmentsMetadataManager} object in the memory of the
  * currently leading Coordinator via HTTP queries.
  */
 @ManageLifecycle

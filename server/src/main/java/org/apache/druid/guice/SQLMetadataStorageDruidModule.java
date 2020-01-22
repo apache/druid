@@ -41,10 +41,10 @@ import org.apache.druid.metadata.SQLMetadataRuleManagerProvider;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisher;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import org.apache.druid.metadata.SQLMetadataSupervisorManager;
-import org.apache.druid.metadata.SegmentsMetadata;
-import org.apache.druid.metadata.SegmentsMetadataProvider;
-import org.apache.druid.metadata.SqlSegmentsMetadata;
-import org.apache.druid.metadata.SqlSegmentsMetadataProvider;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
+import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
@@ -73,8 +73,8 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
 
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadata.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManager.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentPublisher.class), defaultValue);
@@ -90,14 +90,14 @@ public class SQLMetadataStorageDruidModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.optionBinder(binder, Key.get(SegmentsMetadata.class))
+    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataManager.class))
             .addBinding(type)
-            .to(SqlSegmentsMetadata.class)
+            .to(SqlSegmentsMetadataManager.class)
             .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataProvider.class))
+    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataManagerProvider.class))
             .addBinding(type)
-            .to(SqlSegmentsMetadataProvider.class)
+            .to(SqlSegmentsMetadataManagerProvider.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))

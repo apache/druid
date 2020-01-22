@@ -22,7 +22,7 @@ package org.apache.druid.metadata;
 import java.util.Collection;
 
 /**
- * Exception thrown by {@link SegmentsMetadata} when a segment id is unknown.
+ * Exception thrown by {@link SegmentsMetadataManager} when a segment id is unknown.
  */
 public class UnknownSegmentIdsException extends Exception
 {

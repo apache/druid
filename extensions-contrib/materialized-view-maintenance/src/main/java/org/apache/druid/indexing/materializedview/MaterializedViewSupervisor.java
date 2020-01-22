@@ -47,7 +47,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlSegmentsMetadata;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -73,7 +73,7 @@ public class MaterializedViewSupervisor implements Supervisor
 
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final SqlSegmentsMetadata sqlSegmentsMetadata;
+  private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private final MaterializedViewSupervisorSpec spec;
   private final TaskMaster taskMaster;
   private final TaskStorage taskStorage;
@@ -100,7 +100,7 @@ public class MaterializedViewSupervisor implements Supervisor
       TaskMaster taskMaster,
       TaskStorage taskStorage,
       MetadataSupervisorManager metadataSupervisorManager,
-      SqlSegmentsMetadata sqlSegmentsMetadata,
+      SqlSegmentsMetadataManager sqlSegmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       MaterializedViewTaskConfig config,
       MaterializedViewSupervisorSpec spec
@@ -109,7 +109,7 @@ public class MaterializedViewSupervisor implements Supervisor
     this.taskMaster = taskMaster;
     this.taskStorage = taskStorage;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
-    this.sqlSegmentsMetadata = sqlSegmentsMetadata;
+    this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.config = config;
     this.spec = spec;
@@ -392,7 +392,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        sqlSegmentsMetadata.markSegmentAsUnused(segment.getId().toString());
+        sqlSegmentsMetadataManager.markSegmentAsUnused(segment.getId().toString());
       }
     }
     // data of the latest interval will be built firstly.
@@ -494,7 +494,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
     metadataStorageCoordinator.deletePendingSegments(dataSource);
-    sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSource);
+    sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSource);
     metadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
   }
 

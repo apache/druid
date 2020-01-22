@@ -83,7 +83,9 @@ public interface IndexerMetadataStorageCoordinator
    * given data source from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
-   * parameter. This methods returns overshadowed segments, as if {@link Segments#INCLUDING_OVERSHADOWED} was passed.
+   * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
+   * Segments#INCLUDING_OVERSHADOWED} was passed. It's the responsibility of the caller to filter out overshadowed ones
+   * if needed.
    *
    * @param dataSource The data source to query
    *
@@ -178,7 +180,7 @@ public interface IndexerMetadataStorageCoordinator
    * Delete pending segments created in the given interval belonging to the given data source from the pending segments
    * table. The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
    *
-   * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interva
+   * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interval
    * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the
    * interval is about the time column value in rows belonging to the segment).
    *

@@ -50,9 +50,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SegmentsMetadata;
-import org.apache.druid.metadata.SegmentsMetadataConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadata;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -92,7 +92,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentLoaderFactory segmentLoaderFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
-  private SegmentsMetadata segmentsMetadata;
+  private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
 
   @Before
@@ -109,9 +109,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector()
     );
-    segmentsMetadata = new SqlSegmentsMetadata(
+    segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
-        SegmentsMetadataConfig::new,
+        SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector()
     );
@@ -166,9 +166,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return storageCoordinator;
   }
 
-  public SegmentsMetadata getSegmentsMetadata()
+  public SegmentsMetadataManager getSegmentsMetadataManager()
   {
-    return segmentsMetadata;
+    return segmentsMetadataManager;
   }
 
   public TaskLockbox getLockbox()

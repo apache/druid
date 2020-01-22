@@ -38,28 +38,28 @@ import java.util.stream.Collectors;
 /**
  * Like {@link SQLMetadataRuleManagerTest} except with no segments to make sure it behaves when it's empty
  */
-public class SqlSegmentsMetadataEmptyTest
+public class SqlSegmentsMetadataManagerEmptyTest
 {
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SqlSegmentsMetadata sqlSegmentsMetadata;
+  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataConfig config = new SegmentsMetadataConfig();
+    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(1));
-    sqlSegmentsMetadata = new SqlSegmentsMetadata(
+    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );
-    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadataManager.start();
 
     connector.createSegmentTable();
   }
@@ -67,25 +67,25 @@ public class SqlSegmentsMetadataEmptyTest
   @After
   public void teardown()
   {
-    if (sqlSegmentsMetadata.isPollingDatabasePeriodically()) {
-      sqlSegmentsMetadata.stopPollingDatabasePeriodically();
+    if (sqlSegmentsMetadataManager.isPollingDatabasePeriodically()) {
+      sqlSegmentsMetadataManager.stopPollingDatabasePeriodically();
     }
-    sqlSegmentsMetadata.stop();
+    sqlSegmentsMetadataManager.stop();
   }
 
   @Test
   public void testPollEmpty()
   {
-    sqlSegmentsMetadata.startPollingDatabasePeriodically();
-    sqlSegmentsMetadata.poll();
-    Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.poll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     Assert.assertEquals(
         ImmutableSet.of(),
-        sqlSegmentsMetadata.retrieveAllDataSourceNames()
+        sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
     );
     Assert.assertEquals(
         ImmutableList.of(),
-        sqlSegmentsMetadata
+        sqlSegmentsMetadataManager
             .getImmutableDataSourcesWithAllUsedSegments()
             .stream()
             .map(ImmutableDruidDataSource::getName)
@@ -93,11 +93,11 @@ public class SqlSegmentsMetadataEmptyTest
     );
     Assert.assertEquals(
         null,
-        sqlSegmentsMetadata.getImmutableDataSourceWithUsedSegments("wikipedia")
+        sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments("wikipedia")
     );
     Assert.assertEquals(
         ImmutableSet.of(),
-        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
   }
 
@@ -105,9 +105,9 @@ public class SqlSegmentsMetadataEmptyTest
   public void testStopAndStart()
   {
     // Simulate successive losing and getting the coordinator leadership
-    sqlSegmentsMetadata.startPollingDatabasePeriodically();
-    sqlSegmentsMetadata.stopPollingDatabasePeriodically();
-    sqlSegmentsMetadata.startPollingDatabasePeriodically();
-    sqlSegmentsMetadata.stopPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.stopPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    sqlSegmentsMetadataManager.stopPollingDatabasePeriodically();
   }
 }

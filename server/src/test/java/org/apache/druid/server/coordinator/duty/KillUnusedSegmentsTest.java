@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.metadata.SegmentsMetadata;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -87,19 +87,19 @@ public class KillUnusedSegmentsTest
 
   private void testFindIntervalForKill(List<Interval> segmentIntervals, Interval expected)
   {
-    SegmentsMetadata segmentsMetadata = EasyMock.createMock(SegmentsMetadata.class);
+    SegmentsMetadataManager segmentsMetadataManager = EasyMock.createMock(SegmentsMetadataManager.class);
     EasyMock.expect(
-        segmentsMetadata.getUnusedSegmentIntervals(
+        segmentsMetadataManager.getUnusedSegmentIntervals(
             EasyMock.anyString(),
             EasyMock.anyObject(DateTime.class),
             EasyMock.anyInt()
         )
     ).andReturn(segmentIntervals);
-    EasyMock.replay(segmentsMetadata);
+    EasyMock.replay(segmentsMetadataManager);
     IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
 
     KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
-        segmentsMetadata,
+        segmentsMetadataManager,
         indexingServiceClient,
         new TestDruidCoordinatorConfig(
             null,
