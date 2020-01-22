@@ -43,6 +43,10 @@ public interface Joinable
   /**
    * Returns the cardinality of "columnName", or {@link #CARDINALITY_UNKNOWN} if not known. May be used at query
    * time to trigger optimizations.
+   *
+   * If not {@link #CARDINALITY_UNKNOWN}, this must match the cardinality of selectors returned by the
+   * {@link ColumnSelectorFactory#makeDimensionSelector} method of this joinable's
+   * {@link JoinMatcher#getColumnSelectorFactory()} .
    */
   int getCardinality(String columnName);
 

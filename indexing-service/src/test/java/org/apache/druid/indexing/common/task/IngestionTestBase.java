@@ -56,6 +56,7 @@ import org.apache.druid.metadata.SQLMetadataSegmentManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -306,6 +307,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             null,
+            NoopJoinableFactory.INSTANCE,
             null,
             null,
             objectMapper,

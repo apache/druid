@@ -27,7 +27,6 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -165,6 +164,30 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
     } else {
       log.warn("close() is called more than once on ReferenceCountingSegment");
     }
+  }
+
+  public ReferenceCounter referenceCounter()
+  {
+    return new ReferenceCounter()
+    {
+      @Override
+      public boolean increment()
+      {
+        return ReferenceCountingSegment.this.increment();
+      }
+
+      @Override
+      public Closeable decrementOnceCloseable()
+      {
+        return ReferenceCountingSegment.this.decrementOnceCloseable();
+      }
+
+      @Override
+      public void decrement()
+      {
+        ReferenceCountingSegment.this.decrement();
+      }
+    };
   }
 
   public boolean increment()
