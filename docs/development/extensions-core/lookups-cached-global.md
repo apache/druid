@@ -337,7 +337,7 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 
 ### JDBC lookup
 
-The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. **If `tsColumn` is set, the caching service will attempt to only poll values that were written after the last sync, and any entries deleted from the the database won't be removed from the cache.** If `tsColumn` is not set, the entire table is pulled every time. Due to possibilities of use-after-free race conditions, **setting `tsColumn` is not recommended for offHeap lookups.**
+The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. **If `tsColumn` is set, the caching service will attempt to only poll values that were written after the last sync, and any entries deleted from the the database won't be removed from the cache.** If `tsColumn` is not set, the entire table is pulled every time. Due to possibilities of use-after-free race conditions, **setting `tsColumn` is not recommended for `offHeap` lookups.**
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
