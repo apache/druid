@@ -51,6 +51,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
@@ -74,6 +75,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -177,7 +179,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
-      @JsonProperty("tuningConfig") @Nullable final ParallelIndexTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject ObjectMapper jsonMapper,
       @JacksonInject AuthorizerMapper authorizerMapper,
@@ -213,10 +215,10 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
-    this.tuningConfig = tuningConfig;
+    this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.jsonMapper = jsonMapper;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
-    this.partitionConfigurationManager = new PartitionConfigurationManager(tuningConfig);
+    this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
@@ -225,6 +227,51 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
     this.appenderatorsManager = appenderatorsManager;
+  }
+
+  @VisibleForTesting
+  static ParallelIndexTuningConfig getTuningConfig(TuningConfig tuningConfig)
+  {
+    if (tuningConfig instanceof ParallelIndexTuningConfig) {
+      return (ParallelIndexTuningConfig) tuningConfig;
+    } else if (tuningConfig instanceof IndexTuningConfig) {
+      final IndexTuningConfig indexTuningConfig = (IndexTuningConfig) tuningConfig;
+      return new ParallelIndexTuningConfig(
+          null,
+          indexTuningConfig.getMaxRowsPerSegment(),
+          indexTuningConfig.getMaxRowsPerSegment(),
+          indexTuningConfig.getMaxBytesInMemory(),
+          indexTuningConfig.getMaxTotalRows(),
+          indexTuningConfig.getNumShards(),
+          null,
+          indexTuningConfig.getPartitionsSpec(),
+          indexTuningConfig.getIndexSpec(),
+          indexTuningConfig.getIndexSpecForIntermediatePersists(),
+          indexTuningConfig.getMaxPendingPersists(),
+          indexTuningConfig.isForceGuaranteedRollup(),
+          indexTuningConfig.isReportParseExceptions(),
+          indexTuningConfig.getPushTimeout(),
+          indexTuningConfig.getSegmentWriteOutMediumFactory(),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          indexTuningConfig.isLogParseExceptions(),
+          indexTuningConfig.getMaxParseExceptions(),
+          indexTuningConfig.getMaxSavedParseExceptions()
+      );
+    } else {
+      throw new ISE(
+          "Unknown tuningConfig type: [%s], Must be either [%s] or [%s]",
+          tuningConfig.getClass().getName(),
+          ParallelIndexTuningConfig.class.getName(),
+          IndexTuningConfig.class.getName()
+      );
+    }
   }
 
   @JsonProperty
@@ -848,7 +895,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private Granularity segmentGranularity;
     @Nullable
-    private ParallelIndexTuningConfig tuningConfig;
+    private TuningConfig tuningConfig;
     @Nullable
     private Map<String, Object> context;
 
@@ -911,7 +958,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
-    public Builder tuningConfig(ParallelIndexTuningConfig tuningConfig)
+    public Builder tuningConfig(TuningConfig tuningConfig)
     {
       this.tuningConfig = tuningConfig;
       return this;
