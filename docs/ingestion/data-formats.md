@@ -121,7 +121,7 @@ The CSV `inputFormat` has the following components:
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `csv`. | yes |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
@@ -144,8 +144,8 @@ The `inputFormat` to load data of a delimited format. An example is:
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `tsv`. | yes |
-| delimiter | String | A custom delimiter for data values. | no (default == `\t`) |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| delimiter | String | A custom delimiter for data values. | no (default = `\t`) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
@@ -187,7 +187,7 @@ The ORC `inputFormat` has the following components:
 |-------|------|-------------|----------|
 | type | String | This should say `orc`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default == false) |
+| binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
 ### Parquet
 
@@ -221,7 +221,7 @@ The Parquet `inputFormat` has the following components:
 |-------|------|-------------|----------|
 |type| String| This should be set to `parquet` to read Parquet file| yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 ### FlattenSpec
 
@@ -602,7 +602,7 @@ JSON path expressions for all supported types.
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 | type      | String      | This should say `parquet`.| yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Valid parseSpec formats are `timeAndDims` and `parquet` | yes |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default = false) |
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
 a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined
@@ -752,7 +752,7 @@ Note that the `int96` Parquet value type is not supported with this parser.
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 | type      | String      | This should say `parquet-avro`. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Should be `avro`. | yes |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default = false) |
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
 a format should not be supplied. When the format is UTF8 (String), either `auto` or
@@ -961,7 +961,7 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 |-------|------|-------------|----------|
 | type | String | This should say `schema_registry`. | no |
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
-| capacity | Integer | Specifies the max size of the cache (default == Integer.MAX_VALUE). | no |
+| capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 
 ```json
 ...
@@ -1078,7 +1078,7 @@ Use this with the String Parser to load CSV. Strings are parsed using the com.op
 | format | String | This should say `csv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. | yes |
 
 Sample spec:
@@ -1123,8 +1123,8 @@ the delimiter is a tab, so this will load TSV.
 | format | String | This should say `tsv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
-| delimiter | String | A custom delimiter for data values. | no (default == \t) |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| delimiter | String | A custom delimiter for data values. | no (default = \t) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON String array | Specifies the columns of the data. | yes |
 
 Sample spec:
