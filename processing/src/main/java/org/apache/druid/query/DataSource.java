@@ -51,7 +51,8 @@ public interface DataSource
   List<DataSource> getChildren();
 
   /**
-   * Return a new DataSource, identical to this one, with different children.
+   * Return a new DataSource, identical to this one, with different children. The number of children must be equal
+   * to the number of children that this datasource already has.
    */
   DataSource withChildren(List<DataSource> children);
 
