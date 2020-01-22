@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
@@ -35,7 +36,7 @@ import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.Jerseys;
@@ -82,6 +83,7 @@ import org.apache.druid.server.http.MetadataResource;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.RulesResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -221,8 +223,8 @@ public class CliCoordinator extends ServerRunnable
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
                   + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for "
-                  + "more details about compaction."
+                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration "
+                  + "for more details about compaction."
               );
             }
 
@@ -236,11 +238,14 @@ public class CliCoordinator extends ServerRunnable
                 KillStalePendingSegments.class
             );
 
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
                 Coordinator.class,
-                DiscoverySideEffectsProvider.builder(NodeType.COORDINATOR).build()
+                DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()
             );
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           @Provides

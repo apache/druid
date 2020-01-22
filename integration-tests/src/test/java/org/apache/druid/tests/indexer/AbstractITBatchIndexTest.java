@@ -21,8 +21,11 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -223,7 +226,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       );
     }
 
-    // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
+    // IT*ParallelIndexTest do a second round of ingestion to replace segements in an existing
     // data source. For that second round we need to make sure the coordinator actually learned
     // about the new segments befor waiting for it to report that all segments are loaded; otherwise
     // this method could return too early because the coordinator is merely reporting that all the
@@ -260,7 +263,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE);
+                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);
                     }
                   })
                   .count();

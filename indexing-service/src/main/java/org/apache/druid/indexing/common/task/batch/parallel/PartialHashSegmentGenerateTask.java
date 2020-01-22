@@ -130,6 +130,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     return new HashPartitionCachingLocalSegmentAllocator(
         toolbox,
         getId(),
+        supervisorTaskId,
         getDataSource(),
         createShardSpecs()
     );

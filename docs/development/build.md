@@ -23,8 +23,8 @@ title: "Build from source"
   -->
 
 
-You can build Apache Druid (incubating) directly from source. Please note that these instructions are for building the latest stable version of Druid.
-For building the latest code in master, follow the instructions [here](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md).
+You can build Apache Druid directly from source. Please note that these instructions are for building the latest stable version of Druid.
+For building the latest code in master, follow the instructions [here](https://github.com/apache/druid/blob/master/docs/content/development/build.md).
 
 
 #### Prerequisites
@@ -39,7 +39,7 @@ For building the latest code in master, follow the instructions [here](https://g
 ##### Downloading the source:
 
 ```bash
-git clone git@github.com:apache/incubator-druid.git
+git clone git@github.com:apache/druid.git
 cd druid
 ```
 

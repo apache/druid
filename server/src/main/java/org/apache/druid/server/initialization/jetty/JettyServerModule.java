@@ -63,6 +63,7 @@ import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -222,7 +223,7 @@ public class JettyServerModule extends JerseyServletModule
     final Server server = new Server(threadPool);
 
     // Without this bean set, the default ScheduledExecutorScheduler runs as non-daemon, causing lifecycle hooks to fail
-    // to fire on main exit. Related bug: https://github.com/apache/incubator-druid/pull/1627
+    // to fire on main exit. Related bug: https://github.com/apache/druid/pull/1627
     server.addBean(new ScheduledExecutorScheduler("JettyScheduler", true), true);
 
     final List<ServerConnector> serverConnectors = new ArrayList<>();
@@ -230,6 +231,10 @@ public class JettyServerModule extends JerseyServletModule
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       HttpConfiguration httpConfiguration = new HttpConfiguration();
+      if (config.isEnableForwardedRequestCustomizer()) {
+        httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
+      }
+
       httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
       if (node.isBindOnHost()) {
@@ -308,6 +313,9 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      if (config.isEnableForwardedRequestCustomizer()) {
+        httpsConfiguration.addCustomizer(new ForwardedRequestCustomizer());
+      }
       httpsConfiguration.setSecureScheme("https");
       httpsConfiguration.setSecurePort(node.getTlsPort());
       httpsConfiguration.addCustomizer(new SecureRequestCustomizer());

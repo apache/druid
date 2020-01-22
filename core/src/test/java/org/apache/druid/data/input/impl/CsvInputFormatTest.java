@@ -48,7 +48,59 @@ public class CsvInputFormatTest
   public void testComma()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Column[a,] has a comma, it cannot");
-    new CsvInputFormat(Collections.singletonList("a,"), ",", null, false, 0);
+    expectedException.expectMessage("Column[a,] cannot have the delimiter[,] in its name");
+    new CsvInputFormat(Collections.singletonList("a,"), "|", null, false, 0);
+  }
+
+  @Test
+  public void testDelimiter()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot have same delimiter and list delimiter of [,]");
+    new CsvInputFormat(Collections.singletonList("a\t"), ",", null, false, 0);
+  }
+
+  @Test
+  public void testFindColumnsFromHeaderWithColumnsReturningItsValue()
+  {
+    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, true, 0);
+    Assert.assertTrue(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testFindColumnsFromHeaderWithMissingColumnsReturningItsValue()
+  {
+    final CsvInputFormat format = new CsvInputFormat(null, null, null, true, 0);
+    Assert.assertTrue(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testMissingFindColumnsFromHeaderWithMissingColumnsThrowingError()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("At least one of [Property{name='hasHeaderRow', value=null}");
+    new CsvInputFormat(null, null, null, null, 0);
+  }
+
+  @Test
+  public void testMissingFindColumnsFromHeaderWithColumnsReturningFalse()
+  {
+    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, null, 0);
+    Assert.assertFalse(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testHasHeaderRowWithMissingFindColumnsThrowingError()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("At most one of [Property{name='hasHeaderRow', value=true}");
+    new CsvInputFormat(null, null, true, false, 0);
+  }
+
+  @Test
+  public void testHasHeaderRowWithMissingColumnsReturningItsValue()
+  {
+    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
+    Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 }

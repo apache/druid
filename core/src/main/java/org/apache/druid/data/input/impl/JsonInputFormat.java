@@ -70,7 +70,7 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new JsonReader(inputRowSchema, source, temporaryDirectory, getFlattenSpec(), objectMapper);
+    return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper);
   }
 
   @Override

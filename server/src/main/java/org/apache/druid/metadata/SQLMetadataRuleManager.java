@@ -203,7 +203,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 // won't actually run anymore after that (it could only enter the synchronized section and exit
                 // immediately because the localStartedOrder doesn't match the new currentStartOrder). It's needed
                 // to avoid flakiness in SQLMetadataRuleManagerTest.
-                // See https://github.com/apache/incubator-druid/issues/6028
+                // See https://github.com/apache/druid/issues/6028
                 synchronized (lock) {
                   if (localStartedOrder == currentStartOrder) {
                     poll();

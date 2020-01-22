@@ -582,7 +582,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // UNIQUE key for the row, ensuring sequences do not fork in two directions.
     // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
-    // have difficulty with large unique keys (see https://github.com/apache/incubator-druid/issues/2319)
+    // have difficulty with large unique keys (see https://github.com/apache/druid/issues/2319)
     final String sequenceNamePrevIdSha1 = BaseEncoding.base16().encode(
         Hashing.sha1()
                .newHasher()
@@ -658,7 +658,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // UNIQUE key for the row, ensuring we don't have more than one segment per sequence per interval.
     // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
-    // have difficulty with large unique keys (see https://github.com/apache/incubator-druid/issues/2319)
+    // have difficulty with large unique keys (see https://github.com/apache/druid/issues/2319)
     final String sequenceNamePrevIdSha1 = BaseEncoding.base16().encode(
         Hashing.sha1()
                .newHasher()

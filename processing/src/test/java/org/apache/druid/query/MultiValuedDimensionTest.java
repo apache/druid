@@ -67,6 +67,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
@@ -89,7 +90,7 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
-public class MultiValuedDimensionTest
+public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters(name = "groupby: {0} forceHashAggregation: {2} ({1})")
   public static Collection<?> constructorFeeder()
@@ -609,8 +610,8 @@ public class MultiValuedDimensionTest
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3t3", "count", 4L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t5t5", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1t2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t4t4", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t2", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7t7", "count", 2L)
     );
 
@@ -1022,10 +1023,7 @@ public class MultiValuedDimensionTest
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
@@ -1075,10 +1073,7 @@ public class MultiValuedDimensionTest
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
@@ -1135,10 +1130,7 @@ public class MultiValuedDimensionTest
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(

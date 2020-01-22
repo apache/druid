@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
@@ -38,6 +39,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -78,6 +80,10 @@ public class TaskSerdeTest
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    jsonMapper.registerSubtypes(
+        new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
+        new NamedType(IndexTuningConfig.class, "index")
+    );
   }
 
   @Test
@@ -394,7 +400,7 @@ public class TaskSerdeTest
 
             new RealtimeTuningConfig(
                 1,
-                null,
+                10L,
                 new Period("PT10M"),
                 null,
                 null,
@@ -444,6 +450,10 @@ public class TaskSerdeTest
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod(),
         task2.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod()
+    );
+    Assert.assertEquals(
+        task.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory(),
+        task2.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory()
     );
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),

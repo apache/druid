@@ -120,7 +120,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
     try {
       URI uri = uriExtractor.apply(event);
       // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
-      // See https://github.com/apache/incubator-druid/pull/6898#discussion_r251384586.
+      // See https://github.com/apache/druid/pull/6898#discussion_r251384586.
       HttpPostEmitter emitter = emitters.get(uri);
       if (emitter == null) {
         try {

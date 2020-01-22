@@ -368,7 +368,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   /**
    * This method should be deduplicated with DataSourcesSnapshot.determineOvershadowedSegments(): see
-   * https://github.com/apache/incubator-druid/issues/8070.
+   * https://github.com/apache/druid/issues/8070.
    */
   public Set<TimelineObjectHolder<VersionType, ObjectType>> findFullyOvershadowed()
   {

@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +52,7 @@ class BaseParquetReaderTest
   ) throws IOException
   {
     FileEntity entity = new FileEntity(new File(parquetFile));
-    ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString);
+    ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString, new Configuration());
     return parquet.createReader(schema, entity, null);
   }
 

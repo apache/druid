@@ -2006,7 +2006,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // This allows time for the stream to start writing to the new partitions after repartitioning.
           // For Kinesis ingestion, this cooldown time is particularly useful, lowering the possibility of
           // the new shards being empty, which can cause issues presently
-          // (see https://github.com/apache/incubator-druid/issues/7600)
+          // (see https://github.com/apache/druid/issues/7600)
           earlyStopTime = DateTimes.nowUtc().plus(tuningConfig.getRepartitionTransitionDuration());
           log.info(
               "Previous partition set [%s] has changed to [%s] - requesting that tasks stop after [%s] at [%s]",

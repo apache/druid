@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -128,9 +129,14 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
       return null;
     }
 
+    final GroupByQuery groupByQuery = subQuery.toGroupByQuery();
+    if (groupByQuery == null) {
+      throw new CannotBuildQueryException("Subquery could not be converted to GroupBy query");
+    }
+
     final RowSignature sourceRowSignature = subQuery.getOutputRowSignature();
     return partialQuery.build(
-        new QueryDataSource(subQuery.toGroupByQuery()),
+        new QueryDataSource(groupByQuery),
         sourceRowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),

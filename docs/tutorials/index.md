@@ -35,9 +35,12 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 You will need:
 
-* Java 8 (8u92+)
+* **Java 8 (8u92+)**
 * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
+> **Warning:** Java 8 is required to run Druid. While Druid will start with a higher version of Java it will not function correctly.
+>
+> If needed, you can specify where to find Java using the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the verify-java script.
 
 ### Hardware
 
@@ -52,7 +55,7 @@ configuration than `micro-quickstart`.
 
 ## Getting started
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+[Download](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
 the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
@@ -64,7 +67,7 @@ cd apache-druid-{{DRUIDVERSION}}
 
 In the package, you should find:
 
-* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
+* `LICENSE` and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
 * `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions

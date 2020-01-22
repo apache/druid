@@ -48,7 +48,7 @@ public class MoveTask extends AbstractFixedIntervalTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("target") Map<String, Object> targetLoadSpec,
       @JsonProperty("context") Map<String, Object> context,
-      // See https://github.com/apache/incubator-druid/pull/1922
+      // See https://github.com/apache/druid/pull/1922
       @JsonProperty("targetLoadSpec") Map<String, Object> targetLoadSpecCOMPAT
   )
   {

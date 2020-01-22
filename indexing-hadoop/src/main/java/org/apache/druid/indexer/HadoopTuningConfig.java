@@ -117,7 +117,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("jobProperties") @Nullable Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("useCombiner") @Nullable Boolean useCombiner,
-      // See https://github.com/apache/incubator-druid/pull/1922
+      // See https://github.com/apache/druid/pull/1922
       final @JsonProperty("rowFlushBoundary") @Nullable Integer maxRowsInMemoryCOMPAT,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,

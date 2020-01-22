@@ -61,7 +61,7 @@ public interface Rule
    * "CoordinatorDutyParams". The opposite for the collection of used segments and {@link
    * org.apache.druid.client.DataSourcesSnapshot}.
    *
-   * See https://github.com/apache/incubator-druid/issues/7228
+   * See https://github.com/apache/druid/issues/7228
    */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 }

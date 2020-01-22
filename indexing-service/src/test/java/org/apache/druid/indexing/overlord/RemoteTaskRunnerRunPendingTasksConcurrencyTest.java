@@ -54,7 +54,7 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     rtrTestUtils.tearDown();
   }
 
-  // This task reproduces the races described in https://github.com/apache/incubator-druid/issues/2842
+  // This task reproduces the races described in https://github.com/apache/druid/issues/2842
   @Test(timeout = 60_000L)
   public void testConcurrency() throws Exception
   {

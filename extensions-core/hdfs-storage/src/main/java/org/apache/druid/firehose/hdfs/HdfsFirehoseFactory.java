@@ -27,6 +27,7 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.druid.utils.CompressionUtils;
@@ -46,7 +47,7 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
 
   @JsonCreator
   public HdfsFirehoseFactory(
-      @JacksonInject Configuration conf,
+      @JacksonInject @Hdfs Configuration conf,
       @JsonProperty("paths") Object inputPaths,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,

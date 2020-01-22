@@ -245,7 +245,7 @@ public class DerivativeDataSourceManager
                       return null;
                     }
                 )
-                .first();
+                .list();
             return intervals.isEmpty() ? 0L : totalSize / intervals.size();
           }
         }

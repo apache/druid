@@ -23,17 +23,10 @@ title: "Protobuf"
   -->
 
 
-This Apache Druid (incubating) extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` as an extension.
+This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` as an extension.
 
-## Protobuf Parser
-
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `protobuf`. | no |
-| descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](../../ingestion/index.md) for more configuration options.  Please note timeAndDims parseSpec is no longer supported. | yes |
+The `druid-protobuf-extensions` provides the [Protobuf Parser](../../ingestion/data-formats.md#protobuf-parser)
+for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.
 
 ## Example: Load Protobuf messages from Kafka
 

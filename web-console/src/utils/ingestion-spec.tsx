@@ -265,7 +265,8 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   // Make sure that if we actually get a task payload we extract the spec
   if (typeof (spec as any).spec === 'object') spec = (spec as any).spec;
 
-  const specType = getSpecType(spec);
+  const specType =
+    deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type');
   if (!specType) return spec as IngestionSpec;
   if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
   if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
@@ -334,13 +335,13 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     defined: (p: InputFormat) =>
       ((p.type === 'csv' || p.type === 'tsv') && !p.findColumnsFromHeader) || p.type === 'regex',
   },
-  // {
-  //   name: 'delimiter',
-  //   type: 'string',
-  //   defaultValue: '\t',
-  //   defined: (p: InputFormat) => p.type === 'tsv',
-  //   info: <>A custom delimiter for data values.</>,
-  // },
+  {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    defined: (p: InputFormat) => p.type === 'tsv',
+    info: <>A custom delimiter for data values.</>,
+  },
   {
     name: 'listDelimiter',
     type: 'string',
@@ -392,7 +393,7 @@ export interface TimestampSpec {
 }
 
 export function getTimestampSpecColumn(timestampSpec: TimestampSpec) {
-  // https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
+  // https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
   return timestampSpec.column || 'timestamp';
 }
 
@@ -509,7 +510,7 @@ const DIMENSION_SPEC_FORM_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['string', 'long', 'float'],
+    suggestions: ['string', 'long', 'float', 'double'],
   },
   {
     name: 'createBitmapIndex',
@@ -2455,34 +2456,33 @@ export function updateIngestionType(
 }
 
 export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
-  const inputFormat = guessInputFormat(sampleData);
-  if (!inputFormat) return spec;
-
-  return deepSet(spec, 'ioConfig.inputFormat', inputFormat);
+  return deepSet(spec, 'ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
-function guessInputFormat(sampleData: string[]): InputFormat | undefined {
-  const sampleDatum = sampleData[0];
-  if (!sampleDatum) return;
+function guessInputFormat(sampleData: string[]): InputFormat {
+  let sampleDatum = sampleData[0];
+  if (sampleDatum) {
+    sampleDatum = String(sampleDatum); // Really ensure it is a string
 
-  if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-    return inputFormatFromType('json');
-  }
+    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
+      return inputFormatFromType('json');
+    }
 
-  if (sampleDatum.split('\t').length > 3) {
-    return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
-  }
+    if (sampleDatum.split('\t').length > 3) {
+      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    }
 
-  if (sampleDatum.split(',').length > 3) {
-    return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
-  }
+    if (sampleDatum.split(',').length > 3) {
+      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
+    }
 
-  if (sampleDatum.startsWith('PAR1')) {
-    return inputFormatFromType('parquet');
-  }
+    if (sampleDatum.startsWith('PAR1')) {
+      return inputFormatFromType('parquet');
+    }
 
-  if (sampleDatum.startsWith('ORC')) {
-    return inputFormatFromType('orc');
+    if (sampleDatum.startsWith('ORC')) {
+      return inputFormatFromType('orc');
+    }
   }
 
   return inputFormatFromType('regex');

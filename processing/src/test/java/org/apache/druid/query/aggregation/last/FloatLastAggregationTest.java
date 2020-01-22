@@ -30,14 +30,16 @@ import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
-public class FloatLastAggregationTest
+public class FloatLastAggregationTest extends InitializedNullHandlingTest
 {
   private FloatLastAggregatorFactory floatLastAggregatorFactory;
   private FloatLastAggregatorFactory combiningAggFactory;
@@ -113,9 +115,21 @@ public class FloatLastAggregationTest
   @Test
   public void testCombine()
   {
-    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621);
-    SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4);
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621f);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4f);
     Assert.assertEquals(pair2, floatLastAggregatorFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testComparatorWithNulls()
+  {
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621f);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, null);
+    Comparator comparator = floatLastAggregatorFactory.getComparator();
+    Assert.assertEquals(1, comparator.compare(pair1, pair2));
+    Assert.assertEquals(0, comparator.compare(pair1, pair1));
+    Assert.assertEquals(0, comparator.compare(pair2, pair2));
+    Assert.assertEquals(-1, comparator.compare(pair2, pair1));
   }
 
   @Test

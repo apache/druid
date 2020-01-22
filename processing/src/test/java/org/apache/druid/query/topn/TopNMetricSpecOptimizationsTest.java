@@ -269,12 +269,6 @@ public class TopNMetricSpecOptimizationsTest
       }
 
       // stubs below this line not important for tests
-      @Override
-      public String getSegmentIdentifier()
-      {
-        return null;
-      }
-
 
       @Override
       public Indexed<String> getAvailableDimensions()

@@ -245,7 +245,7 @@ public class MetadataResource
 
   /**
    * This is a {@link POST} method to pass the list of intervals in the body,
-   * see https://github.com/apache/incubator-druid/pull/2109#issuecomment-182191258
+   * see https://github.com/apache/druid/pull/2109#issuecomment-182191258
    */
   @POST
   @Path("/datasources/{dataSourceName}/segments")

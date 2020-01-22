@@ -53,7 +53,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.RE;
@@ -499,11 +499,11 @@ public class SystemSchema extends AbstractSchema
 
       final FluentIterable<Object[]> results = FluentIterable
           .from(() -> druidServers)
-          .transform(val -> {
+          .transform((DiscoveryDruidNode val) -> {
             boolean isDataNode = false;
             final DruidNode node = val.getDruidNode();
             long currHistoricalSize = 0;
-            if (val.getNodeType().equals(NodeType.HISTORICAL)) {
+            if (val.getNodeRole().equals(NodeRole.HISTORICAL)) {
               final DruidServer server = serverInventoryView.getInventoryValue(val.toDruidServer().getName());
               currHistoricalSize = server.getCurrSize();
               isDataNode = true;
@@ -513,7 +513,7 @@ public class SystemSchema extends AbstractSchema
                 extractHost(node.getHost()),
                 (long) extractPort(node.getHostAndPort()),
                 (long) extractPort(node.getHostAndTlsPort()),
-                StringUtils.toLowerCase(toStringOrNull(val.getNodeType())),
+                StringUtils.toLowerCase(toStringOrNull(val.getNodeRole())),
                 isDataNode ? val.toDruidServer().getTier() : null,
                 isDataNode ? currHistoricalSize : CURRENT_SERVER_SIZE,
                 isDataNode ? val.toDruidServer().getMaxSize() : MAX_SERVER_SIZE
@@ -524,8 +524,8 @@ public class SystemSchema extends AbstractSchema
 
     private Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
     {
-      return Arrays.stream(NodeType.values())
-                   .flatMap(nodeType -> druidNodeDiscoveryProvider.getForNodeType(nodeType).getAllNodes().stream())
+      return Arrays.stream(NodeRole.values())
+                   .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
                    .collect(Collectors.toList())
                    .iterator();
     }

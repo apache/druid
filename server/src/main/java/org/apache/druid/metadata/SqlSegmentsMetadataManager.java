@@ -315,7 +315,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       // isPollingDatabasePeriodically() to ensure that when stopPollingDatabasePeriodically() exits, poll() won't
       // actually run anymore after that (it could only enter the synchronized section and exit immediately because the
       // localStartedOrder doesn't match the new currentStartPollingOrder). It's needed to avoid flakiness in
-      // SqlSegmentsMetadataManagerTest. See https://github.com/apache/incubator-druid/issues/6028
+      // SqlSegmentsMetadataManagerTest. See https://github.com/apache/druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopPollLock.readLock();
       lock.lock();
       try {

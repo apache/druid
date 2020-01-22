@@ -281,7 +281,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   /**
    * Create a {@link ShardSpec} suitable for the desired secondary partitioning strategy.
    */
-  abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int partitionNum);
+  abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int partitionId);
 
   private Set<DataSegment> mergeAndPushSegments(
       TaskToolbox toolbox,

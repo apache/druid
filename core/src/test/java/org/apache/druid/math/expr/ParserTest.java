@@ -400,6 +400,13 @@ public class ParserTest extends InitializedNullHandlingTest
         "(cast [x, LONG_ARRAY])",
         ImmutableList.of("x")
     );
+
+    validateApplyUnapplied(
+        "case_searched((x == 'b'),'b',(x == 'g'),'g','Other')",
+        "(case_searched [(== x b), b, (== x g), g, Other])",
+        "(map ([x] -> (case_searched [(== x b), b, (== x g), g, Other])), [x])",
+        ImmutableList.of("x")
+    );
   }
 
   @Test
@@ -424,14 +431,14 @@ public class ParserTest extends InitializedNullHandlingTest
     validateApplyUnapplied(
         "x + x",
         "(+ x x)",
-        "(cartesian_map ([x, x_0] -> (+ x x_0)), [x, x])",
+        "(map ([x] -> (+ x x)), [x])",
         ImmutableList.of("x")
     );
 
     validateApplyUnapplied(
         "x + x + x",
         "(+ (+ x x) x)",
-        "(cartesian_map ([x, x_0, x_1] -> (+ (+ x x_0) x_1)), [x, x, x])",
+        "(map ([x] -> (+ (+ x x) x)), [x])",
         ImmutableList.of("x")
     );
 
@@ -439,7 +446,7 @@ public class ParserTest extends InitializedNullHandlingTest
     validateApplyUnapplied(
         "x + x + x + y + y + y + y + z + z + z",
         "(+ (+ (+ (+ (+ (+ (+ (+ (+ x x) x) y) y) y) y) z) z) z)",
-        "(cartesian_map ([x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)), [x, x, x, y, y, y, y, z, z, z])",
+        "(cartesian_map ([x, y, z] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x) x) y) y) y) y) z) z) z)), [x, y, z])",
         ImmutableList.of("x", "y", "z")
     );
   }

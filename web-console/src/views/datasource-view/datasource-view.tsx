@@ -644,6 +644,14 @@ GROUP BY 1`;
           },
         },
         {
+          icon: IconNames.REFRESH,
+          title: 'Mark as used all segments (will lead to reapplying retention rules)',
+          onAction: () =>
+            this.setState({
+              dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+            }),
+        },
+        {
           icon: IconNames.COMPRESSED,
           title: 'Edit compaction configuration',
           onAction: () => {

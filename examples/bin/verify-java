@@ -19,6 +19,7 @@
 
 use strict;
 use warnings;
+use File::Basename;
 
 sub fail_check {
   my ($current_version) = @_;
@@ -35,6 +36,12 @@ environment variable:
   export DRUID_SKIP_JAVA_CHECK=1
 
 Otherwise, install Java 8 and try again.
+
+This script searches for Java 8 in 3 locations in the following
+order
+  * DRUID_JAVA_HOME
+  * JAVA_HOME
+  * java (installed on PATH)
 EOT
   exit 1;
 }
@@ -44,7 +51,15 @@ if ($skip_var && $skip_var ne "0" && $skip_var ne "false" && $skip_var ne "f") {
   exit 0;
 }
 
-my $java_version = qx[java -version 2>&1];
+my $cwd =  dirname(__FILE__);
+my $java_bin_dir = `source $cwd/java-util && get_java_bin_dir 2>&1`;
+
+# If we could not find java
+if ($java_bin_dir eq "") {
+  fail_check()
+}
+my $java_exec = "${java_bin_dir}/java";
+my $java_version = qx[$java_exec -version 2>&1];
 if ($?) {
   fail_check();
 }

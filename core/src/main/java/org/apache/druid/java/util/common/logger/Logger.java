@@ -28,6 +28,7 @@ public class Logger
 {
   private final org.slf4j.Logger log;
   private final boolean stackTraces;
+  private final Logger noStackTraceLogger;
 
   public Logger(String name)
   {
@@ -43,6 +44,7 @@ public class Logger
   {
     this.log = log;
     this.stackTraces = stackTraces;
+    noStackTraceLogger = stackTraces ? new Logger(log, false) : this;
   }
 
   protected org.slf4j.Logger getSlf4jLogger()
@@ -57,12 +59,12 @@ public class Logger
   }
 
   /**
-   * Create a copy of this Logger that does not log exception stack traces, unless the log level is DEBUG or lower.
+   * Returns a copy of this Logger that does not log exception stack traces, unless the log level is DEBUG or lower.
    * Useful for writing code like: {@code log.noStackTrace().warn(e, "Something happened.");}
    */
   public Logger noStackTrace()
   {
-    return new Logger(log, false);
+    return noStackTraceLogger;
   }
 
   public void trace(String message, Object... formatArgs)

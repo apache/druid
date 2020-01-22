@@ -720,7 +720,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 try {
                   //this can still be null due to race from explicit task shutdown request
                   //or if another thread steals and completes this task right after this thread makes copy
-                  //of pending tasks. See https://github.com/apache/incubator-druid/issues/2842 .
+                  //of pending tasks. See https://github.com/apache/druid/issues/2842 .
                   Task task = pendingTaskPayloads.get(taskId);
                   if (task != null && tryAssignTask(task, taskRunnerWorkItem)) {
                     pendingTaskPayloads.remove(taskId);

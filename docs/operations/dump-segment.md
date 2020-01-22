@@ -23,7 +23,7 @@ title: "dump-segment tool"
   -->
 
 
-The DumpSegment tool can be used to dump the metadata or contents of an Apache Druid (incubating) segment for debugging purposes. Note that the
+The DumpSegment tool can be used to dump the metadata or contents of an Apache Druid segment for debugging purposes. Note that the
 dump is not necessarily a full-fidelity translation of the segment. In particular, not all metadata is included, and
 complex metric values may not be complete.
 

@@ -157,7 +157,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.getGracefulShutdownTimeout(),
         oldConfig.getUnannouncePropagationDelay(),
         oldConfig.getInflateBufferSize(),
-        oldConfig.getCompressionLevel()
+        oldConfig.getCompressionLevel(),
+        oldConfig.isEnableForwardedRequestCustomizer()
     );
   }
 }

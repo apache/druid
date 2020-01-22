@@ -29,13 +29,13 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.17.0-incubating-SNAPSHOT</version>
+    <version>0.18.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <parquet.version>1.10.1</parquet.version>
+    <parquet.version>1.11.0</parquet.version>
   </properties>
   <dependencies>
     <dependency>
@@ -80,10 +80,6 @@
       <artifactId>parquet-avro</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
-        <exclusion>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>commons-pool</groupId>
           <artifactId>commons-pool</artifactId>
@@ -146,10 +142,6 @@
           <artifactId>aopalliance</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.apache.commons</groupId>
           <artifactId>commons-compress</artifactId>
         </exclusion>
@@ -208,10 +200,6 @@
         <exclusion>
           <groupId>org.apache.yetus</groupId>
           <artifactId>audience-annotations</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro</artifactId>
         </exclusion>
         <exclusion>
           <groupId>commons-codec</groupId>
@@ -414,7 +402,7 @@
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
-      <scope>provided</scope>
+      <version>${avro.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

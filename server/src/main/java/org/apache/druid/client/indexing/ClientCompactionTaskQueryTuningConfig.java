@@ -193,6 +193,7 @@ public class ClientCompactionTaskQueryTuningConfig
            Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
            Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
            Objects.equals(maxTotalRows, that.maxTotalRows) &&
+           Objects.equals(splitHintSpec, that.splitHintSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(maxPendingPersists, that.maxPendingPersists) &&
            Objects.equals(pushTimeout, that.pushTimeout) &&
@@ -207,6 +208,7 @@ public class ClientCompactionTaskQueryTuningConfig
         maxBytesInMemory,
         maxRowsInMemory,
         maxTotalRows,
+        splitHintSpec,
         indexSpec,
         maxPendingPersists,
         pushTimeout,
@@ -222,6 +224,7 @@ public class ClientCompactionTaskQueryTuningConfig
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxBytesInMemory=" + maxBytesInMemory +
            ", maxTotalRows=" + maxTotalRows +
+           ", splitHintSpec=" + splitHintSpec +
            ", indexSpec=" + indexSpec +
            ", maxPendingPersists=" + maxPendingPersists +
            ", pushTimeout=" + pushTimeout +

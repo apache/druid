@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
@@ -51,6 +52,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   private final Closer closer;
 
   ParquetReader(
+      Configuration conf,
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
@@ -69,7 +71,9 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
     final ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      reader = closer.register(org.apache.parquet.hadoop.ParquetReader.builder(new GroupReadSupport(), path).build());
+      reader = closer.register(org.apache.parquet.hadoop.ParquetReader.builder(new GroupReadSupport(), path)
+                                                                      .withConf(conf)
+                                                                      .build());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currentClassLoader);
