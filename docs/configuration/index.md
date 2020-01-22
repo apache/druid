@@ -1378,12 +1378,15 @@ These Historical configurations can be defined in the `historical/runtime.proper
 In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
 
 In `druid.segmentCache.locationSelectorStrategy`, one of leastBytesUsed, roundRobin, random, or mostAvailableSize could be specified to represent the strategy to distribute segments across multiple segment cache locations.
-The leastBytesUsed strategy, which is the default strategy, always selects a location which has least bytes used in absolute terms.
-The roundRobin strategy selects a location in a round robin fashion oblivious to the bytes used or the capacity.
-The random strategy selects a segment cache location randomly each time among the available storage locations.
-The mostAvailableSize strategy selects a segment cache location that has most free space among the available storage locations.
 
-Note that `if druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the leastBytesUsed strategy or mostAvailableSize strategy, historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
+|Strategy|Description|
+|--------|-----------|
+|`leastBytesUsed`|selects a location which has least bytes used in absolute terms.|
+|`roundRobin`|selects a location in a round robin fashion oblivious to the bytes used or the capacity.|
+|`random`|selects a segment cache location randomly each time among the available storage locations.|
+|`mostAvailableSize`|selects a segment cache location that has most free space among the available storage locations.|
+
+Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the leastBytesUsed strategy or mostAvailableSize strategy, historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
 
 #### Historical query configs
 
