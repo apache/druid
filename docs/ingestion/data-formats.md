@@ -121,7 +121,7 @@ The CSV `inputFormat` has the following components:
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `csv`. | yes |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
@@ -144,8 +144,8 @@ The `inputFormat` to load data of a delimited format. An example is:
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `tsv`. | yes |
-| delimiter | String | A custom delimiter for data values. | no (default == `\t`) |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| delimiter | String | A custom delimiter for data values. | no (default = `\t`) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
@@ -185,9 +185,9 @@ The ORC `inputFormat` has the following components:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `json`. | yes |
-| flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
-| binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default == false) |
+| type | String | This should say `orc`. | yes |
+| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
+| binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
 ### Parquet
 
@@ -221,7 +221,7 @@ The Parquet `inputFormat` has the following components:
 |-------|------|-------------|----------|
 |type| String| This should be set to `parquet` to read Parquet file| yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 ### FlattenSpec
 
@@ -300,9 +300,9 @@ This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`.
 You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`,
 e.g.: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or
-`"avro.schema.input.value": "your_schema_JSON_object"`,
-if reader's schema is not set, the schema in Avro object container file will be used,
-see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution).
+`"avro.schema.input.value": "your_schema_JSON_object"`.
+If the Avro reader's schema is not set, the schema in Avro object container file will be used.
+See [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution) for more information.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -602,7 +602,7 @@ JSON path expressions for all supported types.
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 | type      | String      | This should say `parquet`.| yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Valid parseSpec formats are `timeAndDims` and `parquet` | yes |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default = false) |
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
 a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined
@@ -610,7 +610,7 @@ a format should not be supplied. When the format is UTF8 (String), either `auto`
 
 #### Parquet Hadoop Parser vs Parquet Avro Hadoop Parser
 
-Both parsers are to read Parquet files, but slightly different. The main
+Both parsers read from Parquet files, but slightly differently. The main
 differences are:
 
 * The Parquet Hadoop Parser uses a simple conversion while the Parquet Avro Hadoop Parser
@@ -752,7 +752,7 @@ Note that the `int96` Parquet value type is not supported with this parser.
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 | type      | String      | This should say `parquet-avro`. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Should be `avro`. | yes |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default == false) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default = false) |
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
 a format should not be supplied. When the format is UTF8 (String), either `auto` or
@@ -863,7 +863,7 @@ If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 > may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
 > allows the parser to identify the proper Avro schema for reading records.
 
-This decoder can be used if all the input events can be read using the same schema. In that case schema can be specified in the input task JSON itself as described below.
+This decoder can be used if all the input events can be read using the same schema. In this case, specify the schema in the input task JSON itself, as described below.
 
 ```
 ...
@@ -885,7 +885,7 @@ This decoder can be used if all the input events can be read using the same sche
 
 ##### Multiple Inline Schemas Based Avro Bytes Decoder
 
-This decoder can be used if different input events can have different read schema. In that case schema can be specified in the input task JSON itself as described below.
+Use this decoder if different input events can have different read schemas. In this case, specify the schema in the input task JSON itself, as described below.
 
 ```
 ...
@@ -925,13 +925,13 @@ Note that it is essentially a map of integer schema ID to avro schema object. Th
 
 ##### SchemaRepo Based Avro Bytes Decoder
 
-This Avro bytes decoder first extract `subject` and `id` from input message bytes, then use them to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
+This Avro bytes decoder first extracts `subject` and `id` from the input message bytes, and then uses them to look up the Avro schema used to decode the Avro record from bytes. For details, see the [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. For information on registering a schema on the message producer side, see `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `schema_repo`. | no |
-| subjectAndIdConverter | JSON Object | Specifies the how to extract subject and id from message bytes. | yes |
-| schemaRepository | JSON Object | Specifies the how to lookup Avro schema from subject and id. | yes |
+| subjectAndIdConverter | JSON Object | Specifies how to extract the subject and id from message bytes. | yes |
+| schemaRepository | JSON Object | Specifies how to look up the Avro schema from subject and id. | yes |
 
 ###### Avro-1124 Subject And Id Converter
 
@@ -954,14 +954,14 @@ This section describes the format of the `schemaRepository` object for the `sche
 
 ##### Confluent Schema Registry-based Avro Bytes Decoder
 
-This Avro bytes decoder first extract unique `id` from input message bytes, then use them it lookup in the Schema Registry for the related schema, with which to decode Avro record from bytes.
-Details can be found in Schema Registry [documentation](http://docs.confluent.io/current/schema-registry/docs/) and [repository](https://github.com/confluentinc/schema-registry).
+This Avro bytes decoder first extracts a unique `id` from input message bytes, and then uses it to look up the schema in the Schema Registry used to decode the Avro record from bytes.
+For details, see the Schema Registry [documentation](http://docs.confluent.io/current/schema-registry/docs/) and [repository](https://github.com/confluentinc/schema-registry).
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `schema_registry`. | no |
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
-| capacity | Integer | Specifies the max size of the cache (default == Integer.MAX_VALUE). | no |
+| capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 
 ```json
 ...
@@ -983,7 +983,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 | type | String | This should say `protobuf`. | yes |
 | descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
 | protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](./index.md) for more configuration options.  Please note timeAndDims parseSpec is no longer supported. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](./index.md) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
 
 Sample spec:
 
@@ -1027,7 +1027,7 @@ Consider using the [input format](#input-format) instead for these types of inge
 
 ParseSpecs serve two purposes:
 
-- The String Parser use them to determine the format (i.e. JSON, CSV, TSV) of incoming rows.
+- The String Parser use them to determine the format (i.e., JSON, CSV, TSV) of incoming rows.
 - All Parsers use them to determine the timestamp and dimensions of incoming rows.
 
 If `format` is not included, the parseSpec defaults to `tsv`.
@@ -1078,7 +1078,7 @@ Use this with the String Parser to load CSV. Strings are parsed using the com.op
 | format | String | This should say `csv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. | yes |
 
 Sample spec:
@@ -1123,8 +1123,8 @@ the delimiter is a tab, so this will load TSV.
 | format | String | This should say `tsv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
-| delimiter | String | A custom delimiter for data values. | no (default == \t) |
-| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
+| delimiter | String | A custom delimiter for data values. | no (default = \t) |
+| listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON String array | Specifies the columns of the data. | yes |
 
 Sample spec:
@@ -1147,7 +1147,7 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 
 #### TSV (Delimited) Index Tasks
 
-If your input files contain a header, the `columns` field is optional and you don't need to set.
+If your input files contain a header, the `columns` field is optional and doesn't need to be set.
 Instead, you can set the `hasHeaderRow` field to true, which makes Druid automatically extract the column information from the header.
 Otherwise, you must set the `columns` field and ensure that field must match the columns of your input data in the same order.
 
