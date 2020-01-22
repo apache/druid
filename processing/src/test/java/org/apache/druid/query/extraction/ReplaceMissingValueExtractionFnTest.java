@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.extraction;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,7 +36,11 @@ public class ReplaceMissingValueExtractionFnTest extends InitializedNullHandling
 
     Assert.assertEquals("123", extractionFn.apply("123"));
     Assert.assertEquals("MISSING", extractionFn.apply(null));
-    Assert.assertEquals("MISSING", extractionFn.apply(""));
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals("", extractionFn.apply(""));
+    } else {
+      Assert.assertEquals("MISSING", extractionFn.apply(""));
+    }
   }
 
   @Test
@@ -43,8 +48,13 @@ public class ReplaceMissingValueExtractionFnTest extends InitializedNullHandling
   {
     ExtractionFn extractionFn = new ReplaceMissingValueExtractionFn(null);
     Assert.assertEquals("123", extractionFn.apply("123"));
-    Assert.assertEquals(null, extractionFn.apply(""));
     Assert.assertEquals(null, extractionFn.apply(null));
+
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals("", extractionFn.apply(""));
+    } else {
+      Assert.assertEquals(null, extractionFn.apply(""));
+    }
   }
 
   @Test
