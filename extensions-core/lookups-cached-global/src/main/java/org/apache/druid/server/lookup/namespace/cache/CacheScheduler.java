@@ -205,7 +205,7 @@ public final class CacheScheduler
      * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry},
      *                to create Cache from
      * @param version version, associated with the cache
-     * @param pairs  List of Pairs consisting of new cache entries to be added to current Cache.
+     * @param newCacheEntries  List of Pairs consisting of new cache entries to be added to current Cache.
      * @return a new {@link VersionedCache} by adding pairs to existing cache, This operation is
      * non atomic and for Off-Heap caches there's possibility this will lead to a crash, in case
      * of use-after-free.
@@ -213,7 +213,7 @@ public final class CacheScheduler
     public @Nullable VersionedCache createFromExistingCache(
         @Nullable EntryImpl<? extends ExtractionNamespace> entryId,
         String version,
-        List<Pair<String, String>> pairs
+        List<Pair<String, String>> newCacheEntries
     )
     {
       if (!(cacheStateHolder.get() instanceof VersionedCache)) {
@@ -221,7 +221,7 @@ public final class CacheScheduler
       }
       VersionedCache state = (VersionedCache) cacheStateHolder.get();
       ConcurrentMap<String, String> cache = state.cacheHandler.getCache();
-      for (Pair<String, String> pair : pairs) {
+      for (Pair<String, String> pair : newCacheEntries) {
         cache.put(pair.lhs, pair.rhs);
       }
       return createVersionedCache(entryId, version, state.cacheHandler).getVersionedCache();
