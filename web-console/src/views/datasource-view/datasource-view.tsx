@@ -152,10 +152,10 @@ export interface DatasourcesViewState {
   showUnused: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
   compactionDialogOpenOn?: CompactionDialogOpenOn;
-  dataSourceToMarkAsUnusedAllSegmentsIn?: string;
-  dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn?: string;
+  datasourceToMarkAsUnusedAllSegmentsIn?: string;
+  datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn?: string;
   killDatasource?: string;
-  dataSourceToMarkSegmentsByIntervalIn?: string;
+  datasourceToMarkSegmentsByIntervalIn?: string;
   useUnuseAction: 'use' | 'unuse';
   useUnuseInterval: string;
   hiddenColumns: LocalStorageBackedArray<string>;
@@ -349,68 +349,68 @@ GROUP BY 1`;
   }
 
   renderUnuseAction() {
-    const { dataSourceToMarkAsUnusedAllSegmentsIn } = this.state;
-    if (!dataSourceToMarkAsUnusedAllSegmentsIn) return;
+    const { datasourceToMarkAsUnusedAllSegmentsIn } = this.state;
+    if (!datasourceToMarkAsUnusedAllSegmentsIn) return;
 
     return (
       <AsyncActionDialog
         action={async () => {
           const resp = await axios.delete(
-            `/druid/coordinator/v1/datasources/${dataSourceToMarkAsUnusedAllSegmentsIn}`,
+            `/druid/coordinator/v1/datasources/${datasourceToMarkAsUnusedAllSegmentsIn}`,
             {},
           );
           return resp.data;
         }}
-        confirmButtonText="Mark as unused all segments in data source"
+        confirmButtonText="Mark as unused all segments"
         successText="All segments in data source have been marked as unused"
         failText="Failed to mark as unused all segments in data source"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ dataSourceToMarkAsUnusedAllSegmentsIn: undefined });
+          this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
         }}
       >
         <p>
-          {`Are you sure you want to mark as unused all segments in '${dataSourceToMarkAsUnusedAllSegmentsIn}'?`}
+          {`Are you sure you want to mark as unused all segments in '${datasourceToMarkAsUnusedAllSegmentsIn}'?`}
         </p>
       </AsyncActionDialog>
     );
   }
 
   renderUseAction() {
-    const { dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn } = this.state;
-    if (!dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn) return;
+    const { datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn } = this.state;
+    if (!datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn) return;
 
     return (
       <AsyncActionDialog
         action={async () => {
           const resp = await axios.post(
-            `/druid/coordinator/v1/datasources/${dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
+            `/druid/coordinator/v1/datasources/${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}`,
             {},
           );
           return resp.data;
         }}
-        confirmButtonText="Mark as used all non-overshadowed segments in data source"
+        confirmButtonText="Mark as used all segments"
         successText="All non-overshadowed segments in data source have been marked as used"
         failText="Failed to mark as used all non-overshadowed segments in data source"
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
+          this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to mark as used all non-overshadowed segments in '${dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn}'?`}</p>
+        <p>{`Are you sure you want to mark as used all non-overshadowed segments in '${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}'?`}</p>
       </AsyncActionDialog>
     );
   }
 
   renderUseUnuseActionByInterval() {
-    const { dataSourceToMarkSegmentsByIntervalIn, useUnuseAction, useUnuseInterval } = this.state;
-    if (!dataSourceToMarkSegmentsByIntervalIn) return;
+    const { datasourceToMarkSegmentsByIntervalIn, useUnuseAction, useUnuseInterval } = this.state;
+    if (!datasourceToMarkSegmentsByIntervalIn) return;
     const isUse = useUnuseAction === 'use';
     const usedWord = isUse ? 'used' : 'unused';
     return (
@@ -419,26 +419,26 @@ GROUP BY 1`;
           if (!useUnuseInterval) return;
           const param = isUse ? 'markUsed' : 'markUnused';
           const resp = await axios.post(
-            `/druid/coordinator/v1/datasources/${dataSourceToMarkSegmentsByIntervalIn}/${param}`,
+            `/druid/coordinator/v1/datasources/${datasourceToMarkSegmentsByIntervalIn}/${param}`,
             {
               interval: useUnuseInterval,
             },
           );
           return resp.data;
         }}
-        confirmButtonText={`Mark as ${usedWord} segments in the interval in data source`}
+        confirmButtonText={`Mark as ${usedWord} segments in the interval`}
         confirmButtonDisabled={!/.\/./.test(useUnuseInterval)}
         successText={`Segments in the interval in data source have been marked as ${usedWord}`}
         failText={`Failed to mark as ${usedWord} segments in the interval in data source`}
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ dataSourceToMarkSegmentsByIntervalIn: undefined });
+          this.setState({ datasourceToMarkSegmentsByIntervalIn: undefined });
         }}
         onSuccess={() => {
           this.datasourceQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Please select the interval in which you want to mark segments as ${usedWord}?`}</p>
+        <p>{`Please select the interval in which you want to mark segments as ${usedWord} in '${datasourceToMarkSegmentsByIntervalIn}'?`}</p>
         <FormGroup>
           <InputGroup
             value={useUnuseInterval}
@@ -466,7 +466,7 @@ GROUP BY 1`;
           );
           return resp.data;
         }}
-        confirmButtonText="Permanently delete unused segments in data source"
+        confirmButtonText="Permanently delete unused segments"
         successText="Kill task was issued. Unused segments in data source will be deleted"
         failText="Failed submit kill task"
         intent={Intent.DANGER}
@@ -619,7 +619,7 @@ GROUP BY 1`;
 
           onAction: () =>
             this.setState({
-              dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+              datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
             }),
         },
         {
@@ -648,7 +648,7 @@ GROUP BY 1`;
           title: 'Mark as used all segments (will lead to reapplying retention rules)',
           onAction: () =>
             this.setState({
-              dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+              datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
             }),
         },
         {
@@ -669,7 +669,7 @@ GROUP BY 1`;
 
           onAction: () =>
             this.setState({
-              dataSourceToMarkSegmentsByIntervalIn: datasource,
+              datasourceToMarkSegmentsByIntervalIn: datasource,
               useUnuseAction: 'use',
             }),
         },
@@ -679,7 +679,7 @@ GROUP BY 1`;
 
           onAction: () =>
             this.setState({
-              dataSourceToMarkSegmentsByIntervalIn: datasource,
+              datasourceToMarkSegmentsByIntervalIn: datasource,
               useUnuseAction: 'unuse',
             }),
         },
@@ -687,7 +687,7 @@ GROUP BY 1`;
           icon: IconNames.IMPORT,
           title: 'Mark as unused all segments',
           intent: Intent.DANGER,
-          onAction: () => this.setState({ dataSourceToMarkAsUnusedAllSegmentsIn: datasource }),
+          onAction: () => this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: datasource }),
         },
         {
           icon: IconNames.TRASH,

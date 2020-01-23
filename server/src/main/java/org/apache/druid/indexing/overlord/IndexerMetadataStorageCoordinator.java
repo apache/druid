@@ -193,7 +193,6 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Delete all pending segments belonging to the given data source from the pending segments table.
-   * The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
    *
    * @return number of deleted pending segments
    * @see #deletePendingSegmentsCreatedInInterval(String, Interval) similar to this method but also accepts interval for
