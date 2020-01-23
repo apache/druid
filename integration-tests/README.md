@@ -36,7 +36,8 @@ Integration Testing Using Docker
 
 For running integration tests using docker there are 2 approaches.
 If your platform supports docker natively, you can simply set `DOCKER_IP`
-environment variable to localhost and skip to [Running tests](#running-tests) section.
+environment variable to localhost and skip to [Running tests](#running-tests) section. Ensure that you have
+at least 4GiB of memory allocated to the docker engine (This can be set under Preferences > Advanced).
 
 ```
 export DOCKER_IP=127.0.0.1
@@ -218,8 +219,3 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
-
-### Register new tests for Travis CI
-
-Once you add new integration tests, don't forget to add them to `{DRUID_ROOT}/ci/travis_script_integration.sh`
-or `{DRUID_ROOT}/ci/travis_script_integration_part2.sh` for Travis CI to run them.

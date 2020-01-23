@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 
 /**
@@ -107,13 +108,19 @@ public final class Closer implements Closeable
   {
   }
 
+  public <C extends Closeable> void registerAll(Collection<C> closeables)
+  {
+    for (C closeable : closeables) {
+      register(closeable);
+    }
+  }
+
   /**
-   * Registers the given {@code closeable} to be closed when this {@code Closer} is
+   * Registers the given {@code Closeable} to be closed when this {@code Closer} is
    * {@linkplain #close closed}.
    *
-   * @return the given {@code closeable}
+   * @return the given {@code Closeable}
    */
-  // close. this word no longer has any meaning to me.
   public <C extends Closeable> C register(@Nullable C closeable)
   {
     if (closeable != null) {
@@ -121,6 +128,18 @@ public final class Closer implements Closeable
     }
 
     return closeable;
+  }
+
+  /**
+   * Registers a list of {@code Closeable} to be closed when this {@code Closer} is
+   * {@linkplain #close closed}.
+   *
+   * @return the supplied list of {@code Closeable}
+   */
+  public <C extends Closeable> Iterable<C> registerAll(Iterable<C> closeables)
+  {
+    closeables.forEach(this::register);
+    return closeables;
   }
 
   /**

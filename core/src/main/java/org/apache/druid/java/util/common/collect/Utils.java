@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.collect;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,10 +65,28 @@ public class Utils
       list.add(null);
     } else {
       list = new ArrayList<>(elements.length);
-      for (T element : elements) {
-        list.add(element);
-      }
+      list.addAll(Arrays.asList(elements));
     }
     return list;
+  }
+
+  public static <T> boolean isPrefix(List<T> small, List<T> big)
+  {
+    for (int i = 0; i < small.size(); i++) {
+      if (!small.get(i).equals(big.get(i))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  public static String safeObjectClassGetName(@Nullable Object o)
+  {
+    if (o == null) {
+      return "NULL";
+    } else {
+      return o.getClass().getName();
+    }
   }
 }

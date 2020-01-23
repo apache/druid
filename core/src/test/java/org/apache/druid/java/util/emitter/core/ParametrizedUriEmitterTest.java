@@ -42,7 +42,7 @@ import java.util.Properties;
 
 public class ParametrizedUriEmitterTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   private MockHttpClient httpClient;
   private Lifecycle lifecycle;
@@ -66,6 +66,10 @@ public class ParametrizedUriEmitterTest
     final Properties props = new Properties();
     props.setProperty("org.apache.druid.java.util.emitter.type", "parametrized");
     props.setProperty("org.apache.druid.java.util.emitter.recipientBaseUrlPattern", uriPattern);
+    props.setProperty(
+        "org.apache.druid.java.util.emitter.httpEmitting.flushTimeOut",
+        String.valueOf(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
+    );
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
     Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
@@ -98,8 +102,8 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
@@ -148,8 +152,8 @@ public class ParametrizedUriEmitterTest
     emitter.flush();
     Assert.assertTrue(httpClient.succeeded());
     Map<String, String> expected = ImmutableMap.of(
-        "http://example.com/test1", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(0))),
-        "http://example.com/test2", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1)))
+        "http://example.com/test1", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(0))),
+        "http://example.com/test2", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(1)))
     );
     Assert.assertEquals(expected, results);
   }
@@ -173,8 +177,8 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );

@@ -30,12 +30,13 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
@@ -47,8 +48,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FloatLastAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
+public class FloatLastAggregatorFactory extends AggregatorFactory
 {
+  private static final Aggregator NIL_AGGREGATOR = new FloatLastAggregator(
+      NilColumnValueSelector.instance(),
+      NilColumnValueSelector.instance()
+  )
+  {
+    @Override
+    public void aggregate()
+    {
+      // no-op
+    }
+  };
+
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new FloatLastBufferAggregator(
+      NilColumnValueSelector.instance(),
+      NilColumnValueSelector.instance()
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
 
   private final String fieldName;
   private final String name;
@@ -66,24 +90,31 @@ public class FloatLastAggregatorFactory extends NullableAggregatorFactory<Column
   }
 
   @Override
-  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return metricFactory.makeColumnValueSelector(fieldName);
+    final BaseFloatColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_AGGREGATOR;
+    } else {
+      return new FloatLastAggregator(
+          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          valueSelector
+      );
+    }
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatLastAggregator(metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME), selector);
-  }
-
-  @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
-  {
-    return new FloatLastBufferAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector
-    );
+    final BaseFloatColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_BUFFER_AGGREGATOR;
+    } else {
+      return new FloatLastBufferAggregator(
+          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          valueSelector
+      );
+    }
   }
 
   @Override
@@ -123,35 +154,52 @@ public class FloatLastAggregatorFactory extends NullableAggregatorFactory<Column
     return new FloatLastAggregatorFactory(name, name)
     {
       @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+      public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
+        ColumnValueSelector<SerializablePair<Long, Float>> selector = metricFactory.makeColumnValueSelector(name);
         return new FloatLastAggregator(null, null)
         {
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
+            SerializablePair<Long, Float> pair = selector.getObject();
             if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
-              lastValue = pair.rhs;
+              if (pair.rhs != null) {
+                lastValue = pair.rhs;
+                rhsNull = false;
+              } else {
+                rhsNull = true;
+              }
             }
           }
         };
       }
 
       @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
+        ColumnValueSelector<SerializablePair<Long, Float>> selector = metricFactory.makeColumnValueSelector(name);
         return new FloatLastBufferAggregator(null, null)
         {
           @Override
+          public void putValue(ByteBuffer buf, int position)
+          {
+            SerializablePair<Long, Float> pair = selector.getObject();
+            buf.putFloat(position, pair.rhs);
+          }
+
+          @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Float> pair = (SerializablePair<Long, Float>) selector.getObject();
+            SerializablePair<Long, Float> pair = selector.getObject();
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
-              buf.putLong(position, pair.lhs);
-              buf.putFloat(position + Long.BYTES, pair.rhs);
+              if (pair.rhs != null) {
+                updateTimeWithValue(buf, position, pair.lhs);
+              } else {
+                updateTimeWithNull(buf, position, pair.lhs);
+              }
             }
           }
 
@@ -175,6 +223,9 @@ public class FloatLastAggregatorFactory extends NullableAggregatorFactory<Column
   public Object deserialize(Object object)
   {
     Map map = (Map) object;
+    if (map.get("rhs") == null) {
+      return new SerializablePair<>(((Number) map.get("lhs")).longValue(), null);
+    }
     return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).floatValue());
   }
 
@@ -219,13 +270,15 @@ public class FloatLastAggregatorFactory extends NullableAggregatorFactory<Column
   @Override
   public String getTypeName()
   {
+    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
     return "float";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Float.BYTES;
+    // timestamp, is null, value
+    return Long.BYTES + Byte.BYTES + Float.BYTES;
   }
 
   @Override

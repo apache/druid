@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -956,7 +957,7 @@ public class OverlordResourceTest
   {
     // This is disabled since OverlordResource.getTaskStatus() is annotated with TaskResourceFilter which is supposed to
     // set authorization token properly, but isn't called in this test.
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     final NoopTask task = NoopTask.create("mydatasource");
     EasyMock.expect(taskStorageQueryAdapter.getTask("mytask"))
@@ -994,13 +995,19 @@ public class OverlordResourceTest
   {
     // This is disabled since OverlordResource.getTaskStatus() is annotated with TaskResourceFilter which is supposed to
     // set authorization token properly, but isn't called in this test.
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     final Task task = NoopTask.create("mytask", 0);
     final TaskStatus status = TaskStatus.running("mytask");
 
     EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("mytask"))
-            .andReturn(new TaskInfo<>(task.getId(), DateTimes.of("2018-01-01"), status, task.getDataSource(), task));
+            .andReturn(new TaskInfo(
+                task.getId(),
+                DateTimes.of("2018-01-01"),
+                status,
+                task.getDataSource(),
+                task
+            ));
 
     EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("othertask"))
             .andReturn(null);
@@ -1029,6 +1036,7 @@ public class OverlordResourceTest
             "mytask",
             new TaskStatusPlus(
                 "mytask",
+                "mytask",
                 "noop",
                 DateTimes.of("2018-01-01"),
                 DateTimes.EPOCH,
@@ -1055,7 +1063,7 @@ public class OverlordResourceTest
   public void testShutdownTask()
   {
     // This is disabled since OverlordResource.doShutdown is annotated with TaskResourceFilter
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
     EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
@@ -1088,7 +1096,7 @@ public class OverlordResourceTest
   public void testShutdownAllTasks()
   {
     // This is disabled since OverlordResource.shutdownTasksForDataSource is annotated with DatasourceResourceFilter
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
     EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
@@ -1277,6 +1285,11 @@ public class OverlordResourceTest
       public boolean isReady(TaskActionClient taskActionClient)
       {
         return false;
+      }
+
+      @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
       }
 
       @Override

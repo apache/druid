@@ -26,18 +26,15 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -50,8 +47,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -59,6 +56,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -112,8 +110,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   private static final IndexIO INDEX_IO;
 
   private File tmpDir;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory2;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory2;
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
@@ -166,7 +164,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   @Before
   public void setup() throws Exception
   {
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
 
     InputRow row;
     List<String> dimNames = Arrays.asList("dimA", "metA");
@@ -386,6 +384,9 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
+        new QueryConfig()
+    );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -397,6 +398,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -415,6 +417,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            queryConfigSupplier,
             bufferPool,
             mergePool2,
             new ObjectMapper(new SmileFactory()),
@@ -424,18 +427,12 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         strategySelector,
-        new GroupByQueryQueryToolChest(
-            strategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector)
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
         strategySelector2,
-        new GroupByQueryQueryToolChest(
-            strategySelector2,
-            noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector2)
     );
   }
 
@@ -460,27 +457,27 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   @Test
   public void testDescendingNumerics()
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1(2))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner2 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory2.mergeRunners(executorService, getRunner2(3))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> finalRunner = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
+            new QueryRunner<ResultRow>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -549,31 +546,35 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), new HashMap<>());
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2027L,
         "d1", 3L,
         "d2", 17L,
         "a0", 2L
     );
-    Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2024L,
         "d1", 1L,
         "d2", 14L,
         "a0", 2L
     );
-    Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2020L,
         "d1", 11L,
         "d2", 13L,
         "a0", 2L
     );
-    Row expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2017L,
         "d1", 9L,
@@ -593,27 +594,27 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1(0))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner2 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory2.mergeRunners(executorService, getRunner2(1))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> finalRunner = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
+            new QueryRunner<ResultRow>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -670,28 +671,32 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), new HashMap<>());
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "mango",
         "hour", 1505260800000L,
         "metASum", 26L
     );
-    Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "pomegranate",
         "hour", 1505260800000L,
         "metASum", 7113L
     );
-    Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "mango",
         "hour", 1505264400000L,
         "metASum", 10L
     );
-    Row expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "pomegranate",
         "hour", 1505264400000L,
@@ -705,11 +710,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     Assert.assertEquals(expectedRow3, results.get(3));
   }
 
-  private List<QueryRunner<Row>> getRunner1(int qIndexNumber)
+  private List<QueryRunner<ResultRow>> getRunner1(int qIndexNumber)
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(qIndexNumber);
-    QueryRunner<Row> runner = makeQueryRunner(
+    QueryRunner<ResultRow> runner = makeQueryRunner(
         groupByFactory,
         SegmentId.dummy(index.toString()),
         new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
@@ -718,11 +723,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     return runners;
   }
 
-  private List<QueryRunner<Row>> getRunner2(int qIndexNumber)
+  private List<QueryRunner<ResultRow>> getRunner2(int qIndexNumber)
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(qIndexNumber);
-    QueryRunner<Row> tooSmallRunner = makeQueryRunner(
+    QueryRunner<ResultRow> tooSmallRunner = makeQueryRunner(
         groupByFactory2,
         SegmentId.dummy(index2.toString()),
         new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))
@@ -771,31 +776,5 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     );
   }
 
-  public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
-  {
-    @Override
-    public void registerQuery(Query query, ListenableFuture future)
-    {
-
-    }
-  };
-
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
-  {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null)
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return new QueryRunner<T>()
-        {
-          @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
-          {
-            return delegate.run(queryPlus, responseContext);
-          }
-        };
-      }
-    };
-  }
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
 }

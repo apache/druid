@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -79,7 +80,7 @@ public class HdfsDataSegmentPusherTest
     objectMapper = new TestObjectMapper();
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(ObjectMapper.class, objectMapper);
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
     objectMapper.setInjectableValues(injectableValues);
   }
 
@@ -448,7 +449,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         JobHelper.INDEX_ZIP,
         hdfsDataSegmentPusher
@@ -471,7 +472,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
         hdfsDataSegmentPusher
@@ -535,7 +536,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         JobHelper.INDEX_ZIP,
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())
@@ -558,7 +559,7 @@ public class HdfsDataSegmentPusherTest
             null,
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
-            -1
+            0
         ),
         new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())

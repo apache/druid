@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,20 +46,20 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "lhost", "lhost", 1, "v1"), 0,
+                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1"), 0,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
@@ -82,20 +83,20 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "lhost", "lhost", 1, "v1"), 0,
+                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1"), 0,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
     );
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
@@ -112,13 +113,13 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1"), 0,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
     );
     Assert.assertNull(worker);
   }

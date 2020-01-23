@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -43,6 +44,8 @@ import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -50,6 +53,7 @@ import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
@@ -62,9 +66,11 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -77,6 +83,7 @@ public class DruidPlanner implements Closeable
   private final FrameworkConfig frameworkConfig;
   private final Planner planner;
   private final PlannerContext plannerContext;
+  private RexBuilder rexBuilder;
 
   public DruidPlanner(
       final FrameworkConfig frameworkConfig,
@@ -121,6 +128,8 @@ public class DruidPlanner implements Closeable
       explain = (SqlExplain) parsed;
       parsed = explain.getExplicandum();
     }
+    // the planner's type factory is not available until after parsing
+    this.rexBuilder = new RexBuilder(planner.getTypeFactory());
 
     SqlParametizerShuttle sshuttle = new SqlParametizerShuttle(plannerContext);
     SqlNode parametized = parsed.accept(sshuttle);
@@ -190,8 +199,10 @@ public class DruidPlanner implements Closeable
       final RelRoot root
   ) throws RelConversionException
   {
+    final RelNode possiblyWrappedRootRel = possiblyWrapRootWithOuterLimitFromContext(root);
+
     RelParameterizerShuttle parametizer = new RelParameterizerShuttle(plannerContext);
-    RelNode parametized = root.rel.accept(parametizer);
+    RelNode parametized = possiblyWrappedRootRel.accept(parametizer);
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
         Rules.DRUID_CONVENTION_RULES,
         planner.getEmptyTraitSet()
@@ -205,31 +216,21 @@ public class DruidPlanner implements Closeable
     if (explain != null) {
       return planExplanation(druidRel, explain, dataSourceNames);
     } else {
-      final Supplier<Sequence<Object[]>> resultsSupplier = new Supplier<Sequence<Object[]>>()
-      {
-        @Override
-        public Sequence<Object[]> get()
-        {
-          if (root.isRefTrivial()) {
-            return druidRel.runQuery();
-          } else {
-            // Add a mapping on top to accommodate root.fields.
-            return Sequences.map(
-                druidRel.runQuery(),
-                new Function<Object[], Object[]>()
-                {
-                  @Override
-                  public Object[] apply(final Object[] input)
-                  {
-                    final Object[] retVal = new Object[root.fields.size()];
-                    for (int i = 0; i < root.fields.size(); i++) {
-                      retVal[i] = input[root.fields.get(i).getKey()];
-                    }
-                    return retVal;
-                  }
+      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+        if (root.isRefTrivial()) {
+          return druidRel.runQuery();
+        } else {
+          // Add a mapping on top to accommodate root.fields.
+          return Sequences.map(
+              druidRel.runQuery(),
+              input -> {
+                final Object[] retVal = new Object[root.fields.size()];
+                for (int i = 0; i < root.fields.size(); i++) {
+                  retVal[i] = input[root.fields.get(i).getKey()];
                 }
-            );
-          }
+                return retVal;
+              }
+          );
         }
       };
 
@@ -278,9 +279,9 @@ public class DruidPlanner implements Closeable
             new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
             {
               @Override
-              public EnumeratorIterator make()
+              public EnumeratorIterator<Object[]> make()
               {
-                return new EnumeratorIterator(new Iterator<Object[]>()
+                return new EnumeratorIterator<>(new Iterator<Object[]>()
                 {
                   @Override
                   public boolean hasNext()
@@ -302,10 +303,71 @@ public class DruidPlanner implements Closeable
 
               }
             }
-        ), () -> enumerator.close());
+        ), enumerator::close);
       };
       return new PlannerResult(resultsSupplier, root.validatedRowType, ImmutableSet.of());
     }
+  }
+
+  /**
+   * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
+   * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
+   * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
+   *
+   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
+   * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
+   *
+   * @param root root node
+   * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
+   */
+  @Nullable
+  private RelNode possiblyWrapRootWithOuterLimitFromContext(
+      RelRoot root
+  )
+  {
+    Object outerLimitObj = plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
+    Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
+    if (outerLimit == null) {
+      return root.rel;
+    }
+
+    if (root.rel instanceof Sort) {
+      Sort innerSort = (Sort) root.rel;
+      final int offset = Calcites.getOffset(innerSort);
+      final int innerLimit = Calcites.getFetch(innerSort);
+      final int fetch = Calcites.collapseFetch(
+          innerLimit,
+          Ints.checkedCast(outerLimit),
+          0
+      );
+
+      if (fetch == innerLimit) {
+        // nothing to do, don't bother to make a new sort
+        return root.rel;
+      }
+
+      return LogicalSort.create(
+          innerSort.getInput(),
+          innerSort.collation,
+          offset > 0 ? makeBigIntLiteral(offset) : null,
+          makeBigIntLiteral(fetch)
+      );
+    }
+    return LogicalSort.create(
+        root.rel,
+        root.collation,
+        null,
+        makeBigIntLiteral(outerLimit)
+    );
+  }
+
+  private RexNode makeBigIntLiteral(long value)
+  {
+    return rexBuilder.makeLiteral(
+        value,
+        new BasicSqlType(DruidTypeSystem.INSTANCE, SqlTypeName.BIGINT),
+        false
+    );
   }
 
   private PlannerResult planExplanation(
@@ -332,7 +394,7 @@ public class DruidPlanner implements Closeable
   {
     private final Iterator<T> it;
 
-    public EnumeratorIterator(Iterator<T> it)
+    EnumeratorIterator(Iterator<T> it)
     {
       this.it = it;
     }

@@ -34,11 +34,11 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.Map;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
@@ -73,12 +73,17 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
-    final boolean populateCache = CacheUtil.populateCacheOnDataNodes(query, strategy, cacheConfig);
-    final boolean useCache = CacheUtil.useCacheOnDataNodes(query, strategy, cacheConfig);
+    final boolean populateCache = CacheUtil.isPopulateSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    );
+    final boolean useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.DATA);
 
     final Cache.NamedKey key;
     if (strategy != null && (useCache || populateCache)) {

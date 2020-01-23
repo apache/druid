@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -33,7 +34,6 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.select.EventHolder;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -44,7 +44,6 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.Transformer;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -133,7 +132,7 @@ public class IngestSegmentFirehose implements Firehose
                                       {
                                         final Map<String, Object> theEvent = Maps.newLinkedHashMap();
                                         final long timestamp = timestampColumnSelector.getLong();
-                                        theEvent.put(EventHolder.timestampKey, DateTimes.utc(timestamp));
+                                        theEvent.put(TimestampSpec.DEFAULT_COLUMN, DateTimes.utc(timestamp));
 
                                         for (Map.Entry<String, DimensionSelector> dimSelector :
                                             dimSelectors.entrySet()) {
@@ -200,12 +199,6 @@ public class IngestSegmentFirehose implements Firehose
     final InputRow inputRow = rowYielder.get();
     rowYielder = rowYielder.next(null);
     return transformer.transform(inputRow);
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return Runnables.getNoopRunnable();
   }
 
   @Override

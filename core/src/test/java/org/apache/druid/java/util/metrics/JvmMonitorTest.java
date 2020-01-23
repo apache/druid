@@ -24,6 +24,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.List;
@@ -39,6 +40,8 @@ public class JvmMonitorTest
     final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "localhost", emitter);
     serviceEmitter.start();
     final JvmMonitor jvmMonitor = new JvmMonitor();
+    // skip tests if gc counters fail to initialize with this JDK
+    Assume.assumeNotNull(jvmMonitor.gcCounters);
 
     while (true) {
       // generate some garbage to see gc counters incremented

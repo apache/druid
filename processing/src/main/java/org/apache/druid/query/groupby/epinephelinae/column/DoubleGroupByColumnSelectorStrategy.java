@@ -19,13 +19,15 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.epinephelinae.GrouperBufferComparatorUtils;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
@@ -39,12 +41,12 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   public void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap,
+      ResultRow resultRow,
       int keyBufferPosition
   )
   {
     final double val = key.getDouble(keyBufferPosition);
-    resultMap.put(selectorPlus.getOutputName(), val);
+    resultRow.set(selectorPlus.getResultRowPosition(), val);
   }
 
   @Override
@@ -89,5 +91,15 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
     // rows from a double column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
+  {
+    return GrouperBufferComparatorUtils.makeBufferComparatorForDouble(
+        keyBufferPosition,
+        true,
+        stringComparator
+    );
   }
 }

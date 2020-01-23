@@ -27,7 +27,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.realtime.plumber.Plumber;
 
 import java.io.IOException;
 
@@ -88,14 +87,10 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
     return tuningConfig;
   }
 
-  public Plumber findPlumber()
-  {
-    return ioConfig.getPlumberSchool().findPlumber(dataSchema, tuningConfig, metrics);
-  }
-
   public Firehose connect() throws IOException
   {
-    return ioConfig.getFirehoseFactory().connect(dataSchema.getParser(), null);
+    return ioConfig.getFirehoseFactory()
+                   .connect(Preconditions.checkNotNull(dataSchema.getParser(), "inputRowParser"), null);
   }
 
   public FireDepartmentMetrics getMetrics()

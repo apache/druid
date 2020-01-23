@@ -20,13 +20,13 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -89,7 +90,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +116,10 @@ public class TimeseriesBenchmark
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private List<IncrementalIndex> incIndexes;
   private List<QueryableIndex> qIndexes;
@@ -275,7 +279,7 @@ public class TimeseriesBenchmark
       incIndexes.add(incIndex);
     }
 
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
     qIndexes = new ArrayList<>();
@@ -292,9 +296,7 @@ public class TimeseriesBenchmark
     }
 
     factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new TimeseriesQueryQueryToolChest(),
         new TimeseriesQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
@@ -323,7 +325,7 @@ public class TimeseriesBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -401,7 +403,7 @@ public class TimeseriesBenchmark
 
     Sequence<Result<TimeseriesResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        new HashMap<>()
+        ResponseContext.createEmpty()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 

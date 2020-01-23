@@ -20,15 +20,11 @@
 
 .home-view {
   display: grid;
-  grid-gap: $standard-padding;
+  gap: $standard-padding;
   grid-template-columns: 1fr 1fr 1fr 1fr;
 
   & > a {
     text-decoration: inherit;
     color: inherit;
-  }
-
-  .status-card {
-    height: 160px;
   }
 }

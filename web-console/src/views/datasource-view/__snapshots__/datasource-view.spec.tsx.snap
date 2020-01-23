@@ -2,35 +2,49 @@
 
 exports[`data source view matches snapshot 1`] = `
 <div
-  className="data-sources-view app-view"
+  className="datasource-view app-view no-chart"
 >
-  <ViewControlBar
+  <Memo(ViewControlBar)
     label="Datasources"
   >
-    <RefreshButton
+    <Memo(RefreshButton)
       localStorageKey="datasources-refresh-rate"
       onRefresh={[Function]}
     />
-    <Blueprint3.Button
-      icon="application"
-      onClick={[Function]}
-      text="Go to SQL"
+    <Memo(MoreButton)>
+      <Blueprint3.MenuItem
+        disabled={false}
+        icon="application"
+        multiline={false}
+        onClick={[Function]}
+        popoverProps={Object {}}
+        shouldDismissPopover={true}
+        text="View SQL query for table"
+      />
+    </Memo(MoreButton)>
+    <Blueprint3.Switch
+      checked={false}
+      disabled={false}
+      label="Show segment timeline"
+      onChange={[Function]}
     />
     <Blueprint3.Switch
       checked={false}
+      disabled={false}
       label="Show disabled"
       onChange={[Function]}
     />
-    <TableColumnSelector
+    <Memo(TableColumnSelector)
       columns={
         Array [
           "Datasource",
           "Availability",
           "Segment load/drop",
           "Retention",
-          "Compaction",
-          "Size",
           "Replicated size",
+          "Size",
+          "Compaction",
+          "Avg. segment size",
           "Num rows",
           "Actions",
         ]
@@ -38,7 +52,7 @@ exports[`data source view matches snapshot 1`] = `
       onChange={[Function]}
       tableColumnsHidden={Array []}
     />
-  </ViewControlBar>
+  </Memo(ViewControlBar)>
   <ReactTable
     AggregatedComponent={[Function]}
     ExpanderComponent={[Function]}
@@ -130,11 +144,11 @@ exports[`data source view matches snapshot 1`] = `
         },
         Object {
           "Cell": [Function],
-          "Header": "Compaction",
-          "accessor": [Function],
+          "Header": "Replicated size",
+          "accessor": "replicated_size",
           "filterable": false,
-          "id": "compaction",
           "show": true,
+          "width": 100,
         },
         Object {
           "Cell": [Function],
@@ -146,8 +160,16 @@ exports[`data source view matches snapshot 1`] = `
         },
         Object {
           "Cell": [Function],
-          "Header": "Replicated size",
-          "accessor": "replicated_size",
+          "Header": "Compaction",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "compaction",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Avg. segment size",
+          "accessor": "avg_segment_size",
           "filterable": false,
           "show": true,
           "width": 100,

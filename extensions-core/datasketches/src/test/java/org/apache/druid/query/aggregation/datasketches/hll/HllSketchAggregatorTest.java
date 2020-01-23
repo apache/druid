@@ -22,12 +22,13 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class HllSketchAggregatorTest
+public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 {
   private static final boolean ROUND = true;
 
@@ -73,7 +74,7 @@ public class HllSketchAggregatorTest
   @Test
   public void ingestSketches() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim"),
@@ -85,16 +86,16 @@ public class HllSketchAggregatorTest
         200, // maxRowCount
         buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(200, (double) row.getMetric("sketch"), 0.1);
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200, (double) row.get(0), 0.1);
   }
 
   @Test
   public void buildSketchesAtIngestionTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Collections.singletonList("dim"),
@@ -106,16 +107,16 @@ public class HllSketchAggregatorTest
         200, // maxRowCount
         buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(200, (double) row.getMetric("sketch"), 0.1);
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200, (double) row.get(0), 0.1);
   }
 
   @Test
   public void buildSketchesAtQueryTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim", "id"),
@@ -127,16 +128,16 @@ public class HllSketchAggregatorTest
         200, // maxRowCount
         buildGroupByQueryJson("HLLSketchBuild", "id", !ROUND)
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(200, (double) row.getMetric("sketch"), 0.1);
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200, (double) row.get(0), 0.1);
   }
 
   @Test
   public void buildSketchesAtQueryTimeMultiValue() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim", "id"),
@@ -148,16 +149,16 @@ public class HllSketchAggregatorTest
         200, // maxRowCount
         buildGroupByQueryJson("HLLSketchBuild", "multiDim", !ROUND)
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(14, (double) row.getMetric("sketch"), 0.1);
+    ResultRow row = results.get(0);
+    Assert.assertEquals(14, (double) row.get(0), 0.1);
   }
 
   @Test
   public void roundBuildSketch() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim", "id"),
@@ -169,16 +170,16 @@ public class HllSketchAggregatorTest
         200, // maxRowCount
         buildGroupByQueryJson("HLLSketchBuild", "id", ROUND)
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(200L, (long) row.getMetric("sketch"));
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200L, (long) row.get(0));
   }
 
   @Test
   public void roundMergeSketch() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim"),
@@ -190,10 +191,10 @@ public class HllSketchAggregatorTest
         200, // maxRowCount
         buildGroupByQueryJson("HLLSketchMerge", "sketch", ROUND)
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(200L, (long) row.getMetric("sketch"));
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200L, (long) row.get(0));
   }
 
   private static String buildParserJson(List<String> dimensions, List<String> columns)

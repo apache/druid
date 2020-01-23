@@ -16,9 +16,6 @@
   "query/node/ttfb": [
     "server"
   ],
-  "query/intervalChunk/time": [
-    "chunkInterval"
-  ],
   "query/success/count": [],
   "query/failed/count": [],
   "query/interrupted/count": [],
@@ -63,19 +60,19 @@
   "ingest/rows/output": [
     "dataSource"
   ],
-  "ingest/persist/count": [
+  "ingest/persists/count": [
     "dataSource"
   ],
-  "ingest/persist/time": [
+  "ingest/persists/time": [
     "dataSource"
   ],
-  "ingest/persist/cpu": [
+  "ingest/persists/cpu": [
     "dataSource"
   ],
-  "ingest/persist/backPressure": [
+  "ingest/persists/backPressure": [
     "dataSource"
   ],
-  "ingest/persist/failed": [
+  "ingest/persists/failed": [
     "dataSource"
   ],
   "ingest/handoff/failed": [

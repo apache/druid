@@ -22,7 +22,7 @@ package org.apache.druid.benchmark.query;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -32,8 +32,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -63,7 +65,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -79,6 +80,10 @@ public class SqlVsNativeBenchmark
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlVsNativeBenchmark.class);
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
@@ -98,6 +103,7 @@ public class SqlVsNativeBenchmark
                                                .interval(schemaInfo.getDataInterval())
                                                .version("1")
                                                .shardSpec(new LinearShardSpec(0))
+                                               .size(0)
                                                .build();
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
@@ -151,8 +157,8 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryNative(Blackhole blackhole)
   {
-    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, new HashMap<>());
-    final Row lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
+    final Sequence<ResultRow> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, ResponseContext.createEmpty());
+    final ResultRow lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
     blackhole.consume(lastRow);
   }
 

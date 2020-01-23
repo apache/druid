@@ -78,7 +78,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   private final String requestMethod;
   private final ResourceFilter resourceFilter;
   private final Injector injector;
-  private final Task noopTask = new NoopTask(null, null, 0, 0, null, null, null);
+  private final Task noopTask = NoopTask.create();
 
   private static boolean mockedOnceTsqa;
   private static boolean mockedOnceSM;
@@ -148,6 +148,18 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
         public boolean isSuspended()
         {
           return false;
+        }
+
+        @Override
+        public String getType()
+        {
+          return null;
+        }
+
+        @Override
+        public String getSource()
+        {
+          return null;
         }
       };
       EasyMock.expect(supervisorManager.getSupervisorSpec(EasyMock.anyString()))

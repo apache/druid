@@ -28,7 +28,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React from 'react';
+import React, { ReactNode, useState } from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
@@ -46,37 +46,30 @@ export interface AsyncActionDialogProps {
   intent?: Intent;
   successText: string;
   failText: string;
+  children?: ReactNode;
 }
 
-export interface AsyncActionDialogState {
-  working: boolean;
-}
+export const AsyncActionDialog = React.memo(function AsyncActionDialog(
+  props: AsyncActionDialogProps,
+) {
+  const {
+    action,
+    onClose,
+    onSuccess,
+    successText,
+    failText,
+    className,
+    intent,
+    icon,
+    confirmButtonText,
+    confirmButtonDisabled,
+    cancelButtonText,
+    children,
+  } = props;
+  const [working, setWorking] = useState(false);
 
-export class AsyncActionDialog extends React.PureComponent<
-  AsyncActionDialogProps,
-  AsyncActionDialogState
-> {
-  private mounted = false;
-
-  constructor(props: AsyncActionDialogProps) {
-    super(props);
-    this.state = {
-      working: false,
-    };
-  }
-
-  componentDidMount(): void {
-    this.mounted = true;
-  }
-
-  componentWillUnmount(): void {
-    this.mounted = false;
-  }
-
-  private handleConfirm = async () => {
-    const { action, onClose, onSuccess, successText, failText } = this.props;
-
-    this.setState({ working: true });
+  async function handleConfirm() {
+    setWorking(true);
     try {
       await action();
     } catch (e) {
@@ -84,75 +77,56 @@ export class AsyncActionDialog extends React.PureComponent<
         message: `${failText}: ${e.message}`,
         intent: Intent.DANGER,
       });
-      if (this.mounted) {
-        this.setState({ working: false });
-        onClose();
-      }
+      setWorking(false);
+      onClose();
+
       return;
     }
     AppToaster.show({
       message: successText,
       intent: Intent.SUCCESS,
     });
-    if (this.mounted) {
-      this.setState({ working: false });
-    }
+
+    setWorking(false);
+
     if (onSuccess) onSuccess();
     onClose();
-  };
-
-  private handleClose = () => {
-    const { onClose } = this.props;
-    onClose();
-  };
-
-  render() {
-    const {
-      className,
-      icon,
-      intent,
-      confirmButtonText,
-      cancelButtonText,
-      confirmButtonDisabled,
-      children,
-    } = this.props;
-    const { working } = this.state;
-
-    return (
-      <Dialog
-        isOpen
-        className={classNames(Classes.ALERT, 'async-action-dialog', className)}
-        canEscapeKeyClose={!working}
-        onClose={this.handleClose}
-      >
-        <div className={Classes.ALERT_BODY}>
-          {working ? (
-            <FormGroup className="progress-group" label="Processing action...">
-              <ProgressBar intent={intent || Intent.PRIMARY} />
-            </FormGroup>
-          ) : (
-            <>
-              {icon && <Icon icon={icon} />}
-              <div className={Classes.ALERT_CONTENTS}>{children}</div>
-            </>
-          )}
-        </div>
-        <div className={Classes.ALERT_FOOTER}>
-          {working ? (
-            <Button icon={IconNames.EYE_OFF} text="Run in background" onClick={this.handleClose} />
-          ) : (
-            <>
-              <Button
-                intent={intent}
-                text={confirmButtonText}
-                onClick={this.handleConfirm}
-                disabled={confirmButtonDisabled}
-              />
-              <Button text={cancelButtonText || 'Cancel'} onClick={this.handleClose} />
-            </>
-          )}
-        </div>
-      </Dialog>
-    );
   }
-}
+
+  return (
+    <Dialog
+      isOpen
+      className={classNames(Classes.ALERT, 'async-action-dialog', className)}
+      canEscapeKeyClose={!working}
+      onClose={onClose}
+    >
+      <div className={Classes.ALERT_BODY}>
+        {working ? (
+          <FormGroup className="progress-group" label="Processing action...">
+            <ProgressBar intent={intent || Intent.PRIMARY} />
+          </FormGroup>
+        ) : (
+          <>
+            {icon && <Icon icon={icon} />}
+            <div className={Classes.ALERT_CONTENTS}>{children}</div>
+          </>
+        )}
+      </div>
+      <div className={Classes.ALERT_FOOTER}>
+        {working ? (
+          <Button icon={IconNames.EYE_OFF} text="Run in background" onClick={onClose} />
+        ) : (
+          <>
+            <Button
+              intent={intent}
+              text={confirmButtonText}
+              onClick={handleConfirm}
+              disabled={confirmButtonDisabled}
+            />
+            <Button text={cancelButtonText || 'Cancel'} onClick={onClose} />
+          </>
+        )}
+      </div>
+    </Dialog>
+  );
+});

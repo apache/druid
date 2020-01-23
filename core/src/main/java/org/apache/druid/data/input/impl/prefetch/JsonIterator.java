@@ -43,7 +43,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
 {
   private JsonParser jp;
   private ObjectCodec objectCodec;
-  private final TypeReference typeRef;
+  private final TypeReference<T> typeRef;
   private final InputStream inputStream;
   private final Closeable resourceCloser;
   private final ObjectMapper objectMapper;
@@ -55,7 +55,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
    * @param objectMapper   object mapper, used for deserialization
    */
   public JsonIterator(
-      TypeReference typeRef,
+      TypeReference<T> typeRef,
       InputStream inputStream,
       Closeable resourceCloser,
       ObjectMapper objectMapper
@@ -117,7 +117,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
       }
       final JsonToken nextToken = jp.nextToken();
       if (nextToken != JsonToken.START_ARRAY) {
-        throw new IAE("First token should be START_ARRAY", jp.getCurrentToken());
+        throw new IAE("First token should be START_ARRAY, but it is actually [%s]", jp.getCurrentToken());
       } else {
         jp.nextToken();
         objectCodec = jp.getCodec();

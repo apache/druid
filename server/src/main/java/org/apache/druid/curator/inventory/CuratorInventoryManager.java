@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
@@ -70,7 +71,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   private final PathChildrenCacheFactory cacheFactory;
   private final ExecutorService pathChildrenCacheExecutor;
 
-  private volatile PathChildrenCache childrenCache;
+  private volatile @Nullable PathChildrenCache childrenCache;
 
   public CuratorInventoryManager(
       CuratorFramework curatorFramework,
@@ -91,6 +92,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         //NOTE: cacheData is temporarily set to false and we get data directly from ZK on each event.
         //this is a workaround to solve curator's out-of-order events problem
         //https://issues.apache.org/jira/browse/CURATOR-191
+        // This is also done in CuratorDruidNodeDiscoveryProvider.
         .withCacheData(false)
         .withCompressed(true)
         .withExecutorService(pathChildrenCacheExecutor)
@@ -101,12 +103,14 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   @LifecycleStart
   public void start() throws Exception
   {
+    PathChildrenCache childrenCache;
     synchronized (lock) {
+      childrenCache = this.childrenCache;
       if (childrenCache != null) {
         return;
       }
 
-      childrenCache = cacheFactory.make(curatorFramework, config.getContainerPath());
+      this.childrenCache = childrenCache = cacheFactory.make(curatorFramework, config.getContainerPath());
     }
 
     childrenCache.getListenable().addListener(new ContainerCacheListener());
@@ -131,13 +135,14 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   public void stop() throws IOException
   {
     synchronized (lock) {
+      PathChildrenCache childrenCache = this.childrenCache;
       if (childrenCache == null) {
         return;
       }
 
       // This close() call actually calls shutdownNow() on the executor registered with the Cache object...
       childrenCache.close();
-      childrenCache = null;
+      this.childrenCache = null;
     }
 
     Closer closer = Closer.create();
@@ -157,6 +162,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     return config;
   }
 
+  @Nullable
   public ContainerClass getInventoryValue(String containerKey)
   {
     final ContainerHolder containerHolder = containers.get(containerKey);
@@ -171,13 +177,18 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
                      .collect(Collectors.toList());
   }
 
-  private byte[] getZkDataForNode(String path)
+  /**
+   * Doing this instead of a simple call to {@link ChildData#getData()} because data cache is turned off, see a comment
+   * in {@link #CuratorInventoryManager}.
+   */
+  @Nullable
+  private byte[] getZkDataForNode(ChildData child)
   {
     try {
-      return curatorFramework.getData().decompressed().forPath(path);
+      return curatorFramework.getData().decompressed().forPath(child.getPath());
     }
     catch (Exception ex) {
-      log.warn(ex, "Exception while getting data for node %s", path);
+      log.warn(ex, "Exception while getting data for node %s", child.getPath());
       return null;
     }
   }
@@ -193,7 +204,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         PathChildrenCache cache
     )
     {
-      this.container = new AtomicReference<ContainerClass>(container);
+      this.container = new AtomicReference<>(container);
       this.cache = cache;
     }
 
@@ -226,9 +237,9 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           synchronized (lock) {
             final ChildData child = event.getData();
 
-            byte[] data = getZkDataForNode(child.getPath());
+            byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.warn("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
                   child.getStat().getVersion());
@@ -285,9 +296,9 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           synchronized (lock) {
             final ChildData child = event.getData();
 
-            byte[] data = getZkDataForNode(child.getPath());
+            byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info(
+              log.warn(
                   "Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
@@ -356,14 +367,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     private class InventoryCacheListener implements PathChildrenCacheListener
     {
       private final String containerKey;
-      private final String inventoryPath;
 
       public InventoryCacheListener(String containerKey, String inventoryPath)
       {
         this.containerKey = containerKey;
-        this.inventoryPath = inventoryPath;
-
-        log.info("Created new InventoryCacheListener for %s", inventoryPath);
+        log.debug("Created new InventoryCacheListener for %s", inventoryPath);
       }
 
       @Override
@@ -378,9 +386,9 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_ADDED: {
             final ChildData child = event.getData();
 
-            byte[] data = getZkDataForNode(child.getPath());
+            byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.warn("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
                   child.getStat().getVersion());
@@ -401,9 +409,9 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_UPDATED: {
             final ChildData child = event.getData();
 
-            byte[] data = getZkDataForNode(child.getPath());
+            byte[] data = getZkDataForNode(child);
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.warn("Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
                   child.getStat().getVersion());

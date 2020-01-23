@@ -302,6 +302,12 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    return location;
+  }
+
+  @Override
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
@@ -322,7 +328,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
   {
     QueryRunner<T> queryRunner = null;
-    final String queryDataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    final String queryDataSource = Iterables.getOnlyElement(query.getDataSource().getTableNames());
 
     if (runningItem != null) {
       final Task task = runningItem.getTask();

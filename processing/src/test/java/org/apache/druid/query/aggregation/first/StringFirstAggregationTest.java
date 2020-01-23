@@ -28,7 +28,9 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,7 +41,7 @@ import java.nio.ByteBuffer;
 public class StringFirstAggregationTest
 {
   private final Integer MAX_STRING_SIZE = 1024;
-  private AggregatorFactory stringLastAggFactory;
+  private AggregatorFactory stringFirstAggFactory;
   private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
@@ -59,8 +61,8 @@ public class StringFirstAggregationTest
   @Before
   public void setup()
   {
-    stringLastAggFactory = new StringFirstAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
-    combiningAggFactory = stringLastAggFactory.getCombiningFactory();
+    stringFirstAggFactory = new StringFirstAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
+    combiningAggFactory = stringFirstAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestObjectColumnSelector<>(strings);
     objectSelector = new TestObjectColumnSelector<>(pairs);
@@ -68,13 +70,16 @@ public class StringFirstAggregationTest
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
 
   @Test
-  public void testStringLastAggregator()
+  public void testStringFirstAggregator()
   {
-    Aggregator agg = stringLastAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = stringFirstAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -87,12 +92,12 @@ public class StringFirstAggregationTest
   }
 
   @Test
-  public void testStringLastBufferAggregator()
+  public void testStringFirstBufferAggregator()
   {
-    BufferAggregator agg = stringLastAggFactory.factorizeBuffered(
+    BufferAggregator agg = stringFirstAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[stringLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[stringFirstAggFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -110,11 +115,11 @@ public class StringFirstAggregationTest
   {
     SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
     SerializablePairLongString pair2 = new SerializablePairLongString(1467240000L, "BBBB");
-    Assert.assertEquals(pair2, stringLastAggFactory.combine(pair1, pair2));
+    Assert.assertEquals(pair2, stringFirstAggFactory.combine(pair1, pair2));
   }
 
   @Test
-  public void testStringLastCombiningAggregator()
+  public void testStringFirstCombiningAggregator()
   {
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
@@ -133,10 +138,9 @@ public class StringFirstAggregationTest
   @Test
   public void testStringFirstCombiningBufferAggregator()
   {
-    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
-        colSelectorFactory);
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[stringLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[stringFirstAggFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);

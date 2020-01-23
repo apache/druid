@@ -21,14 +21,19 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.BinaryOperator;
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.
@@ -44,7 +49,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
     TypeReference<ResultType> resultTypeReference = getResultTypeReference();
     // resultTypeReference is null in MaterializedViewQueryQueryToolChest.
-    // See https://github.com/apache/incubator-druid/issues/6977
+    // See https://github.com/apache/druid/issues/6977
     if (resultTypeReference != null) {
       baseResultType = typeFactory.constructType(resultTypeReference);
       bySegmentResultType = typeFactory.constructParametrizedType(
@@ -73,22 +78,68 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
+   * Perform any per-query decoration of an {@link ObjectMapper} that enables it to read and write objects of the
+   * query's {@link ResultType}. It is used by QueryResource on the write side, and DirectDruidClient on the read side.
+   *
+   * For most queries, this is a no-op, but it can be useful for query types that support more than one result
+   * serialization format. Queries that implement this method must not modify the provided ObjectMapper, but instead
+   * must return a copy.
+   */
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final QueryType query)
+  {
+    return objectMapper;
+  }
+
+  /**
    * This method wraps a QueryRunner.  The input QueryRunner, by contract, will provide a series of
    * ResultType objects in time order (ascending or descending).  This method should return a new QueryRunner that
    * potentially merges the stream of ordered ResultType objects.
+   *
+   * A default implementation constructs a {@link ResultMergeQueryRunner} which creates a
+   * {@link org.apache.druid.common.guava.CombiningSequence} using the supplied {@link QueryRunner} with
+   * {@link QueryToolChest#createResultComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
+   * toolchest.
    *
    * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
    *
    * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
    */
-  public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner)
+  {
+    return new ResultMergeQueryRunner<>(runner, this::createResultComparator, this::createMergeFn);
+  }
+
+  /**
+   * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
+   * function is used in the default {@link ResultMergeQueryRunner} provided by
+   * {@link QueryToolChest#mergeResults(QueryRunner)} and also used in
+   * {@link org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence} by 'CachingClusteredClient' if it
+   * does not return null.
+   *
+   * Returning null from this function means that a query does not support result merging, at
+   * least via the mechanisms that utilize this function.
+   */
+  @Nullable
+  public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
+  {
+    return null;
+  }
+
+  /**
+   * Creates an ordering comparator that is used to order results. This comparator is used in the default
+   * {@link ResultMergeQueryRunner} provided by {@link QueryToolChest#mergeResults(QueryRunner)}
+   */
+  public Comparator<ResultType> createResultComparator(Query<ResultType> query)
+  {
+    throw new UOE("%s doesn't provide a result comparator", query.getClass().getName());
+  }
 
   /**
    * Creates a {@link QueryMetrics} object that is used to generate metrics for this specific query type.  This exists
    * to allow for query-specific dimensions and metrics.  That is, the ToolChest is expected to set some
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
-   * 
+   *
    * <p>QueryToolChests for query types in core (druid-processing) and public extensions (belonging to the Druid source
    * tree) should use delegate this method to {@link GenericQueryMetricsFactory#makeMetrics(Query)} on an injected
    * instance of {@link GenericQueryMetricsFactory}, as long as they don't need to emit custom dimensions and/or
@@ -218,5 +269,51 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
+  }
+
+  /**
+   * Returns a list of field names in the order that {@link #resultsAsArrays} would return them. The returned list will
+   * be the same length as each array returned by {@link #resultsAsArrays}.
+   *
+   * @param query same query passed to {@link #resultsAsArrays}
+   *
+   * @return list of field names
+   *
+   * @throws UnsupportedOperationException if this query type does not support returning results as arrays
+   */
+  public List<String> resultArrayFields(QueryType query)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
+  }
+
+  /**
+   * Converts a sequence of this query's ResultType into arrays. The array schema is given by
+   * {@link #resultArrayFields}. This functionality is useful because it allows higher-level processors to operate on
+   * the results of any query in a consistent way. This is useful for the SQL layer and for any algorithm that might
+   * operate on the results of an inner query.
+   *
+   * Not all query types support this method. They will throw {@link UnsupportedOperationException}, and they cannot
+   * be used by the SQL layer or by generic higher-level algorithms.
+   *
+   * Some query types return less information after translating their results into arrays, especially in situations
+   * where there is no clear way to translate fully rich results into flat arrays. For example, the scan query does not
+   * include the segmentId in its array-based results, because it could potentially conflict with a 'segmentId' field
+   * in the actual datasource being scanned.
+   *
+   * It is possible that there will be multiple arrays returned for a single result object. For example, in the topN
+   * query, each {@link org.apache.druid.query.topn.TopNResultValue} will generate a separate array for each of its
+   * {@code values}.
+   *
+   * By convention, the array form should include the __time column, if present,  as a long (milliseconds since epoch).
+   *
+   * @param resultSequence results of the form returned by {@link #mergeResults}
+   *
+   * @return results in array form
+   *
+   * @throws UnsupportedOperationException if this query type does not support returning results as arrays
+   */
+  public Sequence<Object[]> resultsAsArrays(QueryType query, Sequence<ResultType> resultSequence)
+  {
+    throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
   }
 }

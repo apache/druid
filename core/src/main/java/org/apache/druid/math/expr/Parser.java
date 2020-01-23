@@ -162,24 +162,26 @@ public class Parser
    * used in a scalar manner, walking the {@link Expr} tree and lifting array variables into the {@link LambdaExpr} of
    * {@link ApplyFunctionExpr} and transforming the arguments of {@link FunctionExpr}
    * @param expr expression to visit and rewrite
-   * @param toApply
+   * @param bindingsToApply
    * @return
    */
-  public static Expr applyUnappliedIdentifiers(Expr expr, Expr.BindingDetails bindingDetails, List<String> toApply)
+  public static Expr applyUnappliedBindings(Expr expr, Expr.BindingDetails bindingDetails, List<String> bindingsToApply)
   {
-    if (toApply.size() == 0) {
+    if (bindingsToApply.isEmpty()) {
+      // nothing to do, expression is fine as is
       return expr;
     }
-    List<String> unapplied = toApply.stream()
-                                     .filter(x -> bindingDetails.getRequiredColumns().contains(x))
+    // filter the list of bindings to those which are used in this expression
+    List<String> unappliedBindingsInExpression = bindingsToApply.stream()
+                                     .filter(x -> bindingDetails.getRequiredBindings().contains(x))
                                      .collect(Collectors.toList());
 
-    // any unapplied identifiers that are inside a lambda expression need that lambda expression to be rewritten
+    // any unapplied bindings that are inside a lambda expression need that lambda expression to be rewritten
     Expr newExpr = expr.visit(
         childExpr -> {
           if (childExpr instanceof ApplyFunctionExpr) {
             // try to lift unapplied arguments into the apply function lambda
-            return liftApplyLambda((ApplyFunctionExpr) childExpr, unapplied);
+            return liftApplyLambda((ApplyFunctionExpr) childExpr, unappliedBindingsInExpression);
           } else if (childExpr instanceof FunctionExpr) {
             // check array function arguments for unapplied identifiers to transform if necessary
             FunctionExpr fnExpr = (FunctionExpr) childExpr;
@@ -187,7 +189,7 @@ public class Parser
             List<Expr> newArgs = new ArrayList<>();
             for (Expr arg : fnExpr.args) {
               if (arg.getIdentifierIfIdentifier() == null && arrayInputs.contains(arg)) {
-                Expr newArg = applyUnappliedIdentifiers(arg, bindingDetails, unapplied);
+                Expr newArg = applyUnappliedBindings(arg, bindingDetails, unappliedBindingsInExpression);
                 newArgs.add(newArg);
               } else {
                 newArgs.add(arg);
@@ -203,60 +205,68 @@ public class Parser
 
     Expr.BindingDetails newExprBindings = newExpr.analyzeInputs();
     final Set<String> expectedArrays = newExprBindings.getArrayVariables();
-    List<String> remainingUnappliedArgs =
-        unapplied.stream().filter(x -> !expectedArrays.contains(x)).collect(Collectors.toList());
+
+    List<String> remainingUnappliedBindings =
+        unappliedBindingsInExpression.stream().filter(x -> !expectedArrays.contains(x)).collect(Collectors.toList());
 
     // if lifting the lambdas got rid of all missing bindings, return the transformed expression
-    if (remainingUnappliedArgs.size() == 0) {
+    if (remainingUnappliedBindings.isEmpty()) {
       return newExpr;
     }
 
-    return applyUnapplied(newExpr, remainingUnappliedArgs);
+    return applyUnapplied(newExpr, remainingUnappliedBindings);
   }
 
   /**
    * translate an {@link Expr} into an {@link ApplyFunctionExpr} for {@link ApplyFunction.MapFunction} or
    * {@link ApplyFunction.CartesianMapFunction} if there are multiple unbound arguments to be applied
    */
-  private static Expr applyUnapplied(Expr expr, List<String> unapplied)
+  private static Expr applyUnapplied(Expr expr, List<String> unappliedBindings)
   {
-    // wrap an expression in either map or cartesian_map to apply any unapplied identifiers
-    final Map<IdentifierExpr, IdentifierExpr> toReplace = new HashMap<>();
+    // filter to get list of IdentifierExpr that are backed by the unapplied bindings
     final List<IdentifierExpr> args = expr.analyzeInputs()
                                           .getFreeVariables()
                                           .stream()
-                                          .filter(x -> unapplied.contains(x.getBindingIdentifier()))
+                                          .filter(x -> unappliedBindings.contains(x.getBinding()))
                                           .collect(Collectors.toList());
 
     final List<IdentifierExpr> lambdaArgs = new ArrayList<>();
 
-    // construct lambda args from list of args to apply
+    // construct lambda args from list of args to apply. Identifiers in a lambda body have artificial 'binding' values
+    // that is the same as the 'identifier', because the bindings are supplied by the wrapping apply function
+    // replacements are done by binding rather than identifier because repeats of the same input should not result
+    // in a cartesian product
+    final Map<String, IdentifierExpr> toReplace = new HashMap<>();
     for (IdentifierExpr applyFnArg : args) {
-      IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getIdentifier());
-      lambdaArgs.add(lambdaRewrite);
-      toReplace.put(applyFnArg, lambdaRewrite);
+      if (!toReplace.containsKey(applyFnArg.getBinding())) {
+        IdentifierExpr lambdaRewrite = new IdentifierExpr(applyFnArg.getBinding());
+        lambdaArgs.add(lambdaRewrite);
+        toReplace.put(applyFnArg.getBinding(), lambdaRewrite);
+      }
     }
 
     // rewrite identifiers in the expression which will become the lambda body, so they match the lambda identifiers we
     // are constructing
     Expr newExpr = expr.visit(childExpr -> {
       if (childExpr instanceof IdentifierExpr) {
-        if (toReplace.containsKey(childExpr)) {
-          return toReplace.get(childExpr);
+        if (toReplace.containsKey(((IdentifierExpr) childExpr).getBinding())) {
+          return toReplace.get(((IdentifierExpr) childExpr).getBinding());
         }
       }
       return childExpr;
     });
 
+
+    // wrap an expression in either map or cartesian_map to apply any unapplied identifiers
     final LambdaExpr lambdaExpr = new LambdaExpr(lambdaArgs, newExpr);
     final ApplyFunction fn;
-    if (args.size() == 1) {
+    if (lambdaArgs.size() == 1) {
       fn = new ApplyFunction.MapFunction();
     } else {
       fn = new ApplyFunction.CartesianMapFunction();
     }
 
-    final Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, ImmutableList.copyOf(args));
+    final Expr magic = new ApplyFunctionExpr(fn, fn.name(), lambdaExpr, ImmutableList.copyOf(lambdaArgs));
     return magic;
   }
 
@@ -274,21 +284,21 @@ public class Parser
     // recursively evaluate arguments to ensure they are properly transformed into arrays as necessary
     Set<String> unappliedInThisApply =
         unappliedArgs.stream()
-                     .filter(u -> !expr.bindingDetails.getArrayColumns().contains(u))
+                     .filter(u -> !expr.bindingDetails.getArrayBindings().contains(u))
                      .collect(Collectors.toSet());
 
     List<String> unappliedIdentifiers =
         expr.bindingDetails
             .getFreeVariables()
             .stream()
-            .filter(x -> unappliedInThisApply.contains(x.getIdentifierBindingIfIdentifier()))
+            .filter(x -> unappliedInThisApply.contains(x.getBindingIfIdentifier()))
             .map(IdentifierExpr::getIdentifierIfIdentifier)
             .collect(Collectors.toList());
 
     List<Expr> newArgs = new ArrayList<>();
     for (int i = 0; i < expr.argsExpr.size(); i++) {
       newArgs.add(
-          applyUnappliedIdentifiers(
+          applyUnappliedBindings(
               expr.argsExpr.get(i),
               expr.argsBindingDetails.get(i),
               unappliedIdentifiers
@@ -300,11 +310,11 @@ public class Parser
     List<IdentifierExpr> unappliedLambdaBindings =
         expr.lambdaBindingDetails.getFreeVariables()
                                  .stream()
-                                 .filter(x -> unappliedArgs.contains(x.getIdentifierBindingIfIdentifier()))
-                                 .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBindingIdentifier()))
+                                 .filter(x -> unappliedArgs.contains(x.getBindingIfIdentifier()))
+                                 .map(x -> new IdentifierExpr(x.getIdentifier(), x.getBinding()))
                                  .collect(Collectors.toList());
 
-    if (unappliedLambdaBindings.size() == 0) {
+    if (unappliedLambdaBindings.isEmpty()) {
       return new ApplyFunctionExpr(expr.function, expr.name, expr.lambdaExpr, newArgs);
     }
 
@@ -386,8 +396,8 @@ public class Parser
   public static void validateExpr(Expr expression, Expr.BindingDetails bindingDetails)
   {
     final Set<String> conflicted =
-        Sets.intersection(bindingDetails.getScalarColumns(), bindingDetails.getArrayColumns());
-    if (conflicted.size() != 0) {
+        Sets.intersection(bindingDetails.getScalarBindings(), bindingDetails.getArrayBindings());
+    if (!conflicted.isEmpty()) {
       throw new RE("Invalid expression: %s; %s used as both scalar and array variables", expression, conflicted);
     }
   }

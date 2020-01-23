@@ -60,6 +60,18 @@ public interface ApplyFunction
    */
   Set<Expr> getArrayInputs(List<Expr> args);
 
+  /**
+   * Returns true if apply function produces an array output. All {@link ApplyFunction} implementations are expected to
+   * exclusively produce either scalar or array values.
+   */
+  default boolean hasArrayOutput(LambdaExpr lambdaExpr)
+  {
+    return false;
+  }
+
+  /**
+   * Validate apply function arguments, throwing an exception if incorrect
+   */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
@@ -69,6 +81,12 @@ public interface ApplyFunction
    */
   abstract class BaseMapFunction implements ApplyFunction
   {
+    @Override
+    public boolean hasArrayOutput(LambdaExpr lambdaExpr)
+    {
+      return true;
+    }
+
     /**
      * Evaluate {@link LambdaExpr} against every index position of an {@link IndexableMapLambdaObjectBinding}
      */
@@ -260,11 +278,18 @@ public interface ApplyFunction
       }
       return ExprEval.bestEffortOf(accumulator);
     }
+
+    @Override
+    public boolean hasArrayOutput(LambdaExpr lambdaExpr)
+    {
+      Expr.BindingDetails lambdaBindingDetails = lambdaExpr.analyzeInputs();
+      return lambdaBindingDetails.isOutputArray();
+    }
   }
 
   /**
    * Accumulate a value for a single array input with a 2 argument {@link LambdaExpr}. The 'array' input expression is
-   * the first argument, the initial value for the accumlator expression is the 2nd argument.
+   * the first argument, the initial value for the accumulator expression is the 2nd argument.
    */
   class FoldFunction extends BaseFoldFunction
   {
@@ -289,10 +314,10 @@ public interface ApplyFunction
       if (array == null) {
         return ExprEval.of(null);
       }
-      Object accumlator = accEval.value();
+      Object accumulator = accEval.value();
 
-      FoldLambdaBinding lambdaBinding = new FoldLambdaBinding(array, accumlator, lambdaExpr, bindings);
-      return applyFold(lambdaExpr, accumlator, lambdaBinding);
+      FoldLambdaBinding lambdaBinding = new FoldLambdaBinding(array, accumulator, lambdaExpr, bindings);
+      return applyFold(lambdaExpr, accumulator, lambdaBinding);
     }
 
     @Override
@@ -315,8 +340,8 @@ public interface ApplyFunction
 
   /**
    * Accumulate a value for the cartesian product of 'n' array inputs arguments with an 'n + 1' argument
-   * {@link LambdaExpr}. The 'array' input expressions are the first 'n' arguments, the initial value for the accumlator
-   * expression is the final argument.
+   * {@link LambdaExpr}. The 'array' input expressions are the first 'n' arguments, the initial value for the
+   * accumulator expression is the final argument.
    */
   class CartesianFoldFunction extends BaseFoldFunction
   {
@@ -360,11 +385,11 @@ public interface ApplyFunction
 
       ExprEval accEval = accExpr.eval(bindings);
 
-      Object accumlator = accEval.value();
+      Object accumulator = accEval.value();
 
       CartesianFoldLambdaBinding lambdaBindings =
-          new CartesianFoldLambdaBinding(product, accumlator, lambdaExpr, bindings);
-      return applyFold(lambdaExpr, accumlator, lambdaBindings);
+          new CartesianFoldLambdaBinding(product, accumulator, lambdaExpr, bindings);
+      return applyFold(lambdaExpr, accumulator, lambdaBindings);
     }
 
     @Override
@@ -395,6 +420,12 @@ public interface ApplyFunction
     public String name()
     {
       return NAME;
+    }
+
+    @Override
+    public boolean hasArrayOutput(LambdaExpr lambdaExpr)
+    {
+      return true;
     }
 
     @Override

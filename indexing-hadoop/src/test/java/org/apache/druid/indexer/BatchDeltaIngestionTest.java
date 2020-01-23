@@ -53,6 +53,7 @@ import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -82,7 +83,7 @@ public class BatchDeltaIngestionTest
     MAPPER.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     InjectableValues inject = new InjectableValues.Std()
         .addValue(ObjectMapper.class, MAPPER)
-        .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+        .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(inject);
     INDEX_IO = HadoopDruidIndexerConfig.INDEX_IO;
 
@@ -161,7 +162,7 @@ public class BatchDeltaIngestionTest
   /**
    * By default re-indexing expects same aggregators as used by original indexing job. But, with additional flag
    * "useNewAggs" in DatasourcePathSpec, user can optionally have any set of aggregators.
-   * See https://github.com/apache/incubator-druid/issues/5277 .
+   * See https://github.com/apache/druid/issues/5277 .
    */
   @Test
   public void testReindexingWithNewAggregators() throws Exception

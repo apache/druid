@@ -19,15 +19,18 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.DoublesUnion;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesUnion;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
+
+import javax.annotation.Nullable;
 
 public class DoublesSketchMergeAggregator implements Aggregator
 {
 
   private final ColumnValueSelector selector;
+  @Nullable
   private DoublesUnion union;
 
   public DoublesSketchMergeAggregator(final ColumnValueSelector selector, final int k)

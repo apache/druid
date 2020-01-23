@@ -107,7 +107,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   @Override
   @Nullable
-  public Object startJob()
+  public Object startJob(AppenderatorDriverSegmentLockHelper lockHelper)
   {
     handoffNotifier.start();
 
@@ -115,8 +115,6 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         appenderator.startJob(),
         AppenderatorDriverMetadata.class
     );
-
-    log.info("Restored metadata[%s].", metadata);
 
     if (metadata != null) {
       synchronized (segments) {
@@ -133,6 +131,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
           final SegmentsForSequenceBuilder builder = new SegmentsForSequenceBuilder(lastSegmentIds.get(sequenceName));
           builders.put(sequenceName, builder);
           entry.getValue().forEach(builder::add);
+          if (lockHelper != null) {
+            for (SegmentWithState segmentWithState : entry.getValue()) {
+              if (segmentWithState.getState() != SegmentState.PUSHED_AND_DROPPED
+                  && !lockHelper.lock(segmentWithState.getSegmentIdentifier())) {
+                throw new ISE("Failed to lock segment[%s]", segmentWithState.getSegmentIdentifier());
+              }
+            }
+          }
         }
 
         builders.forEach((sequence, builder) -> segments.put(sequence, builder.build()));
@@ -219,10 +225,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   public Object persist(final Committer committer) throws InterruptedException
   {
     try {
-      log.info("Persisting data.");
+      log.debug("Persisting pending data.");
       final long start = System.currentTimeMillis();
       final Object commitMetadata = appenderator.persistAll(wrapCommitter(committer)).get();
-      log.info("Persisted pending data in %,dms.", System.currentTimeMillis() - start);
+      log.debug("Persisted pending data in %,dms.", System.currentTimeMillis() - start);
       return commitMetadata;
     }
     catch (InterruptedException e) {
@@ -273,6 +279,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
         sam -> publishInBackground(
+            null,
             sam,
             publisher
         )
@@ -320,7 +327,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         );
       }
 
-      log.info("Register handoff of segments: [%s]", waitingSegmentIdList);
+      log.debug("Register handoff of segments: [%s]", waitingSegmentIdList);
 
       final SettableFuture<SegmentsAndMetadata> resultFuture = SettableFuture.create();
       final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
@@ -334,7 +341,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             ),
             Execs.directExecutor(),
             () -> {
-              log.info("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
+              log.debug("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
               metrics.incrementHandOffCount();
 
               final ListenableFuture<?> dropFuture = appenderator.drop(segmentIdentifier);
@@ -346,7 +353,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     public void onSuccess(Object result)
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
-                        log.info("Successfully handed off [%d] segments.", segmentsAndMetadata.getSegments().size());
+                        log.debug("Successfully handed off [%d] segments.", segmentsAndMetadata.getSegments().size());
                         resultFuture.set(
                             new SegmentsAndMetadata(
                                 segmentsAndMetadata.getSegments(),

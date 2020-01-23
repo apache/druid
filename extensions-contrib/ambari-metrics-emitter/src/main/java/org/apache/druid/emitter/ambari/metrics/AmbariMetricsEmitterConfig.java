@@ -80,7 +80,7 @@ public class AmbariMetricsEmitterConfig
       @JsonProperty("port") Integer port,
       @JsonProperty("protocol") String protocol,
       @JsonProperty("trustStorePath") String trustStorePath,
-      @JsonProperty("trustStoreType") String trustStoretype,
+      @JsonProperty("trustStoreType") String trustStoreType,
       @JsonProperty("trustStorePassword") String trustStorePassword,
       @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("flushPeriod") Long flushPeriod,
@@ -95,7 +95,7 @@ public class AmbariMetricsEmitterConfig
     this.port = Preconditions.checkNotNull(port, "port can not be null");
     this.protocol = protocol == null ? DEFAULT_PROTOCOL : protocol;
     this.trustStorePath = trustStorePath;
-    this.trustStoreType = trustStoretype;
+    this.trustStoreType = trustStoreType;
     this.trustStorePassword = trustStorePassword;
     this.batchSize = (batchSize == null) ? DEFAULT_BATCH_SIZE : batchSize;
     this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD_MILLIS : flushPeriod;

@@ -41,7 +41,7 @@ public class HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPr
    * It should be checked with a tool like https://github.com/AdoptOpenJDK/jitwatch that C2 compiler output for this
    * method doesn't have any method calls in the while loop, i. e. all method calls are inlined. To be able to see
    * assembly of this method in JITWatch and other similar tools, {@link
-   * PooledTopNAlgorithm#specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN} should be turned off.
+   * PooledTopNAlgorithm#SPECIALIZE_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN} should be turned off.
    * Note that in this case the benchmark should be "naturally monomorphic", i. e. execute this method always with the
    * same runtime shape.
    *

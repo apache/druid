@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -33,8 +34,12 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,8 +53,6 @@ import java.util.stream.Collectors;
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
-  private final Map<String, Object> consumerProperties;
-  private final ObjectMapper sortingMapper;
   private boolean closed;
 
   public KafkaRecordSupplier(
@@ -57,9 +60,15 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       ObjectMapper sortingMapper
   )
   {
-    this.consumerProperties = consumerProperties;
-    this.sortingMapper = sortingMapper;
-    this.consumer = getKafkaConsumer();
+    this(getKafkaConsumer(sortingMapper, consumerProperties));
+  }
+
+  @VisibleForTesting
+  public KafkaRecordSupplier(
+      KafkaConsumer<byte[], byte[]> consumer
+  )
+  {
+    this.consumer = consumer;
   }
 
   @Override
@@ -197,7 +206,33 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     }
   }
 
-  private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
+  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+  {
+    Deserializer deserializerObject;
+    try {
+      Class deserializerClass = Class.forName(properties.getProperty(
+          kafkaConfigKey,
+          ByteArrayDeserializer.class.getTypeName()
+      ));
+      Method deserializerMethod = deserializerClass.getMethod("deserialize", String.class, byte[].class);
+
+      Type deserializerReturnType = deserializerMethod.getGenericReturnType();
+
+      if (deserializerReturnType == byte[].class) {
+        deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
+      } else {
+        throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), " +
+                                           deserializerClass.getName() + " returns " +
+                                           deserializerReturnType.getTypeName());
+      }
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+      throw new StreamException(e);
+    }
+    return deserializerObject;
+  }
+
+  private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
@@ -206,8 +241,11 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(props, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+      Thread.currentThread().setContextClassLoader(KafkaRecordSupplier.class.getClassLoader());
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+
+      return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

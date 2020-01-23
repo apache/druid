@@ -29,30 +29,16 @@ import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import java.util.Objects;
 
 /**
+ *
  */
 public class DefaultDimensionSpec implements DimensionSpec
 {
   public static DefaultDimensionSpec of(String dimensionName)
   {
     return new DefaultDimensionSpec(dimensionName, dimensionName);
-  }
-
-  public static List<DimensionSpec> toSpec(String... dimensionNames)
-  {
-    return toSpec(Arrays.asList(dimensionNames));
-  }
-
-  public static List<DimensionSpec> toSpec(Iterable<String> dimensionNames)
-  {
-    return StreamSupport.stream(dimensionNames.spliterator(), false)
-                        .map(input -> new DefaultDimensionSpec(input, input))
-                        .collect(Collectors.toList());
   }
 
   private static final byte CACHE_TYPE_ID = 0x0;
@@ -152,6 +138,12 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new DefaultDimensionSpec(newDimension, this.outputName, this.outputType);
+  }
+
+  @Override
   public String toString()
   {
     return "DefaultDimensionSpec{" +
@@ -174,13 +166,13 @@ public class DefaultDimensionSpec implements DimensionSpec
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
+    if (!Objects.equals(dimension, that.dimension)) {
       return false;
     }
-    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) {
+    if (!Objects.equals(outputName, that.outputName)) {
       return false;
     }
-    if (outputType != null ? !outputType.equals(that.outputType) : that.outputType != null) {
+    if (!Objects.equals(outputType, that.outputType)) {
       return false;
     }
 

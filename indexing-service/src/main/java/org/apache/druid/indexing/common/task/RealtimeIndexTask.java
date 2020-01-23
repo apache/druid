@@ -32,26 +32,24 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -190,14 +188,12 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
-    if (plumber != null) {
-      QueryRunnerFactory<T, Query<T>> factory = queryRunnerFactoryConglomerate.findFactory(query);
-      QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-
-      return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
-    } else {
-      return null;
+    if (plumber == null) {
+      // Not yet initialized, no data yet, just return a noop runner.
+      return new NoopQueryRunner<>();
     }
+
+    return plumber.getQueryRunner(query);
   }
 
   @Override
@@ -240,7 +236,7 @@ public class RealtimeIndexTask extends AbstractTask
         // Side effect: Calling announceSegment causes a lock to be acquired
         Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
-                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+                new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
             ),
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
@@ -266,7 +262,7 @@ public class RealtimeIndexTask extends AbstractTask
         for (DataSegment segment : segments) {
           Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(
-                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+                  new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
               ),
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
@@ -302,7 +298,7 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
           final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(action),
               "Cannot acquire a lock for interval[%s]",
@@ -350,20 +346,20 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
-        toolbox.getObjectMapper()
+        toolbox.getJsonMapper()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
-    Supplier<Committer> committerSupplier = null;
-    final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
+    final Supplier<Committer> committerSupplier = Committers.nilSupplier();
+    final File firehoseTempDir = toolbox.getIndexingTmpDir();
 
     LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
                                           new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        NodeType.PEON,
+        NodeRole.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService
@@ -390,8 +386,10 @@ public class RealtimeIndexTask extends AbstractTask
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {
         if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
-          committerSupplier = Committers.supplierFromFirehose(firehose);
+          firehose = firehoseFactory.connect(
+              Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
+              firehoseTempDir
+          );
         }
       }
 
@@ -517,6 +515,14 @@ public class RealtimeIndexTask extends AbstractTask
       }
       catch (Exception e) {
         throw new RuntimeException(e);
+      }
+    } else {
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          // If task restore is not enabled, just interrupt immediately.
+          gracefullyStopped = true;
+          runThread.interrupt();
+        }
       }
     }
   }

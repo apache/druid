@@ -20,8 +20,6 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -41,13 +39,14 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.select.SelectQueryConfig;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -64,22 +63,18 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  */
 public class CachingClusteredClientFunctionalityTest
 {
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
-  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
-      new SelectQueryConfig(true)
-  );
   private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER = CachingClusteredClientTestUtils
-      .createWarehouse(OBJECT_MAPPER, SELECT_CONFIG_SUPPLIER);
+      .createWarehouse(OBJECT_MAPPER);
   private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
   private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
@@ -124,59 +119,59 @@ public class CachingClusteredClientFunctionalityTest
                                                             3
                                                         ));
 
-    Map<String, Object> responseContext = new HashMap<>();
+    ResponseContext responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
-    Assert.assertNull(responseContext.get("uncoveredIntervals"));
+    Assert.assertNull(responseContext.get(ResponseContext.Key.UNCOVERED_INTERVALS));
 
     builder.intervals("2015-01-01/2015-01-03");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
     builder.intervals("2015-01-01/2015-01-04");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-02/2015-01-04");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
     builder.intervals("2015-01-01/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-02/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-04/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
     builder.intervals("2015-01-10/2015-01-30");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
     builder.intervals("2015-01-01/2015-02-25");
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");
   }
 
-  private void assertUncovered(Map<String, Object> context, boolean uncoveredIntervalsOverflowed, String... intervals)
+  private void assertUncovered(ResponseContext context, boolean uncoveredIntervalsOverflowed, String... intervals)
   {
     List<Interval> expectedList = Lists.newArrayListWithExpectedSize(intervals.length);
     for (String interval : intervals) {
       expectedList.add(Intervals.of(interval));
     }
-    Assert.assertEquals((Object) expectedList, context.get("uncoveredIntervals"));
-    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get("uncoveredIntervalsOverflowed"));
+    Assert.assertEquals((Object) expectedList, context.get(ResponseContext.Key.UNCOVERED_INTERVALS));
+    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
   private void addToTimeline(Interval interval, String version)
@@ -188,6 +183,7 @@ public class CachingClusteredClientFunctionalityTest
                        .interval(interval)
                        .version(version)
                        .shardSpec(NoneShardSpec.instance())
+                       .size(0)
                        .build(),
             new TierSelectorStrategy()
             {
@@ -308,20 +304,37 @@ public class CachingClusteredClientFunctionalityTest
             return mergeLimit;
           }
         },
-        new DruidHttpClientConfig() {
+        new DruidHttpClientConfig()
+        {
           @Override
           public long getMaxQueuedBytes()
           {
             return 0L;
           }
-        }
+        },
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
+
+          @Override
+          public int getMergePoolParallelism()
+          {
+            // fixed so same behavior across all test environments
+            return 4;
+          }
+        },
+        ForkJoinPool.commonPool()
     );
   }
 
   private static <T> Sequence<T> runQuery(
       CachingClusteredClient client,
       final Query<T> query,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     return client.getQueryRunnerForIntervals(query, query.getIntervals()).run(

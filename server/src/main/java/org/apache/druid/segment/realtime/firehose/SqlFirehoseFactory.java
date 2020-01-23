@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.impl.prefetch.PrefetchSqlFirehoseFactory;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -34,6 +33,8 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
 import org.skife.jdbi.v2.exceptions.StatementException;
+
+import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -51,6 +52,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
 {
   @JsonProperty
   private final List<String> sqls;
+  @Nullable
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
   private final ObjectMapper objectMapper;
@@ -87,7 +89,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
   }
 
   @Override
-  protected InputStream openObjectStream(String object, File fileName) throws IOException
+  protected InputStream openObjectStream(String sql, File fileName) throws IOException
   {
     Preconditions.checkNotNull(sqlFirehoseDatabaseConnector, "SQL Metadata Connector not configured!");
     try (FileOutputStream fos = new FileOutputStream(fileName)) {
@@ -95,7 +97,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
       sqlFirehoseDatabaseConnector.retryWithHandle(
           (handle) -> {
             ResultIterator<Map<String, Object>> resultIterator = handle.createQuery(
-                object
+                sql
             ).map(
                 (index, r, ctx) -> {
                   Map<String, Object> resultRow = foldCase ? new CaseFoldedMap() : new HashMap<>();

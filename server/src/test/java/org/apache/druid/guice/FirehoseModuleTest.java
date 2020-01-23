@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice;
 
-import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
@@ -28,10 +27,14 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.reflect.ClassPath;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -39,7 +42,8 @@ import java.util.stream.Collectors;
 
 public class FirehoseModuleTest
 {
-  private static final Predicate<Class> IS_FIREHOSE_FACTORY = FirehoseFactory.class::isAssignableFrom;
+  private static final Predicate<Class> IS_FIREHOSE_FACTORY =
+      c -> FirehoseFactory.class.isAssignableFrom(c) && !Modifier.isAbstract(c.getModifiers());
 
   @Test
   public void testAllFirehoseFactorySubtypesRegistered() throws IOException
@@ -64,8 +68,7 @@ public class FirehoseModuleTest
   {
     Class parentClass = FirehoseFactory.class;
     MapperConfig config = objectMapper.getDeserializationConfig();
-    AnnotationIntrospector annotationIntrospector = config.getAnnotationIntrospector();
-    AnnotatedClass ac = AnnotatedClass.constructWithoutSuperTypes(parentClass, annotationIntrospector, config);
+    AnnotatedClass ac = AnnotatedClass.constructWithoutSuperTypes(parentClass, config);
     Collection<NamedType> subtypes = objectMapper.getSubtypeResolver().collectAndResolveSubtypesByClass(config, ac);
     Assert.assertNotNull(subtypes);
     return subtypes.stream()
@@ -77,8 +80,10 @@ public class FirehoseModuleTest
   @SuppressWarnings("UnstableApiUsage") // for ClassPath
   private static Set<Class> getFirehoseFactoryClassesInPackage(String packageName) throws IOException
   {
-    ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    ClassPath classPath = ClassPath.from(loader);
+    // workaround for Guava 16, which can only parse the classpath from URLClassLoaders
+    // requires Guava 28 or later to work properly with the system class loader in Java 9 and above
+    URLClassLoader classloader = new URLClassLoader(JvmUtils.systemClassPath().toArray(new URL[0]));
+    ClassPath classPath = ClassPath.from(classloader);
     return classPath.getTopLevelClasses(packageName).stream()
                     .map(ClassPath.ClassInfo::load)
                     .filter(IS_FIREHOSE_FACTORY)

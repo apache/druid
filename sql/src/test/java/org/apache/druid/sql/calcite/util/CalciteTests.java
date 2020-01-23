@@ -44,7 +44,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
@@ -84,10 +84,6 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryEngine;
-import org.apache.druid.query.select.SelectQueryQueryToolChest;
-import org.apache.druid.query.select.SelectQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -133,8 +129,10 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -149,6 +147,8 @@ public class CalciteTests
   public static final String DATASOURCE1 = "foo";
   public static final String DATASOURCE2 = "foo2";
   public static final String DATASOURCE3 = "numfoo";
+  public static final String DATASOURCE4 = "foo4";
+  public static final String DATASOURCE5 = "lotsocolumns";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
@@ -261,6 +261,31 @@ public class CalciteTests
       )
   );
 
+  private static final InputRowParser<Map<String, Object>> PARSER_LOTS_OF_COLUMNS = new MapInputRowParser(
+      new TimeAndDimsParseSpec(
+          new TimestampSpec("timestamp", "millis", null),
+          new DimensionsSpec(
+              DimensionsSpec.getDefaultSchemas(
+                  ImmutableList.<String>builder().add("dimHyperUnique")
+                                                 .add("dimMultivalEnumerated")
+                                                 .add("dimMultivalEnumerated2")
+                                                 .add("dimMultivalSequentialWithNulls")
+                                                 .add("dimSequential")
+                                                 .add("dimSequentialHalfNull")
+                                                 .add("dimUniform")
+                                                 .add("dimZipf")
+                                                 .add("metFloatNormal")
+                                                 .add("metFloatZipf")
+                                                 .add("metLongSequential")
+                                                 .add("metLongUniform")
+                                                 .build()
+              ),
+              null,
+              null
+          )
+      )
+  );
+
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
@@ -279,6 +304,14 @@ public class CalciteTests
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
       .withDimensionsSpec(PARSER_NUMERIC_DIMS)
+      .withRollup(false)
+      .build();
+
+  private static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
+      .withMetrics(
+          new CountAggregatorFactory("count")
+      )
+      .withDimensionsSpec(PARSER_LOTS_OF_COLUMNS)
       .withRollup(false)
       .build();
 
@@ -425,8 +458,70 @@ public class CalciteTests
       createRow("2000-01-01", "друид", "ru", 1.0)
   );
 
+  public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01T10:51:45.695Z")
+              .put("m1", "1.0")
+              .put("m2", "1.0")
+              .put("dim1", "")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of("a", "b"))
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-18T10:51:45.695Z")
+              .put("m1", "2.0")
+              .put("m2", "2.0")
+              .put("dim1", "10.1")
+              .put("dim2", ImmutableList.of())
+              .put("dim3", ImmutableList.of("b", "c"))
+              .build()
+      )
+  );
+
+
   public static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
       createRow("2000-01-01", "forbidden", "abcd", 9999.0)
+  );
+
+  // Hi, I'm Troy McClure. You may remember these rows from such benchmarks generator schemas as basic and expression
+  public static final List<InputRow> ROWS_LOTS_OF_COLUMNS = ImmutableList.of(
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("timestamp", 1576306800000L)
+              .put("metFloatZipf", 147.0)
+              .put("dimMultivalSequentialWithNulls", Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8"))
+              .put("dimMultivalEnumerated2", Arrays.asList(null, "Orange", "Apple"))
+              .put("metLongUniform", 372)
+              .put("metFloatNormal", 5000.0)
+              .put("dimZipf", "27")
+              .put("dimUniform", "74416")
+              .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "Hello", "Baz"))
+              .put("metLongSequential", 0)
+              .put("dimHyperUnique", "0")
+              .put("dimSequential", "0")
+              .put("dimSequentialHalfNull", "0")
+              .build(),
+          PARSER_LOTS_OF_COLUMNS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("timestamp", 1576306800000L)
+              .put("metFloatZipf", 25.0)
+              .put("dimMultivalEnumerated2", Arrays.asList("Xylophone", null, "Corundum"))
+              .put("metLongUniform", 252)
+              .put("metFloatNormal", 4999.0)
+              .put("dimZipf", "9")
+              .put("dimUniform", "50515")
+              .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "World", "World"))
+              .put("metLongSequential", 8)
+              .put("dimHyperUnique", "8")
+              .put("dimSequential", "8")
+              .build(),
+          PARSER_LOTS_OF_COLUMNS
+      )
   );
 
   private CalciteTests()
@@ -472,6 +567,13 @@ public class CalciteTests
               }
 
               @Override
+              public int getNumThreads()
+              {
+                // Only use 1 thread for tests.
+                return 1;
+              }
+
+              @Override
               public int getNumMergeBuffers()
               {
                 // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
@@ -499,27 +601,16 @@ public class CalciteTests
                 new ScanQueryRunnerFactory(
                     new ScanQueryQueryToolChest(
                         new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
+                        new DefaultGenericQueryMetricsFactory()
                     ),
                     new ScanQueryEngine(),
                     new ScanQueryConfig()
                 )
             )
             .put(
-                SelectQuery.class,
-                new SelectQueryRunnerFactory(
-                    new SelectQueryQueryToolChest(
-                        TestHelper.makeJsonMapper(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
-                    new SelectQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -528,10 +619,7 @@ public class CalciteTests
                 TopNQuery.class,
                 new TopNQueryRunnerFactory(
                     stupidPool,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
@@ -556,7 +644,7 @@ public class CalciteTests
           }
         },
         walker,
-        new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
+        new DefaultGenericQueryMetricsFactory(),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new AuthConfig(),
@@ -615,12 +703,30 @@ public class CalciteTests
         .rows(ROWS1_WITH_NUMERIC_DIMS)
         .buildMMappedIndex();
 
+    final QueryableIndex index4 = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "4"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(ROWS1_WITH_FULL_TIMESTAMP)
+        .buildMMappedIndex();
+
+    final QueryableIndex indexLotsOfColumns = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "5"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA_LOTS_O_COLUMNS)
+        .rows(ROWS_LOTS_OF_COLUMNS)
+        .buildMMappedIndex();
+
+
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
                    .interval(index1.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index1
     ).add(
@@ -629,6 +735,7 @@ public class CalciteTests
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     ).add(
@@ -637,15 +744,36 @@ public class CalciteTests
                    .interval(forbiddenIndex.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         forbiddenIndex
-    ).add(DataSegment.builder()
-                     .dataSource(DATASOURCE3)
-                     .interval(indexNumericDims.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .build(),
-          indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE3)
+                   .interval(indexNumericDims.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE4)
+                   .interval(index4.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        index4
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE5)
+                   .interval(indexLotsOfColumns.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexLotsOfColumns
     );
   }
 
@@ -739,7 +867,7 @@ public class CalciteTests
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         EasyMock.createMock(HttpClient.class),
         EasyMock.createMock(DruidNodeDiscoveryProvider.class),
-        NodeType.COORDINATOR,
+        NodeRole.COORDINATOR,
         "/simple/leader",
         new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
     )
@@ -763,5 +891,20 @@ public class CalciteTests
         getJsonMapper()
     );
     return schema;
+  }
+
+  /**
+   * Some Calcite exceptions (such as that thrown by
+   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
+   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
+   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
+   */
+  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
+  {
+    Throwable curThrowable = t;
+    while (curThrowable.getCause() instanceof InvocationTargetException) {
+      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    }
+    return curThrowable;
   }
 }

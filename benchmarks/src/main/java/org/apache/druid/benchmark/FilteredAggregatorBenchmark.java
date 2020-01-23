@@ -21,14 +21,14 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -44,6 +44,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -89,7 +90,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -99,6 +99,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class FilteredAggregatorBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Param({"75000"})
   private int rowsPerSegment;
 
@@ -181,7 +185,7 @@ public class FilteredAggregatorBenchmark
       inputRows.add(row);
     }
 
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
     indexFile = INDEX_MERGER_V9.persist(
@@ -193,9 +197,7 @@ public class FilteredAggregatorBenchmark
     qIndex = INDEX_IO.loadIndex(indexFile);
 
     factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new TimeseriesQueryQueryToolChest(),
         new TimeseriesQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
@@ -240,7 +242,7 @@ public class FilteredAggregatorBenchmark
     final QueryPlus<T> queryToRun = QueryPlus.wrap(
         query.withOverriddenContext(ImmutableMap.of("vectorize", vectorize))
     );
-    Sequence<T> queryResult = theRunner.run(queryToRun, new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(queryToRun, ResponseContext.createEmpty());
     return queryResult.toList();
   }
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authorization.db.updater;
 
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.server.security.ResourceAction;
@@ -38,21 +39,33 @@ public interface BasicAuthorizerMetadataStorageUpdater
 
   void deleteUser(String prefix, String userName);
 
+  void createGroupMapping(String prefix, BasicAuthorizerGroupMapping groupMapping);
+
+  void deleteGroupMapping(String prefix, String groupMappingName);
+
   void createRole(String prefix, String roleName);
 
   void deleteRole(String prefix, String roleName);
 
-  void assignRole(String prefix, String userName, String roleName);
+  void assignUserRole(String prefix, String userName, String roleName);
 
-  void unassignRole(String prefix, String userName, String roleName);
+  void unassignUserRole(String prefix, String userName, String roleName);
+
+  void assignGroupMappingRole(String prefix, String groupMappingName, String roleName);
+
+  void unassignGroupMappingRole(String prefix, String groupMappingName, String roleName);
 
   void setPermissions(String prefix, String roleName, List<ResourceAction> permissions);
 
   Map<String, BasicAuthorizerUser> getCachedUserMap(String prefix);
 
+  Map<String, BasicAuthorizerGroupMapping> getCachedGroupMappingMap(String prefix);
+
   Map<String, BasicAuthorizerRole> getCachedRoleMap(String prefix);
 
   byte[] getCurrentUserMapBytes(String prefix);
+
+  byte[] getCurrentGroupMappingMapBytes(String prefix);
 
   byte[] getCurrentRoleMapBytes(String prefix);
 

@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -46,11 +47,8 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
-import java.io.IOException;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -69,7 +67,7 @@ import java.util.stream.Collectors;
 public class DerivativeDataSourceManager 
 {
   private static final EmittingLogger log = new EmittingLogger(DerivativeDataSourceManager.class);
-  private static final AtomicReference<ConcurrentHashMap<String, SortedSet<DerivativeDataSource>>> derivativesRef =
+  private static final AtomicReference<ConcurrentHashMap<String, SortedSet<DerivativeDataSource>>> DERIVATIVES_REF =
       new AtomicReference<>(new ConcurrentHashMap<>());
   private final MaterializedViewConfig config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
@@ -137,7 +135,7 @@ public class DerivativeDataSourceManager
       started = false;
       future.cancel(true);
       future = null;
-      derivativesRef.set(new ConcurrentHashMap<>());
+      DERIVATIVES_REF.set(new ConcurrentHashMap<>());
       exec.shutdownNow();
       exec = null;
     }
@@ -145,41 +143,36 @@ public class DerivativeDataSourceManager
 
   public static ImmutableSet<DerivativeDataSource> getDerivatives(String datasource)
   {
-    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, new TreeSet<>()));
+    return ImmutableSet.copyOf(DERIVATIVES_REF.get().getOrDefault(datasource, new TreeSet<>()));
   }
 
   public static ImmutableMap<String, Set<DerivativeDataSource>> getAllDerivatives()
   {
-    return ImmutableMap.copyOf(derivativesRef.get());
+    return ImmutableMap.copyOf(DERIVATIVES_REF.get());
   }
 
   private void updateDerivatives()
   {
     List<Pair<String, DerivativeDataSourceMetadata>> derivativesInDatabase = connector.retryWithHandle(
         handle ->
-          handle.createQuery(
-              StringUtils.format("SELECT DISTINCT dataSource,commit_metadata_payload FROM %1$s", dbTables.get().getDataSourceTable())
-          )
-              .map(new ResultSetMapper<Pair<String, DerivativeDataSourceMetadata>>() 
-              {
-                @Override 
-                public Pair<String, DerivativeDataSourceMetadata> map(int index, ResultSet r, StatementContext ctx) throws SQLException 
-                {
-                  String datasourceName = r.getString("dataSource");
-                  try {
-                    DataSourceMetadata payload = objectMapper.readValue(
-                        r.getBytes("commit_metadata_payload"),
-                        DataSourceMetadata.class);
-                    if (!(payload instanceof DerivativeDataSourceMetadata)) {
-                      return null;
-                    }
-                    DerivativeDataSourceMetadata metadata = (DerivativeDataSourceMetadata) payload;
-                    return new Pair<>(datasourceName, metadata);
-                  }
-                  catch (IOException e) {
-                    throw new RuntimeException(e);
-                  }
+          handle
+              .createQuery(
+                  StringUtils.format(
+                      "SELECT DISTINCT dataSource,commit_metadata_payload FROM %1$s",
+                      dbTables.get().getDataSourceTable()
+                  )
+              )
+              .map((int index, ResultSet r, StatementContext ctx) -> {
+                String datasourceName = r.getString("dataSource");
+                DataSourceMetadata payload = JacksonUtils.readValue(
+                    objectMapper,
+                    r.getBytes("commit_metadata_payload"),
+                    DataSourceMetadata.class);
+                if (!(payload instanceof DerivativeDataSourceMetadata)) {
+                  return null;
                 }
+                DerivativeDataSourceMetadata metadata = (DerivativeDataSourceMetadata) payload;
+                return new Pair<>(datasourceName, metadata);
               })
               .list()
     );
@@ -205,8 +198,8 @@ public class DerivativeDataSourceManager
     }
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> current;
     do {
-      current = derivativesRef.get();
-    } while (!derivativesRef.compareAndSet(current, newDerivatives));
+      current = DERIVATIVES_REF.get();
+    } while (!DERIVATIVES_REF.compareAndSet(current, newDerivatives));
   }
 
   /**
@@ -240,24 +233,20 @@ public class DerivativeDataSourceManager
             )
                 .bind("dataSource", datasource)
                 .map(
-                    new ResultSetMapper<Object>() 
-                    {
-                      @Override
-                      public Object map(int index, ResultSet r, StatementContext ctx) throws SQLException 
-                      {
-                        try {
-                          intervals.add(Intervals.utc(DateTimes.of(r.getString("start")).getMillis(), DateTimes.of(r.getString("end")).getMillis()));
-                          DataSegment segment = objectMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          totalSize += segment.getSize();
-                        } 
-                        catch (IOException e) {
-                          throw new RuntimeException(e);
-                        }
-                        return null;
-                      }
+                    (int index, ResultSet r, StatementContext ctx) -> {
+                      intervals.add(
+                          Intervals.utc(
+                              DateTimes.of(r.getString("start")).getMillis(),
+                              DateTimes.of(r.getString("end")).getMillis()
+                          )
+                      );
+                      DataSegment segment =
+                          JacksonUtils.readValue(objectMapper, r.getBytes("payload"), DataSegment.class);
+                      totalSize += segment.getSize();
+                      return null;
                     }
                 )
-                .first();
+                .list();
             return intervals.isEmpty() ? 0L : totalSize / intervals.size();
           }
         }

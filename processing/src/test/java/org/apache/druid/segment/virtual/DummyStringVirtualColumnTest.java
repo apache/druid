@@ -21,7 +21,6 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -33,6 +32,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
@@ -41,6 +41,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +51,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class DummyStringVirtualColumnTest
+public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 {
   private static final String VSTRING_DIM = "vstring";
   private static final String COUNT = "count";
@@ -66,11 +67,11 @@ public class DummyStringVirtualColumnTest
   {
     QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(
         TestIndex.getMMappedTestIndex(),
-        SegmentId.dummy(QueryRunnerTestHelper.dataSource)
+        SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)
     );
     IncrementalIndexSegment incrementalIndexSegment = new IncrementalIndexSegment(
         TestIndex.getIncrementalTestIndex(),
-        SegmentId.dummy(QueryRunnerTestHelper.dataSource)
+        SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)
     );
 
     mmappedSegments = Lists.newArrayList(queryableIndexSegment, queryableIndexSegment);
@@ -242,10 +243,10 @@ public class DummyStringVirtualColumnTest
   private void testGroupBy(List<Segment> segments, boolean enableRowBasedMethods, boolean enableColumnBasedMethods)
   {
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
-            new DummyStringVirtualColumn(QueryRunnerTestHelper.marketDimension, VSTRING_DIM,
+            new DummyStringVirtualColumn(QueryRunnerTestHelper.MARKET_DIMENSION, VSTRING_DIM,
                                          enableRowBasedMethods, enableColumnBasedMethods,
                                          false, true
             )
@@ -256,18 +257,12 @@ public class DummyStringVirtualColumnTest
         .addOrderByColumn(VSTRING_DIM)
         .build();
 
-    List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
-    List<Row> expectedRows = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot"),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2000-01-01T00:00:00.000Z",
-            COUNT,
-            372L,
-            VSTRING_DIM,
-            "total_market"
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372L, VSTRING_DIM, "upfront")
+    List<ResultRow> expectedRows = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 1674L, VSTRING_DIM, "spot"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 372L, VSTRING_DIM, "total_market"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 372L, VSTRING_DIM, "upfront")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -282,11 +277,11 @@ public class DummyStringVirtualColumnTest
   )
   {
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
             new DummyStringVirtualColumn(
-                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.MARKET_DIMENSION,
                 VSTRING_DIM,
                 enableRowBasedMethods,
                 enableColumnBasedMethods,
@@ -301,10 +296,10 @@ public class DummyStringVirtualColumnTest
         .setDimFilter(new SelectorDimFilter(VSTRING_DIM, "spot", null))
         .build();
 
-    List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
-    List<Row> expectedRows = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot")
+    List<ResultRow> expectedRows = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 1674L, VSTRING_DIM, "spot")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -319,11 +314,11 @@ public class DummyStringVirtualColumnTest
   )
   {
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
             new DummyStringVirtualColumn(
-                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.MARKET_DIMENSION,
                 VSTRING_DIM,
                 enableRowBasedMethods,
                 enableColumnBasedMethods,
@@ -338,11 +333,11 @@ public class DummyStringVirtualColumnTest
         .setDimFilter(new RegexDimFilter(VSTRING_DIM, "(spot)|(upfront)", null))
         .build();
 
-    List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
-    List<Row> expectedRows = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372L, VSTRING_DIM, "upfront")
+    List<ResultRow> expectedRows = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 1674L, VSTRING_DIM, "spot"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 372L, VSTRING_DIM, "upfront")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -355,16 +350,14 @@ public class DummyStringVirtualColumnTest
   )
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(Granularities.ALL)
         .dimension(VSTRING_DIM)
         .metric(COUNT)
         .threshold(1)
-        .aggregators(
-            Collections.singletonList(new CountAggregatorFactory(COUNT))
-        )
+        .aggregators(new CountAggregatorFactory(COUNT))
         .virtualColumns(new DummyStringVirtualColumn(
-            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.MARKET_DIMENSION,
             VSTRING_DIM,
             enableRowBasedMethods,
             enableColumnBasedMethods,

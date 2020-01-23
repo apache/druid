@@ -21,9 +21,11 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
+import java.util.concurrent.TimeUnit;
 
 public class BaseHttpEmittingConfig
 {
@@ -33,6 +35,8 @@ public class BaseHttpEmittingConfig
   /** ensure the event buffers don't use more than 10% of memory by default */
   public static final int DEFAULT_MAX_BATCH_SIZE;
   public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+
+  public static final long TEST_FLUSH_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
 
   static {
     Pair<Integer, Integer> batchConfigPair =
@@ -45,7 +49,6 @@ public class BaseHttpEmittingConfig
    * Do not time out in case flushTimeOut is not set
    */
   public static final long DEFAULT_FLUSH_TIME_OUT = Long.MAX_VALUE;
-  public static final String DEFAULT_BASIC_AUTHENTICATION = null;
   public static final BatchingStrategy DEFAULT_BATCHING_STRATEGY = BatchingStrategy.ARRAY;
   public static final ContentEncoding DEFAULT_CONTENT_ENCODING = null;
   public static final float DEFAULT_HTTP_TIMEOUT_ALLOWANCE_FACTOR = 2.0f;
@@ -86,7 +89,7 @@ public class BaseHttpEmittingConfig
   long flushTimeOut = DEFAULT_FLUSH_TIME_OUT;
 
   @JsonProperty
-  String basicAuthentication = DEFAULT_BASIC_AUTHENTICATION;
+  PasswordProvider basicAuthentication = null;
 
   @JsonProperty
   BatchingStrategy batchingStrategy = DEFAULT_BATCHING_STRATEGY;
@@ -125,7 +128,7 @@ public class BaseHttpEmittingConfig
     return flushTimeOut;
   }
 
-  public String getBasicAuthentication()
+  public PasswordProvider getBasicAuthentication()
   {
     return basicAuthentication;
   }

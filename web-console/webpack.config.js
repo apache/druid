@@ -23,50 +23,57 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 const { version } = require('./package.json');
 
-function friendlyErrorFormatter(e, colors) {
-  //const messageColor = error.severity === "warning" ? colors.bold.yellow : colors.bold.red;
-  // return (
-  //   "Does not compute.... " +
-  //   messageColor(Object.keys(error).map(key => `${key}: ${error[key]}`))
-  // );
+function friendlyErrorFormatter(e) {
   return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
 }
 
-module.exports = (env) => {
-  let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
+module.exports = env => {
+  let druidUrl = (env || {}).druid_host || process.env.druid_host || 'localhost';
   if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
   if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
 
   const proxyTarget = {
     target: druidUrl,
-    secure: false
+    secure: false,
   };
 
+  const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  const useBabel = process.env.babel || mode === 'production';
+  console.log(`Webpack running in ${mode} mode. ${useBabel ? 'Will' : 'Wont'} use babel.`);
+
+  function babelTest(s) {
+    // https://github.com/zloirock/core-js/issues/514
+    if (s.includes('/node_modules/core-js/')) return false;
+    return /\.m?js$/.test(s);
+  }
+
   return {
-    mode: process.env.NODE_ENV || 'development',
+    mode: mode,
+    devtool: 'hidden-source-map',
     entry: {
-      'web-console': './src/entry.ts'
+      'web-console': './src/entry.ts',
     },
     output: {
       path: path.resolve(__dirname, './public'),
       filename: `[name]-${version}.js`,
       chunkFilename: `[name]-${version}.js`,
-      publicPath: '/public'
+      publicPath: '/public',
     },
     target: 'web',
     resolve: {
-      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css']
+      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css'],
     },
     devServer: {
       publicPath: '/public',
       index: './index.html',
       openPage: 'unified-console.html',
+      host: '0.0.0.0',
       port: 18081,
       proxy: {
         '/status': proxyTarget,
         '/druid': proxyTarget,
-        '/proxy': proxyTarget
-      }
+        '/proxy': proxyTarget,
+      },
     },
     module: {
       rules: [
@@ -79,10 +86,10 @@ module.exports = (env) => {
               options: {
                 configFile: 'tslint.json',
                 emitErrors: true,
-                fix: false // Set this to true to auto fix errors
-              }
-            }
-          ]
+                fix: false, // Set this to true to auto fix errors
+              },
+            },
+          ],
         },
         {
           test: /\.tsx?$/,
@@ -91,34 +98,42 @@ module.exports = (env) => {
             {
               loader: 'ts-loader',
               options: {
-                errorFormatter: friendlyErrorFormatter
-              }
-            }
-          ]
+                errorFormatter: friendlyErrorFormatter,
+              },
+            },
+          ],
+        },
+        {
+          test: useBabel ? babelTest : /^xxx_nothing_will_match_$/,
+          use: {
+            loader: 'babel-loader',
+          },
         },
         {
           test: /\.s?css$/,
           use: [
-            {loader: 'style-loader'}, // creates style nodes from JS strings
-            {loader: 'css-loader'}, // translates CSS into CommonJS
+            { loader: 'style-loader' }, // creates style nodes from JS strings
+            { loader: 'css-loader' }, // translates CSS into CommonJS
             {
               loader: 'postcss-loader',
               options: {
                 ident: 'postcss',
                 plugins: () => [
                   postcssPresetEnv({
-                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1']
-                  })
-                ]
-              }
+                    autoprefixer: { grid: "no-autoplace" },
+                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1', 'ie 11'],
+                  }),
+                ],
+              },
             },
-            {loader: 'sass-loader'} // compiles Sass to CSS, using Node Sass by default
-          ]
-        }
-      ]
+            { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
+          ],
+        },
+      ],
     },
-    plugins: [
-      // new BundleAnalyzerPlugin()
-    ]
+    performance: {
+      hints: false,
+    },
+    plugins: process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE' ? [new BundleAnalyzerPlugin()] : [],
   };
 };

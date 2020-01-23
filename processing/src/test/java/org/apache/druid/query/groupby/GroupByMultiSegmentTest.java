@@ -24,18 +24,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -46,14 +44,15 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -98,7 +97,7 @@ public class GroupByMultiSegmentTest
   private static final IndexIO INDEX_IO;
 
   private File tmpDir;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory;
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
@@ -152,7 +151,7 @@ public class GroupByMultiSegmentTest
   @Before
   public void setup() throws Exception
   {
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
 
     InputRow row;
     List<String> dimNames = Arrays.asList("dimA", "metA");
@@ -276,6 +275,7 @@ public class GroupByMultiSegmentTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            Suppliers.ofInstance(new QueryConfig()),
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -285,10 +285,7 @@ public class GroupByMultiSegmentTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         strategySelector,
-        new GroupByQueryQueryToolChest(
-            strategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector)
     );
   }
 
@@ -313,8 +310,8 @@ public class GroupByMultiSegmentTest
   @Test
   public void testHavingAndNoLimitPushDown()
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, makeGroupByMultiRunners())
         ),
@@ -342,10 +339,11 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "world",
         "metA", 150L
@@ -355,12 +353,12 @@ public class GroupByMultiSegmentTest
     Assert.assertEquals(expectedRow, results.get(0));
   }
 
-  private List<QueryRunner<Row>> makeGroupByMultiRunners()
+  private List<QueryRunner<ResultRow>> makeGroupByMultiRunners()
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
 
     for (QueryableIndex qindex : groupByIndices) {
-      QueryRunner<Row> runner = makeQueryRunner(
+      QueryRunner<ResultRow> runner = makeQueryRunner(
           groupByFactory,
           SegmentId.dummy(qindex.toString()),
           new QueryableIndexSegment(qindex, SegmentId.dummy(qindex.toString()))
@@ -418,21 +416,4 @@ public class GroupByMultiSegmentTest
 
     }
   };
-
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
-  {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
-      @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return new QueryRunner<T>() {
-          @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
-          {
-            return delegate.run(queryPlus, responseContext);
-          }
-        };
-      }
-    };
-  }
 }

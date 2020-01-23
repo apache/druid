@@ -36,6 +36,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -67,6 +68,7 @@ import java.util.concurrent.ExecutorService;
 public class TaskToolbox
 {
   private final TaskConfig config;
+  private final DruidNode taskExecutorNode;
   private final TaskActionClient taskActionClient;
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
@@ -85,7 +87,7 @@ public class TaskToolbox
   private final MonitorScheduler monitorScheduler;
   private final ExecutorService queryExecutorService;
   private final SegmentLoader segmentLoader;
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper jsonMapper;
   private final File taskWorkDir;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -98,9 +100,11 @@ public class TaskToolbox
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
+  private final IntermediaryDataManager intermediaryDataManager;
 
   public TaskToolbox(
       TaskConfig config,
+      DruidNode taskExecutorNode,
       TaskActionClient taskActionClient,
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
@@ -114,7 +118,7 @@ public class TaskToolbox
       ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
-      ObjectMapper objectMapper,
+      ObjectMapper jsonMapper,
       File taskWorkDir,
       IndexIO indexIO,
       Cache cache,
@@ -125,10 +129,12 @@ public class TaskToolbox
       DruidNode druidNode,
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
-      TaskReportFileWriter taskReportFileWriter
+      TaskReportFileWriter taskReportFileWriter,
+      IntermediaryDataManager intermediaryDataManager
   )
   {
     this.config = config;
+    this.taskExecutorNode = taskExecutorNode;
     this.taskActionClient = taskActionClient;
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
@@ -142,7 +148,7 @@ public class TaskToolbox
     this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoader = segmentLoader;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.taskWorkDir = taskWorkDir;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
@@ -154,12 +160,18 @@ public class TaskToolbox
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
-    this.taskReportFileWriter.setObjectMapper(this.objectMapper);
+    this.taskReportFileWriter.setObjectMapper(this.jsonMapper);
+    this.intermediaryDataManager = intermediaryDataManager;
   }
 
   public TaskConfig getConfig()
   {
     return config;
+  }
+
+  public DruidNode getTaskExecutorNode()
+  {
+    return taskExecutorNode;
   }
 
   public TaskActionClient getTaskActionClient()
@@ -222,9 +234,9 @@ public class TaskToolbox
     return monitorScheduler;
   }
 
-  public ObjectMapper getObjectMapper()
+  public ObjectMapper getJsonMapper()
   {
-    return objectMapper;
+    return jsonMapper;
   }
 
   public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
@@ -282,9 +294,9 @@ public class TaskToolbox
     return indexMergerV9;
   }
 
-  public File getFirehoseTemporaryDir()
+  public File getIndexingTmpDir()
   {
-    return new File(taskWorkDir, "firehose");
+    return new File(taskWorkDir, "indexing-tmp");
   }
 
   public File getMergeDir()
@@ -320,5 +332,10 @@ public class TaskToolbox
   public TaskReportFileWriter getTaskReportFileWriter()
   {
     return taskReportFileWriter;
+  }
+
+  public IntermediaryDataManager getIntermediaryDataManager()
+  {
+    return intermediaryDataManager;
   }
 }

@@ -30,6 +30,7 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.cache.polling.OffHeapPollingCache;
 import org.apache.druid.server.lookup.cache.polling.OnHeapPollingCache;
 import org.apache.druid.server.lookup.cache.polling.PollingCacheFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,16 +46,16 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class PollingLookupTest
+public class PollingLookupTest extends InitializedNullHandlingTest
 {
-  private static final Map<String, String> firstLookupMap = ImmutableMap.of(
+  private static final Map<String, String> FIRST_LOOKUP_MAP = ImmutableMap.of(
       "foo", "bar",
       "bad", "bar",
       "how about that", "foo",
       "empty string", ""
   );
 
-  private static final Map<String, String> secondLookupMap = ImmutableMap.of(
+  private static final Map<String, String> SECOND_LOOKUP_MAP = ImmutableMap.of(
       "new-foo", "new-bar",
       "new-bad", "new-bar"
   );
@@ -71,9 +72,9 @@ public class PollingLookupTest
     {
       if (callNumber == 0) {
         callNumber++;
-        return firstLookupMap.entrySet();
+        return FIRST_LOOKUP_MAP.entrySet();
       }
-      return secondLookupMap.entrySet();
+      return SECOND_LOOKUP_MAP.entrySet();
     }
 
     @Nullable
@@ -145,15 +146,15 @@ public class PollingLookupTest
   @Test
   public void testApply()
   {
-    assertMapLookup(firstLookupMap, pollingLookup);
+    assertMapLookup(FIRST_LOOKUP_MAP, pollingLookup);
   }
 
   @Test(timeout = POLL_PERIOD * 3)
   public void testApplyAfterDataChange() throws InterruptedException
   {
-    assertMapLookup(firstLookupMap, pollingLookup);
+    assertMapLookup(FIRST_LOOKUP_MAP, pollingLookup);
     Thread.sleep(POLL_PERIOD * 2);
-    assertMapLookup(secondLookupMap, pollingLookup);
+    assertMapLookup(SECOND_LOOKUP_MAP, pollingLookup);
   }
 
   @Test
@@ -184,8 +185,8 @@ public class PollingLookupTest
   @Test
   public void testBulkApply()
   {
-    Map<String, String> map = pollingLookup.applyAll(firstLookupMap.keySet());
-    Assert.assertEquals(firstLookupMap, Maps.transformValues(map, new Function<String, String>()
+    Map<String, String> map = pollingLookup.applyAll(FIRST_LOOKUP_MAP.keySet());
+    Assert.assertEquals(FIRST_LOOKUP_MAP, Maps.transformValues(map, new Function<String, String>()
     {
       @Override
       public String apply(String input)

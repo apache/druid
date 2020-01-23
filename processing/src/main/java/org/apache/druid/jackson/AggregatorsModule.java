@@ -38,6 +38,10 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
@@ -53,6 +57,8 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastFoldingAggregatorFactory;
+import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
+import org.apache.druid.query.aggregation.mean.DoubleMeanHolder;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.DoubleGreatestPostAggregator;
@@ -65,8 +71,6 @@ import org.apache.druid.query.aggregation.post.LongGreatestPostAggregator;
 import org.apache.druid.query.aggregation.post.LongLeastPostAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
-/**
- */
 public class AggregatorsModule extends SimpleModule
 {
   public AggregatorsModule()
@@ -79,6 +83,8 @@ public class AggregatorsModule extends SimpleModule
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
+
+    addSerializer(DoubleMeanHolder.class, DoubleMeanHolder.Serializer.INSTANCE);
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -105,9 +111,14 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "stringFirstFold", value = StringFirstFoldingAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longLast", value = LongLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleLast", value = DoubleLastAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "doubleMean", value = DoubleMeanAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatLast", value = FloatLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringLast", value = StringLastAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "stringLastFold", value = StringLastFoldingAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "stringLastFold", value = StringLastFoldingAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "longAny", value = LongAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatAny", value = FloatAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "doubleAny", value = DoubleAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

@@ -19,10 +19,16 @@
 
 package org.apache.druid.server;
 
+import org.apache.druid.java.util.common.logger.Logger;
+
 import javax.annotation.Nullable;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.UriInfo;
 
 public class JettyUtils
 {
+  private static final Logger log = new Logger(JettyUtils.class);
+
   /**
    * Concatenate URI parts, in a way that is useful for proxy servlets.
    *
@@ -45,5 +51,39 @@ public class JettyUtils
     }
 
     return url.toString();
+  }
+
+  /**
+   * Returns the value of the query parameter of the given name. If not found, but there is a value corresponding to
+   * the parameter of the given compatiblityName it is returned instead and a warning is logged suggestion to make
+   * queries using the new parameter name.
+   *
+   * This method is useful for renaming query parameters (from name to compatiblityName) while preserving backward
+   * compatibility of the REST API.
+   */
+  @Nullable
+  public static String getQueryParam(UriInfo uriInfo, String name, String compatiblityName)
+  {
+    MultivaluedMap<String, String> queryParameters = uriInfo.getQueryParameters();
+    // Returning the first value, according to the @QueryParam spec:
+    // https://docs.oracle.com/javaee/7/api/javax/ws/rs/QueryParam.html:
+    // "If the type is not one of the collection types listed in 5 above and the query parameter is represented by
+    //  multiple values then the first value (lexically) of the parameter is used."
+    String paramValue = queryParameters.getFirst(name);
+    if (paramValue != null) {
+      return paramValue;
+    }
+    String compatibilityParamValue = queryParameters.getFirst(compatiblityName);
+    if (compatibilityParamValue != null) {
+      log.warn(
+          "Parameter %s in %s query has been renamed to %s. Use the new parameter name.",
+          compatiblityName,
+          uriInfo.getPath(),
+          name
+      );
+      return compatibilityParamValue;
+    }
+    // Not found neither name nor compatiblityName
+    return null;
   }
 }

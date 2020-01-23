@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
@@ -108,12 +109,7 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
-        if (eval.isArray()) {
-          return Arrays.stream(eval.asStringArray())
-                .map(NullHandling::emptyToNullIfNeeded)
-                .collect(Collectors.toList());
-        }
-        return eval.value();
+        return coerceEvalToSelectorObject(eval);
       }
 
       @Override
@@ -142,7 +138,7 @@ public class ExpressionSelectors
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredColumnsList();
+    final List<String> columns = exprDetails.getRequiredBindingsList();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
@@ -160,8 +156,8 @@ public class ExpressionSelectors
                  && capabilities.isDictionaryEncoded()
                  && capabilities.isComplete()
                  && !capabilities.hasMultipleValues()
-                 && !exprDetails.getArrayColumns().contains(column)) {
-        // Optimization for expressions that hit one string column and nothing else.
+                 && exprDetails.getArrayBindings().isEmpty()) {
+        // Optimization for expressions that hit one scalar string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
             expression
@@ -176,11 +172,11 @@ public class ExpressionSelectors
 
     final List<String> needsApplied =
         columns.stream()
-               .filter(c -> actualArrays.contains(c) && !exprDetails.getArrayColumns().contains(c))
+               .filter(c -> actualArrays.contains(c) && !exprDetails.getArrayBindings().contains(c))
                .collect(Collectors.toList());
     final Expr finalExpr;
     if (needsApplied.size() > 0) {
-      finalExpr = Parser.applyUnappliedIdentifiers(expression, exprDetails, needsApplied);
+      finalExpr = Parser.applyUnappliedBindings(expression, exprDetails, needsApplied);
     } else {
       finalExpr = expression;
     }
@@ -214,26 +210,33 @@ public class ExpressionSelectors
   public static DimensionSelector makeDimensionSelector(
       final ColumnSelectorFactory columnSelectorFactory,
       final Expr expression,
-      final ExtractionFn extractionFn
+      @Nullable final ExtractionFn extractionFn
   )
   {
     final Expr.BindingDetails exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
-    final List<String> columns = exprDetails.getRequiredColumnsList();
-
+    final List<String> columns = exprDetails.getRequiredBindingsList();
 
     if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
 
+      // Optimization for dimension selectors that wrap a single underlying string column.
+      // The string column can be multi-valued, but if so, it must be implicitly mappable (i.e. the expression is
+      // not treating it as an array, not wanting to output an array, and the multi-value dimension appears
+      // exactly once).
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
           && capabilities.isDictionaryEncoded()
           && capabilities.isComplete()
-          && !capabilities.hasMultipleValues()
-          && !exprDetails.getArrayColumns().contains(column)
+          && !exprDetails.hasInputArrays()
+          && !exprDetails.isOutputArray()
+          // the following condition specifically is to handle the case of when a multi-value column identifier
+          // appears more than once in an expression,
+          // e.g. 'x + x' is fine if 'x' is scalar, but if 'x' is multi-value it should be translated to
+          // 'cartesian_map((x_1, x_2) -> x_1 + x_2, x, x)'
+          && (!capabilities.hasMultipleValues() || exprDetails.getFreeVariables().size() == 1)
       ) {
-        // Optimization for dimension selectors that wrap a single underlying string column.
         return new SingleStringInputDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
             expression
@@ -249,7 +252,7 @@ public class ExpressionSelectors
 
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
     final boolean multiVal = actualArrays.size() > 0 ||
-                             exprDetails.getArrayColumns().size() > 0 ||
+                             exprDetails.getArrayBindings().size() > 0 ||
                              unknownIfArrays.size() > 0;
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
@@ -355,7 +358,7 @@ public class ExpressionSelectors
   )
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    final List<String> columns = bindingDetails.getRequiredColumnsList();
+    final List<String> columns = bindingDetails.getRequiredBindingsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
@@ -366,15 +369,15 @@ public class ExpressionSelectors
       if (nativeType == ValueType.FLOAT) {
         ColumnValueSelector selector = columnSelectorFactory
             .makeColumnValueSelector(columnName);
-        supplier = makeNullableSupplier(selector, selector::getFloat);
+        supplier = makeNullableNumericSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
         ColumnValueSelector selector = columnSelectorFactory
             .makeColumnValueSelector(columnName);
-        supplier = makeNullableSupplier(selector, selector::getLong);
+        supplier = makeNullableNumericSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
         ColumnValueSelector selector = columnSelectorFactory
             .makeColumnValueSelector(columnName);
-        supplier = makeNullableSupplier(selector, selector::getDouble);
+        supplier = makeNullableNumericSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
@@ -411,7 +414,12 @@ public class ExpressionSelectors
     }
   }
 
-  private static <T> Supplier<T> makeNullableSupplier(
+  /**
+   * Wraps a {@link ColumnValueSelector} and uses it to supply numeric values in a null-aware way.
+   *
+   * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
+   */
+  private static <T> Supplier<T> makeNullableNumericSupplier(
       ColumnValueSelector selector,
       Supplier<T> supplier
   )
@@ -479,7 +487,7 @@ public class ExpressionSelectors
         if (val instanceof Number || val instanceof String) {
           return val;
         } else if (val instanceof List) {
-          return coerceListDimToStringArray((List) val);
+          return coerceListToArray((List) val);
         } else {
           return null;
         }
@@ -488,7 +496,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return coerceListDimToStringArray((List) val);
+          return coerceListToArray((List) val);
         }
         return null;
       };
@@ -501,13 +509,84 @@ public class ExpressionSelectors
   /**
    * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
    */
-  private static Object coerceListDimToStringArray(List val)
+  public static Object coerceListToArray(@Nullable List<?> val)
   {
-    Object[] arrayVal = val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
-    if (arrayVal.length > 0) {
-      return arrayVal;
+    if (val != null && val.size() > 0) {
+      Class coercedType = null;
+
+      for (Object elem : val) {
+        if (elem != null) {
+          coercedType = convertType(coercedType, elem.getClass());
+        }
+      }
+
+      if (coercedType == Long.class || coercedType == Integer.class) {
+        return val.stream().map(x -> x != null ? ((Number) x).longValue() : null).toArray(Long[]::new);
+      }
+      if (coercedType == Float.class || coercedType == Double.class) {
+        return val.stream().map(x -> x != null ? ((Number) x).doubleValue() : null).toArray(Double[]::new);
+      }
+      // default to string
+      return val.stream().map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
     return new String[]{null};
+  }
+
+  private static Class convertType(@Nullable Class existing, Class next)
+  {
+    if (Number.class.isAssignableFrom(next) || next == String.class) {
+      if (existing == null) {
+        return next;
+      }
+      // string wins everything
+      if (existing == String.class) {
+        return existing;
+      }
+      if (next == String.class) {
+        return next;
+      }
+      // all numbers win over Integer
+      if (existing == Integer.class) {
+        return next;
+      }
+      if (existing == Float.class) {
+        // doubles win over floats
+        if (next == Double.class) {
+          return next;
+        }
+        return existing;
+      }
+      if (existing == Long.class) {
+        if (next == Integer.class) {
+          // long beats int
+          return existing;
+        }
+        // double and float win over longs
+        return next;
+      }
+      // otherwise double
+      return Double.class;
+    }
+    throw new UOE("Invalid array expression type: %s", next);
+  }
+
+  /**
+   * Coerces {@link ExprEval} value back to selector friendly {@link List} if the evaluated expression result is an
+   * array type
+   */
+  @Nullable
+  public static Object coerceEvalToSelectorObject(ExprEval eval)
+  {
+    switch (eval.type()) {
+      case STRING_ARRAY:
+        return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
+      case DOUBLE_ARRAY:
+        return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
+      case LONG_ARRAY:
+        return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
+      default:
+        return eval.value();
+    }
   }
 
   /**
@@ -530,7 +609,7 @@ public class ExpressionSelectors
         } else if (
             !capabilities.isComplete() &&
             capabilities.getType().equals(ValueType.STRING) &&
-            !exprDetails.getArrayColumns().contains(column)
+            !exprDetails.getArrayBindings().contains(column)
         ) {
           unknownIfArrays.add(column);
         }

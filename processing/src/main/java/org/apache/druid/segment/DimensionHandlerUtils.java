@@ -34,7 +34,6 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.dimension.VectorColumnStrategizer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
@@ -64,10 +63,10 @@ public final class DimensionHandlerUtils
                                   .setDictionaryEncoded(true)
                                   .setHasBitmapIndexes(true);
 
-  public static DimensionHandler getHandlerFromCapabilities(
+  public static DimensionHandler<?, ?, ?> getHandlerFromCapabilities(
       String dimensionName,
-      ColumnCapabilities capabilities,
-      MultiValueHandling multiValueHandling
+      @Nullable ColumnCapabilities capabilities,
+      @Nullable MultiValueHandling multiValueHandling
   )
   {
     if (capabilities == null) {
@@ -113,15 +112,17 @@ public final class DimensionHandlerUtils
    * {@link #createColumnSelectorPluses(ColumnSelectorStrategyFactory, List, ColumnSelectorFactory)} with a singleton
    * list of dimensionSpecs and then retrieving the only element in the returned array.
    *
-   * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
+   * @param <Strategy> The strategy type created by the provided strategy factory.
    * @param strategyFactory               A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpec                 column to generate a ColumnSelectorPlus object for
    * @param cursor                        Used to create value selectors for columns.
    *
    * @return A ColumnSelectorPlus object
+   *
+   * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
-  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass> createColumnSelectorPlus(
-      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
+  public static <Strategy extends ColumnSelectorStrategy> ColumnSelectorPlus<Strategy> createColumnSelectorPlus(
+      ColumnSelectorStrategyFactory<Strategy> strategyFactory,
       DimensionSpec dimensionSpec,
       ColumnSelectorFactory cursor
   )
@@ -140,39 +141,38 @@ public final class DimensionHandlerUtils
    * A caller should define a strategy factory that provides an interface for type-specific operations
    * in a query engine. See GroupByStrategyFactory for a reference.
    *
-   * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
+   * @param <Strategy>                    The strategy type created by the provided strategy factory.
    * @param strategyFactory               A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpecs                The set of columns to generate ColumnSelectorPlus objects for
    * @param columnSelectorFactory         Used to create value selectors for columns.
    *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
+   *
+   * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
-  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
-  //CHECKSTYLE.OFF: Indentation
-  ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
-      //CHECKSTYLE.ON: Indentation
-      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
+  public static <Strategy extends ColumnSelectorStrategy> ColumnSelectorPlus<Strategy>[] createColumnSelectorPluses(
+      ColumnSelectorStrategyFactory<Strategy> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
       ColumnSelectorFactory columnSelectorFactory
   )
   {
     int dimCount = dimensionSpecs.size();
     @SuppressWarnings("unchecked")
-    ColumnSelectorPlus<ColumnSelectorStrategyClass>[] dims = new ColumnSelectorPlus[dimCount];
+    ColumnSelectorPlus<Strategy>[] dims = new ColumnSelectorPlus[dimCount];
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = dimensionSpecs.get(i);
       final String dimName = dimSpec.getDimension();
-      final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
+      final ColumnValueSelector<?> selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
           columnSelectorFactory
       );
-      ColumnSelectorStrategyClass strategy = makeStrategy(
+      Strategy strategy = makeStrategy(
           strategyFactory,
           dimSpec,
           columnSelectorFactory.getColumnCapabilities(dimSpec.getDimension()),
           selector
       );
-      final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
+      final ColumnSelectorPlus<Strategy> selectorPlus = new ColumnSelectorPlus<>(
           dimName,
           dimSpec.getOutputName(),
           strategy,
@@ -183,7 +183,7 @@ public final class DimensionHandlerUtils
     return dims;
   }
 
-  private static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+  private static ColumnValueSelector<?> getColumnValueSelectorFromDimensionSpec(
       DimensionSpec dimSpec,
       ColumnSelectorFactory columnSelectorFactory
   )
@@ -191,12 +191,10 @@ public final class DimensionHandlerUtils
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    switch (capabilities.getType()) {
-      case STRING:
-        return columnSelectorFactory.makeDimensionSelector(dimSpec);
-      default:
-        return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
+    if (capabilities.getType() == ValueType.STRING) {
+      return columnSelectorFactory.makeDimensionSelector(dimSpec);
     }
+    return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
   }
 
   /**
@@ -235,11 +233,11 @@ public final class DimensionHandlerUtils
     return capabilities;
   }
 
-  private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
-      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
+  private static <Strategy extends ColumnSelectorStrategy> Strategy makeStrategy(
+      ColumnSelectorStrategyFactory<Strategy> strategyFactory,
       DimensionSpec dimSpec,
       @Nullable ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector<?> selector
   )
   {
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
@@ -249,11 +247,12 @@ public final class DimensionHandlerUtils
   /**
    * Equivalent to calling makeVectorProcessor(DefaultDimensionSpec.of(column), strategyFactory, selectorFactory).
    *
-   * @see #makeVectorProcessor(DimensionSpec, VectorColumnStrategizer, VectorColumnSelectorFactory)
+   * @see #makeVectorProcessor(DimensionSpec, VectorColumnProcessorFactory, VectorColumnSelectorFactory)
+   * @see ColumnProcessors#makeProcessor the non-vectorized version
    */
   public static <T> T makeVectorProcessor(
       final String column,
-      final VectorColumnStrategizer<T> strategyFactory,
+      final VectorColumnProcessorFactory<T> strategyFactory,
       final VectorColumnSelectorFactory selectorFactory
   )
   {
@@ -269,10 +268,12 @@ public final class DimensionHandlerUtils
    * @param dimensionSpec   dimensionSpec for the input to the processor
    * @param strategyFactory object that encapsulates the knowledge about how to create processors
    * @param selectorFactory column selector factory used for creating the vector processor
+   *
+   * @see ColumnProcessors#makeProcessor the non-vectorized version
    */
   public static <T> T makeVectorProcessor(
       final DimensionSpec dimensionSpec,
-      final VectorColumnStrategizer<T> strategyFactory,
+      final VectorColumnProcessorFactory<T> strategyFactory,
       final VectorColumnSelectorFactory selectorFactory
   )
   {
@@ -285,11 +286,11 @@ public final class DimensionHandlerUtils
 
     if (type == ValueType.STRING) {
       if (capabilities.hasMultipleValues()) {
-        return strategyFactory.makeMultiValueDimensionStrategy(
+        return strategyFactory.makeMultiValueDimensionProcessor(
             selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
         );
       } else {
-        return strategyFactory.makeSingleValueDimensionStrategy(
+        return strategyFactory.makeSingleValueDimensionProcessor(
             selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
         );
       }
@@ -303,15 +304,15 @@ public final class DimensionHandlerUtils
       );
 
       if (type == ValueType.LONG) {
-        return strategyFactory.makeLongStrategy(
+        return strategyFactory.makeLongProcessor(
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.FLOAT) {
-        return strategyFactory.makeFloatStrategy(
+        return strategyFactory.makeFloatProcessor(
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else if (type == ValueType.DOUBLE) {
-        return strategyFactory.makeDoubleStrategy(
+        return strategyFactory.makeDoubleProcessor(
             selectorFactory.makeValueSelector(dimensionSpec.getDimension())
         );
       } else {

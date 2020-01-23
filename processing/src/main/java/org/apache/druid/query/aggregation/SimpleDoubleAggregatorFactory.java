@@ -29,7 +29,10 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -37,7 +40,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFactory<BaseDoubleColumnValueSelector>
+/**
+ * This is an abstract class inherited by various {@link AggregatorFactory} implementations that consume double input
+ * and produce double output on aggregation.
+ * It extends "NullableAggregatorFactory<ColumnValueSelector>" instead of "NullableAggregatorFactory<BaseDoubleColumnValueSelector>"
+ * to additionally support aggregation on single/multi value string column types.
+ */
+public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
 {
   protected final String name;
   @Nullable
@@ -68,14 +77,55 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
     );
   }
 
-  protected BaseDoubleColumnValueSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory, double nullValue)
+  @Override
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  {
+    if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
+      return new StringColumnDoubleAggregatorWrapper(
+          selector,
+          SimpleDoubleAggregatorFactory.this::buildAggregator,
+          nullValue()
+      );
+    } else {
+      return buildAggregator(selector);
+    }
+  }
+
+  @Override
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      ColumnValueSelector selector
+  )
+  {
+    if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
+      return new StringColumnDoubleBufferAggregatorWrapper(
+          selector,
+          SimpleDoubleAggregatorFactory.this::buildBufferAggregator,
+          nullValue()
+      );
+    } else {
+      return buildBufferAggregator(selector);
+    }
+  }
+
+  @Override
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
     return AggregatorUtil.makeColumnValueSelectorWithDoubleDefault(
         metricFactory,
         fieldName,
         fieldExpression.get(),
-        nullValue
+        nullValue()
     );
+  }
+
+  private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)
+  {
+    if (fieldName != null) {
+      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+      return capabilities != null && capabilities.getType() == ValueType.STRING;
+    }
+    return false;
   }
 
   @Override
@@ -121,7 +171,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   {
     return fieldName != null
            ? Collections.singletonList(fieldName)
-           : fieldExpression.get().analyzeInputs().getRequiredColumnsList();
+           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
   }
 
   @Override
@@ -184,4 +234,10 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   {
     return expression;
   }
+
+  protected abstract double nullValue();
+
+  protected abstract Aggregator buildAggregator(BaseDoubleColumnValueSelector selector);
+
+  protected abstract BufferAggregator buildBufferAggregator(BaseDoubleColumnValueSelector selector);
 }

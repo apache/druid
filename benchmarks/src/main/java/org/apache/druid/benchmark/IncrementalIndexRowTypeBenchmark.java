@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,12 +49,16 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class IncrementalIndexRowTypeBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private IncrementalIndex incIndex;
   private IncrementalIndex incFloatIndex;
   private IncrementalIndex incStrIndex;
   private static AggregatorFactory[] aggs;
-  static final int dimensionCount = 8;
-  static final int maxRows = 250000;
+  static final int DIMENSION_COUNT = 8;
+  static final int MAX_ROWS = 250000;
 
   private ArrayList<InputRow> longRows = new ArrayList<InputRow>();
   private ArrayList<InputRow> floatRows = new ArrayList<InputRow>();
@@ -61,9 +66,9 @@ public class IncrementalIndexRowTypeBenchmark
 
 
   static {
-    final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(dimensionCount + 1);
+    final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(DIMENSION_COUNT + 1);
     ingestAggregatorFactories.add(new CountAggregatorFactory("rows"));
-    for (int i = 0; i < dimensionCount; ++i) {
+    for (int i = 0; i < DIMENSION_COUNT; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
               StringUtils.format("sumResult%s", i),
@@ -125,23 +130,23 @@ public class IncrementalIndexRowTypeBenchmark
         .setSimpleTestingIndexSchema(aggs)
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
-        .setMaxRowCount(maxRows)
+        .setMaxRowCount(MAX_ROWS)
         .buildOnheap();
   }
 
   @Setup
   public void setup()
   {
-    for (int i = 0; i < maxRows; i++) {
-      longRows.add(getLongRow(0, dimensionCount));
+    for (int i = 0; i < MAX_ROWS; i++) {
+      longRows.add(getLongRow(0, DIMENSION_COUNT));
     }
 
-    for (int i = 0; i < maxRows; i++) {
-      floatRows.add(getFloatRow(0, dimensionCount));
+    for (int i = 0; i < MAX_ROWS; i++) {
+      floatRows.add(getFloatRow(0, DIMENSION_COUNT));
     }
 
-    for (int i = 0; i < maxRows; i++) {
-      stringRows.add(getStringRow(0, dimensionCount));
+    for (int i = 0; i < MAX_ROWS; i++) {
+      stringRows.add(getStringRow(0, DIMENSION_COUNT));
     }
   }
 
@@ -156,10 +161,10 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(maxRows)
+  @OperationsPerInvocation(MAX_ROWS)
   public void normalLongs(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < maxRows; i++) {
+    for (int i = 0; i < MAX_ROWS; i++) {
       InputRow row = longRows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
@@ -169,10 +174,10 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(maxRows)
+  @OperationsPerInvocation(MAX_ROWS)
   public void normalFloats(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < maxRows; i++) {
+    for (int i = 0; i < MAX_ROWS; i++) {
       InputRow row = floatRows.get(i);
       int rv = incFloatIndex.add(row).getRowCount();
       blackhole.consume(rv);
@@ -182,10 +187,10 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(maxRows)
+  @OperationsPerInvocation(MAX_ROWS)
   public void normalStrings(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < maxRows; i++) {
+    for (int i = 0; i < MAX_ROWS; i++) {
       InputRow row = stringRows.get(i);
       int rv = incStrIndex.add(row).getRowCount();
       blackhole.consume(rv);

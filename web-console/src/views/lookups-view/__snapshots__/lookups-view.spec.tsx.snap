@@ -4,19 +4,19 @@ exports[`lookups view matches snapshot 1`] = `
 <div
   className="lookups-view app-view"
 >
-  <ViewControlBar
+  <Memo(ViewControlBar)
     label="Lookups"
   >
-    <RefreshButton
+    <Memo(RefreshButton)
       localStorageKey="lookups-refresh-rate"
       onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="plus"
       onClick={[Function]}
-      text="Add"
+      text="Add lookup"
     />
-    <TableColumnSelector
+    <Memo(TableColumnSelector)
       columns={
         Array [
           "Lookup name",
@@ -29,7 +29,7 @@ exports[`lookups view matches snapshot 1`] = `
       onChange={[Function]}
       tableColumnsHidden={Array []}
     />
-  </ViewControlBar>
+  </Memo(ViewControlBar)>
   <ReactTable
     AggregatedComponent={[Function]}
     ExpanderComponent={[Function]}
@@ -207,18 +207,6 @@ exports[`lookups view matches snapshot 1`] = `
     sortable={true}
     style={Object {}}
     subRowsKey="_subRows"
-  />
-  <LookupEditDialog
-    allLookupTiers={Array []}
-    isEdit={false}
-    isOpen={false}
-    lookupName=""
-    lookupSpec=""
-    lookupTier=""
-    lookupVersion=""
-    onChange={[Function]}
-    onClose={[Function]}
-    onSubmit={[Function]}
   />
 </div>
 `;

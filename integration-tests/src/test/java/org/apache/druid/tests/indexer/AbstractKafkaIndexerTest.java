@@ -28,14 +28,14 @@ import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -48,24 +48,25 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Callable;
 
-public class AbstractKafkaIndexerTest extends AbstractIndexerTest
+abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
-  private static final String INDEXER_FILE = "/indexer/kafka_supervisor_spec.json";
+  protected static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/kafka_supervisor_spec_legacy_parser.json";
+  protected static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/kafka_supervisor_spec_input_format.json";
   private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
 
   private static final int NUM_EVENTS_TO_SEND = 60;
   private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
-  public static final String testPropertyPrefix = "kafka.test.property.";
+  private static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
-  final String event_template =
+  private static final String EVENT_TEMPLATE =
       "{\"timestamp\": \"%s\"," +
       "\"page\": \"Gypsy Danger\"," +
       "\"language\" : \"en\"," +
@@ -83,17 +84,13 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
       "\"deleted\":%d," +
       "\"delta\":%d}";
 
-  private String supervisorId;
-  private ZkClient zkClient;
   private ZkUtils zkUtils;
   private boolean segmentsExist;   // to tell if we should remove segments during teardown
 
   // format for the querying interval
-  private final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
+  private static final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
   // format for the expected timestamp in a query response
-  private final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
-  private DateTime dtFirst;                // timestamp of 1st event
-  private DateTime dtLast;                 // timestamp of last event
+  private static final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
 
   @Inject
   private TestQueryHelper queryHelper;
@@ -102,7 +99,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
   private String fullDatasourceName;
 
-  void doKafkaIndexTest(String dataSourceName, boolean txnEnabled)
+  void doKafkaIndexTest(String dataSourceName, String supervisorSpecPath, boolean txnEnabled)
   {
     fullDatasourceName = dataSourceName + config.getExtraDatasourceNameSuffix();
     // create topic
@@ -110,7 +107,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
       int sessionTimeoutMs = 10000;
       int connectionTimeoutMs = 10000;
       String zkHosts = config.getZookeeperHosts();
-      zkClient = new ZkClient(zkHosts, sessionTimeoutMs, connectionTimeoutMs, ZKStringSerializer$.MODULE$);
+      ZkClient zkClient = new ZkClient(zkHosts, sessionTimeoutMs, connectionTimeoutMs, ZKStringSerializer$.MODULE$);
       zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
       if (config.manageKafkaTopic()) {
         int numPartitions = 4;
@@ -132,39 +129,39 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
     String spec;
     try {
-      LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
+      LOG.info("supervisorSpec name: [%s]", supervisorSpecPath);
       final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       final Properties consumerProperties = new Properties();
       consumerProperties.putAll(consumerConfigs);
-      consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
+      consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
 
-      spec = getResourceAsString(INDEXER_FILE);
+      spec = getResourceAsString(supervisorSpecPath);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
       spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
       spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {
-      LOG.error("could not read file [%s]", INDEXER_FILE);
-      throw new ISE(e, "could not read file [%s]", INDEXER_FILE);
+      LOG.error("could not read file [%s]", supervisorSpecPath);
+      throw new ISE(e, "could not read file [%s]", supervisorSpecPath);
     }
 
     // start supervisor
-    supervisorId = indexer.submitSupervisor(spec);
+    String supervisorId = indexer.submitSupervisor(spec);
     LOG.info("Submitted supervisor");
 
     // set up kafka producer
     Properties properties = new Properties();
     addFilteredProperties(config, properties);
-    properties.put("bootstrap.servers", config.getKafkaHost());
+    properties.setProperty("bootstrap.servers", config.getKafkaHost());
     LOG.info("Kafka bootstrap.servers: [%s]", config.getKafkaHost());
-    properties.put("acks", "all");
-    properties.put("retries", "3");
-    properties.put("key.serializer", ByteArraySerializer.class.getName());
-    properties.put("value.serializer", ByteArraySerializer.class.getName());
+    properties.setProperty("acks", "all");
+    properties.setProperty("retries", "3");
+    properties.setProperty("key.serializer", ByteArraySerializer.class.getName());
+    properties.setProperty("value.serializer", ByteArraySerializer.class.getName());
     if (txnEnabled) {
-      properties.put("enable.idempotence", "true");
-      properties.put("transactional.id", RandomIdUtils.getRandomId());
+      properties.setProperty("enable.idempotence", "true");
+      properties.setProperty("transactional.id", RandomIdUtils.getRandomId());
     }
 
     KafkaProducer<String, String> producer = new KafkaProducer<>(
@@ -178,8 +175,8 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     DateTime dt = new DateTime(zone); // timestamp to put on events
-    dtFirst = dt;            // timestamp of 1st event
-    dtLast = dt;             // timestamp of last event
+    DateTime dtFirst = dt;            // timestamp of 1st event
+    DateTime dtLast = dt;             // timestamp of last event
 
     // these are used to compute the expected aggregations
     int added = 0;
@@ -194,11 +191,11 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
       num_events++;
       added += num_events;
       // construct the event to send
-      String event = StringUtils.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
+      String event = StringUtils.format(EVENT_TEMPLATE, event_fmt.print(dt), num_events, 0, num_events);
       LOG.info("sending event: [%s]", event);
       try {
 
-        producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();
+        producer.send(new ProducerRecord<>(TOPIC_NAME, event)).get();
 
       }
       catch (Exception ioe) {
@@ -230,7 +227,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
     // put the timestamps into the query structure
     String query_response_template;
     try {
-      query_response_template = IOUtils.toString(is, "UTF-8");
+      query_response_template = IOUtils.toString(is, StandardCharsets.UTF_8);
     }
     catch (IOException e) {
       throw new ISE(e, "could not read query file: %s", QUERIES_FILE);
@@ -260,29 +257,17 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
     // wait for all kafka indexing tasks to finish
     LOG.info("Waiting for all kafka indexing tasks to finish");
-    RetryUtil.retryUntilTrue(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return (indexer.getPendingTasks().size() + indexer.getRunningTasks().size() + indexer.getWaitingTasks()
-                                                                                                 .size()) == 0;
-          }
-        }, "Waiting for Tasks Completion"
+    ITRetryUtil.retryUntilTrue(
+        () -> (indexer.getPendingTasks().size()
+               + indexer.getRunningTasks().size()
+               + indexer.getWaitingTasks().size()) == 0,
+        "Waiting for Tasks Completion"
     );
 
     // wait for segments to be handed off
     try {
-      RetryUtil.retryUntil(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call()
-            {
-              return coordinator.areSegmentsLoaded(fullDatasourceName);
-            }
-          },
+      ITRetryUtil.retryUntil(
+          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
           10000,
           30,
@@ -307,8 +292,8 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
   private void addFilteredProperties(IntegrationTestingConfig config, Properties properties)
   {
     for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
-      if (entry.getKey().startsWith(testPropertyPrefix)) {
-        properties.put(entry.getKey().substring(testPropertyPrefix.length()), entry.getValue());
+      if (entry.getKey().startsWith(TEST_PROPERTY_PREFIX)) {
+        properties.setProperty(entry.getKey().substring(TEST_PROPERTY_PREFIX.length()), entry.getValue());
       }
     }
   }

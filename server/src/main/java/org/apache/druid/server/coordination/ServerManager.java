@@ -53,6 +53,7 @@ import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -71,8 +72,6 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- */
 public class ServerManager implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(ServerManager.class);
@@ -128,6 +127,12 @@ public class ServerManager implements QuerySegmentWalker
       throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
+    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    if (!analysis.getPreJoinableClauses().isEmpty()) {
+      throw new ISE("Cannot handle join dataSource");
+    }
+
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
@@ -162,8 +167,7 @@ public class ServerManager implements QuerySegmentWalker
             {
               @Override
               public Iterable<QueryRunner<T>> apply(
-                  @Nullable
-                  final TimelineObjectHolder<String, ReferenceCountingSegment> holder
+                  @Nullable final TimelineObjectHolder<String, ReferenceCountingSegment> holder
               )
               {
                 if (holder == null) {
@@ -210,7 +214,7 @@ public class ServerManager implements QuerySegmentWalker
 
   private String getDataSourceName(DataSource dataSource)
   {
-    return Iterables.getOnlyElement(dataSource.getNames());
+    return Iterables.getOnlyElement(dataSource.getTableNames());
   }
 
   @Override
@@ -222,6 +226,12 @@ public class ServerManager implements QuerySegmentWalker
          .addData("dataSource", query.getDataSource())
          .emit();
       return new NoopQueryRunner<T>();
+    }
+
+    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    if (!analysis.getPreJoinableClauses().isEmpty()) {
+      throw new ISE("Cannot handle join dataSource");
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();

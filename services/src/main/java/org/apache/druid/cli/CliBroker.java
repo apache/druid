@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -29,12 +30,11 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -51,11 +51,12 @@ import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.http.BrokerResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.timeline.PruneLastCompactionState;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
@@ -90,6 +91,7 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
+          binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);
@@ -118,18 +120,19 @@ public class CliBroker extends ServerRunnable
 
           Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
-          MetricsModule.register(binder, CacheMonitor.class);
-
           LifecycleModule.register(binder, Server.class);
 
-
-          bindAnnouncer(
+          bindNodeRoleAndAnnouncer(
               binder,
-              DiscoverySideEffectsProvider.builder(NodeType.BROKER)
-                                          .serviceClasses(ImmutableList.of(LookupNodeService.class))
-                                          .useLegacyAnnouncer(true)
-                                          .build()
+              DiscoverySideEffectsProvider
+                  .builder(NodeRole.BROKER)
+                  .serviceClasses(ImmutableList.of(LookupNodeService.class))
+                  .useLegacyAnnouncer(true)
+                  .build()
           );
+
+          Jerseys.addResource(binder, SelfDiscoveryResource.class);
+          LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
         new LookupModule(),
         new SqlModule()

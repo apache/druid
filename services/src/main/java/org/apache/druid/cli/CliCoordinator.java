@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
@@ -35,7 +36,7 @@ import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.Jerseys;
@@ -47,7 +48,9 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -80,6 +83,7 @@ import org.apache.druid.server.http.MetadataResource;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.RulesResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -95,6 +99,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 
 /**
+ *
  */
 @Command(
     name = "coordinator",
@@ -103,6 +108,7 @@ import java.util.concurrent.ExecutorService;
 public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
+  private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -119,7 +125,7 @@ public class CliCoordinator extends ServerRunnable
     beOverlord = isOverlord(properties);
 
     if (beOverlord) {
-      log.info("Coordinator is configured to act as Overlord as well.");
+      log.info("Coordinator is configured to act as Overlord as well (%s = true).", AS_OVERLORD_PROPERTY);
     }
   }
 
@@ -144,8 +150,7 @@ public class CliCoordinator extends ServerRunnable
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
-            binder.bind(MetadataStorage.class)
-                  .toProvider(MetadataStorageProvider.class);
+            binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
@@ -218,8 +223,8 @@ public class CliCoordinator extends ServerRunnable
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
                   + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for more "
-                  + "details about compaction."
+                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration "
+                  + "for more details about compaction."
               );
             }
 
@@ -233,11 +238,14 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorCleanupPendingSegments.class
             );
 
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
                 Coordinator.class,
-                DiscoverySideEffectsProvider.builder(NodeType.COORDINATOR).build()
+                DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()
             );
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           @Provides
@@ -248,7 +256,8 @@ public class CliCoordinator extends ServerRunnable
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              ZkPathsConfig zkPaths
+              ZkPathsConfig zkPaths,
+              Lifecycle lifecycle
           )
           {
             boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
@@ -256,9 +265,12 @@ public class CliCoordinator extends ServerRunnable
             if (useHttpLoadQueuePeon) {
               callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
             } else {
-              callBackExec = Execs.multiThreaded(config.getNumCuratorCallBackThreads(), "LoadQueuePeon"
-                                                                                        + "-callbackexec--%d");
+              callBackExec = Execs.multiThreaded(
+                  config.getNumCuratorCallBackThreads(),
+                  "LoadQueuePeon-callbackexec--%d"
+              );
             }
+            ExecutorServices.manageLifecycle(lifecycle, callBackExec);
             return new LoadQueueTaskMaster(
                 curator,
                 jsonMapper,
@@ -285,6 +297,6 @@ public class CliCoordinator extends ServerRunnable
 
   public static boolean isOverlord(Properties properties)
   {
-    return Boolean.parseBoolean(properties.getProperty("druid.coordinator.asOverlord.enabled"));
+    return Boolean.parseBoolean(properties.getProperty(AS_OVERLORD_PROPERTY));
   }
 }

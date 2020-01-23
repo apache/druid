@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.PostProcessingOperator;
@@ -37,10 +38,12 @@ import org.apache.druid.query.ResultLevelCachingQueryRunner;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 /**
+ *
  */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
@@ -79,12 +82,24 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
+    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    if (!analysis.getPreJoinableClauses().isEmpty()) {
+      throw new ISE("Cannot handle join dataSource");
+    }
+
     return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
+    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    if (!analysis.getPreJoinableClauses().isEmpty()) {
+      throw new ISE("Cannot handle join dataSource");
+    }
+
     return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
   }
 
@@ -92,13 +107,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    // This does not adhere to the fluent workflow. See https://github.com/apache/incubator-druid/issues/5517
-    return new ResultLevelCachingQueryRunner<>(makeRunner(query, baseClientRunner, toolChest),
-                                               toolChest,
-                                               query,
-                                               objectMapper,
-                                               cache,
-                                               cacheConfig);
+    // This does not adhere to the fluent workflow. See https://github.com/apache/druid/issues/5517
+    return new ResultLevelCachingQueryRunner<>(
+        makeRunner(query, baseClientRunner, toolChest),
+        toolChest,
+        query,
+        objectMapper,
+        cache,
+        cacheConfig
+    );
   }
 
   private <T> QueryRunner<T> makeRunner(

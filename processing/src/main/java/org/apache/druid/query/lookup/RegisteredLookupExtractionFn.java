@@ -47,8 +47,8 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       @JacksonInject LookupExtractorFactoryContainerProvider manager,
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
-      @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
-      @Nullable @JsonProperty("injective") final Boolean injective,
+      @JsonProperty("replaceMissingValueWith") @Nullable final String replaceMissingValueWith,
+      @JsonProperty("injective") @Nullable final Boolean injective,
       @JsonProperty("optimize") Boolean optimize
   )
   {
@@ -96,7 +96,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
+    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getName());
     final byte[] lookupName = StringUtils.toUtf8(getLookup());
     final byte[] delegateKey = ensureDelegate().getCacheKey();
     return ByteBuffer

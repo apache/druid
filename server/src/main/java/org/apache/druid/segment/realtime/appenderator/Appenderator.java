@@ -29,7 +29,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
 
@@ -46,8 +45,13 @@ import java.util.List;
  * all methods of the data appending and indexing lifecycle except {@link #drop} must be called from a single thread.
  * Methods inherited from {@link QuerySegmentWalker} can be called concurrently from multiple threads.
  */
-public interface Appenderator extends QuerySegmentWalker, Closeable
+public interface Appenderator extends QuerySegmentWalker
 {
+  /**
+   * Return the identifier of this Appenderator; useful for log messages and such.
+   */
+  String getId();
+
   /**
    * Return the name of the dataSource associated with this Appenderator.
    */
@@ -182,8 +186,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * <p>
    * If committer is not provided, no metadata is persisted.
    *
-   * @param identifiers list of segments to push
-   * @param committer   a committer associated with all data that has been added so far
+   * @param identifiers   list of segments to push
+   * @param committer     a committer associated with all data that has been added so far
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
    *
    * @return future that resolves when all segments have been pushed. The segment list will be the list of segments
@@ -200,7 +204,6 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * pushes to finish. This will not remove any on-disk persisted data, but it will drop any data that has not yet been
    * persisted.
    */
-  @Override
   void close();
 
   /**

@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { RunButton } from './run-button';
 
@@ -25,11 +25,14 @@ describe('run button', () => {
   it('matches snapshot', () => {
     const runButton = (
       <RunButton
+        onHistory={() => {}}
+        onEditContext={() => {}}
         runeMode={false}
-        queryContext={{}}
-        onQueryContextChange={() => null}
-        onRun={() => null}
-        onExplain={() => null}
+        queryContext={{ f: 3 }}
+        onQueryContextChange={() => {}}
+        onRun={() => {}}
+        onExplain={() => {}}
+        onPrettier={() => {}}
       />
     );
 

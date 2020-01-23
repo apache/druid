@@ -42,7 +42,7 @@ export function getColumnTypeFromHeaderAndRows(
   column: string,
 ): string {
   return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : null)),
+    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
   );
 }
 
@@ -51,10 +51,10 @@ export function getDimensionSpecs(
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(headerAndRows.header, h => {
-    if (h === '__time') return null;
+    if (h === '__time') return;
     const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
     if (guessedType === 'string') return h;
-    if (hasRollup) return null;
+    if (hasRollup) return;
     return {
       type: guessedType,
       name: h,
@@ -65,7 +65,7 @@ export function getDimensionSpecs(
 export function getMetricSecs(headerAndRows: HeaderAndRows): MetricSpec[] {
   return [{ name: 'count', type: 'count' }].concat(
     filterMap(headerAndRows.header, h => {
-      if (h === '__time') return null;
+      if (h === '__time') return;
       const guessedType = getColumnTypeFromHeaderAndRows(headerAndRows, h);
       switch (guessedType) {
         case 'double':
@@ -73,7 +73,7 @@ export function getMetricSecs(headerAndRows: HeaderAndRows): MetricSpec[] {
         case 'long':
           return { name: `sum_${h}`, type: 'longSum', fieldName: h };
         default:
-          return null;
+          return;
       }
     }),
   );
@@ -88,17 +88,13 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
-    newSpec = deepSet(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensions', []);
+    newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec.dimensions', []);
   } else {
-    newSpec = deepDelete(newSpec, 'dataSchema.parser.parseSpec.dimensionsSpec.dimensionExclusions');
+    newSpec = deepDelete(newSpec, 'dataSchema.dimensionsSpec.dimensionExclusions');
 
     const dimensions = getDimensionSpecs(headerAndRows, rollup);
     if (dimensions) {
-      newSpec = deepSet(
-        newSpec,
-        'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
-        dimensions,
-      );
+      newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec.dimensions', dimensions);
     }
   }
 

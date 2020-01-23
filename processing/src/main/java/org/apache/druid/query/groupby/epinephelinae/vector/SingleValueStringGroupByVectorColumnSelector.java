@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class SingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
@@ -57,13 +57,13 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
 
   @Override
   public void writeKeyToResultRow(
-      final String outputName,
       final ByteBuffer keyBuffer,
       final int keyOffset,
-      final Map<String, Object> resultMap
+      final ResultRow resultRow,
+      final int resultRowPosition
   )
   {
     final int id = keyBuffer.getInt(keyOffset * Integer.BYTES);
-    resultMap.put(outputName, selector.lookupName(id));
+    resultRow.set(resultRowPosition, selector.lookupName(id));
   }
 }

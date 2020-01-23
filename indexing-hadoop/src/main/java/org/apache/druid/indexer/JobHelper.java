@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.io.Files;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -49,6 +48,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
+import javax.annotation.Nullable;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,6 +61,8 @@ import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -293,7 +296,7 @@ public class JobHelper
   {
     log.info("Uploading jar to path[%s]", path);
     try (OutputStream os = fs.create(path)) {
-      Files.asByteSource(jarFile).copyTo(os);
+      Files.copy(jarFile.toPath(), os);
     }
   }
 
@@ -312,11 +315,21 @@ public class JobHelper
     String mapJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
     String reduceJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
 
-    for (String propName : System.getProperties().stringPropertyNames()) {
+    for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {
         if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
-          mapJavaOpts = StringUtils.format("%s -D%s=%s", mapJavaOpts, propName, System.getProperty(propName));
-          reduceJavaOpts = StringUtils.format("%s -D%s=%s", reduceJavaOpts, propName, System.getProperty(propName));
+          mapJavaOpts = StringUtils.format(
+              "%s -D%s=%s",
+              mapJavaOpts,
+              propName,
+              HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName)
+          );
+          reduceJavaOpts = StringUtils.format(
+              "%s -D%s=%s",
+              reduceJavaOpts,
+              propName,
+              HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName)
+          );
           break;
         }
       }
@@ -332,9 +345,9 @@ public class JobHelper
 
   public static Configuration injectSystemProperties(Configuration conf)
   {
-    for (String propName : System.getProperties().stringPropertyNames()) {
+    for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
       if (propName.startsWith("hadoop.")) {
-        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+        conf.set(propName.substring("hadoop.".length()), HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName));
       }
     }
     return conf;
@@ -364,9 +377,9 @@ public class JobHelper
   public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
   {
     if (hadoopJobId != null && hadoopJobIdFileName != null) {
-      try {
+      try (final OutputStream out = Files.newOutputStream(Paths.get(hadoopJobIdFileName))) {
         HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
-            new OutputStreamWriter(new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            new OutputStreamWriter(out, StandardCharsets.UTF_8),
             hadoopJobId
         );
         log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
@@ -548,7 +561,7 @@ public class JobHelper
       List<String> filesToCopy = Arrays.asList(baseDir.list());
       for (String fileName : filesToCopy) {
         final File fileToCopy = new File(baseDir, fileName);
-        if (java.nio.file.Files.isRegularFile(fileToCopy.toPath())) {
+        if (Files.isRegularFile(fileToCopy.toPath())) {
           size += copyFileToZipStream(fileToCopy, outputStream, progressable);
         } else {
           log.warn("File at [%s] is not a regular file! skipping as part of zip", fileToCopy.getPath());
@@ -705,7 +718,7 @@ public class JobHelper
       final Configuration configuration,
       final File outDir,
       final Progressable progressable,
-      final RetryPolicy retryPolicy
+      @Nullable final RetryPolicy retryPolicy
   ) throws IOException
   {
     final RetryPolicy effectiveRetryPolicy;

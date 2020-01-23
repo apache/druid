@@ -23,23 +23,25 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.yahoo.sketches.Family;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
-import com.yahoo.sketches.theta.Sketches;
-import com.yahoo.sketches.theta.Union;
-import com.yahoo.sketches.theta.UpdateSketch;
+import org.apache.datasketches.Family;
+import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Sketch;
+import org.apache.datasketches.theta.Sketches;
+import org.apache.datasketches.theta.Union;
+import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.junit.After;
@@ -58,8 +60,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class SketchAggregationTest
@@ -98,34 +102,80 @@ public class SketchAggregationTest
   @Test
   public void testSketchDataIngestAndGpByQuery() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    final String groupByQueryString = readFileFromClasspathAsString("sketch_test_data_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
         1000,
-        readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
+        groupByQueryString
     );
 
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
-        new MapBasedRow(
-            DateTimes.of("2014-10-19T00:00:00.000Z"),
-            ImmutableMap
-                .<String, Object>builder()
-                .put("sids_sketch_count", 50.0)
-                .put("sids_sketch_count_with_err",
-                    new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
-                .put("sketchEstimatePostAgg", 50.0)
-                .put("sketchEstimatePostAggWithErrorBounds",
-                    new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
-                .put("sketchUnionPostAggEstimate", 50.0)
-                .put("sketchIntersectionPostAggEstimate", 50.0)
-                .put("sketchAnotBPostAggEstimate", 0.0)
-                .put("non_existing_col_validation", 0.0)
-                .build()
+        ResultRow.fromLegacyRow(
+            new MapBasedRow(
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("sids_sketch_count", 50.0)
+                    .put(
+                        "sids_sketch_count_with_err",
+                        new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2)
+                    )
+                    .put("sketchEstimatePostAgg", 50.0)
+                    .put(
+                        "sketchEstimatePostAggWithErrorBounds",
+                        new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2)
+                    )
+                    .put("sketchUnionPostAggEstimate", 50.0)
+                    .put("sketchIntersectionPostAggEstimate", 50.0)
+                    .put("sketchAnotBPostAggEstimate", 0.0)
+                    .put("non_existing_col_validation", 0.0)
+                    .build()
+            ),
+            groupByQuery
+        ),
+        results.get(0)
+    );
+  }
+
+  @Test
+  public void testEmptySketchAggregateCombine() throws Exception
+  {
+    final String groupByQueryString = readFileFromClasspathAsString("empty_sketch_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(SketchAggregationTest.class.getClassLoader().getResource("empty_sketch_data.tsv").getFile()),
+        readFileFromClasspathAsString("empty_sketch_data_record_parser.json"),
+        readFileFromClasspathAsString("empty_sketch_test_data_aggregators.json"),
+        0,
+        Granularities.NONE,
+        5,
+        groupByQueryString
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(
+        ResultRow.fromLegacyRow(
+            new MapBasedRow(
+                DateTimes.of("2019-07-14T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("product", "product_b")
+                    .put("sketch_count", 0.0)
+                    .build()
+            ),
+            groupByQuery
         ),
         results.get(0)
     );
@@ -134,7 +184,11 @@ public class SketchAggregationTest
   @Test
   public void testThetaCardinalityOnSimpleColumn() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    final String groupByQueryString = readFileFromClasspathAsString("simple_test_data_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("simple_test_data.tsv").getFile()),
         readFileFromClasspathAsString("simple_test_data_record_parser2.json"),
         "["
@@ -146,10 +200,10 @@ public class SketchAggregationTest
         0,
         Granularities.NONE,
         1000,
-        readFileFromClasspathAsString("simple_test_data_group_by_query.json")
+        groupByQueryString
     );
 
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(5, results.size());
     Assert.assertEquals(
         ImmutableList.of(
@@ -218,7 +272,7 @@ public class SketchAggregationTest
                     .put("non_existing_col_validation", 0.0)
                     .build()
             )
-        ),
+        ).stream().map(row -> ResultRow.fromLegacyRow(row, groupByQuery)).collect(Collectors.toList()),
         results
     );
   }
@@ -284,7 +338,7 @@ public class SketchAggregationTest
             2
         )
     );
-    
+
     assertPostAggregatorSerde(
         new SketchEstimatePostAggregator(
             "name",
@@ -308,7 +362,7 @@ public class SketchAggregationTest
             )
         )
     );
-    
+
     assertPostAggregatorSerde(
         new SketchSetPostAggregator(
             "name",
@@ -357,17 +411,21 @@ public class SketchAggregationTest
   @Test
   public void testRetentionDataIngestAndGpByQuery() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    final String groupByQueryString = readFileFromClasspathAsString("retention_test_data_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("retention_test_data.tsv").getFile()),
         readFileFromClasspathAsString("simple_test_data_record_parser.json"),
         readFileFromClasspathAsString("simple_test_data_aggregators.json"),
         0,
         Granularities.NONE,
         5,
-        readFileFromClasspathAsString("retention_test_data_group_by_query.json")
+        groupByQueryString
     );
 
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         ImmutableList.of(
@@ -385,7 +443,7 @@ public class SketchAggregationTest
                     .put("non_existing_col_validation", 0.0)
                     .build()
             )
-        ),
+        ).stream().map(row -> ResultRow.fromLegacyRow(row, groupByQuery)).collect(Collectors.toList()),
         results
     );
   }

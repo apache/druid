@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -26,7 +28,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -38,8 +39,12 @@ public class QueryContexts
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
-  @Deprecated
-  public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
+  public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
+  public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
+  public static final String VECTORIZE_KEY = "vectorize";
+  public static final String VECTOR_SIZE_KEY = "vectorSize";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -51,6 +56,7 @@ public class QueryContexts
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
+  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -82,6 +88,19 @@ public class QueryContexts
     };
 
     public abstract boolean shouldVectorize(boolean canVectorize);
+
+    @JsonCreator
+    public static Vectorize fromString(String str)
+    {
+      return Vectorize.valueOf(StringUtils.toUpperCase(str));
+    }
+
+    @Override
+    @JsonValue
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name()).replace('_', '-');
+    }
   }
 
   public static <T> boolean isBySegment(Query<T> query)
@@ -149,14 +168,14 @@ public class QueryContexts
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
   }
 
-  public static <T> Vectorize getVectorize(Query<T> query)
+  public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
-    return parseEnum(query, "vectorize", Vectorize.class, DEFAULT_VECTORIZE);
+    return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
   }
 
-  public static <T> int getVectorSize(Query<T> query)
+  public static <T> int getVectorSize(Query<T> query, int defaultSize)
   {
-    return parseInt(query, "vectorSize", QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+    return parseInt(query, VECTOR_SIZE_KEY, defaultSize);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
@@ -179,10 +198,24 @@ public class QueryContexts
     return parseInt(query, PRIORITY_KEY, defaultValue);
   }
 
-  @Deprecated
-  public static <T> String getChunkPeriod(Query<T> query)
+  public static <T> boolean getEnableParallelMerges(Query<T> query)
   {
-    return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
+    return parseBoolean(query, BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
+  }
+
+  public static <T> int getParallelMergeInitialYieldRows(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+  }
+
+  public static <T> int getParallelMergeSmallBatchRows(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+  }
+
+  public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLELISM, defaultValue);
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

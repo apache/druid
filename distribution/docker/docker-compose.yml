@@ -25,6 +25,7 @@ volumes:
   broker_var: {}
   coordinator_var: {}
   overlord_var: {}
+  router_var: {}
 
 services:
   postgres:
@@ -45,7 +46,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: druid
+    image: apache/druid
     container_name: coordinator
     volumes:
       - coordinator_var:/opt/druid/var
@@ -60,7 +61,7 @@ services:
       - environment
 
   broker:
-    image: druid
+    image: apache/druid
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
@@ -76,7 +77,7 @@ services:
       - environment
 
   historical:
-    image: druid
+    image: apache/druid
     container_name: historical
     volumes:
       - historical_var:/opt/druid/var
@@ -92,7 +93,7 @@ services:
       - environment
 
   overlord:
-    image: druid
+    image: apache/druid
     container_name: overlord
     volumes:
       - overlord_var:/opt/druid/var
@@ -107,7 +108,7 @@ services:
       - environment
 
   middlemanager:
-    image: druid
+    image: apache/druid
     container_name: middlemanager
     volumes:
       - middle_var:/opt/druid/var
@@ -122,3 +123,18 @@ services:
     env_file:
       - environment
 
+  router:
+    image: apache/druid
+    container_name: router
+    volumes:
+      - router_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "4008:8888"
+    command:
+      - router
+    env_file:
+      - environment

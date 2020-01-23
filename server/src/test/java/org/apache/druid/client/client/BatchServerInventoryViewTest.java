@@ -81,10 +81,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class BatchServerInventoryViewTest
 {
-  private static final String testBasePath = "/test";
+  private static final String TEST_BASE_PATH = "/test";
   public static final DateTime SEGMENT_INTERVAL_START = DateTimes.of("2013-01-01");
   public static final int INITIAL_SEGMENTS = 100;
-  private static final Timing timing = new Timing();
+  private static final Timing TIMING = new Timing();
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -113,7 +113,7 @@ public class BatchServerInventoryViewTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(testBasePath);
+    cf.create().creatingParentsIfNeeded().forPath(TEST_BASE_PATH);
 
     jsonMapper = TestHelper.makeJsonMapper();
 
@@ -138,7 +138,7 @@ public class BatchServerInventoryViewTest
       @Override
       public String getBase()
       {
-        return testBasePath;
+        return TEST_BASE_PATH;
       }
     };
 
@@ -176,7 +176,7 @@ public class BatchServerInventoryViewTest
           @Override
           public String getBase()
           {
-            return testBasePath;
+            return TEST_BASE_PATH;
           }
         },
         cf,
@@ -192,7 +192,7 @@ public class BatchServerInventoryViewTest
           @Override
           public String getBase()
           {
-            return testBasePath;
+            return TEST_BASE_PATH;
           }
         },
         cf,
@@ -368,7 +368,7 @@ public class BatchServerInventoryViewTest
     testSegments.remove(segment2);
 
     waitForSync(filteredBatchServerInventoryView, testSegments);
-    timing.forWaiting().awaitLatch(removeCallbackLatch);
+    TIMING.forWaiting().awaitLatch(removeCallbackLatch);
 
     EasyMock.verify(callback);
   }
@@ -384,13 +384,14 @@ public class BatchServerInventoryViewTest
                           )
                       )
                       .version(DateTimes.nowUtc().toString())
+                      .size(0)
                       .build();
   }
 
   private static void waitForSync(BatchServerInventoryView batchServerInventoryView, Set<DataSegment> testSegments)
       throws Exception
   {
-    final Timing forWaitingTiming = timing.forWaiting();
+    final Timing forWaitingTiming = TIMING.forWaiting();
     Stopwatch stopwatch = Stopwatch.createStarted();
     while (Iterables.isEmpty(batchServerInventoryView.getInventory())
            || Iterables.size(Iterables.get(batchServerInventoryView.getInventory(), 0).iterateAllSegments()) !=
@@ -405,7 +406,7 @@ public class BatchServerInventoryViewTest
   private void waitForUpdateEvents(int count)
       throws Exception
   {
-    final Timing forWaitingTiming = timing.forWaiting();
+    final Timing forWaitingTiming = TIMING.forWaiting();
     Stopwatch stopwatch = Stopwatch.createStarted();
     while (inventoryUpdateCounter.get() != count) {
       Thread.sleep(100);
@@ -469,7 +470,7 @@ public class BatchServerInventoryViewTest
                         @Override
                         public String getBase()
                         {
-                          return testBasePath;
+                          return TEST_BASE_PATH;
                         }
                       },
                       announcer,

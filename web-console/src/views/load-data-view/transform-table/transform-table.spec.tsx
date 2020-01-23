@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TransformTable } from './transform-table';
 
@@ -27,7 +27,7 @@ describe('transform table', () => {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],
@@ -39,8 +39,8 @@ describe('transform table', () => {
         columnFilter=""
         transformedColumnsOnly={false}
         transforms={[]}
-        selectedTransformIndex={-1}
-        onTransformSelect={() => null}
+        selectedColumnName={undefined}
+        onTransformSelect={() => {}}
       />
     );
 

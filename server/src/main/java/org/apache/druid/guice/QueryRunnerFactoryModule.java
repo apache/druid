@@ -36,8 +36,6 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryRunnerFactory;
-import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryRunnerFactory;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -52,7 +50,7 @@ import java.util.Map;
  */
 public class QueryRunnerFactoryModule extends QueryToolChestModule
 {
-  private static final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> mappings =
+  private static final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> MAPPINGS =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryRunnerFactory>>builder()
                   .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
                   .put(SearchQuery.class, SearchQueryRunnerFactory.class)
@@ -60,7 +58,6 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
                   .put(GroupByQuery.class, GroupByQueryRunnerFactory.class)
                   .put(ScanQuery.class, ScanQueryRunnerFactory.class)
-                  .put(SelectQuery.class, SelectQueryRunnerFactory.class)
                   .put(TopNQuery.class, TopNQueryRunnerFactory.class)
                   .put(DataSourceMetadataQuery.class, DataSourceMetadataQueryRunnerFactory.class)
                   .build();
@@ -80,7 +77,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
         binder
     );
 
-    for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : mappings.entrySet()) {
+    for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : MAPPINGS.entrySet()) {
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }

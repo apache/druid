@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -40,7 +39,7 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   public LongMinAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -53,22 +52,19 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected BaseLongColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected long nullValue()
   {
-    return getLongColumnSelector(
-        metricFactory,
-        Long.MAX_VALUE
-    );
+    return Long.MAX_VALUE;
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
+  protected Aggregator buildAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongMinAggregator(selector);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
+  protected BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongMinBufferAggregator(selector);
   }

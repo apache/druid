@@ -22,34 +22,49 @@ package org.apache.druid.segment.serde;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ *  ComplexMetrics houses a mapping of serde names to affiliated ComplexMetricSerde objects.
  */
 public class ComplexMetrics
 {
-  private static final Map<String, ComplexMetricSerde> complexSerializers = new HashMap<>();
+  private static final ConcurrentHashMap<String, ComplexMetricSerde> COMPLEX_SERIALIZERS = new ConcurrentHashMap<>();
 
   @Nullable
   public static ComplexMetricSerde getSerdeForType(String type)
   {
-    return complexSerializers.get(type);
+    return COMPLEX_SERIALIZERS.get(type);
   }
 
+  /**
+   * Register a serde name -> ComplexMetricSerde mapping.
+   *
+   * <p>
+   * If the specified serde key string is already used and the supplied ComplexMetricSerde is not of the same
+   * type as the existing value in the map for said key, an ISE is thrown.
+   * </p>
+   *
+   * @param type The serde name used as the key in the map.
+   * @param serde The ComplexMetricSerde object to be associated with the 'type' in the map.
+   */
   public static void registerSerde(String type, ComplexMetricSerde serde)
   {
-    if (complexSerializers.containsKey(type)) {
-      if (!complexSerializers.get(type).getClass().getName().equals(serde.getClass().getName())) {
-        throw new ISE(
-            "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
-            type,
-            serde.getClass().getName(),
-            complexSerializers.get(type).getClass().getName()
-        );
+    COMPLEX_SERIALIZERS.compute(type, (key, value) -> {
+      if (value == null) {
+        return serde;
+      } else {
+        if (!value.getClass().getName().equals(serde.getClass().getName())) {
+          throw new ISE(
+              "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
+              key,
+              serde.getClass().getName(),
+              value.getClass().getName()
+          );
+        } else {
+          return value;
+        }
       }
-    } else {
-      complexSerializers.put(type, serde);
-    }
+    });
   }
 }

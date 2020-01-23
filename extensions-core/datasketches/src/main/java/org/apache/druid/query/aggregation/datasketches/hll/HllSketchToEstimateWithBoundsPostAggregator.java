@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.yahoo.sketches.hll.HllSketch;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -43,6 +43,7 @@ import java.util.Set;
  */
 public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregator
 {
+  public static final int DEFAULT_NUM_STD_DEVS = 1;
 
   private final String name;
   private final PostAggregator field;
@@ -57,7 +58,7 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   {
     this.name = name;
     this.field = field;
-    this.numStdDevs = numStdDevs == null ? 1 : numStdDevs;
+    this.numStdDevs = numStdDevs == null ? DEFAULT_NUM_STD_DEVS : numStdDevs;
   }
 
   @Override

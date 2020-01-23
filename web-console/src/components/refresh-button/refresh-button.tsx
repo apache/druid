@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -26,32 +27,26 @@ export interface RefreshButtonProps {
   localStorageKey?: LocalStorageKeys;
 }
 
-export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
-  constructor(props: RefreshButtonProps, context: any) {
-    super(props, context);
-  }
+export const RefreshButton = React.memo(function RefreshButton(props: RefreshButtonProps) {
+  const { onRefresh, localStorageKey } = props;
+  const intervals = [
+    { label: '5 seconds', value: 5000 },
+    { label: '10 seconds', value: 10000 },
+    { label: '30 seconds', value: 30000 },
+    { label: '1 minute', value: 60000 },
+    { label: '2 minutes', value: 120000 },
+    { label: 'None', value: 0 },
+  ];
 
-  render() {
-    const { onRefresh, localStorageKey } = this.props;
-    const intervals = [
-      { label: '5 seconds', value: 5000 },
-      { label: '10 seconds', value: 10000 },
-      { label: '30 seconds', value: 30000 },
-      { label: '1 minute', value: 60000 },
-      { label: '2 minutes', value: 120000 },
-      { label: 'None', value: 0 },
-    ];
-
-    return (
-      <TimedButton
-        defaultValue={30000}
-        label="Auto refresh every:"
-        intervals={intervals}
-        icon={IconNames.REFRESH}
-        text="Refresh"
-        onRefresh={onRefresh}
-        localStorageKey={localStorageKey}
-      />
-    );
-  }
-}
+  return (
+    <TimedButton
+      defaultValue={30000}
+      label="Auto refresh every:"
+      intervals={intervals}
+      icon={IconNames.REFRESH}
+      text="Refresh"
+      onRefresh={onRefresh}
+      localStorageKey={localStorageKey}
+    />
+  );
+});

@@ -21,14 +21,12 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -38,9 +36,6 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
 import org.apache.druid.query.search.SearchQueryQueryToolChest;
-import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryConfig;
-import org.apache.druid.query.select.SelectQueryQueryToolChest;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -56,8 +51,7 @@ public final class CachingClusteredClientTestUtils
    * of the test.
    */
   public static Pair<QueryToolChestWarehouse, Closer> createWarehouse(
-      ObjectMapper objectMapper,
-      Supplier<SelectQueryConfig> selectConfigSupplier
+      ObjectMapper objectMapper
   )
   {
     final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest.makeQueryRunnerFactory(
@@ -70,30 +64,15 @@ public final class CachingClusteredClientTestUtils
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                 .put(
                     TimeseriesQuery.class,
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new TimeseriesQueryQueryToolChest()
                 )
                 .put(
                     TopNQuery.class,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new TopNQueryQueryToolChest(new TopNQueryConfig())
                 )
                 .put(
                     SearchQuery.class,
-                    new SearchQueryQueryToolChest(
-                        new SearchQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
-                )
-                .put(
-                    SelectQuery.class,
-                    new SelectQueryQueryToolChest(
-                        objectMapper,
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new SearchQueryQueryToolChest(new SearchQueryConfig())
                 )
                 .put(
                     GroupByQuery.class,

@@ -28,7 +28,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -91,8 +91,10 @@ public abstract class AbstractTask implements Task
     }
 
     final List<Object> objects = new ArrayList<>();
+    final String suffix = RandomIdUtils.getRandomId();
     objects.add(typeName);
     objects.add(dataSource);
+    objects.add(suffix);
     if (interval != null) {
       objects.add(interval.getStart());
       objects.add(interval.getEnd());
@@ -154,16 +156,6 @@ public abstract class AbstractTask implements Task
     return false;
   }
 
-  /**
-   * Should be called independent of canRestore so that resource cleaning can be achieved.
-   * If resource cleaning is required, concrete class should override this method
-   */
-  @Override
-  public void stopGracefully(TaskConfig taskConfig)
-  {
-    // Do nothing and let the concrete class handle it
-  }
-
   @Override
   public String toString()
   {
@@ -188,7 +180,7 @@ public abstract class AbstractTask implements Task
     return ID_JOINER.join(objects);
   }
 
-  static String joinId(Object...objects)
+  static String joinId(Object... objects)
   {
     return ID_JOINER.join(objects);
   }

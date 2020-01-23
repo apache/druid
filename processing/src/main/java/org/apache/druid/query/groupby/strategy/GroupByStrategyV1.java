@@ -28,23 +28,23 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GroupByMergedQueryRunner;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -56,7 +56,6 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class GroupByStrategyV1 implements GroupByStrategy
@@ -81,7 +80,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners)
+  public GroupByQueryResource prepareResource(GroupByQuery query)
   {
     return new GroupByQueryResource();
   }
@@ -93,30 +92,21 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public QueryRunner<Row> createIntervalChunkingRunner(
-      final IntervalChunkingQueryRunnerDecorator decorator,
-      final QueryRunner<Row> runner,
-      final GroupByQueryQueryToolChest toolChest
-  )
-  {
-    return decorator.decorate(runner, toolChest);
-  }
-
-  @Override
   public boolean doMergeResults(final GroupByQuery query)
   {
     return query.getContextBoolean(GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, true);
   }
 
   @Override
-  public Sequence<Row> mergeResults(
-      final QueryRunner<Row> baseRunner,
+  public Sequence<ResultRow> mergeResults(
+      final QueryRunner<ResultRow> baseRunner,
       final GroupByQuery query,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     final IncrementalIndex index = GroupByQueryHelper.makeIncrementalIndex(
         query,
+        null,
         configSupplier.get(),
         bufferPool,
         baseRunner.run(
@@ -128,39 +118,43 @@ public class GroupByStrategyV1 implements GroupByStrategy
                     .setHavingSpec(null)
                     .setLimitSpec(NoopLimitSpec.instance())
                     .overrideContext(
-                        ImmutableMap.of(
-                            "finalize", false,
-                            //set sort to false avoids unnecessary sorting while merging results. we only need to sort
-                            //in the end when returning results to user. (note this is only respected by groupBy v1)
-                            GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
-                            //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would
-                            //return merged results. (note this is only respected by groupBy v1)
-                            GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
-                            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
-                        )
+                        ImmutableMap.<String, Object>builder()
+                            .put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1)
+                            .put("finalize", false)
+
+                            // Always request array result rows when passing the query down.
+                            .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
+
+                            // Set sort to false avoids unnecessary sorting while merging results. we only need to sort
+                            // in the end when returning results to user. (note this is only respected by groupBy v1)
+                            .put(GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false)
+
+                            // No merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would
+                            // return merged results. (note this is only respected by groupBy v1)
+                            .put(GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false)
+                            .build()
                     )
                     .build()
             ),
             responseContext
-        ),
-        true
+        )
     );
 
     return Sequences.withBaggage(GroupByQueryHelper.postAggregate(query, index), index);
   }
 
   @Override
-  public Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query)
+  public Sequence<ResultRow> applyPostProcessing(Sequence<ResultRow> results, GroupByQuery query)
   {
     return query.postProcess(results);
   }
 
   @Override
-  public Sequence<Row> processSubqueryResult(
+  public Sequence<ResultRow> processSubqueryResult(
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResource resource,
-      Sequence<Row> subqueryResult,
+      Sequence<ResultRow> subqueryResult,
       boolean wasQueryPushedDown
   )
   {
@@ -221,10 +215,10 @@ public class GroupByStrategyV1 implements GroupByStrategy
                 GroupByQueryHelper.CTX_KEY_SORT_RESULTS, true
             )
         ),
+        subquery,
         configSupplier.get(),
         bufferPool,
-        subqueryResult,
-        false
+        subqueryResult
     );
 
     //Outer query might have multiple intervals, but they are expected to be non-overlapping and sorted which
@@ -233,15 +227,16 @@ public class GroupByStrategyV1 implements GroupByStrategy
     //and concatenate the results.
     final IncrementalIndex outerQueryResultIndex = GroupByQueryHelper.makeIncrementalIndex(
         outerQuery,
+        null,
         configSupplier.get(),
         bufferPool,
         Sequences.concat(
             Sequences.map(
                 Sequences.simple(outerQuery.getIntervals()),
-                new Function<Interval, Sequence<Row>>()
+                new Function<Interval, Sequence<ResultRow>>()
                 {
                   @Override
-                  public Sequence<Row> apply(Interval interval)
+                  public Sequence<ResultRow> apply(Interval interval)
                   {
                     return process(
                         outerQuery.withQuerySegmentSpec(
@@ -252,8 +247,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
                   }
                 }
             )
-        ),
-        true
+        )
     );
 
     innerQueryResultIndex.close();
@@ -265,28 +259,31 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> processSubtotalsSpec(
+  public Sequence<ResultRow> processSubtotalsSpec(
       GroupByQuery query,
       GroupByQueryResource resource,
-      Sequence<Row> queryResult
+      Sequence<ResultRow> queryResult
   )
   {
     throw new UnsupportedOperationException("subtotalsSpec is not supported for v1 groupBy strategy.");
   }
 
   @Override
-  public QueryRunner<Row> mergeRunners(
+  public QueryRunner<ResultRow> mergeRunners(
       final ListeningExecutorService exec,
-      final Iterable<QueryRunner<Row>> queryRunners
+      final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
     return new GroupByMergedQueryRunner<>(exec, configSupplier, queryWatcher, bufferPool, queryRunners);
   }
 
   @Override
-  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter)
+  public Sequence<ResultRow> process(final GroupByQuery query, final StorageAdapter storageAdapter)
   {
-    return engine.process(query, storageAdapter);
+    return Sequences.map(
+        engine.process(query, storageAdapter),
+        row -> GroupByQueryHelper.toResultRow(query, row)
+    );
   }
 
   @Override

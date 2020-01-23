@@ -79,12 +79,9 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
@@ -144,7 +141,7 @@ import java.util.concurrent.Executor;
 public class RealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
-  private static final ServiceEmitter emitter = new ServiceEmitter(
+  private static final ServiceEmitter EMITTER = new ServiceEmitter(
       "service",
       "host",
       new NoopEmitter()
@@ -163,8 +160,8 @@ public class RealtimeIndexTaskTest
   @Before
   public void setUp()
   {
-    EmittingLogger.registerEmitter(emitter);
-    emitter.start();
+    EmittingLogger.registerEmitter(EMITTER);
+    EMITTER.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
     now = DateTimes.nowUtc();
   }
@@ -881,8 +878,8 @@ public class RealtimeIndexTaskTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
@@ -894,7 +891,7 @@ public class RealtimeIndexTaskTest
         taskLockbox,
         taskStorage,
         mdc,
-        emitter,
+        EMITTER,
         EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
@@ -902,23 +899,11 @@ public class RealtimeIndexTaskTest
         taskActionToolbox,
         new TaskAuditLogConfig(false)
     );
-    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
-        null,
-        null,
-        null
-    )
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return delegate;
-      }
-    };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 new QueryWatcher()
                 {
@@ -976,8 +961,9 @@ public class RealtimeIndexTaskTest
     };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null, // taskExecutorNode
         taskActionClientFactory,
-        emitter,
+        EMITTER,
         new TestDataSegmentPusher(),
         new TestDataSegmentKiller(),
         null, // DataSegmentMover
@@ -999,7 +985,8 @@ public class RealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
 
     return toolboxFactory.build(task);
@@ -1020,8 +1007,7 @@ public class RealtimeIndexTaskTest
                                   .intervals("2000/3000")
                                   .build();
 
-    List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    List<Result<TimeseriesResultValue>> results = task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
     if (results.isEmpty()) {
       return 0L;
     } else {

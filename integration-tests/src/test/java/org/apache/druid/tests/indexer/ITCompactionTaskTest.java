@@ -26,7 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -34,16 +35,18 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+@Test(groups = TestNGGroup.OTHER_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITCompactionTaskTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITCompactionTaskTest.class);
-  private static String INDEX_TASK = "/indexer/wikipedia_index_task.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_index_test";
-  private static String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
+  private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
+  private static final String INDEX_DATASOURCE = "wikipedia_index_test";
+  private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
 
   @Inject
   private IntegrationTestingConfig config;
@@ -62,11 +65,11 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     loadData();
     final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
     intervalsBeforeCompaction.sort(null);
-    try (final Closeable closeable = unloader(fullDatasourceName)) {
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(INDEX_QUERIES_RESOURCE);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", INDEX_QUERIES_RESOURCE);
@@ -98,7 +101,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Load"
     );
@@ -113,7 +116,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     LOG.info("TaskID for compaction task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Compaction"
     );
@@ -121,7 +124,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void checkCompactionFinished(int numExpectedSegments)
   {
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> {
           int metadataSegmentCount = coordinator.getMetadataSegments(fullDatasourceName).size();
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
@@ -133,7 +136,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void checkCompactionIntervals(List<String> expectedIntervals)
   {
-    RetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilTrue(
         () -> {
           final List<String> intervalsAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
           intervalsAfterCompaction.sort(null);

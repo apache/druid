@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { HistoryDialog } from './history-dialog';
 
@@ -29,7 +29,6 @@ describe('history dialog', () => {
           { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
           { auditTime: 'test', auditInfo: 'test', payload: JSON.stringify({ name: 'test' }) },
         ]}
-        isOpen
       />
     );
     render(historyDialog);

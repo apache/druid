@@ -22,6 +22,7 @@ import {
   Hotkey,
   Hotkeys,
   HotkeysTarget,
+  Intent,
   Menu,
   MenuItem,
   Popover,
@@ -32,6 +33,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { MenuCheckbox } from '../../../components';
+import { pluralIfNeeded } from '../../../utils';
 import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
@@ -47,23 +49,15 @@ export interface RunButtonProps {
   runeMode: boolean;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: ((wrapQuery: boolean) => void) | null;
-  onExplain: () => void;
-}
-
-interface RunButtonState {
-  wrapQuery: boolean;
+  onRun: (() => void) | undefined;
+  onExplain: (() => void) | undefined;
+  onEditContext: () => void;
+  onHistory: () => void;
+  onPrettier: () => void;
 }
 
 @HotkeysTarget
-export class RunButton extends React.PureComponent<RunButtonProps, RunButtonState> {
-  constructor(props: RunButtonProps, context: any) {
-    super(props, context);
-    this.state = {
-      wrapQuery: true,
-    };
-  }
-
+export class RunButton extends React.PureComponent<RunButtonProps> {
   public renderHotkeys() {
     return (
       <Hotkeys>
@@ -81,33 +75,39 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   private handleRun = () => {
     const { onRun } = this.props;
     if (!onRun) return;
-    onRun(this.state.wrapQuery);
+    onRun();
   };
 
   renderExtraMenu() {
-    const { runeMode, onExplain, queryContext, onQueryContextChange } = this.props;
-    const { wrapQuery } = this.state;
+    const {
+      runeMode,
+      onExplain,
+      queryContext,
+      onQueryContextChange,
+      onEditContext,
+      onHistory,
+      onPrettier,
+    } = this.props;
 
     const useCache = getUseCache(queryContext);
     const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
     const useApproximateTopN = getUseApproximateTopN(queryContext);
+    const numContextKeys = Object.keys(queryContext).length;
 
     return (
       <Menu>
         <MenuItem
           icon={IconNames.HELP}
-          text="Query docs"
+          text={runeMode ? 'Native query documentation' : 'DruidSQL documentation'}
           href={runeMode ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
           target="_blank"
         />
+        <MenuItem icon={IconNames.HISTORY} text="Query history" onClick={onHistory} />
         {!runeMode && (
           <>
-            <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
-            <MenuCheckbox
-              checked={wrapQuery}
-              label="Wrap query with limit"
-              onChange={() => this.setState({ wrapQuery: !wrapQuery })}
-            />
+            {onExplain && (
+              <MenuItem icon={IconNames.CLEAN} text="Explain SQL query" onClick={onExplain} />
+            )}
             <MenuCheckbox
               checked={useApproximateCountDistinct}
               label="Use approximate COUNT(DISTINCT)"
@@ -133,26 +133,41 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
             onQueryContextChange(setUseCache(queryContext, !useCache));
           }}
         />
+        {!runeMode && (
+          <MenuItem
+            icon={IconNames.PROPERTIES}
+            text="Edit context"
+            onClick={onEditContext}
+            labelElement={numContextKeys ? pluralIfNeeded(numContextKeys, 'key') : undefined}
+          />
+        )}
+        {runeMode && (
+          <MenuItem icon={IconNames.ALIGN_LEFT} text="Prettify JSON" onClick={onPrettier} />
+        )}
       </Menu>
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { runeMode, onRun } = this.props;
-    const { wrapQuery } = this.state;
+    const runButtonText = 'Run' + (runeMode ? 'e' : '');
 
     return (
       <ButtonGroup className="run-button">
-        <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-          <Button
-            icon={IconNames.CARET_RIGHT}
-            onClick={this.handleRun}
-            text={runeMode ? 'Rune' : wrapQuery ? 'Run with limit' : 'Run as is'}
-            disabled={!onRun}
-          />
-        </Tooltip>
+        {onRun ? (
+          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
+            <Button
+              icon={IconNames.CARET_RIGHT}
+              onClick={this.handleRun}
+              text={runButtonText}
+              intent={Intent.PRIMARY}
+            />
+          </Tooltip>
+        ) : (
+          <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
+        )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} />
+          <Button icon={IconNames.MORE} intent={onRun ? Intent.PRIMARY : undefined} />
         </Popover>
       </ButtonGroup>
     );

@@ -34,12 +34,52 @@ import java.util.zip.Deflater;
  */
 public class ServerConfig
 {
-
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
+
+  /**
+   * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
+   *
+   * This constructor is provided for callers that need to create a ServerConfig object with specific field values.
+   */
+  public ServerConfig(
+      int numThreads,
+      int queueSize,
+      boolean enableRequestLimit,
+      @NotNull Period maxIdleTime,
+      long defaultQueryTimeout,
+      long maxScatterGatherBytes,
+      long maxQueryTimeout,
+      int maxRequestHeaderSize,
+      @NotNull Period gracefulShutdownTimeout,
+      @NotNull Period unannouncePropagationDelay,
+      int inflateBufferSize,
+      int compressionLevel,
+      boolean enableForwardedRequestCustomizer
+  )
+  {
+    this.numThreads = numThreads;
+    this.queueSize = queueSize;
+    this.enableRequestLimit = enableRequestLimit;
+    this.maxIdleTime = maxIdleTime;
+    this.defaultQueryTimeout = defaultQueryTimeout;
+    this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxQueryTimeout = maxQueryTimeout;
+    this.maxRequestHeaderSize = maxRequestHeaderSize;
+    this.gracefulShutdownTimeout = gracefulShutdownTimeout;
+    this.unannouncePropagationDelay = unannouncePropagationDelay;
+    this.inflateBufferSize = inflateBufferSize;
+    this.compressionLevel = compressionLevel;
+    this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
+  }
+
+  public ServerConfig()
+  {
+
+  }
 
   @JsonProperty
   @Min(1)
-  private int numThreads = Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  private int numThreads = getDefaultNumThreads();
 
   @JsonProperty
   @Min(1)
@@ -83,6 +123,9 @@ public class ServerConfig
   @Min(-1)
   @Max(9)
   private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
+
+  @JsonProperty
+  private boolean enableForwardedRequestCustomizer = false;
 
   public int getNumThreads()
   {
@@ -144,6 +187,10 @@ public class ServerConfig
     return compressionLevel;
   }
 
+  public boolean isEnableForwardedRequestCustomizer()
+  {
+    return enableForwardedRequestCustomizer;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -164,15 +211,15 @@ public class ServerConfig
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
-           Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
-           Objects.equals(unannouncePropagationDelay, that.unannouncePropagationDelay);
+           enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           maxIdleTime.equals(that.maxIdleTime) &&
+           gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
+           unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
   }
 
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         numThreads,
         queueSize,
@@ -185,7 +232,8 @@ public class ServerConfig
         gracefulShutdownTimeout,
         unannouncePropagationDelay,
         inflateBufferSize,
-        compressionLevel
+        compressionLevel,
+        enableForwardedRequestCustomizer
     );
   }
 
@@ -205,6 +253,12 @@ public class ServerConfig
            ", unannouncePropagationDelay=" + unannouncePropagationDelay +
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
+           ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
            '}';
+  }
+
+  public static int getDefaultNumThreads()
+  {
+    return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
   }
 }

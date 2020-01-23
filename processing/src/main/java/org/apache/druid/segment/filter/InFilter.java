@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -32,9 +33,10 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -52,6 +54,7 @@ public class InFilter implements Filter
   private final String dimension;
   private final Set<String> values;
   private final ExtractionFn extractionFn;
+  private final FilterTuning filterTuning;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
@@ -62,12 +65,14 @@ public class InFilter implements Filter
       Supplier<DruidLongPredicate> longPredicateSupplier,
       Supplier<DruidFloatPredicate> floatPredicateSupplier,
       Supplier<DruidDoublePredicate> doublePredicateSupplier,
-      ExtractionFn extractionFn
+      ExtractionFn extractionFn,
+      FilterTuning filterTuning
   )
   {
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
     this.longPredicateSupplier = longPredicateSupplier;
     this.floatPredicateSupplier = floatPredicateSupplier;
     this.doublePredicateSupplier = doublePredicateSupplier;
@@ -151,7 +156,7 @@ public class InFilter implements Filter
   {
     return DimensionHandlerUtils.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(getPredicateFactory());
   }
@@ -163,9 +168,21 @@ public class InFilter implements Filter
   }
 
   @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override

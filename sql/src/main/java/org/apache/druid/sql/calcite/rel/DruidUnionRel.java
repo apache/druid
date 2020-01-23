@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DruidUnionRel extends DruidRel<DruidUnionRel>
@@ -166,12 +167,11 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
     return rels.stream()
                .flatMap(rel -> ((DruidRel<?>) rel).getDataSourceNames().stream())
-               .distinct()
-               .collect(Collectors.toList());
+               .collect(Collectors.toSet());
   }
 
   @Override

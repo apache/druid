@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
+import axios from 'axios';
 import 'brace'; // Import Ace editor and all the sub components used in the app
 import 'brace/ext/language_tools';
 import 'brace/theme/solarized_dark';
-import 'es6-shim/es6-shim';
-import 'es7-shim'; // Webpack with automatically pick browser.js which does the shim()
+import 'core-js/stable';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import 'regenerator-runtime/runtime';
 
 import './ace-modes/dsql';
 import './ace-modes/hjson';
 import './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
+import { UrlBaser } from './singletons/url-baser';
 
 import './entry.scss';
 
@@ -36,10 +38,11 @@ if (!container) throw new Error('container not found');
 
 interface ConsoleConfig {
   title?: string;
-  hideLegacy?: boolean;
   baseURL?: string;
   customHeaderName?: string;
   customHeaderValue?: string;
+  customHeaders?: Record<string, string>;
+  exampleManifestsUrl?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -47,12 +50,20 @@ if (typeof consoleConfig.title === 'string') {
   window.document.title = consoleConfig.title;
 }
 
+if (consoleConfig.baseURL) {
+  axios.defaults.baseURL = consoleConfig.baseURL;
+  UrlBaser.baseUrl = consoleConfig.baseURL;
+}
+if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
+  axios.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+}
+if (consoleConfig.customHeaders) {
+  Object.assign(axios.defaults.headers, consoleConfig.customHeaders);
+}
+
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
-    hideLegacy: Boolean(consoleConfig.hideLegacy),
-    baseURL: consoleConfig.baseURL,
-    customHeaderName: consoleConfig.customHeaderName,
-    customHeaderValue: consoleConfig.customHeaderValue,
+    exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
   }) as any,
   container,
 );

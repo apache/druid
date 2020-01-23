@@ -31,6 +31,7 @@ import org.apache.druid.annotations.UsedInGeneratedCode;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
@@ -60,19 +61,8 @@ public class ZkWorker implements Closeable
   {
     this.worker = new AtomicReference<>(worker);
     this.statusCache = statusCache;
-    this.cacheConverter = new Function<ChildData, TaskAnnouncement>()
-    {
-      @Override
-      public TaskAnnouncement apply(ChildData input)
-      {
-        try {
-          return jsonMapper.readValue(input.getData(), TaskAnnouncement.class);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
+    this.cacheConverter = (ChildData input) ->
+        JacksonUtils.readValue(jsonMapper, input.getData(), TaskAnnouncement.class);
   }
 
   public void start() throws Exception

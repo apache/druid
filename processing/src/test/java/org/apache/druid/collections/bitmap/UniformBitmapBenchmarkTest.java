@@ -68,13 +68,13 @@ public class UniformBitmapBenchmarkTest extends BitmapBenchmark
         r.add(k);
         expectedUnion.set(k);
       }
-      concise[i] = ImmutableConciseSet.newImmutableFromMutable(c);
-      offheapConcise[i] = makeOffheapConcise(concise[i]);
-      roaring[i] = r;
-      immutableRoaring[i] = makeImmutableRoaring(r);
-      offheapRoaring[i] = makeOffheapRoaring(r);
-      genericConcise[i] = new WrappedImmutableConciseBitmap(offheapConcise[i]);
-      genericRoaring[i] = new WrappedImmutableRoaringBitmap(offheapRoaring[i]);
+      CONCISE[i] = ImmutableConciseSet.newImmutableFromMutable(c);
+      OFF_HEAP_CONCISE[i] = makeOffheapConcise(CONCISE[i]);
+      ROARING[i] = r;
+      IMMUTABLE_ROARING[i] = makeImmutableRoaring(r);
+      OFF_HEAP_ROARING[i] = makeOffheapRoaring(r);
+      GENERIC_CONCISE[i] = new WrappedImmutableConciseBitmap(OFF_HEAP_CONCISE[i]);
+      GENERIC_ROARING[i] = new WrappedImmutableRoaringBitmap(OFF_HEAP_ROARING[i]);
     }
     unionCount = expectedUnion.cardinality();
     minIntersection = knownTrue.length;

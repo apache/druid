@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
-import { getEmptyTimestampSpec } from '../../../utils/ingestion-spec';
+import { getDummyTimestampSpec } from '../../../utils/ingestion-spec';
 
 import { ParseTimeTable } from './parse-time-table';
 
@@ -29,7 +29,7 @@ describe('parse time table', () => {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],
@@ -39,11 +39,12 @@ describe('parse time table', () => {
       <ParseTimeTable
         sampleBundle={{
           headerAndRows: sampleData,
-          timestampSpec: getEmptyTimestampSpec(),
+          timestampSpec: getDummyTimestampSpec(),
         }}
         columnFilter=""
         possibleTimestampColumnsOnly={false}
-        onTimestampColumnSelect={() => null}
+        selectedColumnName={undefined}
+        onTimestampColumnSelect={() => {}}
       />
     );
 

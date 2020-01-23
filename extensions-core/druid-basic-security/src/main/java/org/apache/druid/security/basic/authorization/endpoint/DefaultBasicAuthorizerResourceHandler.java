@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -70,7 +71,20 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response getAllGroupMappings(String authorizerName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+
+  @Override
   public Response getUser(String authorizerName, String userName, boolean isFull, boolean simplifyPermissions)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response getGroupMapping(String authorizerName, String groupMappingName, boolean isFull)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -82,7 +96,19 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response createGroupMapping(String authorizerName, BasicAuthorizerGroupMapping groupMapping)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
   public Response deleteUser(String authorizerName, String userName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response deleteGroupMapping(String authorizerName, String groupMappingName)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -118,7 +144,19 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response assignRoleToGroupMapping(String authorizerName, String groupMappingName, String roleName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
   public Response unassignRoleFromUser(String authorizerName, String userName, String roleName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response unassignRoleFromGroupMapping(String authorizerName, String groupMappingName, String roleName)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -130,7 +168,19 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
-  public Response getCachedMaps(String authorizerName)
+  public Response getRolePermissions(String authorizerName, String roleName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response getCachedUserMaps(String authorizerName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response getCachedGroupMappingMaps(String authorizerName)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -142,7 +192,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
-  public Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap)
+  public Response authorizerUserUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
@@ -156,7 +206,26 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
                      .build();
     }
 
-    cacheManager.handleAuthorizerUpdate(authorizerName, serializedUserAndRoleMap);
+    cacheManager.handleAuthorizerUserUpdate(authorizerName, serializedUserAndRoleMap);
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response authorizerGroupMappingUpdateListener(String authorizerName, byte[] serializedGroupMappingAndRoleMap)
+  {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      String errMsg = StringUtils.format("Received update for unknown authorizer[%s]", authorizerName);
+      log.error(errMsg);
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of(
+                         "error",
+                         StringUtils.format(errMsg)
+                     ))
+                     .build();
+    }
+
+    cacheManager.handleAuthorizerGroupMappingUpdate(authorizerName, serializedGroupMappingAndRoleMap);
     return Response.ok().build();
   }
 
@@ -166,7 +235,10 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     Map<String, Boolean> loadStatus = new HashMap<>();
     authorizerMap.forEach(
         (authorizerName, authorizer) -> {
-          loadStatus.put(authorizerName, cacheManager.getUserMap(authorizerName) != null);
+          loadStatus.put(authorizerName, cacheManager.getUserMap(authorizerName) != null &&
+                                         cacheManager.getRoleMap(authorizerName) != null &&
+                                         cacheManager.getGroupMappingMap(authorizerName) != null &&
+                                         cacheManager.getGroupMappingRoleMap(authorizerName) != null);
         }
     );
     return Response.ok(loadStatus).build();

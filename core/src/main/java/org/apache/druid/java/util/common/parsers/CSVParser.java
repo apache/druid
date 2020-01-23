@@ -20,6 +20,8 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.opencsv.RFC4180Parser;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -28,7 +30,7 @@ import java.util.List;
 
 public class CSVParser extends AbstractFlatTextFormatParser
 {
-  private final com.opencsv.CSVParser parser = new com.opencsv.CSVParser();
+  private final RFC4180Parser parser = CsvInputFormat.createOpenCsvParser();
 
   public CSVParser(
       @Nullable final String listDelimiter,
@@ -51,17 +53,17 @@ public class CSVParser extends AbstractFlatTextFormatParser
     setFieldNames(fieldNames);
   }
 
-  @Override
-  protected List<String> parseLine(String input) throws IOException
-  {
-    return Arrays.asList(parser.parseLine(input));
-  }
-
   @VisibleForTesting
   CSVParser(@Nullable final String listDelimiter, final String header)
   {
     this(listDelimiter, false, 0);
 
     setFieldNames(header);
+  }
+
+  @Override
+  protected List<String> parseLine(String input) throws IOException
+  {
+    return Arrays.asList(parser.parseLine(input));
   }
 }

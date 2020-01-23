@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ import java.util.Set;
 /**
  *
  */
-public class ParserTest
+public class ParserTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSimple()
@@ -196,7 +197,7 @@ public class ParserTest
   public void testFunctions()
   {
     validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
-    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("else", "then", "cond"));
+    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "else", "then"));
     validateParser("cast(x, 'STRING')", "(cast [x, STRING])", ImmutableList.of("x"));
     validateParser("cast(x, 'LONG')", "(cast [x, LONG])", ImmutableList.of("x"));
     validateParser("cast(x, 'DOUBLE')", "(cast [x, DOUBLE])", ImmutableList.of("x"));
@@ -319,7 +320,7 @@ public class ParserTest
     validateParser(
         "array_append(map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))), a)",
         "(array_append [(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])]), a])",
-        ImmutableList.of("a", "x", "y", "z"),
+        ImmutableList.of("x", "y", "a", "z"),
         ImmutableSet.of("a"),
         ImmutableSet.of("x", "z")
     );
@@ -399,6 +400,13 @@ public class ParserTest
         "(cast [x, LONG_ARRAY])",
         ImmutableList.of("x")
     );
+
+    validateApplyUnapplied(
+        "case_searched((x == 'b'),'b',(x == 'g'),'g','Other')",
+        "(case_searched [(== x b), b, (== x g), g, Other])",
+        "(map ([x] -> (case_searched [(== x b), b, (== x g), g, Other])), [x])",
+        ImmutableList.of("x")
+    );
   }
 
   @Test
@@ -423,14 +431,14 @@ public class ParserTest
     validateApplyUnapplied(
         "x + x",
         "(+ x x)",
-        "(cartesian_map ([x, x_0] -> (+ x x_0)), [x, x])",
+        "(map ([x] -> (+ x x)), [x])",
         ImmutableList.of("x")
     );
 
     validateApplyUnapplied(
         "x + x + x",
         "(+ (+ x x) x)",
-        "(cartesian_map ([x, x_0, x_1] -> (+ (+ x x_0) x_1)), [x, x, x])",
+        "(map ([x] -> (+ (+ x x) x)), [x])",
         ImmutableList.of("x")
     );
 
@@ -438,7 +446,7 @@ public class ParserTest
     validateApplyUnapplied(
         "x + x + x + y + y + y + y + z + z + z",
         "(+ (+ (+ (+ (+ (+ (+ (+ (+ x x) x) y) y) y) y) z) z) z)",
-        "(cartesian_map ([x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)), [x, x, x, y, y, y, y, z, z, z])",
+        "(cartesian_map ([x, y, z] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x) x) y) y) y) y) z) z) z)), [x, y, z])",
         ImmutableList.of("x", "y", "z")
     );
   }
@@ -471,7 +479,7 @@ public class ParserTest
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     final Expr.BindingDetails deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, identifiers, deets.getRequiredColumnsList());
+    Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
     Assert.assertEquals(expression, arrays, deets.getArrayVariables());
   }
@@ -486,7 +494,7 @@ public class ParserTest
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Expr.BindingDetails deets = parsed.analyzeInputs();
     Parser.validateExpr(parsed, deets);
-    final Expr transformed = Parser.applyUnappliedIdentifiers(parsed, deets, identifiers);
+    final Expr transformed = Parser.applyUnappliedBindings(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
     Assert.assertEquals(applied, applied, transformed.toString());
   }

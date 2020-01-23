@@ -147,6 +147,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     }
     assertFilterMatchesSkipVectorize(edf("dim4 == '1'"), ImmutableList.of("0"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '3'"), ImmutableList.of("3"));
+    assertFilterMatchesSkipVectorize(edf("dim4 == '4'"), ImmutableList.of("4", "5"));
   }
 
   @Test
@@ -187,7 +188,10 @@ public class ExpressionFilterTest extends BaseFilterTest
   public void testConstantExpression()
   {
     assertFilterMatchesSkipVectorize(edf("1 + 1"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    assertFilterMatchesSkipVectorize(edf("'true'"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+
     assertFilterMatchesSkipVectorize(edf("0 + 0"), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(edf("'false'"), ImmutableList.of());
   }
 
   @Test
@@ -268,6 +272,6 @@ public class ExpressionFilterTest extends BaseFilterTest
 
   private static ExpressionDimFilter edf(final String expression)
   {
-    return new ExpressionDimFilter(expression, TestExprMacroTable.INSTANCE);
+    return new ExpressionDimFilter(expression, null, TestExprMacroTable.INSTANCE);
   }
 }

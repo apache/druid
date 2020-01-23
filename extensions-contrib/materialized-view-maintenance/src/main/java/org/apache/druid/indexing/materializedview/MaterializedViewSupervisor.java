@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
@@ -52,9 +53,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,6 +64,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntSupplier;
 
 public class MaterializedViewSupervisor implements Supervisor
 {
@@ -277,12 +279,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public void checkpoint(
-      @Nullable Integer taskGroupId,
-      String baseSequenceName,
-      DataSourceMetadata previousCheckPoint,
-      DataSourceMetadata currentCheckPoint
-  )
+  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     // do nothing
   }
@@ -346,7 +343,8 @@ public class MaterializedViewSupervisor implements Supervisor
         getVersionAndBaseSegments(
             metadataStorageCoordinator.getUsedSegmentsForInterval(
                 dataSource,
-                ALL_INTERVAL
+                ALL_INTERVAL,
+                Segments.ONLY_VISIBLE
             )
         );
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
@@ -369,18 +367,29 @@ public class MaterializedViewSupervisor implements Supervisor
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
     Map<Interval, String> toBuildInterval = new HashMap<>(difference.entriesOnlyOnLeft());
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
+    // update version of derived segments if isn't the max (created_date) of all base segments
+    // prevent user supplied segments list did not match with segments list obtained from db
+    Map<Interval, MapDifference.ValueDifference<String>> checkIfNewestVersion =
+            new HashMap<>(difference.entriesDiffering());
+    for (Map.Entry<Interval, MapDifference.ValueDifference<String>> entry : checkIfNewestVersion.entrySet()) {
+      final String versionOfBase = maxCreatedDate.get(entry.getKey());
+      final String versionOfDerivative = derivativeVersion.get(entry.getKey());
+      final int baseCount = baseSegments.get(entry.getKey()).size();
+      final IntSupplier usedCountSupplier = () ->
+              metadataStorageCoordinator
+                  .getUsedSegmentsForInterval(spec.getBaseDataSource(), entry.getKey(), Segments.ONLY_VISIBLE).size();
+      if (versionOfBase.compareTo(versionOfDerivative) > 0 && baseCount == usedCountSupplier.getAsInt()) {
+        toBuildInterval.put(entry.getKey(), versionOfBase);
+      }
+    }
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
-    for (Interval interval : runningVersion.keySet()) {
-      if (toBuildInterval.containsKey(interval)
-          && toBuildInterval.get(interval).equals(runningVersion.get(interval))
-          ) {
+    for (Map.Entry<Interval, String> version : runningVersion.entrySet()) {
+      final Interval interval = version.getKey();
+      final String host = version.getValue();
+      if (toBuildInterval.containsKey(interval) && toBuildInterval.get(interval).equals(host)) {
         toBuildInterval.remove(interval);
-
-      } else if (
-          toBuildInterval.containsKey(interval)
-          && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
-      ) {
+      } else if (toBuildInterval.containsKey(interval) && !toBuildInterval.get(interval).equals(host)) {
         if (taskMaster.getTaskQueue().isPresent()) {
           taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
@@ -390,7 +399,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        segmentManager.removeSegment(segment.getId().toString());
+        segmentManager.markSegmentAsUnused(segment.getId().toString());
       }
     }
     // data of the latest interval will be built firstly.
@@ -424,7 +433,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getVersionAndBaseSegments(
-      List<DataSegment> snapshot
+      Collection<DataSegment> snapshot
   )
   {
     Map<Interval, String> versions = new HashMap<>();
@@ -439,7 +448,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(
-      List<Pair<DataSegment, String>> snapshot
+      Collection<Pair<DataSegment, String>> snapshot
   )
   {
     Interval maxAllowedToBuildInterval = snapshot.parallelStream()
@@ -498,7 +507,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
     metadataStorageCoordinator.deletePendingSegments(dataSource, ALL_INTERVAL);
-    segmentManager.removeDataSource(dataSource);
+    segmentManager.markAsUnusedAllSegmentsInDataSource(dataSource);
     metadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
   }
 

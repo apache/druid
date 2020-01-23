@@ -21,16 +21,15 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,28 +38,20 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.Result;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
-import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -93,191 +84,119 @@ public class QueryMaker
 
   public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
   {
-    final Query query = druidQuery.getQuery();
+    final Query<?> query = druidQuery.getQuery();
 
-    final Query innerMostQuery = findInnerMostQuery(query);
-    if (plannerContext.getPlannerConfig().isRequireTimeCondition() &&
-        innerMostQuery.getIntervals().equals(Intervals.ONLY_ETERNITY)) {
-      throw new CannotBuildQueryException(
-          "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
-      );
+    if (plannerContext.getPlannerConfig().isRequireTimeCondition()) {
+      final Query<?> innerMostQuery = findInnerMostQuery(query);
+      if (innerMostQuery.getIntervals().equals(Intervals.ONLY_ETERNITY)) {
+        throw new CannotBuildQueryException(
+            "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
+        );
+      }
     }
 
-    if (query instanceof TimeseriesQuery) {
-      return executeTimeseries(druidQuery, (TimeseriesQuery) query);
-    } else if (query instanceof TopNQuery) {
-      return executeTopN(druidQuery, (TopNQuery) query);
-    } else if (query instanceof GroupByQuery) {
-      return executeGroupBy(druidQuery, (GroupByQuery) query);
-    } else if (query instanceof ScanQuery) {
-      return executeScan(druidQuery, (ScanQuery) query);
+    final List<String> rowOrder;
+    if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
+      // Hack for timeseries queries: when generating them, DruidQuery.toTimeseriesQuery translates a dimension
+      // based on a timestamp_floor expression into a 'granularity'. This is not reflected in the druidQuery's
+      // output row signature, so we have to account for it here. When groupBy on timestamp_floor expressions is
+      // just as fast as a timeseries query (a noble goal) we can remove timeseries queries from the SQL layer and
+      // also remove this hack.
+      final String timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions()).getOutputName();
+      rowOrder = druidQuery.getOutputRowSignature().getRowOrder().stream()
+                           .map(f -> timeDimension.equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
+                           .collect(Collectors.toList());
     } else {
-      throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
+      rowOrder = druidQuery.getOutputRowSignature().getRowOrder();
     }
+
+    return execute(
+        query,
+        rowOrder,
+        druidQuery.getOutputRowType()
+                  .getFieldList()
+                  .stream()
+                  .map(f -> f.getType().getSqlTypeName())
+                  .collect(Collectors.toList())
+    );
   }
 
-  private Query findInnerMostQuery(Query outerQuery)
+  private Query<?> findInnerMostQuery(Query outerQuery)
   {
-    Query query = outerQuery;
+    Query<?> query = outerQuery;
     while (query.getDataSource() instanceof QueryDataSource) {
       query = ((QueryDataSource) query.getDataSource()).getQuery();
     }
     return query;
   }
 
-  private Sequence<Object[]> executeScan(
-      final DruidQuery druidQuery,
-      final ScanQuery query
-  )
-  {
-    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
-    final RowSignature outputRowSignature = druidQuery.getOutputRowSignature();
-
-    // SQL row column index -> Scan query column index
-    final int[] columnMapping = new int[outputRowSignature.getRowOrder().size()];
-    final Map<String, Integer> scanColumnOrder = new HashMap<>();
-
-    for (int i = 0; i < query.getColumns().size(); i++) {
-      scanColumnOrder.put(query.getColumns().get(i), i);
-    }
-
-    for (int i = 0; i < outputRowSignature.getRowOrder().size(); i++) {
-      final Integer index = scanColumnOrder.get(outputRowSignature.getRowOrder().get(i));
-      columnMapping[i] = index == null ? -1 : index;
-    }
-
-    return Sequences.concat(
-        Sequences.map(
-            runQuery(query),
-            scanResult -> {
-              final List<Object[]> retVals = new ArrayList<>();
-              final List<List<Object>> rows = (List<List<Object>>) scanResult.getEvents();
-
-              for (List<Object> row : rows) {
-                final Object[] retVal = new Object[fieldList.size()];
-                for (RelDataTypeField field : fieldList) {
-                  retVal[field.getIndex()] = coerce(
-                      row.get(columnMapping[field.getIndex()]),
-                      field.getType().getSqlTypeName()
-                  );
-                }
-                retVals.add(retVal);
-              }
-
-              return Sequences.simple(retVals);
-            }
-        )
-    );
-  }
-
-  @SuppressWarnings("unchecked")
-  private <T> Sequence<T> runQuery(Query<T> query)
+  private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
     Hook.QUERY_PLAN.run(query);
 
-    final String queryId = UUID.randomUUID().toString();
-    plannerContext.addNativeQueryId(queryId);
-    query = query.withId(queryId)
-                 .withSqlQueryId(plannerContext.getSqlQueryId());
+    if (query.getId() == null) {
+      final String queryId = UUID.randomUUID().toString();
+      plannerContext.addNativeQueryId(queryId);
+      query = query.withId(queryId);
+    }
+
+    query = query.withSqlQueryId(plannerContext.getSqlQueryId());
 
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
-    return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
+    final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
+
+    // After calling "runSimple" the query will start running. We need to do this before reading the toolChest, since
+    // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
+    // array-based results before starting the query; but in practice we don't expect this to happen since we keep
+    // tight control over which query types we generate in the SQL layer. They all support array-based results.)
+    final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, null);
+
+    //noinspection unchecked
+    final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
+    final List<String> resultArrayFields = toolChest.resultArrayFields(query);
+    final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
+
+    return remapFields(resultArrays, resultArrayFields, newFields, newTypes);
   }
 
-  private Sequence<Object[]> executeTimeseries(
-      final DruidQuery druidQuery,
-      final TimeseriesQuery query
+  private Sequence<Object[]> remapFields(
+      final Sequence<Object[]> sequence,
+      final List<String> originalFields,
+      final List<String> newFields,
+      final List<SqlTypeName> newTypes
   )
   {
-    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
-    final String timeOutputName = druidQuery.getGrouping().getDimensions().isEmpty()
-                                  ? null
-                                  : Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions())
-                                             .getOutputName();
+    // Build hash map for looking up original field positions, in case the number of fields is super high.
+    final Object2IntMap<String> originalFieldsLookup = new Object2IntOpenHashMap<>();
+    originalFieldsLookup.defaultReturnValue(-1);
+    for (int i = 0; i < originalFields.size(); i++) {
+      originalFieldsLookup.put(originalFields.get(i), i);
+    }
+
+    // Build "mapping" array of new field index -> old field index.
+    final int[] mapping = new int[newFields.size()];
+    for (int i = 0; i < newFields.size(); i++) {
+      final String newField = newFields.get(i);
+      final int idx = originalFieldsLookup.getInt(newField);
+      if (idx < 0) {
+        throw new ISE(
+            "newField[%s] not contained in originalFields[%s]",
+            newField,
+            String.join(", ", originalFields)
+        );
+      }
+
+      mapping[i] = idx;
+    }
 
     return Sequences.map(
-        runQuery(query),
-        new Function<Result<TimeseriesResultValue>, Object[]>()
-        {
-          @Override
-          public Object[] apply(final Result<TimeseriesResultValue> result)
-          {
-            final Map<String, Object> row = result.getValue().getBaseObject();
-            final Object[] retVal = new Object[fieldList.size()];
-
-            for (final RelDataTypeField field : fieldList) {
-              final String outputName = druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex());
-              if (outputName.equals(timeOutputName)) {
-                retVal[field.getIndex()] = coerce(result.getTimestamp(), field.getType().getSqlTypeName());
-              } else {
-                retVal[field.getIndex()] = coerce(row.get(outputName), field.getType().getSqlTypeName());
-              }
-            }
-
-            return retVal;
+        sequence,
+        array -> {
+          final Object[] newArray = new Object[mapping.length];
+          for (int i = 0; i < mapping.length; i++) {
+            newArray[i] = coerce(array[mapping[i]], newTypes.get(i));
           }
-        }
-    );
-  }
-
-  private Sequence<Object[]> executeTopN(
-      final DruidQuery druidQuery,
-      final TopNQuery query
-  )
-  {
-    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
-
-    return Sequences.concat(
-        Sequences.map(
-            runQuery(query),
-            new Function<Result<TopNResultValue>, Sequence<Object[]>>()
-            {
-              @Override
-              public Sequence<Object[]> apply(final Result<TopNResultValue> result)
-              {
-                final List<DimensionAndMetricValueExtractor> rows = result.getValue().getValue();
-                final List<Object[]> retVals = new ArrayList<>(rows.size());
-
-                for (DimensionAndMetricValueExtractor row : rows) {
-                  final Object[] retVal = new Object[fieldList.size()];
-                  for (final RelDataTypeField field : fieldList) {
-                    final String outputName = druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex());
-                    retVal[field.getIndex()] = coerce(row.getMetric(outputName), field.getType().getSqlTypeName());
-                  }
-
-                  retVals.add(retVal);
-                }
-
-                return Sequences.simple(retVals);
-              }
-            }
-        )
-    );
-  }
-
-  private Sequence<Object[]> executeGroupBy(
-      final DruidQuery druidQuery,
-      final GroupByQuery query
-  )
-  {
-    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
-
-    return Sequences.map(
-        runQuery(query),
-        new Function<Row, Object[]>()
-        {
-          @Override
-          public Object[] apply(final Row row)
-          {
-            final Object[] retVal = new Object[fieldList.size()];
-            for (RelDataTypeField field : fieldList) {
-              retVal[field.getIndex()] = coerce(
-                  row.getRaw(druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex())),
-                  field.getType().getSqlTypeName()
-              );
-            }
-            return retVal;
-          }
+          return newArray;
         }
     );
   }

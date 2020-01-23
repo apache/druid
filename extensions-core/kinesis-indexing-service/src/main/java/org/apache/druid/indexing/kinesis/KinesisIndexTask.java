@@ -22,12 +22,15 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -50,11 +53,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AWSCredentialsConfig awsCredentialsConfig
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
-        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
+        getOrMakeId(id, dataSchema.getDataSource(), TYPE),
         taskResource,
         dataSchema,
         tuningConfig,
@@ -63,11 +67,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
+        appenderatorsManager
     );
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
-
 
   @Override
   protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
@@ -79,7 +83,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager,
+        lockGranularityToUse
     );
   }
 
@@ -123,5 +129,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   public String getType()
   {
     return TYPE;
+  }
+
+  @VisibleForTesting
+  AWSCredentialsConfig getAwsCredentialsConfig()
+  {
+    return awsCredentialsConfig;
   }
 }

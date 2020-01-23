@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TableActionDialog } from './table-action-dialog';
 
@@ -25,9 +25,9 @@ describe('table action dialog', () => {
   it('matches snapshot', () => {
     const tableActionDialog = (
       <TableActionDialog
+        title="Table dummy actions"
         sideButtonMetadata={[{ icon: 'badge', text: 'test' }]}
-        onClose={() => null}
-        isOpen
+        onClose={() => {}}
       />
     );
     render(tableActionDialog);

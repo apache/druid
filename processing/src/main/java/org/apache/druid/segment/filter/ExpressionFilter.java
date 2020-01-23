@@ -30,6 +30,7 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelector;
@@ -44,11 +45,13 @@ public class ExpressionFilter implements Filter
 {
   private final Supplier<Expr> expr;
   private final Supplier<Set<String>> requiredBindings;
+  private final FilterTuning filterTuning;
 
-  public ExpressionFilter(final Supplier<Expr> expr)
+  public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
   {
     this.expr = expr;
-    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredColumns());
+    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -60,25 +63,35 @@ public class ExpressionFilter implements Filter
       @Override
       public boolean matches()
       {
-        if (NullHandling.sqlCompatible() && selector.isNull()) {
-          return false;
-        }
-        ExprEval eval = selector.getObject();
-        if (eval == null) {
-          return false;
-        }
+        final ExprEval eval = selector.getObject();
+
         switch (eval.type()) {
           case LONG_ARRAY:
-            Long[] lResult = eval.asLongArray();
+            final Long[] lResult = eval.asLongArray();
+            if (lResult == null) {
+              return false;
+            }
+
             return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+
           case STRING_ARRAY:
-            String[] sResult = eval.asStringArray();
+            final String[] sResult = eval.asStringArray();
+            if (sResult == null) {
+              return false;
+            }
+
             return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
+
           case DOUBLE_ARRAY:
-            Double[] dResult = eval.asDoubleArray();
+            final Double[] dResult = eval.asDoubleArray();
+            if (dResult == null) {
+              return false;
+            }
+
             return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
+
           default:
-            return Evals.asBoolean(selector.getLong());
+            return eval.asBoolean();
         }
       }
 
@@ -106,6 +119,12 @@ public class ExpressionFilter implements Filter
       // Multi-column expression.
       return false;
     }
+  }
+
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override
@@ -150,5 +169,11 @@ public class ExpressionFilter implements Filter
   {
     // Selectivity estimation not supported.
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return requiredBindings.get();
   }
 }

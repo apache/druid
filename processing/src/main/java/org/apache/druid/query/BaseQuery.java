@@ -40,9 +40,10 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 /**
+ *
  */
 @ExtensionPoint
-public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
+public abstract class BaseQuery<T> implements Query<T>
 {
   public static void checkInterrupted()
   {
@@ -216,13 +217,20 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return overridden;
   }
 
+  /**
+   * Default implementation of {@link Query#getResultOrdering()} that uses {@link Ordering#natural()}.
+   *
+   * If your query result type T is not Comparable, you must override this method.
+   */
   @Override
+  @SuppressWarnings("unchecked") // assumes T is Comparable; see method javadoc
   public Ordering<T> getResultOrdering()
   {
-    Ordering<T> retVal = Ordering.natural();
+    Ordering retVal = Ordering.natural();
     return descending ? retVal.reverse() : retVal;
   }
 
+  @Nullable
   @Override
   public String getId()
   {
@@ -258,18 +266,20 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       return false;
     }
     BaseQuery<?> baseQuery = (BaseQuery<?>) o;
+
+    // Must use getDuration() instead of "duration" because duration is lazily computed.
     return descending == baseQuery.descending &&
            Objects.equals(dataSource, baseQuery.dataSource) &&
            Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
-           Objects.equals(duration, baseQuery.duration) &&
+           Objects.equals(getDuration(), baseQuery.getDuration()) &&
            Objects.equals(granularity, baseQuery.granularity);
   }
 
   @Override
   public int hashCode()
   {
-
-    return Objects.hash(dataSource, descending, context, querySegmentSpec, duration, granularity);
+    // Must use getDuration() instead of "duration" because duration is lazily computed.
+    return Objects.hash(dataSource, descending, context, querySegmentSpec, getDuration(), granularity);
   }
 }

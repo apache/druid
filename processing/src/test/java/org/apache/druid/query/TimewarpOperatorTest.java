@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.joda.time.DateTime;
@@ -37,14 +38,10 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 
 public class TimewarpOperatorTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
-
   TimewarpOperator<Result<TimeseriesResultValue>> testOperator = new TimewarpOperator<>(
       new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
       new Period("P1W"),
@@ -88,7 +85,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             return Sequences.simple(
@@ -134,7 +131,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
 
 
@@ -150,7 +147,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeBoundaryResultValue>> run(
               QueryPlus<Result<TimeBoundaryResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             return Sequences.simple(
@@ -183,7 +180,7 @@ public class TimewarpOperatorTest
                 new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))
             )
         ),
-        timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery), CONTEXT).toList()
+        timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList()
     );
 
   }
@@ -197,7 +194,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             return Sequences.simple(
@@ -244,7 +241,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
   }
 
@@ -257,7 +254,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             return Sequences.simple(
@@ -304,7 +301,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 5))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
   }
 
@@ -317,7 +314,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             final Query<Result<TimeseriesResultValue>> query = queryPlus.getQuery();
@@ -356,7 +353,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 3))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), new HashMap<>()).toList()
+        queryRunner.run(QueryPlus.wrap(query)).toList()
     );
   }
 }

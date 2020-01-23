@@ -20,8 +20,12 @@ export function shallowCopy(v: any): any {
   return Array.isArray(v) ? v.slice() : Object.assign({}, v);
 }
 
-function isEmpty(v: any): boolean {
+export function isEmpty(v: any): boolean {
   return !(Array.isArray(v) ? v.length : Object.keys(v).length);
+}
+
+function isObjectOrArray(v: any): boolean {
+  return Boolean(v && typeof v === 'object');
 }
 
 export function parsePath(path: string): string[] {
@@ -105,6 +109,38 @@ export function deepDelete<T extends Record<string, any>>(value: T, path: string
     }
   }
   return valueCopy;
+}
+
+export function deepMove<T extends Record<string, any>>(
+  value: T,
+  fromPath: string,
+  toPath: string,
+): T {
+  value = deepSet(value, toPath, deepGet(value, fromPath));
+  value = deepDelete(value, fromPath);
+  return value;
+}
+
+export function deepExtend<T extends Record<string, any>>(target: T, diff: Record<string, any>): T {
+  if (typeof target !== 'object') throw new TypeError(`Invalid target`);
+  if (typeof diff !== 'object') throw new TypeError(`Invalid diff`);
+
+  const newValue = shallowCopy(target);
+  for (const key in diff) {
+    const targetValue = target[key];
+    const diffValue = diff[key];
+    if (typeof diffValue === 'undefined') {
+      delete newValue[key];
+    } else {
+      if (isObjectOrArray(targetValue) && isObjectOrArray(diffValue)) {
+        newValue[key] = deepExtend(targetValue, diffValue);
+      } else {
+        newValue[key] = diffValue;
+      }
+    }
+  }
+
+  return newValue;
 }
 
 export function whitelistKeys(obj: Record<string, any>, whitelist: string[]): Record<string, any> {

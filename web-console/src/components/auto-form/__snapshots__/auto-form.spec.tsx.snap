@@ -5,7 +5,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
   class="auto-form"
 >
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -55,7 +55,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
                   chevron-up
                 </desc>
                 <path
-                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
+                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -79,7 +79,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
                   chevron-down
                 </desc>
                 <path
-                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5z"
+                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -90,7 +90,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -105,7 +105,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class="bp3-control-group bp3-numeric-input"
+        class="bp3-control-group bp3-fill bp3-numeric-input"
       >
         <div
           class="bp3-input-group"
@@ -140,7 +140,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
                   chevron-up
                 </desc>
                 <path
-                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
+                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -164,7 +164,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
                   chevron-down
                 </desc>
                 <path
-                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5z"
+                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -175,7 +175,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -202,7 +202,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -217,44 +217,74 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class="bp3-html-select"
+        class="bp3-button-group"
       >
-        <select>
-          <option
-            value="True"
-          >
-            True
-          </option>
-          <option
-            value="False"
+        <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
           >
             False
-          </option>
-        </select>
-        <span
-          class="bp3-icon bp3-icon-double-caret-vertical"
-          icon="double-caret-vertical"
+          </span>
+        </button>
+        <button
+          class="bp3-button"
+          type="button"
         >
-          <svg
-            data-icon="double-caret-vertical"
-            height="16"
-            viewBox="0 0 16 16"
-            width="16"
+          <span
+            class="bp3-button-text"
           >
-            <desc>
-              double-caret-vertical
-            </desc>
-            <path
-              d="M5 7h6a1.003 1.003 0 0 0 .71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 0 0 5 7zm6 2H5a1.003 1.003 0 0 0-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0 0 11 9z"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </span>
+            True
+          </span>
+        </button>
       </div>
     </div>
   </div>
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test four with default
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-button-group"
+      >
+        <button
+          class="bp3-button bp3-active"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            False
+          </span>
+        </button>
+        <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            True
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -274,7 +304,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -289,8 +319,8 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class=" ace_editor ace-tm"
-        id="ace-editor"
+        class=" ace_editor ace-tm json-input"
+        id="brace-editor"
         style="width: 100%; height: 8vh;"
       >
         <textarea
@@ -380,7 +410,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="bp3-form-group"
+    class="bp3-form-group form-group-with-info"
   >
     <label
       class="bp3-label"
@@ -395,8 +425,8 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class=" ace_editor ace-tm"
-        id="ace-editor"
+        class=" ace_editor ace-tm json-input"
+        id="brace-editor"
         style="width: 100%; height: 8vh;"
       >
         <textarea

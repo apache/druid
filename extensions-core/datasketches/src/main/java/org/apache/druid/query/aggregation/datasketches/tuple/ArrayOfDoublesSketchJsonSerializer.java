@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
 
 import java.io.IOException;
 

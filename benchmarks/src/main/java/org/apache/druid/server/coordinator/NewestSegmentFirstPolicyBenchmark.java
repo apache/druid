@@ -20,6 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.helper.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.helper.CompactionSegmentSearchPolicy;
@@ -42,6 +45,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +61,7 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
+  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
 
   @Param("100")
   private int numDataSources;
@@ -69,7 +73,7 @@ public class NewestSegmentFirstPolicyBenchmark
   private int numPartitionsPerDayInterval;
 
   @Param("800000000")
-  private long targetCompactionSizeBytes;
+  private long inputSegmentSizeBytes;
 
   @Param("1000000")
   private long segmentSizeBytes;
@@ -91,9 +95,7 @@ public class NewestSegmentFirstPolicyBenchmark
           new DataSourceCompactionConfig(
               dataSource,
               0,
-              targetCompactionSizeBytes,
-              targetCompactionSizeBytes,
-              null,
+              inputSegmentSizeBytes,
               null,
               null,
               null,
@@ -102,13 +104,9 @@ public class NewestSegmentFirstPolicyBenchmark
       );
     }
 
-    dataSources = new HashMap<>();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < numDataSources; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-
-      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-          String.CASE_INSENSITIVE_ORDER
-      );
 
       final int startYear = ThreadLocalRandom.current().nextInt(2000, 2040);
       DateTime date = DateTimes.of(startYear, 1, 1, 0, 0);
@@ -127,12 +125,11 @@ public class NewestSegmentFirstPolicyBenchmark
               0,
               segmentSizeBytes
           );
-          timeline.add(segment.getInterval(), segment.getVersion(), shardSpec.createChunk(segment));
+          segments.add(segment);
         }
       }
-
-      dataSources.put(dataSource, timeline);
     }
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of()).getUsedSegmentsTimelinesPerDataSource();
   }
 
   @Benchmark

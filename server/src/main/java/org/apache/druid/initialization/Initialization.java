@@ -75,6 +75,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -84,15 +85,17 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
-  private static final ConcurrentHashMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<File, URLClassLoader> LOADERS_MAP = new ConcurrentHashMap<>();
 
-  private static final ConcurrentHashMap<Class<?>, Collection<?>> extensionsMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<Class<?>, Collection<?>> EXTENSIONS_MAP = new ConcurrentHashMap<>();
 
   /**
    * @param clazz service class
@@ -103,7 +106,7 @@ public class Initialization
   public static <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
     @SuppressWarnings("unchecked")
-    Collection<T> retVal = (Collection<T>) extensionsMap.get(clazz);
+    Collection<T> retVal = (Collection<T>) EXTENSIONS_MAP.get(clazz);
     if (retVal == null) {
       return new HashSet<>();
     }
@@ -113,13 +116,13 @@ public class Initialization
   @VisibleForTesting
   static void clearLoadedImplementations()
   {
-    extensionsMap.clear();
+    EXTENSIONS_MAP.clear();
   }
 
   @VisibleForTesting
   static Map<File, URLClassLoader> getLoadersMap()
   {
-    return loadersMap;
+    return LOADERS_MAP;
   }
 
   /**
@@ -138,7 +141,7 @@ public class Initialization
   {
     // It's not clear whether we should recompute modules even if they have been computed already for the serviceClass,
     // but that's how it used to be an preserving the old behaviour here.
-    Collection<?> modules = extensionsMap.compute(
+    Collection<?> modules = EXTENSIONS_MAP.compute(
         serviceClass,
         (serviceC, ignored) -> new ServiceLoadingFromExtensions<>(config, serviceC).implsToLoad
     );
@@ -173,12 +176,21 @@ public class Initialization
     private void addAllFromFileSystem()
     {
       for (File extension : getExtensionFilesToLoad(extensionsConfig)) {
-        log.info("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
+        log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
           final URLClassLoader loader = getClassLoaderForExtension(
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
+
+          log.info(
+              "Loading extension [%s], jars: %s",
+              extension.getName(),
+              Arrays.stream(loader.getURLs())
+                    .map(u -> new File(u.getPath()).getName())
+                    .collect(Collectors.joining(", "))
+          );
+
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
@@ -189,7 +201,7 @@ public class Initialization
 
     private void tryAdd(T serviceImpl, String extensionType)
     {
-      final String serviceImplName = serviceImpl.getClass().getCanonicalName();
+      final String serviceImplName = serviceImpl.getClass().getName();
       if (serviceImplName == null) {
         log.warn(
             "Implementation [%s] was ignored because it doesn't have a canonical name, "
@@ -197,7 +209,7 @@ public class Initialization
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
-        log.info(
+        log.debug(
             "Adding implementation [%s] for class [%s] from %s extension",
             serviceImplName,
             serviceClass,
@@ -292,7 +304,7 @@ public class Initialization
    */
   public static URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
-    return loadersMap.computeIfAbsent(
+    return LOADERS_MAP.computeIfAbsent(
         extension,
         theExtension -> makeClassLoaderForExtension(theExtension, useExtensionClassloaderFirst)
     );
@@ -310,7 +322,7 @@ public class Initialization
       int i = 0;
       for (File jar : jars) {
         final URL url = jar.toURI().toURL();
-        log.info("added URL[%s] for extension[%s]", url, extension.getName());
+        log.debug("added URL[%s] for extension[%s]", url, extension.getName());
         urls[i++] = url;
       }
     }
@@ -474,7 +486,7 @@ public class Initialization
 
     private boolean checkModuleClass(Class<?> moduleClass)
     {
-      String moduleClassName = moduleClass.getCanonicalName();
+      String moduleClassName = moduleClass.getName();
       if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
         log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
         return false;

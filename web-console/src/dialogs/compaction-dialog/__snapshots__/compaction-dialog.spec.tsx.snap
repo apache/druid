@@ -44,7 +44,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                   small-cross
                 </desc>
                 <path
-                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 0 0-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71L11.41 10z"
+                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -55,7 +55,7 @@ exports[`compaction dialog matches snapshot 1`] = `
           class="auto-form"
         >
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -64,7 +64,35 @@ exports[`compaction dialog matches snapshot 1`] = `
                
               <span
                 class="bp3-text-muted"
-              />
+              >
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-info-sign"
+                      icon="info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        width="14"
+                      >
+                        <desc>
+                          info-sign
+                        </desc>
+                        <path
+                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                </span>
+              </span>
             </label>
             <div
               class="bp3-form-content"
@@ -81,7 +109,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                     min="0"
                     style="padding-right: 10px;"
                     type="text"
-                    value=""
+                    value="419430400"
                   />
                 </div>
                 <div
@@ -105,7 +133,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                           chevron-up
                         </desc>
                         <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
                           fill-rule="evenodd"
                         />
                       </svg>
@@ -129,7 +157,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                           chevron-down
                         </desc>
                         <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5z"
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
                           fill-rule="evenodd"
                         />
                       </svg>
@@ -140,92 +168,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
-          >
-            <label
-              class="bp3-label"
-            >
-              Max num segments to compact
-               
-              <span
-                class="bp3-text-muted"
-              />
-            </label>
-            <div
-              class="bp3-form-content"
-            >
-              <div
-                class="bp3-control-group bp3-fill bp3-numeric-input"
-              >
-                <div
-                  class="bp3-input-group"
-                >
-                  <input
-                    autocomplete="off"
-                    class="bp3-input"
-                    min="0"
-                    style="padding-right: 10px;"
-                    type="text"
-                    value=""
-                  />
-                </div>
-                <div
-                  class="bp3-button-group bp3-vertical bp3-fixed"
-                >
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-up"
-                      icon="chevron-up"
-                    >
-                      <svg
-                        data-icon="chevron-up"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-up
-                        </desc>
-                        <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                  <button
-                    class="bp3-button"
-                    type="button"
-                  >
-                    <span
-                      class="bp3-icon bp3-icon-chevron-down"
-                      icon="chevron-down"
-                    >
-                      <svg
-                        data-icon="chevron-down"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <desc>
-                          chevron-down
-                        </desc>
-                        <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -234,7 +177,35 @@ exports[`compaction dialog matches snapshot 1`] = `
                
               <span
                 class="bp3-text-muted"
-              />
+              >
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-info-sign"
+                      icon="info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        width="14"
+                      >
+                        <desc>
+                          info-sign
+                        </desc>
+                        <path
+                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                </span>
+              </span>
             </label>
             <div
               class="bp3-form-content"
@@ -246,22 +217,50 @@ exports[`compaction dialog matches snapshot 1`] = `
                   class="bp3-input"
                   style="padding-right: 10px;"
                   type="text"
-                  value=""
+                  value="P1D"
                 />
               </div>
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
             >
-              Target compaction size bytes
+              Max rows per segment
                
               <span
                 class="bp3-text-muted"
-              />
+              >
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-info-sign"
+                      icon="info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        width="14"
+                      >
+                        <desc>
+                          info-sign
+                        </desc>
+                        <path
+                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                </span>
+              </span>
             </label>
             <div
               class="bp3-form-content"
@@ -278,7 +277,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                     min="0"
                     style="padding-right: 10px;"
                     type="text"
-                    value=""
+                    value="5000000"
                   />
                 </div>
                 <div
@@ -302,7 +301,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                           chevron-up
                         </desc>
                         <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
                           fill-rule="evenodd"
                         />
                       </svg>
@@ -326,7 +325,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                           chevron-down
                         </desc>
                         <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5z"
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
                           fill-rule="evenodd"
                         />
                       </svg>
@@ -337,7 +336,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -346,14 +345,42 @@ exports[`compaction dialog matches snapshot 1`] = `
                
               <span
                 class="bp3-text-muted"
-              />
+              >
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-info-sign"
+                      icon="info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        width="14"
+                      >
+                        <desc>
+                          info-sign
+                        </desc>
+                        <path
+                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                </span>
+              </span>
             </label>
             <div
               class="bp3-form-content"
             >
               <div
-                class=" ace_editor ace-tm"
-                id="ace-editor"
+                class=" ace_editor ace-tm json-input"
+                id="brace-editor"
                 style="width: 100%; height: 8vh;"
               >
                 <textarea
@@ -443,7 +470,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -452,7 +479,35 @@ exports[`compaction dialog matches snapshot 1`] = `
                
               <span
                 class="bp3-text-muted"
-              />
+              >
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-info-sign"
+                      icon="info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        width="14"
+                      >
+                        <desc>
+                          info-sign
+                        </desc>
+                        <path
+                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                </span>
+              </span>
             </label>
             <div
               class="bp3-form-content"
@@ -469,7 +524,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                     min="0"
                     style="padding-right: 10px;"
                     type="text"
-                    value=""
+                    value="25"
                   />
                 </div>
                 <div
@@ -493,7 +548,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                           chevron-up
                         </desc>
                         <path
-                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
+                          d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
                           fill-rule="evenodd"
                         />
                       </svg>
@@ -517,7 +572,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                           chevron-down
                         </desc>
                         <path
-                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5z"
+                          d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
                           fill-rule="evenodd"
                         />
                       </svg>
@@ -528,7 +583,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -537,14 +592,42 @@ exports[`compaction dialog matches snapshot 1`] = `
                
               <span
                 class="bp3-text-muted"
-              />
+              >
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="bp3-icon bp3-icon-info-sign"
+                      icon="info-sign"
+                    >
+                      <svg
+                        data-icon="info-sign"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        width="14"
+                      >
+                        <desc>
+                          info-sign
+                        </desc>
+                        <path
+                          d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                </span>
+              </span>
             </label>
             <div
               class="bp3-form-content"
             >
               <div
-                class=" ace_editor ace-tm"
-                id="ace-editor"
+                class=" ace_editor ace-tm json-input"
+                id="brace-editor"
                 style="width: 100%; height: 8vh;"
               >
                 <textarea

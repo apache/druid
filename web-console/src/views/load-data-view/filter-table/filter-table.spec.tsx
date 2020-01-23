@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { FilterTable } from './filter-table';
 
@@ -27,7 +27,7 @@ describe('filter table', () => {
       header: ['c1'],
       rows: [
         {
-          raw: `{"c1":"hello"}`,
+          input: { c1: 'hello' },
           parsed: { c1: 'hello' },
         },
       ],
@@ -38,9 +38,9 @@ describe('filter table', () => {
         sampleData={sampleData}
         columnFilter=""
         dimensionFilters={[]}
-        selectedFilterIndex={-1}
-        onShowGlobalFilter={() => null}
-        onFilterSelect={() => null}
+        selectedFilterName={undefined}
+        onShowGlobalFilter={() => {}}
+        onFilterSelect={() => {}}
       />
     );
 

@@ -5,8 +5,9 @@ exports[`sql view matches snapshot 1`] = `
   className="query-view app-view"
 >
   <ColumnTree
-    columnMetadata={null}
     columnMetadataLoading={true}
+    defaultSchema="druid"
+    getParsedQuery={[Function]}
     onQueryStringChange={[Function]}
   />
   <t
@@ -25,7 +26,7 @@ exports[`sql view matches snapshot 1`] = `
       className="control-pane"
     >
       <QueryInput
-        columnMetadata={null}
+        currentSchema="druid"
         onQueryStringChange={[Function]}
         queryString="test"
         runeMode={false}
@@ -34,18 +35,47 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          onEditContext={[Function]}
           onExplain={[Function]}
+          onHistory={[Function]}
+          onPrettier={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
         />
+        <Blueprint3.Tooltip
+          content="Automatically run queries when modified via helper action menus."
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            className="auto-run"
+            label="Auto run"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip>
+        <Blueprint3.Tooltip
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets."
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            className="smart-query-limit"
+            label="Smart query limit"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip>
       </div>
     </div>
-    <QueryOutput
-      error={null}
+    <Memo(QueryOutput)
       loading={false}
-      result={null}
+      onQueryChange={[Function]}
+      runeMode={false}
     />
   </t>
 </div>

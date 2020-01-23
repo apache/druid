@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.amazonaws.annotation.GuardedBy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -31,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -57,6 +57,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -73,6 +74,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -272,13 +274,9 @@ public class DruidSchema extends AbstractSchema
                     final DruidTable druidTable = buildDruidTable(dataSource);
                     final DruidTable oldTable = tables.put(dataSource, druidTable);
                     if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-                      log.debug(
-                          "Table for dataSource[%s] has new signature[%s].",
-                          dataSource,
-                          druidTable.getRowSignature()
-                      );
+                      log.info("dataSource [%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
                     } else {
-                      log.debug("Table for dataSource[%s] signature is unchanged.", dataSource);
+                      log.debug("dataSource [%s] signature is unchanged.", dataSource);
                     }
                   }
 
@@ -318,10 +316,10 @@ public class DruidSchema extends AbstractSchema
     );
 
     if (config.isAwaitInitializationOnStart()) {
-      final long startMillis = System.currentTimeMillis();
-      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      final long startNanos = System.nanoTime();
+      log.debug("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
     }
   }
 
@@ -359,14 +357,12 @@ public class DruidSchema extends AbstractSchema
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
       if (segmentMetadata == null) {
-        // segmentReplicatable is used to determine if segments are served by realtime servers or not
-        final long isRealtime = server.segmentReplicatable() ? 0 : 1;
-
-        final Set<String> servers = ImmutableSet.of(server.getName());
+        // segmentReplicatable is used to determine if segments are served by historical or realtime servers
+        long isRealtime = server.segmentReplicatable() ? 0 : 1;
         segmentMetadata = AvailableSegmentMetadata.builder(
             segment,
             isRealtime,
-            servers,
+            ImmutableSet.of(server),
             null,
             DEFAULT_NUM_ROWS
         ).build();
@@ -380,14 +376,15 @@ public class DruidSchema extends AbstractSchema
           log.debug("Added new immutable segment[%s].", segment.getId());
         }
       } else {
-        final Set<String> segmentServers = segmentMetadata.getReplicas();
-        final ImmutableSet<String> servers = new ImmutableSet.Builder<String>()
+        final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+        final ImmutableSet<DruidServerMetadata> servers = new ImmutableSet.Builder<DruidServerMetadata>()
             .addAll(segmentServers)
-            .add(server.getName())
+            .add(server)
             .build();
         final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
             .from(segmentMetadata)
             .withReplicas(servers)
+            .withRealtime(recomputeIsRealtime(servers))
             .build();
         knownSegments.put(segment.getId(), metadataWithNumReplicas);
         if (server.segmentReplicatable()) {
@@ -424,26 +421,30 @@ public class DruidSchema extends AbstractSchema
       if (dataSourceSegments.isEmpty()) {
         segmentMetadataInfo.remove(segment.getDataSource());
         tables.remove(segment.getDataSource());
-        log.info("Removed all metadata for dataSource[%s].", segment.getDataSource());
+        log.info("dataSource[%s] no longer exists, all metadata removed.", segment.getDataSource());
       }
 
       lock.notifyAll();
     }
   }
 
-  private void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+  @VisibleForTesting
+  void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       final AvailableSegmentMetadata segmentMetadata = knownSegments.get(segment.getId());
-      final Set<String> segmentServers = segmentMetadata.getReplicas();
-      final ImmutableSet<String> servers = FluentIterable.from(segmentServers)
-                                                         .filter(Predicates.not(Predicates.equalTo(server.getName())))
-                                                         .toSet();
+      final Set<DruidServerMetadata> segmentServers = segmentMetadata.getReplicas();
+      final ImmutableSet<DruidServerMetadata> servers = FluentIterable
+          .from(segmentServers)
+          .filter(Predicates.not(Predicates.equalTo(server)))
+          .toSet();
+
       final AvailableSegmentMetadata metadataWithNumReplicas = AvailableSegmentMetadata
           .from(segmentMetadata)
           .withReplicas(servers)
+          .withRealtime(recomputeIsRealtime(servers))
           .build();
       knownSegments.put(segment.getId(), metadataWithNumReplicas);
       lock.notifyAll();
@@ -473,6 +474,18 @@ public class DruidSchema extends AbstractSchema
     }
 
     return retVal;
+  }
+
+  private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)
+  {
+    final Optional<DruidServerMetadata> historicalServer = servers
+        .stream()
+        .filter(metadata -> metadata.getType().equals(ServerType.HISTORICAL))
+        .findAny();
+
+    // if there is any historical server in the replicas, isRealtime flag should be unset
+    final long isRealtime = historicalServer.isPresent() ? 0 : 1;
+    return isRealtime;
   }
 
   /**
@@ -525,10 +538,7 @@ public class DruidSchema extends AbstractSchema
             } else {
               final AvailableSegmentMetadata segmentMetadata = dataSourceSegments.get(segmentId);
               if (segmentMetadata == null) {
-                log.warn(
-                    "No segment[%s] found, skipping refresh",
-                    segmentId
-                );
+                log.warn("No segment[%s] found, skipping refresh", segmentId);
               } else {
                 final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
                     .from(segmentMetadata)
@@ -550,7 +560,7 @@ public class DruidSchema extends AbstractSchema
       yielder.close();
     }
 
-    log.info(
+    log.debug(
         "Refreshed metadata for dataSource[%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         System.currentTimeMillis() - startTime,

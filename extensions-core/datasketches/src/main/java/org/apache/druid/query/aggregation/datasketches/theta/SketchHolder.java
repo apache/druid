@@ -23,17 +23,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.Family;
-import com.yahoo.sketches.theta.AnotB;
-import com.yahoo.sketches.theta.Intersection;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
-import com.yahoo.sketches.theta.Sketches;
-import com.yahoo.sketches.theta.Union;
+import org.apache.datasketches.Family;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.theta.AnotB;
+import org.apache.datasketches.theta.Intersection;
+import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Sketch;
+import org.apache.datasketches.theta.Sketches;
+import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+
+import javax.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -49,7 +51,7 @@ public class SketchHolder
   );
 
   public static final Comparator<Object> COMPARATOR = Ordering.from(
-      new Comparator()
+      new Comparator<Object>()
       {
         @Override
         public int compare(Object o1, Object o2)
@@ -108,7 +110,9 @@ public class SketchHolder
 
   private final Object obj;
 
+  @Nullable
   private volatile Double cachedEstimate = null;
+  @Nullable
   private volatile Sketch cachedSketch = null;
 
   private SketchHolder(Object obj)

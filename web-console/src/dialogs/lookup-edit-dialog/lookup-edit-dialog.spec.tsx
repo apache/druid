@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { LookupEditDialog } from './lookup-edit-dialog';
 
@@ -25,10 +25,9 @@ describe('lookup edit dialog', () => {
   it('matches snapshot', () => {
     const lookupEditDialog = (
       <LookupEditDialog
-        isOpen
-        onClose={() => null}
-        onSubmit={() => null}
-        onChange={() => null}
+        onClose={() => {}}
+        onSubmit={() => {}}
+        onChange={() => {}}
         lookupName={'test'}
         lookupTier={'test'}
         lookupVersion={'test'}

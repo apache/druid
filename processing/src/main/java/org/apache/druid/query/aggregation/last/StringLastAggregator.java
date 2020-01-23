@@ -19,61 +19,63 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 
 public class StringLastAggregator implements Aggregator
 {
-
-  private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
+  private final BaseObjectColumnValueSelector<?> valueSelector;
   private final int maxStringBytes;
+  private final boolean needsFoldCheck;
 
   protected long lastTime;
   protected String lastValue;
 
   public StringLastAggregator(
-      BaseLongColumnValueSelector timeSelector,
-      BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      final BaseLongColumnValueSelector timeSelector,
+      final BaseObjectColumnValueSelector<?> valueSelector,
+      final int maxStringBytes,
+      final boolean needsFoldCheck
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
+    this.needsFoldCheck = needsFoldCheck;
 
-    lastTime = Long.MIN_VALUE;
+    lastTime = DateTimes.MIN.getMillis();
     lastValue = null;
   }
 
   @Override
   public void aggregate()
   {
-    long time = timeSelector.getLong();
-    if (time >= lastTime) {
-      lastTime = time;
-      Object value = valueSelector.getObject();
+    if (needsFoldCheck) {
+      // Less efficient code path when folding is a possibility (we must read the value selector first just in case
+      // it's a foldable object).
+      final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+          timeSelector,
+          valueSelector
+      );
 
-      if (value != null) {
-        if (value instanceof String) {
-          lastValue = (String) value;
-        } else if (value instanceof SerializablePairLongString) {
-          lastValue = ((SerializablePairLongString) value).rhs;
-        } else {
-          throw new ISE(
-              "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-              value.getClass().getCanonicalName()
-          );
-        }
+      if (inPair != null && inPair.lhs >= lastTime) {
+        lastTime = inPair.lhs;
+        lastValue = StringUtils.fastLooseChop(inPair.rhs, maxStringBytes);
+      }
+    } else {
+      final long time = timeSelector.getLong();
 
-        if (lastValue != null && lastValue.length() > maxStringBytes) {
-          lastValue = lastValue.substring(0, maxStringBytes);
-        }
-      } else {
-        lastValue = null;
+      if (time >= lastTime) {
+        final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
+        lastTime = time;
+        lastValue = StringUtils.fastLooseChop(value, maxStringBytes);
       }
     }
   }
@@ -81,25 +83,25 @@ public class StringLastAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePairLongString(lastTime, lastValue);
+    return new SerializablePairLongString(lastTime, StringUtils.chop(lastValue, maxStringBytes));
   }
 
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("StringFirstAggregator does not support getFloat()");
+    throw new UnsupportedOperationException("StringLastAggregator does not support getFloat()");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("StringFirstAggregator does not support getLong()");
+    throw new UnsupportedOperationException("StringLastAggregator does not support getLong()");
   }
 
   @Override
   public double getDouble()
   {
-    throw new UnsupportedOperationException("StringFirstAggregator does not support getDouble()");
+    throw new UnsupportedOperationException("StringLastAggregator does not support getDouble()");
   }
 
   @Override

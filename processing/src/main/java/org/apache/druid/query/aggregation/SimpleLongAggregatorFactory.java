@@ -29,6 +29,9 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -36,7 +39,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFactory<BaseLongColumnValueSelector>
+/**
+ * This is an abstract class inherited by various {@link AggregatorFactory} implementations that consume long input
+ * and produce long output on aggregation.
+ * It extends "NullableAggregatorFactory<ColumnValueSelector>" instead of "NullableAggregatorFactory<BaseLongColumnValueSelector>"
+ * to additionally support aggregation on single/multi value string column types.
+ */
+public abstract class SimpleLongAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
 {
   protected final String name;
   @Nullable
@@ -65,13 +74,45 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
     );
   }
 
-  BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory, long nullValue)
+  @Override
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  {
+    if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
+      return new StringColumnLongAggregatorWrapper(
+          selector,
+          SimpleLongAggregatorFactory.this::buildAggregator,
+          nullValue()
+      );
+    } else {
+      return buildAggregator(selector);
+    }
+  }
+
+  @Override
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      ColumnValueSelector selector
+  )
+  {
+    if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
+      return new StringColumnLongBufferAggregatorWrapper(
+          selector,
+          SimpleLongAggregatorFactory.this::buildBufferAggregator,
+          nullValue()
+      );
+    } else {
+      return buildBufferAggregator(selector);
+    }
+  }
+
+  @Override
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
     return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
         metricFactory,
         fieldName,
         fieldExpression.get(),
-        nullValue
+        nullValue()
     );
   }
 
@@ -111,7 +152,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   {
     return fieldName != null
            ? Collections.singletonList(fieldName)
-           : fieldExpression.get().analyzeInputs().getRequiredColumnsList();
+           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
   }
 
   @Override
@@ -174,4 +215,19 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   {
     return expression;
   }
+
+  private boolean shouldUseStringColumnAggregatorWrapper(ColumnSelectorFactory columnSelectorFactory)
+  {
+    if (fieldName != null) {
+      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+      return capabilities != null && capabilities.getType() == ValueType.STRING;
+    }
+    return false;
+  }
+
+  protected abstract long nullValue();
+
+  protected abstract Aggregator buildAggregator(BaseLongColumnValueSelector selector);
+
+  protected abstract BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector);
 }

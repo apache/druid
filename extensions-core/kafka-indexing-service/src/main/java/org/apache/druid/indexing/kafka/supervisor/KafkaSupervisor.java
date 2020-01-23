@@ -27,6 +27,7 @@ import com.google.common.base.Joiner;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
@@ -49,7 +50,6 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -154,11 +154,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     );
   }
 
-
   @Override
-  protected int getTaskGroupIdForPartition(Integer partition)
+  protected int getTaskGroupIdForPartition(Integer partitionId)
   {
-    return partition % spec.getIoConfig().getTaskCount();
+    return partitionId % spec.getIoConfig().getTaskCount();
   }
 
   @Override
@@ -222,7 +221,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         kafkaIoConfig.getPollTimeout(),
         true,
         minimumMessageTime,
-        maximumMessageTime
+        maximumMessageTime,
+        ioConfig.getInputFormat(
+            spec.getDataSchema().getParser() == null ? null : spec.getDataSchema().getParser().getParseSpec()
+        )
     );
   }
 
@@ -258,7 +260,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           null,
           null,
           rowIngestionMetersFactory,
-          sortingMapper
+          sortingMapper,
+          null
       ));
     }
     return taskList;
@@ -266,6 +269,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
+  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
+  @SuppressWarnings("SSBasedInspection")
   protected Map<Integer, Long> getLagPerPartition(Map<Integer, Long> currentOffsets)
   {
     return currentOffsets
@@ -286,7 +291,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<Integer, Long> map)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, map, Collections.emptySet()));
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
 
   @Override
@@ -359,6 +364,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected boolean isShardExpirationMarker(Long seqNum)
+  {
+    return false;
+  }
+
+  @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return false;
@@ -388,5 +399,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return spec.getIoConfig();
+  }
+
+  @VisibleForTesting
+  public KafkaSupervisorTuningConfig getTuningConfig()
+  {
+    return spec.getTuningConfig();
   }
 }

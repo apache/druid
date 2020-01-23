@@ -141,6 +141,7 @@ public class VirtualColumns implements Cacheable
     return getVirtualColumn(columnName) != null;
   }
 
+  @Nullable
   public VirtualColumn getVirtualColumn(String columnName)
   {
     final VirtualColumn vc = withoutDotSupport.get(columnName);
@@ -173,17 +174,26 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
       throw new IAE("No such virtual column[%s]", columnName);
     } else {
-      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(columnName, columnSelector) : null;
+      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
+          columnName,
+          columnSelector
+      ) : null;
     }
   }
 
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
+  @Nullable
+  public DimensionSelector makeDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
   {
     final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
     if (virtualColumn == null) {
@@ -193,7 +203,12 @@ public class VirtualColumns implements Cacheable
     }
   }
 
-  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
+  @Nullable
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn == null) {
@@ -225,6 +240,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -239,6 +255,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public ColumnCapabilities getColumnCapabilitiesWithFallback(StorageAdapter adapter, String columnName)
   {
     final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(columnName);
@@ -263,7 +280,11 @@ public class VirtualColumns implements Cacheable
 
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
-    return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    if (virtualColumns.isEmpty()) {
+      return baseFactory;
+    } else {
+      return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    }
   }
 
   @Override
@@ -273,7 +294,7 @@ public class VirtualColumns implements Cacheable
     return new CacheKeyBuilder((byte) 0).appendCacheablesIgnoringOrder(virtualColumns).build();
   }
 
-  private void detectCycles(VirtualColumn virtualColumn, Set<String> columnNames)
+  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> columnNames)
   {
     // Copy columnNames to avoid modifying it
     final Set<String> nextSet = columnNames == null

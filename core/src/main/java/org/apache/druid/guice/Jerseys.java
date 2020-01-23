@@ -24,15 +24,17 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.logger.Logger;
 
-/**
- */
 @PublicApi
 public class Jerseys
 {
+  private static final Logger LOG = new Logger(Jerseys.class);
+
   public static void addResource(Binder binder, Class<?> resourceClazz)
   {
-    Multibinder.newSetBinder(binder, new TypeLiteral<Class<?>>(){}, JSR311Resource.class)
+    LOG.debug("Adding Jersey resource: " + resourceClazz.getName());
+    Multibinder.newSetBinder(binder, new TypeLiteral<Class<?>>() {}, JSR311Resource.class)
                .addBinding()
                .toInstance(resourceClazz);
   }

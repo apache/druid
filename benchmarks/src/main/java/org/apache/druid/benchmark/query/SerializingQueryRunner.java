@@ -19,17 +19,22 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 public class SerializingQueryRunner<T> implements QueryRunner<T>
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private final ObjectMapper smileMapper;
   private final QueryRunner<T> baseRunner;
   private final Class<T> clazz;
@@ -48,22 +53,17 @@ public class SerializingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(
       final QueryPlus<T> queryPlus,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     return Sequences.map(
         baseRunner.run(queryPlus, responseContext),
-        new Function<T, T>()
-        {
-          @Override
-          public T apply(T input)
-          {
-            try {
-              return smileMapper.readValue(smileMapper.writeValueAsBytes(input), clazz);
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
+        input -> {
+          try {
+            return JacksonUtils.readValue(smileMapper, smileMapper.writeValueAsBytes(input), clazz);
+          }
+          catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
           }
         }
     );

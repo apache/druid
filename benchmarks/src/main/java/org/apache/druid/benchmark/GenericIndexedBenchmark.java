@@ -19,8 +19,9 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -60,9 +61,13 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class GenericIndexedBenchmark
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   public static final int ITERATIONS = 10000;
 
-  static final ObjectStrategy<byte[]> byteArrayStrategy = new ObjectStrategy<byte[]>()
+  static final ObjectStrategy<byte[]> BYTE_ARRAY_STRATEGY = new ObjectStrategy<byte[]>()
   {
     @Override
     public Class<byte[]> getClazz()
@@ -108,7 +113,7 @@ public class GenericIndexedBenchmark
     GenericIndexedWriter<byte[]> genericIndexedWriter = new GenericIndexedWriter<>(
         new OffHeapMemorySegmentWriteOutMedium(),
         "genericIndexedBenchmark",
-        byteArrayStrategy
+        BYTE_ARRAY_STRATEGY
     );
     genericIndexedWriter.open();
 
@@ -121,7 +126,7 @@ public class GenericIndexedBenchmark
       element.putInt(0, i);
       genericIndexedWriter.write(element.array());
     }
-    smooshDir = Files.createTempDir();
+    smooshDir = FileUtils.createTempDir();
     file = File.createTempFile("genericIndexedBenchmark", "meta");
 
     try (FileChannel fileChannel =
@@ -132,7 +137,7 @@ public class GenericIndexedBenchmark
 
     FileChannel fileChannel = FileChannel.open(file.toPath());
     MappedByteBuffer byteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
-    genericIndexed = GenericIndexed.read(byteBuffer, byteArrayStrategy, SmooshedFileMapper.load(smooshDir));
+    genericIndexed = GenericIndexed.read(byteBuffer, BYTE_ARRAY_STRATEGY, SmooshedFileMapper.load(smooshDir));
   }
 
   @Setup(Level.Trial)

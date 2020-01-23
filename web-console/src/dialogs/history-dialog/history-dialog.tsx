@@ -16,71 +16,60 @@
  * limitations under the License.
  */
 
-import { Card, Dialog, Divider, IDialogProps } from '@blueprintjs/core';
-import React from 'react';
+import { Card, Classes, Dialog, Divider } from '@blueprintjs/core';
+import classNames from 'classnames';
+import React, { ReactNode } from 'react';
 
-import { JSONCollapse } from '../../components';
+import { JsonCollapse } from '../../components';
 
 import './history-dialog.scss';
 
-interface HistoryDialogProps extends IDialogProps {
+interface HistoryDialogProps {
   historyRecords: any[];
+  buttons?: ReactNode;
 }
 
-interface HistoryDialogState {}
+export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDialogProps) {
+  const { buttons, historyRecords } = props;
 
-export class HistoryDialog extends React.PureComponent<HistoryDialogProps, HistoryDialogState> {
-  constructor(props: HistoryDialogProps) {
-    super(props);
-    this.state = {};
+  let content;
+  if (historyRecords.length === 0) {
+    content = <div className="no-record">No history records available</div>;
+  } else {
+    content = (
+      <>
+        <span className="history-dialog-title">History</span>
+        <div className="history-record-entries">
+          {historyRecords.map((record, i) => {
+            const auditInfo = record.auditInfo;
+            const auditTime = record.auditTime;
+            const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
+
+            return (
+              <div key={i} className="history-record-entry">
+                <Card>
+                  <div className="history-record-title">
+                    <span className="history-record-title-change">Change</span>
+                    <span>{formattedTime}</span>
+                  </div>
+                  <Divider />
+                  <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
+                  <JsonCollapse stringValue={record.payload} buttonText="Payload" />
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+      </>
+    );
   }
 
-  renderRecords() {
-    const { children, historyRecords } = this.props;
-    let content;
-    if (historyRecords.length === 0) {
-      content = <div className="no-record">No history records available</div>;
-    } else {
-      content = (
-        <>
-          <span className="history-dialog-title">History</span>
-          <div className="history-record-entries">
-            {historyRecords.map((record, i) => {
-              const auditInfo = record.auditInfo;
-              const auditTime = record.auditTime;
-              const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
-
-              return (
-                <div key={i} className="history-record-entry">
-                  <Card>
-                    <div className="history-record-title">
-                      <span className="history-record-title-change">Change</span>
-                      <span>{formattedTime}</span>
-                    </div>
-                    <Divider />
-                    <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
-                    <JSONCollapse stringValue={record.payload} buttonText="Payload" />
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      );
-    }
-    return (
-      <div className="history-record-container">
-        {content}
-        {children}
+  return (
+    <Dialog className="history-dialog" isOpen {...props}>
+      <div className={classNames(Classes.DIALOG_BODY, 'history-record-container')}>{content}</div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>{buttons}</div>
       </div>
-    );
-  }
-
-  render(): React.ReactNode {
-    return (
-      <Dialog isOpen {...this.props}>
-        {this.renderRecords()}
-      </Dialog>
-    );
-  }
-}
+    </Dialog>
+  );
+});

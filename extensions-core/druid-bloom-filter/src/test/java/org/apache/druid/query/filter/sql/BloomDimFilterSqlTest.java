@@ -66,7 +66,7 @@ import java.util.Map;
 
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
-  private static final Injector injector = Guice.createInjector(
+  private static final Injector INJECTOR = Guice.createInjector(
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
@@ -82,7 +82,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   );
 
   private static ObjectMapper jsonMapper =
-      injector
+      INJECTOR
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 
@@ -90,10 +90,10 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   {
     final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
     for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(injector.getInstance(clazz));
+      exprMacros.add(INJECTOR.getInstance(clazz));
     }
-    exprMacros.add(injector.getInstance(BloomFilterExprMacro.class));
-    exprMacros.add(injector.getInstance(LookupExprMacro.class));
+    exprMacros.add(INJECTOR.getInstance(BloomFilterExprMacro.class));
+    exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
     return new ExprMacroTable(exprMacros);
   }
 
@@ -146,7 +146,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
     // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(
-        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s') = TRUE", base64),
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE nullif(bloom_filter_test(concat(dim2, '-foo'), '%s'), 1) is null", base64),
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -154,7 +154,12 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(
                       new ExpressionDimFilter(
-                          StringUtils.format("(bloom_filter_test(concat(\"dim2\",'-foo'),'%s') == 1)", base64),
+                          StringUtils.format(
+                              "case_searched(bloom_filter_test(concat(\"dim2\",'-foo'),'%s'),1,isnull(bloom_filter_test(concat(\"dim2\",'-foo'),'%s')))",
+                              base64,
+                              base64
+                          ),
+                          null,
                           createExprMacroTable()
                       )
                   )
@@ -337,7 +342,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   {
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(),
-        ImmutableSet.of(injector.getInstance(BloomFilterOperatorConversion.class))
+        ImmutableSet.of(INJECTOR.getInstance(BloomFilterOperatorConversion.class))
     );
     return getResults(
         plannerConfig,

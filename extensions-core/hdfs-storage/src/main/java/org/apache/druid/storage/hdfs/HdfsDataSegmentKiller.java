@@ -22,6 +22,7 @@ package org.apache.druid.storage.hdfs;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -43,7 +44,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   private final Path storageDirectory;
 
   @Inject
-  public HdfsDataSegmentKiller(final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
+  public HdfsDataSegmentKiller(@Hdfs final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
   {
     this.config = config;
     this.storageDirectory = new Path(pusherConfig.getStorageDirectory());

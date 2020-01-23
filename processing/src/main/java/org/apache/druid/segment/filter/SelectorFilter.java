@@ -19,17 +19,22 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+
+import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  */
@@ -37,14 +42,26 @@ public class SelectorFilter implements Filter
 {
   private final String dimension;
   private final String value;
+  @Nullable
+  private final FilterTuning filterTuning;
 
   public SelectorFilter(
       String dimension,
       String value
   )
   {
+    this(dimension, value, null);
+  }
+
+  public SelectorFilter(
+      String dimension,
+      String value,
+      @Nullable FilterTuning filterTuning
+  )
+  {
     this.dimension = dimension;
     this.value = value;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -64,7 +81,7 @@ public class SelectorFilter implements Filter
   {
     return DimensionHandlerUtils.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(value);
   }
@@ -73,6 +90,12 @@ public class SelectorFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override
@@ -91,6 +114,12 @@ public class SelectorFilter implements Filter
   public boolean canVectorizeMatcher()
   {
     return true;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
   }
 
   @Override

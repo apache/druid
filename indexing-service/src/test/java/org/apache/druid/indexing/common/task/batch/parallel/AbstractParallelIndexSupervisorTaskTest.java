@@ -19,15 +19,16 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -39,25 +40,30 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.worker.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.segment.loading.DataSegmentKiller;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.NoopDataSegmentKiller;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.Rule;
@@ -66,44 +72,87 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Stream;
 
 public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 {
+  static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
+  static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
+      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
+  );
   static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec(
-          "ts",
-          "auto",
-          null
-      ),
-      new DimensionsSpec(
-          DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-          new ArrayList<>(),
-          new ArrayList<>()
-      ),
+      DEFAULT_TIMESTAMP_SPEC,
+      DEFAULT_DIMENSIONS_SPEC,
       null,
       Arrays.asList("ts", "dim", "val"),
       false,
       0
   );
+  static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
+  static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING = new ParallelIndexTuningConfig(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      2,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+  );
 
-  TaskActionClient actionClient;
-  LocalIndexingServiceClient indexingServiceClient;
-  TaskToolbox toolbox;
-  File localDeepStorage;
+  protected TestLocalTaskActionClient actionClient;
+  protected LocalIndexingServiceClient indexingServiceClient;
+  protected TaskToolbox toolbox;
+  protected File localDeepStorage;
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  class LocalIndexingServiceClient extends NoopIndexingServiceClient
+  private IntermediaryDataManager intermediaryDataManager;
+
+  protected void initializeIntermediaryDataManager() throws IOException
+  {
+    intermediaryDataManager = new IntermediaryDataManager(
+        new WorkerConfig(),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null))
+        ),
+        null
+    );
+  }
+
+  public class LocalIndexingServiceClient extends NoopIndexingServiceClient
   {
     private final ConcurrentMap<String, Future<TaskStatus>> tasks = new ConcurrentHashMap<>();
     private final ListeningExecutorService service = MoreExecutors.listeningDecorator(
@@ -113,17 +162,25 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     @Override
     public String runTask(Object taskObject)
     {
-      final ParallelIndexSubTask subTask = (ParallelIndexSubTask) taskObject;
+      final Task subTask = (Task) taskObject;
+      try {
+        getTaskStorage().insert(subTask, TaskStatus.running(subTask.getId()));
+      }
+      catch (EntryExistsException e) {
+        throw new RuntimeException(e);
+      }
       tasks.put(subTask.getId(), service.submit(() -> {
         try {
           final TaskToolbox toolbox = createTaskToolbox(subTask);
           if (subTask.isReady(toolbox.getTaskActionClient())) {
             return subTask.run(toolbox);
           } else {
+            getTaskStorage().setStatus(TaskStatus.failure(subTask.getId()));
             throw new ISE("task[%s] is not ready", subTask.getId());
           }
         }
         catch (Exception e) {
+          getTaskStorage().setStatus(TaskStatus.failure(subTask.getId(), e.getMessage()));
           throw new RuntimeException(e);
         }
       }));
@@ -134,6 +191,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public TaskStatusResponse getTaskStatus(String taskId)
     {
       final Future<TaskStatus> taskStatusFuture = tasks.get(taskId);
+      final Optional<Task> task = getTaskStorage().getTask(taskId);
+      final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       if (taskStatusFuture != null) {
         try {
           if (taskStatusFuture.isDone()) {
@@ -142,7 +201,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
-                    "index_sub",
+                    groupId,
+                    SinglePhaseSubTask.TYPE,
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
                     taskStatus.getStatusCode(),
@@ -158,7 +218,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
-                    "index_sub",
+                    groupId,
+                    SinglePhaseSubTask.TYPE,
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
                     TaskState.RUNNING,
@@ -172,14 +233,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           }
         }
         catch (InterruptedException | ExecutionException e) {
-          // We don't have a way to pass this exception to the supervisorTask yet..
+          // We don't have a way to propagate this exception to the supervisorTask yet..
           // So, let's print it here.
           System.err.println(Throwables.getStackTraceAsString(e));
           return new TaskStatusResponse(
               taskId,
               new TaskStatusPlus(
                   taskId,
-                  "index_sub",
+                  groupId,
+                  SinglePhaseSubTask.TYPE,
                   DateTimes.EPOCH,
                   DateTimes.EPOCH,
                   TaskState.FAILED,
@@ -208,16 +270,17 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    void shutdown()
+    public void shutdown()
     {
       service.shutdownNow();
     }
   }
 
-  TaskToolbox createTaskToolbox(Task task) throws IOException
+  protected TaskToolbox createTaskToolbox(Task task) throws IOException
   {
     return new TaskToolbox(
         null,
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,
         null,
         new LocalDataSegmentPusher(
@@ -230,18 +293,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               }
             }
         ),
-        new DataSegmentKiller()
-        {
-          @Override
-          public void kill(DataSegment segment)
-          {
-          }
-
-          @Override
-          public void killAll()
-          {
-          }
-        },
+        new NoopDataSegmentKiller(),
         null,
         null,
         null,
@@ -250,7 +302,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        null,
+        newSegmentLoader(temporaryFolder.newFolder()),
         getObjectMapper(),
         temporaryFolder.newFolder(task.getId()),
         getIndexIO(),
@@ -262,7 +314,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        intermediaryDataManager
     );
   }
 
@@ -278,6 +331,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       super(
           id,
+          null,
           taskResource,
           ingestionSchema,
           context,
@@ -291,14 +345,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               return new AllowAllAuthorizer();
             }
           },
-          new DropwizardRowIngestionMetersFactory()
+          new DropwizardRowIngestionMetersFactory(),
+          new TestAppenderatorsManager()
       );
     }
   }
 
-  static class TestParallelIndexTaskRunner extends SinglePhaseParallelIndexTaskRunner
+  static class TestSinglePhaseParallelIndexTaskRunner extends SinglePhaseParallelIndexTaskRunner
   {
-    TestParallelIndexTaskRunner(
+    TestSinglePhaseParallelIndexTaskRunner(
         TaskToolbox toolbox,
         String taskId,
         String groupId,
@@ -316,27 +371,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           indexingServiceClient
       );
     }
-
-    @Override
-    Stream<ParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
-    {
-      final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
-          .getIOConfig()
-          .getFirehoseFactory();
-      return baseFirehoseFactory.getSplits().map(split -> {
-        try {
-          // taskId is suffixed by the current time and this sleep is to make sure that every sub task has different id
-          Thread.sleep(10);
-        }
-        catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-        return newTaskSpec((InputSplit<?>) split);
-      });
-    }
   }
 
-  static class LocalParallelIndexTaskClientFactory implements IndexTaskClientFactory<ParallelIndexTaskClient>
+  static class LocalParallelIndexTaskClientFactory implements IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
@@ -346,7 +383,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public ParallelIndexTaskClient build(
+    public ParallelIndexSupervisorTaskClient build(
         TaskInfoProvider taskInfoProvider,
         String callerId,
         int numThreads,
@@ -354,15 +391,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         long numRetries
     )
     {
-      return new LocalParallelIndexTaskClient(callerId, supervisorTask);
+      return new LocalParallelIndexSupervisorTaskClient(callerId, supervisorTask);
     }
   }
 
-  static class LocalParallelIndexTaskClient extends ParallelIndexTaskClient
+  static class LocalParallelIndexSupervisorTaskClient extends ParallelIndexSupervisorTaskClient
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
-    LocalParallelIndexTaskClient(String callerId, ParallelIndexSupervisorTask supervisorTask)
+    LocalParallelIndexSupervisorTaskClient(String callerId, ParallelIndexSupervisorTask supervisorTask)
     {
       super(null, null, null, null, callerId, 0);
       this.supervisorTask = supervisorTask;
@@ -375,9 +412,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
+    public void report(String supervisorTaskId, SubTaskReport report)
     {
-      supervisorTask.getRunner().collectReport(new PushedSegmentsReport(getSubtaskId(), pushedSegments));
+      supervisorTask.getCurrentRunner().collectReport(report);
     }
   }
 }

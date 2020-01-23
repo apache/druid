@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TaskTableActionDialog } from './task-table-action-dialog';
 
@@ -29,8 +29,7 @@ describe('task table action dialog', () => {
         status={'RUNNING'}
         taskId={'test'}
         actions={[basicAction]}
-        onClose={() => null}
-        isOpen
+        onClose={() => {}}
       />
     );
     render(taskTableActionDialog);

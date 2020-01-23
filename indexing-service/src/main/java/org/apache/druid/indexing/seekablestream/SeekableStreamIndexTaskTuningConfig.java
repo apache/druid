@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -33,15 +34,12 @@ import java.util.Objects;
 
 public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final int maxRowsPerSegment;
-  @Nullable
-  private final Long maxTotalRows;
+  private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   @Deprecated
@@ -87,8 +85,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
 
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
-    this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
-    this.maxTotalRows = maxTotalRows;
+    this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -151,7 +148,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
-    return maxRowsPerSegment;
+    return partitionsSpec.getMaxRowsPerSegment();
   }
 
   @JsonProperty
@@ -159,7 +156,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   @Nullable
   public Long getMaxTotalRows()
   {
-    return maxTotalRows;
+    return partitionsSpec.getMaxTotalRows();
+  }
+
+  @Override
+  public DynamicPartitionsSpec getPartitionsSpec()
+  {
+    return partitionsSpec;
   }
 
   @Override
@@ -265,6 +268,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return skipSequenceNumberAvailabilityCheck;
   }
 
+  @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -279,7 +283,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     SeekableStreamIndexTaskTuningConfig that = (SeekableStreamIndexTaskTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
-           maxRowsPerSegment == that.maxRowsPerSegment &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -288,7 +291,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
-           Objects.equals(maxTotalRows, that.maxTotalRows) &&
+           Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
@@ -303,8 +306,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return Objects.hash(
         maxRowsInMemory,
         maxBytesInMemory,
-        maxRowsPerSegment,
-        maxTotalRows,
+        partitionsSpec,
         intermediatePersistPeriod,
         basePersistDirectory,
         maxPendingPersists,

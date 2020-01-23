@@ -26,23 +26,22 @@ import java.util.Iterator;
  */
 public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T>
 {
-
   private final IteratorMaker<T, IterType> maker;
 
-  public BaseSequence(
-      IteratorMaker<T, IterType> maker
-  )
+  public BaseSequence(IteratorMaker<T, IterType> maker)
   {
     this.maker = maker;
   }
 
   @Override
-  public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> fn)
+  public <OutType> OutType accumulate(final OutType initValue, final Accumulator<OutType, T> fn)
   {
     IterType iterator = maker.make();
+    OutType accumulated = initValue;
+
     try {
       while (iterator.hasNext()) {
-        initValue = fn.accumulate(initValue, iterator.next());
+        accumulated = fn.accumulate(accumulated, iterator.next());
       }
     }
     catch (Throwable t) {
@@ -55,11 +54,14 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
       throw t;
     }
     maker.cleanup(iterator);
-    return initValue;
+    return accumulated;
   }
 
   @Override
-  public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+  public <OutType> Yielder<OutType> toYielder(
+      final OutType initValue,
+      final YieldingAccumulator<OutType, T> accumulator
+  )
   {
     final IterType iterator = maker.make();
 
@@ -78,7 +80,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
   }
 
   private <OutType> Yielder<OutType> makeYielder(
-      OutType initValue,
+      final OutType initValue,
       final YieldingAccumulator<OutType, T> accumulator,
       final IterType iter
   )
@@ -91,14 +93,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
     if (!accumulator.yielded()) {
       return Yielders.done(
           retVal,
-          new Closeable()
-          {
-            @Override
-            public void close()
-            {
-              maker.cleanup(iter);
-            }
-          }
+          (Closeable) () -> maker.cleanup(iter)
       );
     }
 

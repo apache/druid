@@ -66,9 +66,7 @@ import org.junit.runners.Parameterized;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -83,13 +81,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 {
   private static AggregatorFactory[] factories;
-  static final int dimensionCount = 5;
+  static final int DIMENSION_COUNT = 5;
 
   static {
 
-    final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(dimensionCount + 1);
+    final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(DIMENSION_COUNT + 1);
     ingestAggregatorFactories.add(new CountAggregatorFactory("rows"));
-    for (int i = 0; i < dimensionCount; ++i) {
+    for (int i = 0; i < DIMENSION_COUNT; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
               StringUtils.format("sumResult%s", i),
@@ -304,9 +302,9 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         true,
         elementsPerThread * taskCount
     );
-    final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(dimensionCount + 1);
+    final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(DIMENSION_COUNT + 1);
     queryAggregatorFactories.add(new CountAggregatorFactory("rows"));
-    for (int i = 0; i < dimensionCount; ++i) {
+    for (int i = 0; i < DIMENSION_COUNT; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
               StringUtils.format("sumResult%s", i),
@@ -346,7 +344,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     final List<ListenableFuture<?>> queryFutures = new ArrayList<>();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -364,7 +362,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                   currentlyRunning.incrementAndGet();
                   try {
                     for (int i = 0; i < elementsPerThread; i++) {
-                      incrementalIndex.add(getLongRow(timestamp + i, 1, dimensionCount));
+                      incrementalIndex.add(getLongRow(timestamp + i, 1, DIMENSION_COUNT));
                     }
                   }
                   catch (IndexSizeExceededException e) {
@@ -394,8 +392,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
-                  Map<String, Object> context = new HashMap<String, Object>();
-                  List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+                  List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
                   for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
                       Assert.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
@@ -427,12 +424,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
-      for (int i = 0; i < dimensionCount; ++i) {
+      for (int i = 0; i < DIMENSION_COUNT; ++i) {
         Assert.assertEquals(
             StringUtils.format("Failed long sum on dimension %d", i),
             expectedVal,

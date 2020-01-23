@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .load-data-view {
   height: 100%;
   display: grid;
@@ -27,16 +29,47 @@
     'main ctrl'
     'main next';
 
+  &.load-data-continue-view {
+    display: block;
+    text-align: center;
+
+    .spec-card {
+      display: inline-block;
+      width: 480px;
+      height: 100px;
+      margin: 10px;
+      text-align: left;
+
+      .spec-card-icon {
+        vertical-align: top;
+      }
+
+      .spec-card-header {
+        font-size: 25px;
+        line-height: 30px;
+        display: inline-block;
+        vertical-align: top;
+        padding-left: 10px;
+
+        .spec-card-caption {
+          font-size: 15px;
+          line-height: 20px;
+        }
+      }
+    }
+  }
+
   &.welcome {
     .main {
       height: 100%;
       padding: 0;
+      overflow: auto;
 
       .bp3-card {
         position: relative;
         display: inline-block;
         vertical-align: top;
-        width: 250px;
+        width: 220px;
         height: 140px;
         margin-top: 10px;
         margin-left: 10px;
@@ -117,6 +150,7 @@
     position: relative;
     margin: 0 5px;
 
+    .inline-data,
     .raw-lines {
       position: absolute;
       width: 100%;
@@ -172,11 +206,19 @@
           &.timestamp {
             background: rgba(19, 129, 201, 0.5);
           }
+
+          &.used {
+            background: rgba(99, 129, 137, 0.5);
+          }
         }
 
         .rt-td {
           &.timestamp {
             background: rgba(19, 129, 201, 0.15);
+          }
+
+          &.used {
+            background: rgba(99, 129, 137, 0.15);
           }
         }
       }
@@ -220,18 +262,25 @@
     padding: 10px;
     border-radius: 2px;
     margin-bottom: 15px;
+  }
 
-    .controls-buttons {
-      position: relative;
+  .control-buttons {
+    position: relative;
 
-      .add-update {
-        margin-right: 15px;
-      }
-
-      .cancel {
-        position: absolute;
-        right: 0;
-      }
+    .bp3-button {
+      margin-right: 15px;
     }
+
+    .right {
+      position: absolute;
+      right: 0;
+      margin-right: 0;
+    }
+  }
+
+  .center-message {
+    position: absolute;
+    width: 100%;
+    height: 100% !important;
   }
 }

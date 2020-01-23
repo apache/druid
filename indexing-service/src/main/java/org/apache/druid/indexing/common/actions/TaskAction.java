@@ -26,14 +26,18 @@ import org.apache.druid.indexing.common.task.Task;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "lockAcquire", value = LockAcquireAction.class),
-    @JsonSubTypes.Type(name = "lockTryAcquire", value = LockTryAcquireAction.class),
+    @JsonSubTypes.Type(name = "lockAcquire", value = TimeChunkLockAcquireAction.class),
+    @JsonSubTypes.Type(name = "lockTryAcquire", value = TimeChunkLockTryAcquireAction.class),
+    @JsonSubTypes.Type(name = "segmentLockTryAcquire", value = SegmentLockTryAcquireAction.class),
+    @JsonSubTypes.Type(name = "segmentLockAcquire", value = SegmentLockAcquireAction.class),
     @JsonSubTypes.Type(name = "lockList", value = LockListAction.class),
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
     @JsonSubTypes.Type(name = "segmentInsertion", value = SegmentInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
-    @JsonSubTypes.Type(name = "segmentListUsed", value = SegmentListUsedAction.class),
-    @JsonSubTypes.Type(name = "segmentListUnused", value = SegmentListUnusedAction.class),
+    // Type name doesn't correspond to the name of the class for backward compatibility.
+    @JsonSubTypes.Type(name = "segmentListUsed", value = RetrieveUsedSegmentsAction.class),
+    // Type name doesn't correspond to the name of the class for backward compatibility.
+    @JsonSubTypes.Type(name = "segmentListUnused", value = RetrieveUnusedSegmentsAction.class),
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
     @JsonSubTypes.Type(name = "segmentAllocate", value = SegmentAllocateAction.class),

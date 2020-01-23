@@ -20,7 +20,6 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -31,6 +30,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -53,7 +53,7 @@ import java.util.List;
 public class ScanQueryRunnerFactoryTest
 {
 
-  private static final ScanQueryRunnerFactory factory = new ScanQueryRunnerFactory(
+  private static final ScanQueryRunnerFactory FACTORY = new ScanQueryRunnerFactory(
       new ScanQueryQueryToolChest(
           new ScanQueryConfig(),
           DefaultGenericQueryMetricsFactory.instance()
@@ -82,7 +82,7 @@ public class ScanQueryRunnerFactoryTest
                          .batchSize(batchSize)
                          .limit(limit)
                          .order(order)
-                         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                          .dataSource("some datasource")
                          .resultFormat(resultFormat)
                          .build();
@@ -137,7 +137,7 @@ public class ScanQueryRunnerFactoryTest
       });
       Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
       try {
-        List<ScanResultValue> output = factory.priorityQueueSortAndLimit(
+        List<ScanResultValue> output = FACTORY.priorityQueueSortAndLimit(
             inputSequence,
             query,
             ImmutableList.of(new Interval(
@@ -145,13 +145,13 @@ public class ScanQueryRunnerFactoryTest
                 DateTimes.of("2019-01-01").plusHours(1)
             ))
         ).toList();
-        if (query.getLimit() > Integer.MAX_VALUE) {
+        if (query.getScanRowsLimit() > Integer.MAX_VALUE) {
           Assert.fail("Unsupported exception should have been thrown due to high limit");
         }
         validateSortedOutput(output, expectedEventTimestamps);
       }
       catch (UOE e) {
-        if (query.getLimit() <= Integer.MAX_VALUE) {
+        if (query.getScanRowsLimit() <= Integer.MAX_VALUE) {
           Assert.fail("Unsupported operation exception should not have been thrown here");
         }
       }
@@ -226,10 +226,10 @@ public class ScanQueryRunnerFactoryTest
       });
 
       List<ScanResultValue> output =
-          factory.nWayMergeAndLimit(
+          FACTORY.nWayMergeAndLimit(
               groupedRunners,
               QueryPlus.wrap(query),
-              ImmutableMap.of()
+              ResponseContext.createEmpty()
           ).toList();
 
       validateSortedOutput(output, expectedEventTimestamps);
@@ -247,7 +247,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check total # of rows <= limit
-      Assert.assertTrue(output.size() <= query.getLimit());
+      Assert.assertTrue(output.size() <= query.getScanRowsLimit());
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
@@ -261,7 +261,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check the values are correct
-      for (int i = 0; i < query.getLimit() && i < output.size(); i++) {
+      for (int i = 0; i < query.getScanRowsLimit() && i < output.size(); i++) {
         Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
       }
     }
@@ -284,11 +284,11 @@ public class ScanQueryRunnerFactoryTest
       );
       QuerySegmentSpec singleSpecificSpec = new SpecificSegmentSpec(descriptor);
 
-      List<Interval> intervals = factory.getIntervalsFromSpecificQuerySpec(multiSpecificSpec);
+      List<Interval> intervals = FACTORY.getIntervalsFromSpecificQuerySpec(multiSpecificSpec);
       Assert.assertEquals(1, intervals.size());
       Assert.assertEquals(descriptor.getInterval(), intervals.get(0));
 
-      intervals = factory.getIntervalsFromSpecificQuerySpec(singleSpecificSpec);
+      intervals = FACTORY.getIntervalsFromSpecificQuerySpec(singleSpecificSpec);
       Assert.assertEquals(1, intervals.size());
       Assert.assertEquals(descriptor.getInterval(), intervals.get(0));
     }
@@ -304,7 +304,7 @@ public class ScanQueryRunnerFactoryTest
               )
           )
       );
-      factory.getIntervalsFromSpecificQuerySpec(multiIntervalSpec);
+      FACTORY.getIntervalsFromSpecificQuerySpec(multiIntervalSpec);
     }
 
     @Test(expected = UOE.class)
@@ -316,7 +316,7 @@ public class ScanQueryRunnerFactoryTest
               DateTimes.of("2019-01-01").plusHours(1)
           )
       );
-      factory.getIntervalsFromSpecificQuerySpec(legacySpec);
+      FACTORY.getIntervalsFromSpecificQuerySpec(legacySpec);
     }
   }
 }

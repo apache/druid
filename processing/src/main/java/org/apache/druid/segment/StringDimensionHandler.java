@@ -58,7 +58,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
         return valueDiff;
       }
     }
-    //noinspection SubtractionInCompareTo -- substraction is safe here, because lenghts or rows are small numbers.
+    //noinspection SubtractionInCompareTo -- substraction is safe here, because lengths or rows are small numbers.
     int lenDiff = len1 - len2;
     if (lenDiff == 0) {
       return 0;

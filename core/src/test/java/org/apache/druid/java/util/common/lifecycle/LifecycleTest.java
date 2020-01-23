@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class LifecycleTest
 {
-  private static final Lifecycle.Handler dummyHandler = new Lifecycle.Handler()
+  private static final Lifecycle.Handler DUMMY_HANDLER = new Lifecycle.Handler()
   {
     @Override
     public void start()
@@ -319,7 +319,7 @@ public class LifecycleTest
     reachedStop.await();
 
     try {
-      lifecycle.addHandler(dummyHandler);
+      lifecycle.addHandler(DUMMY_HANDLER);
       Assert.fail("Expected exception");
     }
     catch (IllegalStateException e) {
@@ -327,7 +327,7 @@ public class LifecycleTest
     }
 
     try {
-      lifecycle.addMaybeStartHandler(dummyHandler);
+      lifecycle.addMaybeStartHandler(DUMMY_HANDLER);
       Assert.fail("Expected exception");
     }
     catch (IllegalStateException e) {

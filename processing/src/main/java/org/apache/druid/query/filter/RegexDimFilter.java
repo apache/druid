@@ -20,16 +20,20 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.RegexFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -38,7 +42,10 @@ public class RegexDimFilter implements DimFilter
 {
   private final String dimension;
   private final String pattern;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
+  private final FilterTuning filterTuning;
 
   private final Pattern compiledPattern;
 
@@ -46,7 +53,8 @@ public class RegexDimFilter implements DimFilter
   public RegexDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("pattern") String pattern,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -55,6 +63,13 @@ public class RegexDimFilter implements DimFilter
     this.pattern = pattern;
     this.extractionFn = extractionFn;
     this.compiledPattern = Pattern.compile(pattern);
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public RegexDimFilter(String dimension, String pattern, @Nullable ExtractionFn extractionFn)
+  {
+    this(dimension, pattern, extractionFn, null);
   }
 
   @JsonProperty
@@ -69,10 +84,19 @@ public class RegexDimFilter implements DimFilter
     return pattern;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -101,7 +125,7 @@ public class RegexDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new RegexFilter(dimension, compiledPattern, extractionFn);
+    return new RegexFilter(dimension, compiledPattern, extractionFn, filterTuning);
   }
 
   @Override
@@ -111,9 +135,9 @@ public class RegexDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override
@@ -123,6 +147,7 @@ public class RegexDimFilter implements DimFilter
            "dimension='" + dimension + '\'' +
            ", pattern='" + pattern + '\'' +
            ", extractionFn='" + extractionFn + '\'' +
+           ", filterTuning=" + filterTuning +
            '}';
   }
 
@@ -132,28 +157,19 @@ public class RegexDimFilter implements DimFilter
     if (this == o) {
       return true;
     }
-    if (!(o instanceof RegexDimFilter)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     RegexDimFilter that = (RegexDimFilter) o;
-
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (!pattern.equals(that.pattern)) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
+    return dimension.equals(that.dimension) &&
+           pattern.equals(that.pattern) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension.hashCode();
-    result = 31 * result + pattern.hashCode();
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, pattern, extractionFn, filterTuning);
   }
 }

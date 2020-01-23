@@ -41,11 +41,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class CoordinatorResourceTestClient
 {
@@ -98,7 +95,7 @@ public class CoordinatorResourceTestClient
   // return a list of the segment dates for the specified datasource
   public List<String> getMetadataSegments(final String dataSource)
   {
-    ArrayList<String> segments;
+    List<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getMetadataSegmentsURL(dataSource));
 
@@ -117,7 +114,7 @@ public class CoordinatorResourceTestClient
   // return a list of the segment dates for the specified datasource
   public List<String> getSegmentIntervals(final String dataSource)
   {
-    ArrayList<String> segments;
+    List<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 
@@ -134,13 +131,12 @@ public class CoordinatorResourceTestClient
   }
 
   // return a set of the segment versions for the specified datasource
-  public Set<String> getSegmentVersions(final String dataSource)
+  public List<DataSegment> getAvailableSegments(final String dataSource)
   {
-    ArrayList<DataSegment> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
 
-      segments = jsonMapper.readValue(
+      return jsonMapper.readValue(
           response.getContent(), new TypeReference<List<DataSegment>>()
           {
           }
@@ -149,7 +145,6 @@ public class CoordinatorResourceTestClient
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return segments.stream().map(s -> s.getVersion()).collect(Collectors.toSet());
   }
 
   private Map<String, Integer> getLoadStatus()

@@ -24,19 +24,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -45,8 +47,36 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonTypeName("stringFirst")
-public class StringFirstAggregatorFactory extends NullableAggregatorFactory<BaseObjectColumnValueSelector>
+public class StringFirstAggregatorFactory extends AggregatorFactory
 {
+  private static final Aggregator NIL_AGGREGATOR = new StringFirstAggregator(
+      NilColumnValueSelector.instance(),
+      NilColumnValueSelector.instance(),
+      0,
+      false
+  )
+  {
+    @Override
+    public void aggregate()
+    {
+      // no-op
+    }
+  };
+
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new StringFirstBufferAggregator(
+      NilColumnValueSelector.instance(),
+      NilColumnValueSelector.instance(),
+      0,
+      false
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
+
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
 
   public static final Comparator TIME_COMPARATOR = (o1, o2) -> Longs.compare(
@@ -104,35 +134,48 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+
+    if (maxStringBytes != null && maxStringBytes < 0) {
+      throw new IAE("maxStringBytes must be greater than 0");
+    }
+
     this.name = name;
     this.fieldName = fieldName;
-    this.maxStringBytes = maxStringBytes == null ? DEFAULT_MAX_STRING_SIZE : maxStringBytes;
+    this.maxStringBytes = maxStringBytes == null
+                          ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
+                          : maxStringBytes;
   }
 
   @Override
-  protected BaseObjectColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return metricFactory.makeColumnValueSelector(fieldName);
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_AGGREGATOR;
+    } else {
+      return new StringFirstAggregator(
+          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          valueSelector,
+          maxStringBytes,
+          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+      );
+    }
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new StringFirstAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
-        maxStringBytes
-    );
-  }
-
-  @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
-  {
-    return new StringFirstBufferAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
-        maxStringBytes
-    );
+    final BaseObjectColumnValueSelector<?> valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_BUFFER_AGGREGATOR;
+    } else {
+      return new StringFirstBufferAggregator(
+          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          valueSelector,
+          maxStringBytes,
+          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+      );
+    }
   }
 
   @Override
@@ -156,7 +199,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringFirstFoldingAggregatorFactory(name, name, maxStringBytes);
+    return new StringFirstAggregatorFactory(name, name, maxStringBytes);
   }
 
   @Override
@@ -234,25 +277,25 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     StringFirstAggregatorFactory that = (StringFirstAggregatorFactory) o;
-
-    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
+    return maxStringBytes == that.maxStringBytes &&
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes);
   }
 
   @Override
   public String toString()
   {
     return "StringFirstAggregatorFactory{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
-           ", maxStringBytes=" + maxStringBytes + '\'' +
+           "fieldName='" + fieldName + '\'' +
+           ", name='" + name + '\'' +
+           ", maxStringBytes=" + maxStringBytes +
            '}';
   }
 }
