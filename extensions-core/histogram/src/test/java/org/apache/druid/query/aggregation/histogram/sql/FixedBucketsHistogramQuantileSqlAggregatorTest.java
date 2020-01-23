@@ -210,7 +210,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
@@ -336,7 +336,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
     final List<Object[]> results = lifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
@@ -431,7 +431,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
     final List<Object[]> expectedResults;

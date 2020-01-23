@@ -187,7 +187,12 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<String[]> expectedResults = ImmutableList.of(
         new String[] {
             "\"AAAAAT/wAAAAAAAAQBgAAAAAAABAaQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""
@@ -220,7 +225,12 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Log query
-    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
 
     // Verify query
     Assert.assertEquals(
@@ -249,7 +259,12 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[] {
             1.1,
@@ -298,7 +313,12 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT dim1, TDIGEST_GENERATE_SKETCH(m1, 200) AS x FROM foo group by dim1)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[] {
             1.0,
@@ -364,7 +384,12 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[] {
             1.0,
@@ -411,7 +436,12 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Log query
-    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
 
     // Verify query
     Assert.assertEquals(

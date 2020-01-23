@@ -326,7 +326,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{1L}
         ),
-        ImmutableList.of(new SqlParameter(1, SqlType.VARCHAR, base64))
+        ImmutableList.of(new SqlParameter(SqlType.VARCHAR, base64))
     );
   }
 

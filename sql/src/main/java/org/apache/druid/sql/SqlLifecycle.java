@@ -20,7 +20,6 @@
 package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.rel.type.RelDataType;
@@ -54,6 +53,7 @@ import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -112,6 +112,7 @@ public class SqlLifecycle
     this.requestLogger = requestLogger;
     this.startMs = startMs;
     this.startNs = startNs;
+    this.parameters = Collections.emptyList();
   }
 
   public String initialize(String sql, Map<String, Object> queryContext)
@@ -148,6 +149,7 @@ public class SqlLifecycle
   {
     synchronized (lock) {
       try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {
+        // set planner context for logs/metrics in case something explodes early
         this.plannerContext = planner.getPlannerContext();
         this.prepareResult = planner.prepare(sql);
         return prepareResult;
@@ -180,8 +182,6 @@ public class SqlLifecycle
   public RelDataType rowType()
   {
     synchronized (lock) {
-      Preconditions.checkState(prepareResult != null || plannerResult != null,
-                               "must be called after sql has been prepared");
       return plannerResult != null ? plannerResult.rowType() : prepareResult.getRowType();
     }
   }
@@ -195,10 +195,7 @@ public class SqlLifecycle
         return doAuthorize(
             AuthorizationUtils.authorizeAllResourceActions(
                 req,
-                Iterables.transform(
-                    plannerResult.datasourceNames(),
-                    AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-                ),
+                Iterables.transform(plannerResult.datasourceNames(), AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
                 plannerFactory.getAuthorizerMapper()
             )
         );

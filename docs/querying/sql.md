@@ -523,11 +523,11 @@ be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM da
       
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`query`|`String`| SQL query to run|yes|
+|`query`|`String`| SQL query to run| yes |
 |`resultFormat`|`String` (`ResultFormat`)| Result format for output | no (default `"object"`)|
 |`header`|`Boolean`| Write column name header for supporting formats| no (default `false`)|
 |`context`|`Object`| Connection context map. see [connection context parameters](#connection-context)| no |
-|`parameters`|`SqlParameter` list| List of query parameters for parameterized queries. |
+|`parameters`|`SqlParameter` list| List of query parameters for parameterized queries. | no |
 
 
 You can use _curl_ to send SQL queries from the command-line:

@@ -467,13 +467,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
         expectedResults
     );
   }
+
+  public void testQuery(
+      final String sql,
+      final Map<String, Object> context,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults
+  ) throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        context,
+        DEFAULT_PARAMETERS,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        expectedQueries,
+        expectedResults
+    );
+  }
+
   public void testQuery(
       final String sql,
       final List<Query> expectedQueries,
@@ -503,7 +522,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(
         plannerConfig,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         sql,
         authenticationResult,
         expectedQueries,
@@ -522,7 +541,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     log.info("SQL: %s", sql);
     queryLogHook.clearRecordedQueries();
-    final List<Object[]> plannerResults = getResults(plannerConfig, queryContext, ImmutableList.of(), sql, authenticationResult);
+    final List<Object[]> plannerResults =
+        getResults(plannerConfig, queryContext, DEFAULT_PARAMETERS, sql, authenticationResult);
     verifyResults(sql, expectedQueries, expectedResults, plannerResults);
   }
 

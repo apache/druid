@@ -253,7 +253,7 @@ public class SqlResourceTest extends CalciteTestBase
             ResultFormat.OBJECT,
             false,
             null,
-            ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
+            ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
         )
     ).rhs;
 

@@ -22,37 +22,30 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
-import org.joda.time.DateTime;
 
+import java.sql.Date;
 import java.util.Objects;
 
 public class SqlParameter
 {
-  private int ordinal;
-  private SqlType type;
-  private Object value;
+  private final SqlType type;
+  private final Object value;
 
   @JsonCreator
   public SqlParameter(
-      @JsonProperty("ordinal") int ordinal,
       @JsonProperty("type") SqlType type,
       @JsonProperty("value") Object value
   )
   {
-    this.ordinal = ordinal;
-    this.type = type;
-    this.value = value;
-  }
-
-  @JsonProperty
-  public int getOrdinal()
-  {
-    return ordinal;
+    this.type = Preconditions.checkNotNull(type);
+    this.value = Preconditions.checkNotNull(value);
   }
 
   @JsonProperty
@@ -70,32 +63,43 @@ public class SqlParameter
   @JsonIgnore
   public TypedValue getTypedValue()
   {
-    // TypedValue.create for TIMESTAMP expects a long...
-    // but be lenient try to accept iso format and sql 'timestamp' format
+
+    Object adjustedValue = value;
+
+    // perhaps there is a better way to do this?
     if (type == SqlType.TIMESTAMP) {
+      // TypedValue.create for TIMESTAMP expects a long...
+      // but be lenient try to accept iso format and sql 'timestamp' format\
       if (value instanceof String) {
         try {
-          DateTime isIso = DateTimes.of((String) value);
-          return TypedValue.create(ColumnMetaData.Rep.nonPrimitiveRepOf(type).name(), isIso.getMillis());
+          adjustedValue = DateTimes.of((String) value).getMillis();
         }
         catch (IllegalArgumentException ignore) {
         }
         try {
-          TimestampString isString = new TimestampString((String) value);
-          return TypedValue.create(ColumnMetaData.Rep.nonPrimitiveRepOf(type).name(), isString.getMillisSinceEpoch());
+          adjustedValue = new TimestampString((String) value).getMillisSinceEpoch();
+        }
+        catch (IllegalArgumentException ignore) {
+        }
+      }
+    } else if (type == SqlType.DATE) {
+      // TypedValue.create for DATE expects calcites internal int representation of sql dates
+      // but be lenient try to accept sql date 'yyyy-MM-dd' format and convert to internal calcite int representation
+      if (value instanceof String) {
+        try {
+          adjustedValue = SqlFunctions.toInt(Date.valueOf((String) value));
         }
         catch (IllegalArgumentException ignore) {
         }
       }
     }
-    return TypedValue.create(ColumnMetaData.Rep.nonPrimitiveRepOf(type).name(), value);
+    return TypedValue.create(ColumnMetaData.Rep.nonPrimitiveRepOf(type).name(), adjustedValue);
   }
 
   @Override
   public String toString()
   {
     return "SqlParameter{" +
-           "ordinal=" + ordinal +
            ", value={" + type.name() + ',' + value + '}' +
            '}';
   }
@@ -110,14 +114,13 @@ public class SqlParameter
       return false;
     }
     SqlParameter that = (SqlParameter) o;
-    return ordinal == that.ordinal &&
-           Objects.equals(type, that.type) &&
+    return Objects.equals(type, that.type) &&
            Objects.equals(value, that.value);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(ordinal, type, value);
+    return Objects.hash(type, value);
   }
 }

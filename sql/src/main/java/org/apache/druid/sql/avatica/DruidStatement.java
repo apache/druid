@@ -37,12 +37,14 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 
 import java.io.Closeable;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -101,6 +103,7 @@ public class DruidStatement implements Closeable
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
         StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
     );
+    this.parameters = Collections.emptyList();
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -171,18 +174,10 @@ public class DruidStatement implements Closeable
         final RelDataType parameterRowType = prepareResult.getParameterRowType();
         for (RelDataTypeField field : parameterRowType.getFieldList()) {
           RelDataType type = field.getType();
-          params.add(
-              new AvaticaParameter(
-                  false,
-                  type.getPrecision(),
-                  type.getScale(),
-                  type.getSqlTypeName().getJdbcOrdinal(),
-                  type.getSqlTypeName().getName(),
-                  Object.class.getName(),
-                  field.getName()));
+          params.add(createParameter(field, type));
         }
         this.signature = Meta.Signature.create(
-            createColumnMetaData(sqlLifecycle.rowType()),
+            createColumnMetaData(prepareResult.getRowType()),
             query,
             params,
             Meta.CursorFactory.ARRAY,
@@ -197,6 +192,7 @@ public class DruidStatement implements Closeable
       return this;
     }
   }
+
 
   public DruidStatement execute()
   {
@@ -360,6 +356,20 @@ public class DruidStatement implements Closeable
       }
     }
   }
+
+  private AvaticaParameter createParameter(RelDataTypeField field, RelDataType type)
+  {
+    return new AvaticaParameter(
+        false,
+        type.getPrecision(),
+        type.getScale(),
+        type.getSqlTypeName().getJdbcOrdinal(),
+        type.getSqlTypeName().getName(),
+        Calcites.sqlTypeNameJdbcToJavaClass(type.getSqlTypeName()).getName(),
+        field.getName());
+  }
+
+
 
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {

@@ -53,8 +53,8 @@ public class DruidViewMacro implements TableMacro
     final RelDataType rowType;
     // Using an escalator here is a hack, but it's currently needed to get the row type. Ideally, some
     // later refactoring would make this unnecessary, since there is no actual query going out herem.
-    final AuthenticationResult authenticationResult = escalator.createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null, null, authenticationResult)) {
+    final AuthenticationResult authResult = escalator.createEscalatedAuthenticationResult();
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null, ImmutableList.of(), authResult)) {
 
       rowType = planner.plan(viewSql).rowType();
     }

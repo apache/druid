@@ -42,7 +42,7 @@ public class SqlQueryTest extends CalciteTestBase
         ResultFormat.ARRAY,
         true,
         ImmutableMap.of("useCache", false),
-        ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
+        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }

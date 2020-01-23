@@ -34,13 +34,13 @@ import org.apache.calcite.util.TimestampString;
  * It is preferable that all parameters are placed here to pick up as many optimizations as possible, but the facilities
  * to convert jdbc types to {@link SqlLiteral} are a bit less rich here than exist for converting a
  * {@link org.apache.calcite.rex.RexDynamicParam} to {@link org.apache.calcite.rex.RexLiteral}, which is why
- * {@link SqlParametizerShuttle} and {@link RelParameterizerShuttle} both exist.
+ * {@link SqlParameterizerShuttle} and {@link RelParameterizerShuttle} both exist.
  */
-public class SqlParametizerShuttle extends SqlShuttle
+public class SqlParameterizerShuttle extends SqlShuttle
 {
   private final PlannerContext plannerContext;
 
-  public SqlParametizerShuttle(PlannerContext plannerContext)
+  public SqlParameterizerShuttle(PlannerContext plannerContext)
   {
     this.plannerContext = plannerContext;
   }

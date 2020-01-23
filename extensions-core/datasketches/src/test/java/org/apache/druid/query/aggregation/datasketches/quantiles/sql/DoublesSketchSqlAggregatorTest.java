@@ -227,7 +227,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
@@ -312,7 +312,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final List<Object[]> results = lifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
@@ -376,7 +376,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
     final List<Object[]> expectedResults;
@@ -450,7 +450,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final List<Object[]> results = sqlLifecycle.runSimple(
         sql,
         QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(),
+        DEFAULT_PARAMETERS,
         authenticationResult
     ).toList();
 
@@ -533,7 +533,12 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             6L,
@@ -700,7 +705,12 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final String sql2 = StringUtils.format("SELECT DS_GET_QUANTILE(y, 0.5), DS_GET_QUANTILE(y, 0.98) from (%s)", sql);
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql2,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             4.0d,

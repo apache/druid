@@ -42,7 +42,9 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
@@ -97,6 +99,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
@@ -864,9 +867,33 @@ public class CalciteTests
       final PlannerConfig plannerConfig
   )
   {
+    DruidNodeDiscovery disco = EasyMock.createMock(DruidNodeDiscovery.class);
+    DruidNodeDiscovery coordinatorDisco = EasyMock.createMock(DruidNodeDiscovery.class);
+    DruidNodeDiscoveryProvider discoProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+
+    final DiscoveryDruidNode mockCoordinatorNode = new DiscoveryDruidNode(
+        new DruidNode("test", "dummy", false, 8080, null, true, false),
+        NodeRole.COORDINATOR,
+        ImmutableMap.of()
+    );
+
+    // no servers in disco expect a lonely coordinator
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.PEON)).andReturn(disco).anyTimes();
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.MIDDLE_MANAGER)).andReturn(disco).anyTimes();
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.INDEXER)).andReturn(disco).anyTimes();
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.OVERLORD)).andReturn(disco).anyTimes();
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.BROKER)).andReturn(disco).anyTimes();
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.HISTORICAL)).andReturn(disco).anyTimes();
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.ROUTER)).andReturn(disco).anyTimes();
+    EasyMock.expect(disco.getAllNodes()).andReturn(ImmutableList.of()).anyTimes();
+
+    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.COORDINATOR)).andReturn(coordinatorDisco).anyTimes();
+    EasyMock.expect(coordinatorDisco.getAllNodes()).andReturn(ImmutableList.of(mockCoordinatorNode)).anyTimes();
+    EasyMock.replay(disco, coordinatorDisco, discoProvider);
+
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         EasyMock.createMock(HttpClient.class),
-        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        discoProvider,
         NodeRole.COORDINATOR,
         "/simple/leader",
         new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
@@ -887,7 +914,7 @@ public class CalciteTests
         TEST_AUTHORIZER_MAPPER,
         druidLeaderClient,
         druidLeaderClient,
-        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        discoProvider,
         getJsonMapper()
     );
     return schema;

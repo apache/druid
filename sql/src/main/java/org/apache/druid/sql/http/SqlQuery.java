@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,7 +36,6 @@ public class SqlQuery
   public static List<TypedValue> getParameterList(List<SqlParameter> parameters)
   {
     return parameters.stream()
-                     .sorted(Comparator.comparingInt(SqlParameter::getOrdinal))
                      .map(SqlParameter::getTypedValue)
                      .collect(Collectors.toList());
   }

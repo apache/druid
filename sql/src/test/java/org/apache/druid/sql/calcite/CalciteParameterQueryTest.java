@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.calcite.util.TimestampString;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -40,10 +39,18 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Test;
 
+/**
+ * This class has copied a subset of the tests in {@link CalciteQueryTest} and replaced various parts of queries with
+ * dynamic parameters. It is NOT important that this file remains in sync with {@link CalciteQueryTest}, the tests
+ * were merely chosen to produce a selection of parameter types and positions within query expressions and have been
+ * renamed to reflect this
+ */
 public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 {
+  private final boolean useDefault = NullHandling.replaceWithDefault();
+
   @Test
-  public void testSelectConstantExpression() throws Exception
+  public void testSelectConstantParamGetsConstant() throws Exception
   {
     testQuery(
         "SELECT 1 + ?",
@@ -51,12 +58,12 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{2}
         ),
-        ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
+        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );
   }
 
   @Test
-  public void testSelectConstantExpressionFromTable() throws Exception
+  public void testParamsGetOptimizedIntoConstant() throws Exception
   {
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
@@ -75,28 +82,28 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{2, ""}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.INTEGER, 1),
-            new SqlParameter(2, SqlType.INTEGER, 1)
+            new SqlParameter(SqlType.INTEGER, 1),
+            new SqlParameter(SqlType.INTEGER, 1)
         )
     );
   }
 
   @Test
-  public void testSelectCountStart() throws Exception
+  public void testParametersInSelectAndFilter() throws Exception
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
         ImmutableList.of(
-            new SqlParameter(1, SqlType.INTEGER, 10),
-            new SqlParameter(2, SqlType.INTEGER, 0)
+            new SqlParameter(SqlType.INTEGER, 10),
+            new SqlParameter(SqlType.INTEGER, 0)
         ),
-        "SELECT exp(count(*)) + ?, sum(m2)  FROM druid.foo WHERE  dim2 = ?",
+        "SELECT exp(count(*)) + ?, sum(m2) FROM druid.foo WHERE  dim2 = ?",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(selector("dim2", "0", null))
+                               .filters(numericSelector("dim2", "0", null))
                                .granularity(Granularities.ALL)
                                .aggregators(aggregators(
                                    new CountAggregatorFactory("a0"),
@@ -114,94 +121,23 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimestamp() throws Exception
+  public void testSelectTrimFamilyWithParameters() throws Exception
   {
-    long val = new TimestampString("2000-01-01 00:00:00").getMillisSinceEpoch();
-    // with millis
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.INTEGER, 10),
-            new SqlParameter(
-                2,
-                SqlType.TIMESTAMP,
-                DateTimes.of("2999-01-01T00:00:00Z").getMillis()
-            )
-        ),
-        "SELECT exp(count(*)) + ?, sum(m2)  FROM druid.foo WHERE  __time >= ?",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-                               .dataSource(CalciteTests.DATASOURCE1)
-                               .intervals(querySegmentSpec(Intervals.of("2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                               .granularity(Granularities.ALL)
-                               .aggregators(aggregators(
-                                   new CountAggregatorFactory("a0"),
-                                   new DoubleSumAggregatorFactory("a1", "m2")
-                               ))
-                               .postAggregators(
-                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
-                               )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
-                               .build()),
-        ImmutableList.of(
-            new Object[]{11.0, NullHandling.defaultDoubleValue()}
-        )
-    );
-
-
-    // with timestampstring
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.INTEGER, 10),
-            new SqlParameter(
-                2,
-                SqlType.TIMESTAMP,
-                "2999-01-01 00:00:00"
-            )
-        ),
-        "SELECT exp(count(*)) + ?, sum(m2)  FROM druid.foo WHERE  __time >= ?",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-                               .dataSource(CalciteTests.DATASOURCE1)
-                               .intervals(querySegmentSpec(Intervals.of("2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                               .granularity(Granularities.ALL)
-                               .aggregators(aggregators(
-                                   new CountAggregatorFactory("a0"),
-                                   new DoubleSumAggregatorFactory("a1", "m2")
-                               ))
-                               .postAggregators(
-                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
-                               )
-                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
-                               .build()),
-        ImmutableList.of(
-            new Object[]{11.0, NullHandling.defaultDoubleValue()}
-        )
-    );
-  }
-
-
-  @Test
-  public void testSelectTrimFamily() throws Exception
-  {
-    // TRIM has some whacky parsing. Make sure the different forms work.
+    // TRIM has some whacky parsing. Abuse this to test a bunch of parameters
 
     testQuery(
         "SELECT\n"
-        + "TRIM(BOTH 'x' FROM ?),\n"
-        + "TRIM(TRAILING 'x' FROM 'xfoox'),\n"
-        + "TRIM(' ' FROM ' foo '),\n"
-        + "TRIM(TRAILING FROM ' foo '),\n"
-        + "TRIM(' foo '),\n"
-        + "BTRIM(' foo '),\n"
-        + "BTRIM('xfoox', 'x'),\n"
-        + "LTRIM(' foo '),\n"
-        + "LTRIM('xfoox', 'x'),\n"
-        + "RTRIM(' foo '),\n"
-        + "RTRIM('xfoox', 'x'),\n"
+        + "TRIM(BOTH ? FROM ?),\n"
+        + "TRIM(TRAILING ? FROM ?),\n"
+        + "TRIM(? FROM ?),\n"
+        + "TRIM(TRAILING FROM ?),\n"
+        + "TRIM(?),\n"
+        + "BTRIM(?),\n"
+        + "BTRIM(?, ?),\n"
+        + "LTRIM(?),\n"
+        + "LTRIM(?, ?),\n"
+        + "RTRIM(?),\n"
+        + "RTRIM(?, ?),\n"
         + "COUNT(*)\n"
         + "FROM foo",
         ImmutableList.of(
@@ -230,13 +166,29 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{"foo", "xfoo", "foo", " foo", "foo", "foo", "foo", "foo ", "foox", " foo", "xfoo", 6L}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.VARCHAR, "xfoox")
+            new SqlParameter(SqlType.VARCHAR, "x"),
+            new SqlParameter(SqlType.VARCHAR, "xfoox"),
+            new SqlParameter(SqlType.VARCHAR, "x"),
+            new SqlParameter(SqlType.VARCHAR, "xfoox"),
+            new SqlParameter(SqlType.VARCHAR, " "),
+            new SqlParameter(SqlType.VARCHAR, " foo "),
+            new SqlParameter(SqlType.VARCHAR, " foo "),
+            new SqlParameter(SqlType.VARCHAR, " foo "),
+            new SqlParameter(SqlType.VARCHAR, " foo "),
+            new SqlParameter(SqlType.VARCHAR, "xfoox"),
+            new SqlParameter(SqlType.VARCHAR, "x"),
+            new SqlParameter(SqlType.VARCHAR, " foo "),
+            new SqlParameter(SqlType.VARCHAR, "xfoox"),
+            new SqlParameter(SqlType.VARCHAR, "x"),
+            new SqlParameter(SqlType.VARCHAR, " foo "),
+            new SqlParameter(SqlType.VARCHAR, "xfoox"),
+            new SqlParameter(SqlType.VARCHAR, "x")
         )
     );
   }
 
   @Test
-  public void testAggregatorsOnInformationSchemaColumns() throws Exception
+  public void testParamsInInformationSchema() throws Exception
   {
     // Not including COUNT DISTINCT, since it isn't supported by BindableAggregate, and so it can't work.
     testQuery(
@@ -253,14 +205,14 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{8L, 1249L, 156L, -5L, 1111L}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.VARCHAR, "druid"),
-            new SqlParameter(2, SqlType.VARCHAR, "foo")
+            new SqlParameter(SqlType.VARCHAR, "druid"),
+            new SqlParameter(SqlType.VARCHAR, "foo")
         )
     );
   }
 
   @Test
-  public void testSelectWithProjection() throws Exception
+  public void testParamsInSelectExpressionAndLimit() throws Exception
   {
     testQuery(
         "SELECT SUBSTRING(dim2, ?, ?) FROM druid.foo LIMIT ?",
@@ -282,15 +234,15 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{NULL_VALUE}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.INTEGER, 1),
-            new SqlParameter(2, SqlType.INTEGER, 1),
-            new SqlParameter(3, SqlType.INTEGER, 2)
+            new SqlParameter(SqlType.INTEGER, 1),
+            new SqlParameter(SqlType.INTEGER, 1),
+            new SqlParameter(SqlType.INTEGER, 2)
         )
     );
   }
 
   @Test
-  public void testColumnComparison() throws Exception
+  public void testParamsTuckedInACast() throws Exception
   {
     cannotVectorize();
     testQuery(
@@ -300,7 +252,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(expressionFilter("((\"m1\" - 1) == \"dim1\")"))
+                        .setDimFilter(expressionFilter("((\"m1\" - 1) == CAST(\"dim1\", 'DOUBLE'))"))
                         .setDimensions(dimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
                             new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
@@ -318,15 +270,14 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{"2", 3.0f, 1L}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.INTEGER, 1)
+            new SqlParameter(SqlType.INTEGER, 1)
         )
     );
   }
 
   @Test
-  public void testHavingOnRatio() throws Exception
+  public void testParametersInStrangePlaces() throws Exception
   {
-    // Test for https://github.com/apache/incubator-druid/issues/4264
     testQuery(
         "SELECT\n"
         + "  dim1,\n"
@@ -361,17 +312,16 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{"def", 1L}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.VARCHAR, "a"),
-            new SqlParameter(2, SqlType.VARCHAR, "a"),
-            new SqlParameter(3, SqlType.INTEGER, 1)
+            new SqlParameter(SqlType.VARCHAR, "a"),
+            new SqlParameter(SqlType.VARCHAR, "a"),
+            new SqlParameter(SqlType.INTEGER, 1)
         )
     );
   }
 
   @Test
-  public void testPruneDeadAggregatorsThroughPostProjection() throws Exception
+  public void testParametersInCases() throws Exception
   {
-    // Test for ProjectAggregatePruneUnusedCallRule.
     testQuery(
         "SELECT\n"
         + "  CASE 'foo'\n"
@@ -392,66 +342,129 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(new Object[]{2.1}),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.VARCHAR, "bar"),
-            new SqlParameter(2, SqlType.INTEGER, 10),
-            new SqlParameter(3, SqlType.VARCHAR, "foo"),
-            new SqlParameter(4, SqlType.INTEGER, 10),
-            new SqlParameter(5, SqlType.VARCHAR, "baz"),
-            new SqlParameter(6, SqlType.INTEGER, 10)
+            new SqlParameter(SqlType.VARCHAR, "bar"),
+            new SqlParameter(SqlType.INTEGER, 10),
+            new SqlParameter(SqlType.VARCHAR, "foo"),
+            new SqlParameter(SqlType.INTEGER, 10),
+            new SqlParameter(SqlType.VARCHAR, "baz"),
+            new SqlParameter(SqlType.INTEGER, 10)
         )
     );
   }
 
+
   @Test
-  public void testFilterOnFloat() throws Exception
+  public void testTimestamp() throws Exception
   {
+    // with millis
     testQuery(
-        "SELECT COUNT(*) FROM druid.foo WHERE m1 >= ?",
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .filters(bound("m1", "0.9", null, false, false, null, StringComparators.NUMERIC))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
+            new SqlParameter(SqlType.INTEGER, 10),
+            new SqlParameter(
+                SqlType.TIMESTAMP,
+                DateTimes.of("2999-01-01T00:00:00Z").getMillis()
+            )
         ),
+        "SELECT exp(count(*)) + ?, sum(m2)  FROM druid.foo WHERE  __time >= ?",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Intervals.of(
+                                   "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
         ImmutableList.of(
-            new Object[]{6L}
-        ),
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.FLOAT, 0.9)
+            new Object[]{11.0, NullHandling.defaultDoubleValue()}
         )
     );
+
   }
 
   @Test
-  public void testFilterOnDouble() throws Exception
+  public void testTimestampString() throws Exception
   {
+    // with timestampstring
     testQuery(
-        "SELECT COUNT(*) FROM druid.foo WHERE m2 >= ?",
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .filters(bound("m2", "0.9", null, false, false, null, StringComparators.NUMERIC))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
+            new SqlParameter(SqlType.INTEGER, 10),
+            new SqlParameter(
+                SqlType.TIMESTAMP,
+                "2999-01-01 00:00:00"
+            )
         ),
+        "SELECT exp(count(*)) + ?, sum(m2)  FROM druid.foo WHERE  __time >= ?",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Intervals.of(
+                                   "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
         ImmutableList.of(
-            new Object[]{6L}
-        ),
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.DOUBLE, 0.9)
+            new Object[]{11.0, NullHandling.defaultDoubleValue()}
         )
     );
   }
 
   @Test
-  public void testCountStarWithLongColumnFiltersOnFloatLiterals() throws Exception
+  public void testDate() throws Exception
+  {
+    // with date from millis
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        ImmutableList.of(
+            new SqlParameter(SqlType.INTEGER, 10),
+            new SqlParameter(
+                SqlType.DATE,
+                "2999-01-01"
+            )
+        ),
+        "SELECT exp(count(*)) + ?, sum(m2)  FROM druid.foo WHERE  __time >= ?",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Intervals.of(
+                                   "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
+        ImmutableList.of(
+            new Object[]{11.0, NullHandling.defaultDoubleValue()}
+        )
+    );
+  }
+
+  @Test
+  public void testDoubles() throws Exception
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt > ? and cnt < ?",
@@ -469,51 +482,12 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.DOUBLE, 1.1),
-            new SqlParameter(2, SqlType.DOUBLE, 100000001.0)
+            new SqlParameter(SqlType.DOUBLE, 1.1),
+            new SqlParameter(SqlType.FLOAT, 100000001.0)
         )
     );
-    // calcite will strip the trailing zeros when creating float and double literals for whatever reason
-    testQuery(
-        "SELECT COUNT(*) FROM druid.foo WHERE cnt = ?",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(
-                      selector("cnt", "1.0", null)
-                  )
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{6L}
-        ),
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.DOUBLE, 1.0)
-        )
-    );
-    testQuery(
-        "SELECT COUNT(*) FROM druid.foo WHERE cnt = ?",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(
-                      selector("cnt", "100000001", null)
-                  )
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(),
-        ImmutableList.of(
-            new SqlParameter(1, SqlType.DOUBLE, 100000001.0)
-        )
-    );
+
+
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = ? or cnt = ?",
         ImmutableList.of(
@@ -532,9 +506,111 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             new Object[]{6L}
         ),
         ImmutableList.of(
-            new SqlParameter(1, SqlType.DOUBLE, 1.0),
-            new SqlParameter(2, SqlType.DOUBLE, 100000001.0)
+            new SqlParameter(SqlType.DOUBLE, 1.0),
+            new SqlParameter(SqlType.FLOAT, 100000001.0)
         )
+    );
+  }
+
+  @Test
+  public void testFloats() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE cnt = ?",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      selector("cnt", "1.0", null)
+                  )
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L}),
+        ImmutableList.of(new SqlParameter(SqlType.REAL, 1.0f))
+    );
+  }
+
+  @Test
+  public void testLongs() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE l1 > ?",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(bound("l1", "3", null, true, false, null, StringComparators.NUMERIC))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{2L}),
+        ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
+    );
+  }
+
+  @Test
+  public void testMissingParameter() throws Exception
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Parameter: [?0] is not bound");
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE l1 > ?",
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{3L}),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testPartiallyMissingParameter() throws Exception
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Parameter: [?1] is not bound");
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE l1 > ? AND f1 = ?",
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{3L}),
+        ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
+    );
+  }
+
+  @Test
+  public void testWrongTypeParameter() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE l1 > ? AND f1 = ?",
+        useDefault ? ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      and(
+                          bound("l1", "3", null, true, false, null, StringComparators.NUMERIC),
+                          selector("f1", useDefault ? "0.0" : null, null)
+
+                      )
+                  )
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ) : ImmutableList.of(),
+        useDefault ? ImmutableList.of() : ImmutableList.of(new Object[]{0L}),
+        ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );
   }
 }

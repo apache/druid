@@ -74,6 +74,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -232,7 +233,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 
@@ -289,7 +290,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 
@@ -364,7 +365,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 
@@ -425,7 +426,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 
@@ -484,7 +485,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 
@@ -551,7 +552,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 
@@ -619,7 +620,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
         sqlLifecycle.runSimple(
             sql,
             BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
-            ImmutableList.of(),
+            CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
 

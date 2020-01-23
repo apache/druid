@@ -55,7 +55,12 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
+import java.sql.Date;
+import java.sql.JDBCType;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.NavigableSet;
 import java.util.regex.Pattern;
 
@@ -411,5 +416,45 @@ public class Calcites
       fetch = Math.max(0, Math.min(innerFetch - outerOffset, outerFetch));
     }
     return fetch;
+  }
+
+  public static Class<?> sqlTypeNameJdbcToJavaClass(SqlTypeName typeName)
+  {
+    JDBCType jdbcType = JDBCType.valueOf(typeName.getJdbcOrdinal());
+    switch (jdbcType) {
+      case CHAR:
+      case VARCHAR:
+      case LONGVARCHAR:
+        return String.class;
+      case NUMERIC:
+      case DECIMAL:
+        return BigDecimal.class;
+      case BIT:
+        return Boolean.class;
+      case TINYINT:
+        return Byte.class;
+      case SMALLINT:
+        return Short.class;
+      case INTEGER:
+        return Integer.class;
+      case BIGINT:
+        return Long.class;
+      case REAL:
+        return Float.class;
+      case FLOAT:
+      case DOUBLE:
+        return Double.class;
+      case BINARY:
+      case VARBINARY:
+        return Byte[].class;
+      case DATE:
+        return Date.class;
+      case TIME:
+        return Time.class;
+      case TIMESTAMP:
+        return Timestamp.class;
+      default:
+        return Object.class;
+    }
   }
 }

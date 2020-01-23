@@ -23,11 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -37,8 +32,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
@@ -60,36 +53,16 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
-import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
 public class ExpressionsTest extends ExpressionTestBase
 {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  private final PlannerContext plannerContext = PlannerContext.create(
-      CalciteTests.createOperatorTable(),
-      CalciteTests.createExprMacroTable(),
-      new PlannerConfig(),
-      ImmutableMap.of(),
-      ImmutableList.of(),
-      CalciteTests.REGULAR_USER_AUTH_RESULT
-  );
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
       .add("t", ValueType.LONG)

@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -84,7 +83,7 @@ public class PlannerContext
     this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
-    this.parameters = parameters != null ? parameters : ImmutableList.of();
+    this.parameters = Preconditions.checkNotNull(parameters);
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
 

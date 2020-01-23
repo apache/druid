@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -43,9 +42,9 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalSort;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -131,7 +130,7 @@ public class DruidPlanner implements Closeable
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
 
-    SqlParametizerShuttle sshuttle = new SqlParametizerShuttle(plannerContext);
+    SqlParameterizerShuttle sshuttle = new SqlParameterizerShuttle(plannerContext);
     SqlNode parametized = parsed.accept(sshuttle);
     final SqlNode validated = planner.validate(parametized);
     final RelRoot root = planner.rel(validated);
