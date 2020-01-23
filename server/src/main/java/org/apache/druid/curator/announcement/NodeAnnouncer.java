@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * {@link NodeAnnouncer} announces single node on Zookeeper and only watches this node,
+ * {@link NodeAnnouncer} announces a single node on Zookeeper and only watches this node,
  * while {@link Announcer} watches all child paths, not only this node.
  */
 public class NodeAnnouncer
@@ -57,6 +57,7 @@ public class NodeAnnouncer
    * In case a path is added to this collection in {@link #announce} before zk is connected,
    * should remember the path and do announce in {@link #start} later.
    */
+  @GuardedBy("toAnnounce")
   private final List<Announceable> toAnnounce = new ArrayList<>();
   /**
    * In case a path is added to this collection in {@link #update} before zk is connected,
@@ -67,8 +68,8 @@ public class NodeAnnouncer
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
   /**
-   * Only the one created the parent path can drop it, so should remember these created parents.
-   * This comment sounds confusing, shouldn't one of "parent path" occurrences in it be something else?
+   * This list is to remember all paths this node announcer has created.
+   * On {@link #stop}, the node announcer is responsible for deleting all paths in this list.
    */
   @GuardedBy("toAnnounce")
   private final List<String> pathsCreatedInThisAnnouncer = new ArrayList<>();
@@ -126,11 +127,10 @@ public class NodeAnnouncer
       for (NodeCache cache : listeners.values()) {
         closer.register(cache);
       }
-      CloseQuietly.close(closer);
-
       for (String announcementPath : announcedPaths.keySet()) {
-        unannounce(announcementPath);
+        closer.register(() -> unannounce(announcementPath));
       }
+      CloseQuietly.close(closer);
 
       if (!pathsCreatedInThisAnnouncer.isEmpty()) {
         final List<CuratorOp> deleteOps = new ArrayList<>(pathsCreatedInThisAnnouncer.size());
