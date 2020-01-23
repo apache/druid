@@ -138,7 +138,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Hours;
@@ -897,7 +897,7 @@ public class TaskLifecycleTest
                                 .version("2011-04-6T16:52:46.119-05:00")
                                 .dimensions(ImmutableList.of())
                                 .metrics(ImmutableList.of())
-                                .shardSpec(NoneShardSpec.instance())
+                                .shardSpec(new NumberedShardSpec(0, 0))
                                 .binaryVersion(9)
                                 .size(0)
                                 .build();

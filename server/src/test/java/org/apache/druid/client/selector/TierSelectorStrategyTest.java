@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -124,7 +124,7 @@ public class TierSelectorStrategyTest
             new HashMap<>(),
             new ArrayList<>(),
             new ArrayList<>(),
-            NoneShardSpec.instance(),
+            new NumberedShardSpec(0, 0),
             0,
             0L
         ),

@@ -43,7 +43,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -130,7 +130,7 @@ public class TimeBoundaryQueryRunnerTest
 
   private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, NoneShardSpec.instance());
+    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, new NumberedShardSpec(0, 0));
   }
 
   private QueryRunner getCustomRunner() throws IOException

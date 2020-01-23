@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -176,7 +175,7 @@ public class DataSegmentTest
                                            .dataSource("foo")
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                           .shardSpec(NoneShardSpec.instance())
+                                           .shardSpec(new NumberedShardSpec(0, 0))
                                            .size(0)
                                            .build();
 

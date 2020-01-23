@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -36,7 +36,7 @@ public class PeriodDropBeforeRuleTest
       .builder()
       .dataSource("test")
       .version(DateTimes.of("2012-12-31T01:00:00").toString())
-      .shardSpec(NoneShardSpec.instance())
+      .shardSpec(new NumberedShardSpec(0, 0))
       .size(0);
 
   @Test

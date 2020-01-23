@@ -33,7 +33,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -67,7 +67,7 @@ public class SQLMetadataSegmentManagerTest
         ),
         ImmutableList.of("dim1", "dim2", "dim3"),
         ImmutableList.of("count", "value"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         binaryVersion,
         1234L
     );
@@ -98,14 +98,13 @@ public class SQLMetadataSegmentManagerTest
 
   private void publish(DataSegment segment, boolean used) throws IOException
   {
-    boolean partitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
     publisher.publishSegment(
         segment.getId().toString(),
         segment.getDataSource(),
         DateTimes.nowUtc().toString(),
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
-        partitioned,
+        true,
         segment.getVersion(),
         used,
         jsonMapper.writeValueAsBytes(segment)

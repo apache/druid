@@ -47,7 +47,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
@@ -363,7 +363,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                       .version(version)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(0)
                       .build();

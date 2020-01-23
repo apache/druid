@@ -47,7 +47,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -136,7 +136,7 @@ public class MultiSegmentScanQueryTest
 
   private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, NoneShardSpec.instance());
+    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, new NumberedShardSpec(0, 0));
   }
 
   private static IncrementalIndex newIndex(String minTimeStamp)

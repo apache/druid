@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,7 +88,7 @@ public class RetrieveSegmentsActionsTest
         null,
         ImmutableList.of("dim1", "dim2"),
         ImmutableList.of("met1", "met2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         Integer.valueOf(version),
         1
     );

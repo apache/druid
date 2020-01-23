@@ -26,7 +26,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,7 +59,7 @@ public class ServerSelectorTest
                    .version("v1")
                    .dimensions(ImmutableList.of())
                    .metrics(ImmutableList.of())
-                   .shardSpec(NoneShardSpec.instance())
+                   .shardSpec(new NumberedShardSpec(0, 0))
                    .binaryVersion(9)
                    .size(0)
                    .build(),
@@ -92,7 +92,7 @@ public class ServerSelectorTest
                        ))
                    .metrics(
                        ImmutableList.of())
-                   .shardSpec(NoneShardSpec.instance())
+                   .shardSpec(new NumberedShardSpec(0, 0))
                    .binaryVersion(9)
                    .size(0)
                    .build()

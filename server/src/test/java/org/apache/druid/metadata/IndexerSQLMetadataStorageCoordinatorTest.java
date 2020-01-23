@@ -37,7 +37,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -106,7 +105,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       9,
       100
   );

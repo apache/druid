@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,7 +53,7 @@ public class SegmentChangeRequestLoadTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         IndexIO.CURRENT_VERSION_ID,
         1
     );

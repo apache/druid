@@ -44,7 +44,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
@@ -477,7 +477,7 @@ public class SchemalessIndexTest
           Comparators.naturalNullsFirst()
       );
 
-      ShardSpec noneShardSpec = NoneShardSpec.instance();
+      ShardSpec noneShardSpec = new NumberedShardSpec(0, 0);
 
       for (int i = 0; i < intervals.size(); i++) {
         timeline.add(intervals.get(i), i, noneShardSpec.createChunk(new OvershadowableFile(i, filesToMap.get(i))));

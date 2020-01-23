@@ -30,7 +30,7 @@ import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -87,7 +87,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 2
             )
@@ -103,7 +103,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 11
             )
@@ -119,7 +119,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 4
             )
@@ -138,7 +138,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 2
             )
@@ -371,7 +371,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 2
             )

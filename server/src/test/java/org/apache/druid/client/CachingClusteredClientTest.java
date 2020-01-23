@@ -120,7 +120,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
@@ -2532,7 +2532,7 @@ public class CachingClusteredClientTest
             null,
             null,
             null,
-            NoneShardSpec.instance(),
+            new NumberedShardSpec(0, 0),
             null,
             0
         );
@@ -2590,7 +2590,7 @@ public class CachingClusteredClientTest
           return baseSegment.getShardSpec();
         }
         catch (IllegalStateException e) {
-          return NoneShardSpec.instance();
+          return new NumberedShardSpec(0, 0);
         }
       }
 
@@ -2886,7 +2886,7 @@ public class CachingClusteredClientTest
         ),
         ImmutableList.of("product"),
         ImmutableList.of("visited_sum"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         9,
         12334
     );
@@ -2926,7 +2926,7 @@ public class CachingClusteredClientTest
         ),
         ImmutableList.of("product"),
         ImmutableList.of("visited_sum"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         9,
         12334
     );

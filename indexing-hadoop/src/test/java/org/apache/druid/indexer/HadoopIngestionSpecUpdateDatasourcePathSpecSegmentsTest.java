@@ -39,7 +39,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -81,7 +81,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
       ),
       ImmutableList.of("host"),
       ImmutableList.of("visited_sum", "unique_hosts"),
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       9,
       2
   );
@@ -96,7 +96,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
       ),
       ImmutableList.of("host2"),
       ImmutableList.of("visited_sum", "unique_hosts"),
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       9,
       2
   );

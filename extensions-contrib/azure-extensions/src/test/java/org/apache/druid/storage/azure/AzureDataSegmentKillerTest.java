@@ -24,7 +24,7 @@ import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Before;
@@ -47,7 +47,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
       null,
       null,
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       0,
       1
   );

@@ -34,7 +34,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -174,7 +174,7 @@ public class JobHelperTest
         ),
         ImmutableList.of(),
         ImmutableList.of(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         9,
         1024
     );

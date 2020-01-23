@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -70,7 +69,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
         DateTimes.nowUtc().toString(),
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
-        (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
+        true,
         segment.getVersion(),
         true,
         jsonMapper.writeValueAsBytes(segment)

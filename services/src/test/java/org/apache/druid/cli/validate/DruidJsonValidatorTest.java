@@ -37,7 +37,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -164,7 +164,7 @@ public class DruidJsonValidatorTest
                 null,
                 null,
                 1,
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 new IndexSpec(),
                 new IndexSpec(),
                 null,

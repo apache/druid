@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -73,7 +72,12 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
                       .put("created_date", DateTimes.nowUtc().toString())
                       .put("start", segment.getInterval().getStart().toString())
                       .put("end", segment.getInterval().getEnd().toString())
-                      .put("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+                      // In earlier versions of Druid, there was a ShardSpec, named NoneShardSpec, which means
+                      // there is only one segment in the time chunk. This has been removed in 0.18 since it's not very
+                      // useful.
+                      // The "partitioned" field indicates the ShardSpec of the segment is NoneShardSpec or not
+                      // which doesn't make sense for now. However, we keep this field for the compatibility.
+                      .put("partitioned", true)
                       .put("version", segment.getVersion())
                       .put("used", true)
                       .put("payload", mapper.writeValueAsBytes(segment))

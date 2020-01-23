@@ -50,7 +50,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -182,7 +182,7 @@ public class CachingClusteredClientFunctionalityTest
                        .dataSource("test")
                        .interval(interval)
                        .version(version)
-                       .shardSpec(NoneShardSpec.instance())
+                       .shardSpec(new NumberedShardSpec(0, 0))
                        .size(0)
                        .build(),
             new TierSelectorStrategy()

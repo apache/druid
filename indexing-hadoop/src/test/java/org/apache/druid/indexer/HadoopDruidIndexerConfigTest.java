@@ -36,7 +36,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -102,12 +102,12 @@ public class HadoopDruidIndexerConfigTest
     Map<Long, List<HadoopyShardSpec>> shardSpecs = ImmutableMap.of(
         DateTimes.of("2010-01-01T01:00:00").getMillis(),
         Collections.singletonList(new HadoopyShardSpec(
-            NoneShardSpec.instance(),
+            new NumberedShardSpec(0, 0),
             1
         )),
         DateTimes.of("2010-01-01T02:00:00").getMillis(),
         Collections.singletonList(new HadoopyShardSpec(
-            NoneShardSpec.instance(),
+            new NumberedShardSpec(0, 0),
             2
         ))
     );

@@ -39,7 +39,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,7 +63,7 @@ public class S3DataSegmentMoverTest
       ),
       ImmutableList.of("dim1", "dim1"),
       ImmutableList.of("metric1", "metric2"),
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       0,
       1
   );
@@ -142,7 +142,7 @@ public class S3DataSegmentMoverTest
         ),
         ImmutableList.of("dim1", "dim1"),
         ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         1
     ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
@@ -165,7 +165,7 @@ public class S3DataSegmentMoverTest
         ),
         ImmutableList.of("dim1", "dim1"),
         ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         1
     ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));

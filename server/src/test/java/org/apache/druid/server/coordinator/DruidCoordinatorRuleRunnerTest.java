@@ -38,7 +38,7 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -91,7 +91,7 @@ public class DruidCoordinatorRuleRunnerTest
               new HashMap<>(),
               new ArrayList<>(),
               new ArrayList<>(),
-              NoneShardSpec.instance(),
+              new NumberedShardSpec(0, 0),
               IndexIO.CURRENT_VERSION_ID,
               1
           )
@@ -793,7 +793,7 @@ public class DruidCoordinatorRuleRunnerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         1,
         0
     );
@@ -931,7 +931,7 @@ public class DruidCoordinatorRuleRunnerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         1,
         0
     );
@@ -991,7 +991,7 @@ public class DruidCoordinatorRuleRunnerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         IndexIO.CURRENT_VERSION_ID,
         1
     );
@@ -1002,7 +1002,7 @@ public class DruidCoordinatorRuleRunnerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         IndexIO.CURRENT_VERSION_ID,
         1
     );

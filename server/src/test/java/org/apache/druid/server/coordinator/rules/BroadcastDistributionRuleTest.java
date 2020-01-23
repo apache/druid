@@ -33,7 +33,7 @@ import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,7 +66,7 @@ public class BroadcastDistributionRuleTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         0
     );
@@ -80,7 +80,7 @@ public class BroadcastDistributionRuleTest
               new HashMap<>(),
               new ArrayList<>(),
               new ArrayList<>(),
-              NoneShardSpec.instance(),
+              new NumberedShardSpec(0, 0),
               0,
               100
           )
@@ -96,7 +96,7 @@ public class BroadcastDistributionRuleTest
               new HashMap<>(),
               new ArrayList<>(),
               new ArrayList<>(),
-              NoneShardSpec.instance(),
+              new NumberedShardSpec(0, 0),
               0,
               100
           )

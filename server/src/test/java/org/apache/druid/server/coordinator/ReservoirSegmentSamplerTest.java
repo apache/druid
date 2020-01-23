@@ -24,7 +24,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -86,7 +86,7 @@ public class ReservoirSegmentSamplerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         11L
     );
@@ -97,7 +97,7 @@ public class ReservoirSegmentSamplerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         7L
     );
@@ -108,7 +108,7 @@ public class ReservoirSegmentSamplerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         4L
     );
@@ -119,7 +119,7 @@ public class ReservoirSegmentSamplerTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         8L
     );

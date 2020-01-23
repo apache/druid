@@ -30,7 +30,7 @@ import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -68,7 +68,7 @@ public class SegmentWithOvershadowedStatusTest
         LOAD_SPEC,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         null,
         TEST_VERSION,
         1

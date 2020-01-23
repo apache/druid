@@ -49,7 +49,7 @@ import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -670,7 +670,7 @@ public class LoadRuleTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         0
     );

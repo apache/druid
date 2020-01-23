@@ -57,7 +57,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -560,7 +560,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
                       .version(version)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(0)
                       .build();

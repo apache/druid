@@ -38,7 +38,7 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -351,7 +351,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                       .version(version)
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(0)
                       .build();

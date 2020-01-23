@@ -34,7 +34,7 @@ import org.apache.druid.segment.loading.CacheTestSegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -311,7 +311,7 @@ public class SegmentLoadDropHandlerTest
         ImmutableMap.of("version", version, "interval", interval, "cacheDir", infoDir),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         IndexIO.CURRENT_VERSION_ID,
         123L
     );

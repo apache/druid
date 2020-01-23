@@ -35,8 +35,8 @@ import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -146,7 +146,7 @@ public class SegmentManagerTest
           ImmutableMap.of("interval", Intervals.of("0/1000"), "version", 0),
           new ArrayList<>(),
           new ArrayList<>(),
-          NoneShardSpec.instance(),
+          new NumberedShardSpec(0, 0),
           0,
           10
       ),
@@ -157,7 +157,7 @@ public class SegmentManagerTest
           ImmutableMap.of("interval", Intervals.of("1000/2000"), "version", 0),
           new ArrayList<>(),
           new ArrayList<>(),
-          NoneShardSpec.instance(),
+          new NumberedShardSpec(0, 0),
           0,
           10
       ),
@@ -168,7 +168,7 @@ public class SegmentManagerTest
           ImmutableMap.of("interval", Intervals.of("0/1000"), "version", 0),
           new ArrayList<>(),
           new ArrayList<>(),
-          NoneShardSpec.instance(),
+          new NumberedShardSpec(0, 0),
           0,
           100
       ),
@@ -179,7 +179,7 @@ public class SegmentManagerTest
           ImmutableMap.of("interval", Intervals.of("1000/2000"), "version", 0),
           new ArrayList<>(),
           new ArrayList<>(),
-          NoneShardSpec.instance(),
+          new NumberedShardSpec(0, 0),
           0,
           100
       ),
@@ -191,7 +191,7 @@ public class SegmentManagerTest
           ImmutableMap.of("interval", Intervals.of("1000/2000"), "version", 1),
           new ArrayList<>(),
           new ArrayList<>(),
-          NoneShardSpec.instance(),
+          new NumberedShardSpec(0, 0),
           1,
           100
       )

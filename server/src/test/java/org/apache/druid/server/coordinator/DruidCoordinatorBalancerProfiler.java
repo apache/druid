@@ -32,7 +32,7 @@ import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -102,7 +102,7 @@ public class DruidCoordinatorBalancerProfiler
               new HashMap<>(),
               new ArrayList<>(),
               new ArrayList<>(),
-              NoneShardSpec.instance(),
+              new NumberedShardSpec(0, 0),
               0,
               4L
           )

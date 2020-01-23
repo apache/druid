@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
@@ -59,7 +59,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
       ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
       null,
       null,
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       0,
       1
   );
@@ -109,7 +109,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         size
     );

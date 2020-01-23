@@ -47,7 +47,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
@@ -859,24 +858,29 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       // Avoiding ON DUPLICATE KEY since it's not portable.
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-      final int numRowsInserted = handle.createStatement(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(),
-              connector.getQuoteString()
-          )
-      )
-            .bind("id", segment.getId().toString())
-            .bind("dataSource", segment.getDataSource())
-            .bind("created_date", DateTimes.nowUtc().toString())
-            .bind("start", segment.getInterval().getStart().toString())
-            .bind("end", segment.getInterval().getEnd().toString())
-            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-            .bind("version", segment.getVersion())
-            .bind("used", used)
-            .bind("payload", jsonMapper.writeValueAsBytes(segment))
-            .execute();
+      final String sql = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+          dbTables.getSegmentsTable(),
+          connector.getQuoteString()
+      );
+      final int numRowsInserted = handle
+          .createStatement(sql)
+          .bind("id", segment.getId().toString())
+          .bind("dataSource", segment.getDataSource())
+          .bind("created_date", DateTimes.nowUtc().toString())
+          .bind("start", segment.getInterval().getStart().toString())
+          .bind("end", segment.getInterval().getEnd().toString())
+          // In earlier versions of Druid, there was a ShardSpec, named NoneShardSpec, which means
+          // there is only one segment in the time chunk. This has been removed in 0.18 since it's not very
+          // useful.
+          // The "partitioned" field indicates the ShardSpec of the segment is NoneShardSpec or not
+          // which doesn't make sense for now. However, we keep this field for the compatibility.
+          .bind("partitioned", true)
+          .bind("version", segment.getVersion())
+          .bind("used", used)
+          .bind("payload", jsonMapper.writeValueAsBytes(segment))
+          .execute();
 
       if (numRowsInserted == 1) {
         log.info("Published segment [%s] to DB with used flag [%s], json[%s]", segment.getId(), used, jsonMapper.writeValueAsString(segment));

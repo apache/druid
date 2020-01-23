@@ -26,7 +26,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -41,7 +41,7 @@ public class PeriodLoadRuleTest
       .builder()
       .dataSource("test")
       .version(DateTimes.nowUtc().toString())
-      .shardSpec(NoneShardSpec.instance())
+      .shardSpec(new NumberedShardSpec(0, 0))
       .size(0);
 
   @Test

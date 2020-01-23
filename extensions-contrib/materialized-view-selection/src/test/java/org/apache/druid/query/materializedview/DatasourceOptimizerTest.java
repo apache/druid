@@ -55,7 +55,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -251,7 +251,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
                       .version(version)
                       .dimensions(dims)
                       .metrics(ImmutableList.of("cost"))
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(size)
                       .build();

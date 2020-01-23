@@ -32,7 +32,7 @@ import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -92,7 +92,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         ImmutableMap.of("version", "v0", "interval", Intervals.of("P1d/2011-04-02"), "cacheDir", "/no"),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         IndexIO.CURRENT_VERSION_ID,
         123L
     );

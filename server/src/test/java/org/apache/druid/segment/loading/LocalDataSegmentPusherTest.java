@@ -26,7 +26,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,7 +57,7 @@ public class LocalDataSegmentPusherTest
       null,
       ImmutableList.of("dim1"),
       null,
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       null,
       0
   );
@@ -68,7 +68,7 @@ public class LocalDataSegmentPusherTest
       null,
       ImmutableList.of("dim2"),
       null,
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       null,
       0
   );

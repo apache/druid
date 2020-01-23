@@ -33,7 +33,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -392,7 +392,7 @@ public class SegmentLoaderLocalCacheManagerTest
                       .version("2015-05-27T03:38:35.683Z")
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(size)
                       .build();

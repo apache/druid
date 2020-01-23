@@ -52,7 +52,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -407,7 +407,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 1,
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 indexSpec,
                 null,
                 null,

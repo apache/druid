@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -134,7 +134,7 @@ public class LocalDataSegmentKillerTest
         ),
         ImmutableList.of("product"),
         ImmutableList.of("visited_sum", "unique_hosts"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         9,
         12334
     );

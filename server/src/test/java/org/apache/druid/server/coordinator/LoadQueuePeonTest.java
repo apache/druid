@@ -40,7 +40,7 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
@@ -347,7 +347,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
                       .version("2015-05-27T03:38:35.683Z")
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
-                      .shardSpec(NoneShardSpec.instance())
+                      .shardSpec(new NumberedShardSpec(0, 0))
                       .binaryVersion(9)
                       .size(1200)
                       .build();

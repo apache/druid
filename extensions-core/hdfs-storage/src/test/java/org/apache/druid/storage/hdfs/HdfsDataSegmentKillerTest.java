@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -214,7 +214,7 @@ public class HdfsDataSegmentKillerTest
         ),
         ImmutableList.of("product"),
         ImmutableList.of("visited_sum", "unique_hosts"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         9,
         12334
     );

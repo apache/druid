@@ -28,7 +28,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class ImmutableSegmentLoadInfoTest
             null,
             null,
             null,
-            NoneShardSpec.instance(),
+            new NumberedShardSpec(0, 0),
             0, 0
         ), Sets.newHashSet(new DruidServerMetadata("a", "host", null, 10, ServerType.HISTORICAL, "tier", 1))
     );

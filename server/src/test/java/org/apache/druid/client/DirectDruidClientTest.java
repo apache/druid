@@ -46,7 +46,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -78,7 +78,7 @@ public class DirectDruidClientTest
       new HashMap<>(),
       new ArrayList<>(),
       new ArrayList<>(),
-      NoneShardSpec.instance(),
+      new NumberedShardSpec(0, 0),
       0,
       0L
   );

@@ -50,7 +50,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.easymock.EasyMock;
@@ -108,7 +108,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 12334
             )
@@ -124,7 +124,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 12335
             )
@@ -143,7 +143,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product2"),
                 ImmutableList.of("visited_sum2", "unique_hosts2"),
-                NoneShardSpec.instance(),
+                new NumberedShardSpec(0, 0),
                 9,
                 12334
             )

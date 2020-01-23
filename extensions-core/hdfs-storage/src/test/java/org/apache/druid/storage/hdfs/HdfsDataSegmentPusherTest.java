@@ -44,7 +44,6 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -155,7 +154,7 @@ public class HdfsDataSegmentPusherTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         size
     );
@@ -289,7 +288,7 @@ public class HdfsDataSegmentPusherTest
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         0,
         size
     );
@@ -385,7 +384,7 @@ public class HdfsDataSegmentPusherTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(0, 0),
         null,
         1
     );

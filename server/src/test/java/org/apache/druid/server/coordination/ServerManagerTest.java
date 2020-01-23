@@ -70,7 +70,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -475,7 +475,7 @@ public class ServerManagerTest
               ImmutableMap.of("version", version, "interval", interval),
               Arrays.asList("dim1", "dim2", "dim3"),
               Arrays.asList("metric1", "metric2"),
-              NoneShardSpec.instance(),
+              new NumberedShardSpec(0, 0),
               IndexIO.CURRENT_VERSION_ID,
               123L
           ),
@@ -497,7 +497,7 @@ public class ServerManagerTest
             ImmutableMap.of("version", version, "interval", interval),
             Arrays.asList("dim1", "dim2", "dim3"),
             Arrays.asList("metric1", "metric2"),
-            NoneShardSpec.instance(),
+            new NumberedShardSpec(0, 0),
             IndexIO.CURRENT_VERSION_ID,
             123L
         )
