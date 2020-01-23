@@ -49,7 +49,6 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
-import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -281,8 +280,7 @@ public class BrokerServerViewTest extends CuratorTestBase
       Assert.assertTrue(actualPartitionHolder.isComplete());
       Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
 
-      ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
-                                                                                                    .next()).getObject();
+      ServerSelector selector = actualPartitionHolder.iterator().next().getObject();
       Assert.assertFalse(selector.isEmpty());
       Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick().getServer());
       Assert.assertEquals(expectedPair.rhs.rhs.rhs, selector.getSegment());

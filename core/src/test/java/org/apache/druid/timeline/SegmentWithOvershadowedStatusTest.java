@@ -92,7 +92,10 @@ public class SegmentWithOvershadowedStatusTest
     Assert.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assert.assertEquals(
+        ImmutableMap.of("type", "numbered", "partitionNum", 0, "partitions", 0),
+        objectMap.get("shardSpec")
+    );
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));

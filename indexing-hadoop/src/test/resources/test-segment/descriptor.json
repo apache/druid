@@ -10,7 +10,9 @@
     }, 
     "metrics": "visited_sum,unique_hosts", 
     "shardSpec": {
-        "type": "none"
+        "type": "numbered",
+        "partitionNum": 0,
+        "partitions": 0
     }, 
     "size": 4096, 
     "version": "2015-07-15T22:02:40.171Z"

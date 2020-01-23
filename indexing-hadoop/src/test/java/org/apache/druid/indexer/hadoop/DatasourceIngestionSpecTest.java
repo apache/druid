@@ -103,7 +103,7 @@ public class DatasourceIngestionSpecTest
               + "    \"loadSpec\":null,\n"
               + "    \"dimensions\":\"\",\n"
               + "    \"metrics\":\"\",\n"
-              + "    \"shardSpec\":{\"type\":\"none\"},\n"
+              + "    \"shardSpec\":{\"type\":\"numbered\", \"partitionNum\":\"0\", \"partitions\":\"0\"},\n"
               + "    \"binaryVersion\":9,\n"
               + "    \"size\":128,\n"
               + "    \"identifier\":\"test_2014-01-01T00:00:00.000Z_2017-01-01T00:00:00.000Z_v0\"\n"

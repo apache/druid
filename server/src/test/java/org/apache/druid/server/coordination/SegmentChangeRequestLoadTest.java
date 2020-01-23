@@ -72,7 +72,10 @@ public class SegmentChangeRequestLoadTest
     Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assert.assertEquals(
+        ImmutableMap.of("type", "numbered", "partitions", 0, "partitionNum", 0),
+        objectMap.get("shardSpec")
+    );
     Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
   }
