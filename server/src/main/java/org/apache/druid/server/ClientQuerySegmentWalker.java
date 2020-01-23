@@ -43,7 +43,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 /**
- *
+ * Query handler for Broker processes (see CliBroker).
  */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
@@ -55,7 +55,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServerConfig serverConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
-
 
   @Inject
   public ClientQuerySegmentWalker(
@@ -82,25 +81,27 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    if (!analysis.getPreJoinableClauses().isEmpty()) {
-      throw new ISE("Cannot handle join dataSource");
-    }
 
-    return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
+    if (analysis.isConcreteTableBased()) {
+      return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
+    } else {
+      // In the future, we will check here to see if parts of the query are inlinable, and if that inlining would
+      // be able to create a concrete table-based query that we can run through the distributed query stack.
+      throw new ISE("Query dataSource is not table-based, cannot run");
+    }
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    if (!analysis.getPreJoinableClauses().isEmpty()) {
-      throw new ISE("Cannot handle join dataSource");
-    }
 
-    return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
+    if (analysis.isConcreteTableBased()) {
+      return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
+    } else {
+      throw new ISE("Query dataSource is not table-based, cannot run");
+    }
   }
 
   private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
@@ -126,9 +127,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
         query.<String>getContextValue("postProcessing"),
-        new TypeReference<PostProcessingOperator<T>>()
-        {
-        }
+        new TypeReference<PostProcessingOperator<T>>() {}
     );
 
     return new FluentQueryRunnerBuilder<>(toolChest)
