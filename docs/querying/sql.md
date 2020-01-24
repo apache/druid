@@ -558,8 +558,8 @@ Parameterized SQL queries are also supported:
 {
   "query" : "SELECT COUNT(*) FROM data_source WHERE foo = ? AND __time > ?",
   "parameters": [
-    { "ordinal": 1, "type": "VARCHAR", "value": "bar"},
-    { "ordinal": 2, "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
+    { "type": "VARCHAR", "value": "bar"},
+    { "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
   ]
 }
 ```
@@ -568,7 +568,6 @@ Parameterized SQL queries are also supported:
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`ordinal`|`int`| Ordinal of sql parameter|yes|
 |`type`|`String` (`SqlType`) | String value of `SqlType` of parameter. [`SqlType`](https://calcite.apache.org/avatica/apidocs/org/apache/calcite/avatica/SqlType.html) is an friendly wrapper around [`java.sql.Types`](https://docs.oracle.com/javase/8/docs/api/java/sql/Types.html?is-external=true)|yes|
 |`value`|`Object`| Value of the parameter|yes|
 
