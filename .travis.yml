@@ -276,6 +276,7 @@ jobs:
 
     - &integration_batch_index
       name: "batch index integration test"
+      jdk: openjdk11
       services: &integration_test_services
         - docker
       env: TESTNG_GROUPS='-Dgroups=batch-index'
@@ -292,6 +293,7 @@ jobs:
 
     - &integration_perfect_rollup_parallel_batch_index
       name: "perfect rollup parallel batch index integration test"
+      jdk: openjdk11
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index'
       script: *run_integration_test
@@ -299,6 +301,7 @@ jobs:
 
     - &integration_kafka_index
       name: "kafka index integration test"
+      jdk: openjdk11
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-index'
       script: *run_integration_test
@@ -306,6 +309,7 @@ jobs:
 
     - &integration_query
       name: "query integration test"
+      jdk: openjdk11
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query'
       script: *run_integration_test
@@ -313,6 +317,7 @@ jobs:
 
     - &integration_realtime_index
       name: "realtime index integration test"
+      jdk: openjdk11
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=realtime-index'
       script: *run_integration_test
@@ -320,6 +325,7 @@ jobs:
 
     - &integration_tests
       name: "other integration test"
+      jdk: openjdk11
       services: *integration_test_services
       env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index'
       script: *run_integration_test

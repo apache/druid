@@ -16,6 +16,10 @@
 
 FROM ubuntu:16.04
 
+# Install Java JDK 8
+RUN apt-get update \
+    && apt-get install -y openjdk-8-jdk
+
 # Bundle everything into one script so cleanup can reduce image size.
 # Otherwise docker's layered images mean that things are not actually deleted.
 
