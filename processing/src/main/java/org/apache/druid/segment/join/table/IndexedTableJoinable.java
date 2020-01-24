@@ -75,4 +75,9 @@ public class IndexedTableJoinable implements Joinable
         remainderNeeded
     );
   }
+
+  public IndexedTable getTable()
+  {
+    return table;
+  }
 }

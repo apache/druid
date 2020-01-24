@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -27,7 +28,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -35,6 +39,10 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.BoundFilter;
+import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -104,7 +112,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getInterval_factToCountry()
   {
     Assert.assertEquals(
-        Intervals.of("2015-09-12/2015-09-12T02:33:40.060Z"),
+        Intervals.of("2015-09-12/2015-09-12T04:43:40.060Z"),
         makeFactToCountrySegment().getInterval()
     );
   }
@@ -145,7 +153,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getDimensionCardinality_factToCountryFactColumn()
   {
     Assert.assertEquals(
-        15,
+        17,
         makeFactToCountrySegment().getDimensionCardinality("countryIsoCode")
     );
   }
@@ -154,7 +162,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getDimensionCardinality_factToCountryJoinColumn()
   {
     Assert.assertEquals(
-        15,
+        17,
         makeFactToCountrySegment().getDimensionCardinality(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
     );
   }
@@ -190,7 +198,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getMaxTime_factToCountry()
   {
     Assert.assertEquals(
-        DateTimes.of("2015-09-12T02:33:40.059Z"),
+        DateTimes.of("2015-09-12T04:43:40.059Z"),
         makeFactToCountrySegment().getMaxTime()
     );
   }
@@ -325,7 +333,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getMaxIngestedEventTime_factToCountry()
   {
     Assert.assertEquals(
-        DateTimes.of("2015-09-12T02:33:40.059Z"),
+        DateTimes.of("2015-09-12T04:43:40.059Z"),
         makeFactToCountrySegment().getMaxIngestedEventTime()
     );
   }
@@ -396,7 +404,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador", 12L},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NULL_COUNTRY}
         )
     );
   }
@@ -444,7 +454,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador", 12L},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         )
     );
   }
@@ -491,7 +502,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador"},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway"},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador"},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States"}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States"},
+            new Object[]{"Cream Soda", "SU", "SU", "States United"}
         )
     );
   }
@@ -532,7 +544,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "US", "United States", 13L},
             new Object[]{"Giusy Ferreri discography", "IT", "IT", "Italy", 7L},
             new Object[]{"Roma-Bangkok", "IT", "IT", "Italy", 7L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         ) :
         ImmutableList.of(
             new Object[]{"Talk:Oswald Tilghman", null, "AU", "Australia", 0L},
@@ -545,7 +558,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "US", "United States", 13L},
             new Object[]{"Giusy Ferreri discography", "IT", "IT", "Italy", 7L},
             new Object[]{"Roma-Bangkok", "IT", "IT", "Italy", 7L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         )
     );
   }
@@ -584,7 +598,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "United States"},
             new Object[]{"Giusy Ferreri discography", "IT", "Italy"},
             new Object[]{"Roma-Bangkok", "IT", "Italy"},
-            new Object[]{"Old Anatolian Turkish", "US", "United States"}
+            new Object[]{"Old Anatolian Turkish", "US", "United States"},
+            new Object[]{"Cream Soda", "SU", "States United"}
         ) :
         ImmutableList.of(
             new Object[]{"Talk:Oswald Tilghman", null, "Australia"},
@@ -597,7 +612,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "United States"},
             new Object[]{"Giusy Ferreri discography", "IT", "Italy"},
             new Object[]{"Roma-Bangkok", "IT", "Italy"},
-            new Object[]{"Old Anatolian Turkish", "US", "United States"}
+            new Object[]{"Old Anatolian Turkish", "US", "United States"},
+            new Object[]{"Cream Soda", "SU", "States United"}
         )
     );
   }
@@ -654,7 +670,8 @@ public class HashJoinSegmentStorageAdapterTest
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
         ),
         ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L}
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
         )
     );
   }
@@ -683,7 +700,8 @@ public class HashJoinSegmentStorageAdapterTest
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
         ),
         ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L}
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
         )
     );
   }
@@ -846,7 +864,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador", 12L},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         )
     );
   }
@@ -900,7 +919,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "Departamento de San Salvador", "El Salvador"},
             new Object[]{"Алиса в Зазеркалье", "Finnmark Fylke", "Norway"},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "Provincia del Guayas", "Ecuador"},
-            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
+            new Object[]{"Cream Soda", "Ainigriv", "States United"},
+            new Object[]{"Orange Soda", null, null}
         )
     );
   }
@@ -950,7 +971,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Diskussion:Sebastian Schulz", "Norway"},
             new Object[]{"Diskussion:Sebastian Schulz", "El Salvador"},
             new Object[]{"Diskussion:Sebastian Schulz", "United States"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"}
+            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
+            new Object[]{"Diskussion:Sebastian Schulz", "States United"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Usca"}
         )
     );
   }
@@ -1036,7 +1059,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Diskussion:Sebastian Schulz", "Norway"},
             new Object[]{"Diskussion:Sebastian Schulz", "El Salvador"},
             new Object[]{"Diskussion:Sebastian Schulz", "United States"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"}
+            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
+            new Object[]{"Diskussion:Sebastian Schulz", "States United"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Usca"}
         )
     );
   }
@@ -1288,6 +1313,1047 @@ public class HashJoinSegmentStorageAdapterTest
     );
   }
 
+  // Filter push down tests
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnChannel()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new SelectorFilter("channel", "#en.wikipedia"),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", null, null},
+            new Object[]{"Peremptory norm", "New South Wales", "Australia"},
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Glasgow", "Kingston upon Hull", "United Kingdom"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"Sarah Michelle Gellar", "Ontario", "Canada"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Giusy Ferreri discography", "Provincia di Varese", "Italy"},
+            new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
+            new Object[]{"Cream Soda", "Ainigriv", "States United"},
+            new Object[][]{new Object[]{"Orange Soda", null, null}}
+        )
+    );
+
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new SelectorFilter("channel", "#en.wikipedia"),
+        null,
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionExprToCountryLeftFilterOnCountryName()
+  {
+    JoinableClause regionExprToCountry = new JoinableClause(
+        REGION_TO_COUNTRY_PREFIX,
+        new IndexedTableJoinable(countriesTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "reverse(\"%scountryIsoCode\") == \"%scountryIsoCode\"",
+                FACT_TO_REGION_PREFIX,
+                REGION_TO_COUNTRY_PREFIX
+            ),
+            REGION_TO_COUNTRY_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionExprToCountry
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new SelectorFilter("rtc.countryName", "United States"),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Cream Soda", "Ainigriv", "United States"}
+        )
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        null,
+        new SelectorFilter("rtc.countryName", "United States"),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnChannelAndCountryName()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("rtc.countryName", "United States")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+        )
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#en.wikipedia"),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter("rtc.countryName", "United States"),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnNullColumns()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("countryIsoCode", null),
+                    new SelectorFilter("countryNumber", null),
+                    new SelectorFilter("rtc.countryName", null),
+                    new SelectorFilter("r1.regionName", null)
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", null, null},
+            new Object[]{"Rallicula", null, null},
+            new Object[]{"Apamea abruzzorum", null, null},
+            new Object[]{"Atractus flammigerus", null, null},
+            new Object[]{"Agama mossambica", null, null}
+        ) :
+        ImmutableList.of() // when not running in SQL compatible mode, countryNumber does not have nulls
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        null,
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("countryIsoCode", null),
+                new SelectorFilter("countryNumber", null),
+                new SelectorFilter("rtc.countryName", null),
+                new SelectorFilter("r1.regionName", null)
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnInvalidColumns()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("baseTableInvalidColumn", "abcd"),
+                    new SelectorFilter("rtc.invalidColumn", "abcd"),
+                    new SelectorFilter("r1.invalidColumn", "abcd")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of()
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new SelectorFilter("baseTableInvalidColumn", "abcd"),
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("rtc.invalidColumn", "abcd"),
+                new SelectorFilter("r1.invalidColumn", "abcd")
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnChannelVirtualColumn()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("v1", "virtual-column-#en.wikipedia")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.create(
+                ImmutableList.of(
+                    new ExpressionVirtualColumn(
+                        "v1",
+                        "concat('virtual-column-', \"channel\")",
+                        ValueType.STRING,
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+            ),
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", null, null},
+            new Object[]{"Peremptory norm", "New South Wales", "Australia"},
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Glasgow", "Kingston upon Hull", "United Kingdom"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"Sarah Michelle Gellar", "Ontario", "Canada"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Giusy Ferreri discography", "Provincia di Varese", "Italy"},
+            new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
+            new Object[]{"Cream Soda", "Ainigriv", "States United"},
+            new Object[][]{new Object[]{"Orange Soda", null, null}}
+        )
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new SelectorFilter("v1", "virtual-column-#en.wikipedia"),
+        null,
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterNormalizedAlreadyPushDownVariety()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#fr.wikipedia"),
+                    new BoundFilter(new BoundDimFilter(
+                        "page",
+                        "Les Argonautes",
+                        "Les Argonautes",
+                        false,
+                        false,
+                        null,
+                        null,
+                        null
+                    )),
+                    new SelectorFilter("rtc.countryName", "Canada"),
+                    new BoundFilter(new BoundDimFilter(
+                        "rtc.countryName",
+                        "Canada",
+                        "Canada",
+                        false,
+                        false,
+                        null,
+                        null,
+                        null
+                    )),
+                    new OrFilter(
+                        ImmutableList.of(
+                            new SelectorFilter("namespace", "main"),
+                            new BoundFilter(new BoundDimFilter(
+                                "user",
+                                "24.122.168.111",
+                                "24.122.168.111",
+                                false,
+                                false,
+                                null,
+                                null,
+                                null
+                            ))
+                        )
+                    ),
+                    new OrFilter(
+                        ImmutableList.of(
+                            new SelectorFilter("namespace", "main"),
+                            new BoundFilter(new BoundDimFilter(
+                                "r1.regionName",
+                                "Quebec",
+                                "Quebec",
+                                false,
+                                false,
+                                null,
+                                null,
+                                null
+                            ))
+                        )
+                    )
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Les Argonautes", "Quebec", "Canada"}
+        )
+    );
+
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#fr.wikipedia"),
+                new BoundFilter(new BoundDimFilter(
+                    "page",
+                    "Les Argonautes",
+                    "Les Argonautes",
+                    false,
+                    false,
+                    null,
+                    null,
+                    null
+                )),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("CA"), null, null).toFilter(),
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("namespace", "main"),
+                        new BoundFilter(new BoundDimFilter(
+                            "user",
+                            "24.122.168.111",
+                            "24.122.168.111",
+                            false,
+                            false,
+                            null,
+                            null,
+                            null
+                        ))
+                    )
+                )
+            )
+        ),
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("rtc.countryName", "Canada"),
+                new BoundFilter(new BoundDimFilter(
+                    "rtc.countryName",
+                    "Canada",
+                    "Canada",
+                    false,
+                    false,
+                    null,
+                    null,
+                    null
+                )),
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("namespace", "main"),
+                        new BoundFilter(new BoundDimFilter(
+                            "r1.regionName",
+                            "Quebec",
+                            "Quebec",
+                            false,
+                            false,
+                            null,
+                            null,
+                            null
+                        ))
+                    )
+                )
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName()
+  {
+    JoinableClause factExprToRegon = new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%sregionIsoCode\" == reverse(regionIsoCode) && \"%scountryIsoCode\" == reverse(countryIsoCode)",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factExprToRegon,
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("rtc.countryName", "States United")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+        )
+    );
+
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+              new SelectorFilter("channel", "#en.wikipedia"),
+              new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("SU"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter("rtc.countryName", "States United"),
+        ImmutableList.of()
+    );
+    ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
+        "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
+        "reverse(countryIsoCode)",
+        ValueType.STRING,
+        ExprMacroTable.nil()
+    );
+    Assert.assertEquals(
+        expectedFilterSplit.getBaseTableFilter(),
+        adapter.getPreviousJoinFilterSplitForTesting().getBaseTableFilter()
+    );
+    Assert.assertEquals(
+        expectedFilterSplit.getJoinTableFilter(),
+        adapter.getPreviousJoinFilterSplitForTesting().getJoinTableFilter()
+    );
+    ExpressionVirtualColumn actualVirtualColumn = (ExpressionVirtualColumn) adapter.getPreviousJoinFilterSplitForTesting()
+                                                                                   .getPushDownVirtualColumns()
+                                                                                   .get(0);
+    compareExpressionVirtualColumns(expectedVirtualColumn, actualVirtualColumn);
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryNotEquiJoinLeftFilterOnChannelAndCountryName()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
+
+    JoinableClause factExprToRegon = new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%sregionIsoCode\" == regionIsoCode && reverse(\"%scountryIsoCode\") == countryIsoCode",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factExprToRegon,
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("rtc.countryName", "States United")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftUnnormalizedFilter()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new OrFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#ko.wikipedia"),
+                    new AndFilter(
+                        ImmutableList.of(
+                          new SelectorFilter("rtc.countryName", "United States"),
+                          new SelectorFilter("r1.regionName", "Virginia")
+                        )
+                    )
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"유희왕 GX", "Seoul", "Republic of Korea"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+        )
+    );
+
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("channel", "#ko.wikipedia"),
+                        new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter()
+                    )
+                ),
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("channel", "#ko.wikipedia"),
+                        new AndFilter(
+                            ImmutableList.of(
+                                new InDimFilter("regionIsoCode", ImmutableSet.of("VA"), null, null).toFilter(),
+                                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter()
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        new AndFilter(
+            ImmutableList.of(
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("channel", "#ko.wikipedia"),
+                        new SelectorFilter("rtc.countryName", "United States")
+                    )
+                ),
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("channel", "#ko.wikipedia"),
+                        new SelectorFilter("r1.regionName", "Virginia")
+                    )
+                )
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factConcatExpressionToCountryLeftFilterOnChannelAndCountryName()
+  {
+    JoinableClause factExprToCountry = new JoinableClause(
+        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+        new IndexedTableJoinable(countriesTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%scountryIsoCode\" == concat(countryIsoCode, regionIsoCode)",
+                FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX
+            ),
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factExprToCountry
+        )
+    );
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter("c1.countryName", "Usca")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"President of India", "Usca"},
+            new Object[]{"Otjiwarongo Airport", "Usca"},
+            new Object[]{"Carlo Curti", "Usca"}
+        )
+    );
+
+    ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
+        "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
+        "concat(countryIsoCode, regionIsoCode)",
+        ValueType.STRING,
+        ExprMacroTable.nil()
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#en.wikipedia"),
+                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("USCA"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter("c1.countryName", "Usca"),
+        ImmutableList.of(
+            expectedVirtualColumn
+        )
+    );
+    Assert.assertEquals(
+        expectedFilterSplit.getBaseTableFilter(),
+        adapter.getPreviousJoinFilterSplitForTesting().getBaseTableFilter()
+    );
+    Assert.assertEquals(
+        expectedFilterSplit.getJoinTableFilter(),
+        adapter.getPreviousJoinFilterSplitForTesting().getJoinTableFilter()
+    );
+    ExpressionVirtualColumn actualVirtualColumn = (ExpressionVirtualColumn) adapter.getPreviousJoinFilterSplitForTesting()
+                                                                                   .getPushDownVirtualColumns()
+                                                                                   .get(0);
+    compareExpressionVirtualColumns(expectedVirtualColumn, actualVirtualColumn);
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToCountryRightWithFilterOnChannelAndJoinable()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT))
+    );
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#de.wikipedia"),
+                    new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "countryNumber",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Diskussion:Sebastian Schulz", "DE", 3L, "DE", "Germany", 3L}
+        )
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#de.wikipedia"),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("DE"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany"),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToCountryRightWithFilterOnNullColumns()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT))
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", null),
+                    new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "countryNumber",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of()
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        null,
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", null),
+                new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToCountryInnerUsingCountryNumberFilterOnChannelAndCountryName()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(factToCountryOnNumber(JoinType.INNER))
+    );
+
+    // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
+    // is interpreted as 0 (a.k.a. Australia).
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryNumber"
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{"Peremptory norm", "AU", "AU", "Australia", 0L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"Talk:Oswald Tilghman", null, "AU", "Australia", 0L},
+            new Object[]{"Peremptory norm", "AU", "AU", "Australia", 0L}
+        )
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#en.wikipedia"),
+                new InDimFilter("countryNumber", ImmutableSet.of("0"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia"),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToCountryInnerUsingCountryNumberFilterOnNulls()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(factToCountryOnNumber(JoinType.INNER))
+    );
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", null),
+                    new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", null)
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of()
+    );
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        null,
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", null),
+                new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", null)
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToCountryFullWithFilterOnChannelAndCountryName()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL))
+    );
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#es.wikipedia"),
+                    new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador")
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "countryNumber",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Wendigo", "SV", 12L, "SV", "El Salvador", 12L}
+        )
+    );
+
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#es.wikipedia"),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("SV"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador"),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
+  @Test
+  public void test_makeCursorsFilterPushDown_factToCountryFullWithFilterOnNulls()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL))
+    );
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", null),
+                    new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
+                )
+            ),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "countryNumber",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of()
+    );
+
+    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+        null,
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", null),
+                new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", null)
+            )
+        ),
+        ImmutableList.of()
+    );
+    Assert.assertEquals(expectedFilterSplit, adapter.getPreviousJoinFilterSplitForTesting());
+  }
+
   private JoinableClause factToCountryNameUsingIsoCodeLookup(final JoinType joinType)
   {
     return new JoinableClause(
@@ -1385,6 +2451,25 @@ public class HashJoinSegmentStorageAdapterTest
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
         ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
+    );
+  }
+
+  private void compareExpressionVirtualColumns(
+      ExpressionVirtualColumn expectedVirtualColumn,
+      ExpressionVirtualColumn actualVirtualColumn
+  )
+  {
+    Assert.assertEquals(
+        expectedVirtualColumn.getOutputName(),
+        actualVirtualColumn.getOutputName()
+    );
+    Assert.assertEquals(
+        expectedVirtualColumn.getOutputType(),
+        actualVirtualColumn.getOutputType()
+    );
+    Assert.assertEquals(
+        expectedVirtualColumn.getParsedExpression().get().toString(),
+        actualVirtualColumn.getParsedExpression().get().toString()
     );
   }
 }

@@ -83,4 +83,9 @@ public class LookupJoinable implements Joinable
   {
     return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded);
   }
+
+  public LookupExtractor getExtractor()
+  {
+    return extractor;
+  }
 }
