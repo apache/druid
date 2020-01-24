@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import java.io.Closeable;
 
 /**
- * An interface to reference-counted objects. Used by {@link ReferenceCountingSegment}.
+ * An interface to reference-counted objects. Used by {@link ReferenceCountingSegment}. Thread-safe.
  */
 public interface ReferenceCounter
 {

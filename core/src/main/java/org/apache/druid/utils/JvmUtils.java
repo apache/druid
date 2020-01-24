@@ -89,6 +89,10 @@ public class JvmUtils
     return THREAD_MX_BEAN.getCurrentThreadCpuTime();
   }
 
+  /**
+   * Executes and returns the value of {@code function}. Also accumulates the CPU time taken for the function (as
+   * reported by {@link #getCurrentThreadCpuTime()} into {@param accumulator}.
+   */
   public static <T> T safeAccumulateThreadCpuTime(final AtomicLong accumulator, final Supplier<T> function)
   {
     final long start = safeGetThreadCpuTime();

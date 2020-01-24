@@ -32,7 +32,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -81,7 +80,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         segmentAnnouncer,
         emitter,
         queryExecutorService,
-        NoopJoinableFactory.INSTANCE,
+        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats

@@ -37,7 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * until that. So ReferenceCountingSegment implements something like automatic reference count-based resource
  * management.
  */
-public class ReferenceCountingSegment extends AbstractSegment implements Overshadowable<ReferenceCountingSegment>
+public class ReferenceCountingSegment extends AbstractSegment
+    implements Overshadowable<ReferenceCountingSegment>, ReferenceCounter
 {
   private static final EmittingLogger log = new EmittingLogger(ReferenceCountingSegment.class);
 
@@ -168,28 +169,10 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
 
   public ReferenceCounter referenceCounter()
   {
-    return new ReferenceCounter()
-    {
-      @Override
-      public boolean increment()
-      {
-        return ReferenceCountingSegment.this.increment();
-      }
-
-      @Override
-      public Closeable decrementOnceCloseable()
-      {
-        return ReferenceCountingSegment.this.decrementOnceCloseable();
-      }
-
-      @Override
-      public void decrement()
-      {
-        ReferenceCountingSegment.this.decrement();
-      }
-    };
+    return this;
   }
 
+  @Override
   public boolean increment()
   {
     // Negative return from referents.register() means the Phaser is terminated.
@@ -200,6 +183,7 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
    * Returns a {@link Closeable} which action is to call {@link #decrement()} only once. If close() is called on the
    * returned Closeable object for the second time, it won't call {@link #decrement()} again.
    */
+  @Override
   public Closeable decrementOnceCloseable()
   {
     AtomicBoolean decremented = new AtomicBoolean(false);
@@ -212,6 +196,7 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
     };
   }
 
+  @Override
   public void decrement()
   {
     referents.arriveAndDeregister();
