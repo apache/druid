@@ -155,11 +155,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
     }
 
-    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
-    if (!analysis.getPreJoinableClauses().isEmpty()) {
-      throw new ISE("Cannot handle join dataSource");
-    }
-
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());

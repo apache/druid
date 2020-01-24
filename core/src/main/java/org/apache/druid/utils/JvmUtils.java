@@ -52,11 +52,11 @@ public class JvmUtils
   }
 
   @Inject
-  private static final RuntimeInfo RUNTIME_INFO = new RuntimeInfo();
+  private static RuntimeInfo runtimeInfo = new RuntimeInfo();
 
   public static RuntimeInfo getRuntimeInfo()
   {
-    return RUNTIME_INFO;
+    return runtimeInfo;
   }
 
   private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
