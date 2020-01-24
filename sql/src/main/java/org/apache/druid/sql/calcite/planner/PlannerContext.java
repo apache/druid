@@ -213,8 +213,10 @@ public class PlannerContext
       {
         ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
         builder.putAll(base_context);
-        for (int i = 0; i < parameters.size(); i++) {
-          builder.put("?" + i, parameters.get(i).value);
+        int i = 0;
+        for (TypedValue parameter : parameters) {
+          builder.put("?" + i, parameter.value);
+          i++;
         }
         context = builder.build();
       }
