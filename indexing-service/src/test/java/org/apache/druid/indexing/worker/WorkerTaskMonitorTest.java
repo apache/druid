@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -170,7 +171,18 @@ public class WorkerTaskMonitorTest
                 taskConfig,
                 null,
                 taskActionClientFactory,
-                null, null, null, null, null, null, null, notifierFactory, null, null, null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                notifierFactory,
+                null,
+                null,
+                NoopJoinableFactory.INSTANCE,
+                null,
                 new SegmentLoaderFactory(null, jsonMapper),
                 jsonMapper,
                 indexIO,

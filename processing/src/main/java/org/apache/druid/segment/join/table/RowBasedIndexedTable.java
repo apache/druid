@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -62,6 +63,10 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     this.columnTypes = new ArrayList<>(columns.size());
     this.columnFunctions = columns.stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
     this.keyColumns = keyColumns;
+
+    if (new HashSet<>(keyColumns).size() != keyColumns.size()) {
+      throw new ISE("keyColumns[%s] must not contain duplicates", keyColumns);
+    }
 
     if (!rowSignature.keySet().containsAll(keyColumns)) {
       throw new ISE(

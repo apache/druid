@@ -57,6 +57,8 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
@@ -69,6 +71,7 @@ import java.io.Closeable;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * Query handler for indexing tasks.
@@ -85,6 +88,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
@@ -96,6 +100,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats
@@ -107,6 +112,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
     this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
+    this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
@@ -149,11 +155,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
     }
 
-    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
-    if (!analysis.getPreJoinableClauses().isEmpty()) {
-      throw new ISE("Cannot handle join dataSource");
-    }
-
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());
@@ -167,6 +168,13 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     if (analysis.isQuery() && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
+
+    // segmentMapFn maps each base Segment into a joined Segment if necessary.
+    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+        analysis.getPreJoinableClauses(),
+        joinableFactory,
+        cpuTimeAccumulator
+    );
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
@@ -202,7 +210,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     // Prevent the underlying segment from swapping when its being iterated
                     final Pair<Segment, Closeable> segmentAndCloseable = hydrant.getAndIncrementSegment();
                     try {
-                      QueryRunner<T> runner = factory.createRunner(segmentAndCloseable.lhs);
+                      final Segment mappedSegment = segmentMapFn.apply(segmentAndCloseable.lhs);
+
+                      QueryRunner<T> runner = factory.createRunner(mappedSegment);
 
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
@@ -228,7 +238,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                           runner,
                           segmentAndCloseable.rhs
                       );
-                      return new Pair<>(segmentAndCloseable.lhs.getDataInterval(), runner);
+                      return new Pair<>(mappedSegment.getDataInterval(), runner);
                     }
                     catch (RuntimeException e) {
                       CloseQuietly.close(segmentAndCloseable.rhs);

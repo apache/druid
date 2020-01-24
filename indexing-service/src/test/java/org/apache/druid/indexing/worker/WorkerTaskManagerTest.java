@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -120,6 +121,7 @@ public class WorkerTaskManagerTest
                 notifierFactory,
                 null,
                 null,
+                NoopJoinableFactory.INSTANCE,
                 null,
                 new SegmentLoaderFactory(null, jsonMapper),
                 jsonMapper,
