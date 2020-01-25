@@ -514,9 +514,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
         warningChecks={[
-          'I understand that this operation will wipe the current state of the supervisor',
-          `I understand that this will lead to data loss or duplication in ${resetSupervisorId}`,
-          'I accept full responsibility for my actions',
+          `I understand that resetting ${resetSupervisorId} will clear checkpoints and therefore lead to data loss or duplication.`,
+          'I understand that this operation cannot be undone.',
         ]}
       >
         <p>{`Are you sure you want to hard reset supervisor '${resetSupervisorId}'?`}</p>
