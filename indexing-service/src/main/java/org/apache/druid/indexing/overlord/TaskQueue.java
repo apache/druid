@@ -97,6 +97,11 @@ public class TaskQueue
           .setDaemon(false)
           .setNameFormat("TaskQueue-Manager").build()
   );
+  private final ExecutorService taskStatusHandlerExec = Executors.newSingleThreadExecutor(
+      new ThreadFactoryBuilder()
+          .setDaemon(false)
+          .setNameFormat("TaskQueue-TaskStatusHandler").build()
+  );
   private final ScheduledExecutorService storageSyncExec = Executors.newSingleThreadScheduledExecutor(
       new ThreadFactoryBuilder()
           .setDaemon(false)
@@ -217,6 +222,7 @@ public class TaskQueue
       taskFutures.clear();
       active = false;
       managerExec.shutdownNow();
+      taskStatusHandlerExec.shutdownNow();
       storageSyncExec.shutdownNow();
       managementMayBeNecessary.signalAll();
     }
@@ -583,7 +589,8 @@ public class TaskQueue
                  .emit();
             }
           }
-        }
+        },
+        taskStatusHandlerExec
     );
     return statusFuture;
   }
