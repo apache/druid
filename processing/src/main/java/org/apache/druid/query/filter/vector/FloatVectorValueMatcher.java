@@ -108,8 +108,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
             if (predicate.applyNull()) {
               selection[numRows++] = rowNum;
             }
-          }
-          else if (predicate.applyFloat(vector[rowNum])) {
+          } else if (predicate.applyFloat(vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }

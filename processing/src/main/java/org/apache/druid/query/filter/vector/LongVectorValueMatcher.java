@@ -108,8 +108,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
             if (predicate.applyNull()) {
               selection[numRows++] = rowNum;
             }
-          }
-          else if (predicate.applyLong(vector[rowNum])) {
+          } else if (predicate.applyLong(vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }
