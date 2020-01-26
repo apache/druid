@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import org.joda.time.DateTime;
-import org.joda.time.Period;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,14 +35,36 @@ import java.util.List;
 public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorHelper
 {
   private static final Logger log = new Logger(DruidCoordinatorCleanupPendingSegments.class);
-  private static final Period KEEP_PENDING_SEGMENTS_OFFSET = new Period("P1D");
+
+  private final long period;
+  private final long retainDuration;
+  private long lastKillTime;
 
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
-  public DruidCoordinatorCleanupPendingSegments(IndexingServiceClient indexingServiceClient)
+  public DruidCoordinatorCleanupPendingSegments(
+      IndexingServiceClient indexingServiceClient,
+      DruidCoordinatorConfig druidCoordinatorConfig
+  )
   {
+    this.period = druidCoordinatorConfig.getCoordinatorKillPendingSegmentsDurationToRetain().getMillis();
+    Preconditions.checkArgument(
+        this.period > druidCoordinatorConfig.getCoordinatorIndexingPeriod().getMillis(),
+        "coordinator kill pendingSegments period must be greater than druid.coordinator.period.indexingPeriod"
+    );
+    this.retainDuration = druidCoordinatorConfig.getCoordinatorKillPendingSegmentsDurationToRetain().getMillis();
+    Preconditions.checkArgument(
+        this.retainDuration >= 0,
+        "coordinator kill pendingSegments retainDuration must be >= 0"
+    );
+    this.lastKillTime = 0;
     this.indexingServiceClient = indexingServiceClient;
+    log.info(
+        "Clean up pendingSegments task scheduling enabled with period [%s], retainDuration [%s]",
+        this.period,
+        this.retainDuration
+    );
   }
 
   @Override
@@ -71,15 +92,20 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
 
     // If there is no running/pending/waiting/complete tasks, stalePendingSegmentsCutoffCreationTime is
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
-    final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
-    for (String dataSource : params.getUsedSegmentsTimelinesPerDataSource().keySet()) {
-      if (!params.getCoordinatorDynamicConfig().getDataSourcesToNotKillStalePendingSegmentsIn().contains(dataSource)) {
-        log.info(
-            "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
-            indexingServiceClient.killPendingSegments(dataSource, stalePendingSegmentsCutoffCreationTime),
-            stalePendingSegmentsCutoffCreationTime,
-            dataSource
-        );
+    final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(retainDuration);
+    if ((lastKillTime + period) < System.currentTimeMillis()) {
+      lastKillTime = System.currentTimeMillis();
+      for (String dataSource : params.getUsedSegmentsTimelinesPerDataSource().keySet()) {
+        if (!params.getCoordinatorDynamicConfig()
+                   .getDataSourcesToNotKillStalePendingSegmentsIn()
+                   .contains(dataSource)) {
+          log.info(
+              "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
+              indexingServiceClient.killPendingSegments(dataSource, stalePendingSegmentsCutoffCreationTime),
+              stalePendingSegmentsCutoffCreationTime,
+              dataSource
+          );
+        }
       }
     }
     return params;

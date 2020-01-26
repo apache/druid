@@ -51,6 +51,14 @@ public abstract class DruidCoordinatorConfig
   @Default("0")
   public abstract int getCoordinatorKillMaxSegments();
 
+  @Config("druid.coordinator.kill.pendingSegments.period")
+  @Default("PT3600s")
+  public abstract Duration getCoordinatorKillPendingSegmentsPeriod();
+
+  @Config("druid.coordinator.kill.pendingSegments.durationToRetain")
+  @Default("P1D")
+  public abstract Duration getCoordinatorKillPendingSegmentsDurationToRetain();
+
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()
   {

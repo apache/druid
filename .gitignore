@@ -1,5 +1,6 @@
 dist
 target
+*.factorypath
 *.iml
 *.ipr
 *.iws

@@ -30,6 +30,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration loadTimeoutDelay;
   private final Duration coordinatorKillPeriod;
   private final Duration coordinatorKillDurationToRetain;
+  private final Duration coordinatorKillPendingSegmentsPeriod;
+  private final Duration coordinatorKillPendingSegmentsDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
 
@@ -41,6 +43,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorKillPeriod,
       Duration coordinatorKillDurationToRetain,
       int coordinatorKillMaxSegments,
+      Duration coordinatorKillPendingSegmentsPeriod,
+      Duration coordinatorKillPendingSegmentsDurationToRetain,
       Duration getLoadQueuePeonRepeatDelay
   )
   {
@@ -51,6 +55,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorKillPeriod = coordinatorKillPeriod;
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
+    this.coordinatorKillPendingSegmentsPeriod = coordinatorKillPendingSegmentsPeriod;
+    this.coordinatorKillPendingSegmentsDurationToRetain = coordinatorKillPendingSegmentsDurationToRetain;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
   }
 
@@ -88,6 +94,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public int getCoordinatorKillMaxSegments()
   {
     return coordinatorKillMaxSegments;
+  }
+
+  @Override
+  public Duration getCoordinatorKillPendingSegmentsPeriod()
+  {
+    return coordinatorKillPendingSegmentsPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorKillPendingSegmentsDurationToRetain()
+  {
+    return coordinatorKillPendingSegmentsDurationToRetain;
   }
 
   @Override

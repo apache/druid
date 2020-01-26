@@ -45,6 +45,8 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
     Assert.assertEquals(-1000, config.getCoordinatorKillDurationToRetain().getMillis());
     Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
+    Assert.assertEquals(new Duration("PT3600s"), config.getCoordinatorKillPendingSegmentsPeriod());
+    Assert.assertEquals(new Duration(24 * 60 * 60 * 1000), config.getCoordinatorKillPendingSegmentsDurationToRetain());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
 
@@ -58,6 +60,8 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.kill.durationToRetain", "PT1s");
     props.setProperty("druid.coordinator.kill.maxSegments", "10000");
     props.setProperty("druid.coordinator.kill.pendingSegments.on", "true");
+    props.setProperty("druid.coordinator.kill.pendingSegments.period", "PT1s");
+    props.setProperty("druid.coordinator.kill.pendingSegments.durationToRetain", "PT1s");
     props.setProperty("druid.coordinator.load.timeout", "PT1s");
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
 
@@ -70,6 +74,8 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPeriod());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());
+    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPendingSegmentsPeriod());
+    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPendingSegmentsDurationToRetain());
     Assert.assertEquals(new Duration("PT1s"), config.getLoadTimeoutDelay());
     Assert.assertEquals(Duration.millis(100), config.getLoadQueuePeonRepeatDelay());
   }
