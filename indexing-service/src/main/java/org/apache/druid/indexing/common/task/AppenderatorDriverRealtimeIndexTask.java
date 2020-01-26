@@ -772,6 +772,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
         toolbox.getQueryExecutorService(),
+        toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats()

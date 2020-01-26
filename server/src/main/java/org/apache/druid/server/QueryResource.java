@@ -190,7 +190,7 @@ public class QueryResource implements QueryCountStatsProvider
           "%s[%s_%s_%s]",
           currThreadName,
           query.getType(),
-          query.getDataSource().getNames(),
+          query.getDataSource().getTableNames(),
           queryId
       );
 

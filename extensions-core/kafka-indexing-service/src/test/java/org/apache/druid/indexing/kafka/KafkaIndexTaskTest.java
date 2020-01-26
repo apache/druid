@@ -105,6 +105,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -2657,6 +2658,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         handoffNotifierFactory,
         this::makeTimeseriesAndScanConglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),

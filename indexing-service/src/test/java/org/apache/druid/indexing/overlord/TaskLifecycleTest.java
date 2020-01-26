@@ -117,6 +117,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -663,6 +664,7 @@ public class TaskLifecycleTest
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         Execs.directExecutor(), // query executor service
+        NoopJoinableFactory.INSTANCE,
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(null, new DefaultObjectMapper()),
         MAPPER,
@@ -1330,6 +1332,7 @@ public class TaskLifecycleTest
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
         exec,
+        NoopJoinableFactory.INSTANCE,
         new WorkerConfig(),
         MapCache.create(2048),
         new CacheConfig(),

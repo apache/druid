@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
@@ -94,6 +95,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
+        NoopJoinableFactory.INSTANCE,
         null,
         new SegmentLoaderFactory(null, utils.getTestObjectMapper()),
         utils.getTestObjectMapper(),
