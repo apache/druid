@@ -108,7 +108,7 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
               selection[numRows++] = rowNum;
             }
           } else if (predicate.applyDouble(vector[rowNum])) {
-              selection[numRows++] = rowNum;
+            selection[numRows++] = rowNum;
           }
         }
 
