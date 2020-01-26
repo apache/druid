@@ -694,31 +694,31 @@ public class BoundFilterTest extends BaseFilterTest
         ),
         ImmutableList.of("1", "2", "3", "5", "7")
     );
-//    assertFilterMatches(
-//        new BoundDimFilter(
-//            "d0",
-//            "1",
-//            null,
-//            false,
-//            false,
-//            false,
-//            null,
-//            StringComparators.NUMERIC
-//        ),
-//        ImmutableList.of("1", "3", "4", "5", "6")
-//    );
-//    assertFilterMatches(
-//        new BoundDimFilter(
-//            "l0",
-//            "1",
-//            null,
-//            false,
-//            false,
-//            false,
-//            null,
-//            StringComparators.NUMERIC
-//        ),
-//        ImmutableList.of("1", "2", "4", "5", "6")
-//    );
+    assertFilterMatches(
+        new BoundDimFilter(
+            "d0",
+            "1",
+            null,
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        ImmutableList.of("1", "3", "4", "5", "6")
+    );
+    assertFilterMatches(
+        new BoundDimFilter(
+            "l0",
+            "1",
+            null,
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        ImmutableList.of("1", "2", "4", "5", "6")
+    );
   }
 }
