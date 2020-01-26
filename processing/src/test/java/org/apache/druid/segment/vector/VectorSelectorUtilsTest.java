@@ -37,73 +37,73 @@ import java.util.Set;
 
 public class VectorSelectorUtilsTest
 {
-  private static final Set<Integer> nulls = IntSetTestUtility.getSetBits();
-  private static final Set<Integer> alternatingNulls = alternatngPattern(10, 12);
+  private static final Set<Integer> NULLS = IntSetTestUtility.getSetBits();
+  private static final Set<Integer> NULLS_PATTERN = alternatngPattern(10, 12);
 
   @Test
   public void testBitSetNullVector()
   {
     final WrappedBitSetBitmap bitmap = new WrappedBitSetBitmap();
-    populate(bitmap, nulls);
-    assertNullVector(bitmap, nulls);
+    populate(bitmap, NULLS);
+    assertNullVector(bitmap, NULLS);
 
     final WrappedBitSetBitmap bitmap2 = new WrappedBitSetBitmap();
-    populate(bitmap2, alternatingNulls);
-    assertNullVector(bitmap2, alternatingNulls);
+    populate(bitmap2, NULLS_PATTERN);
+    assertNullVector(bitmap2, NULLS_PATTERN);
   }
 
   @Test
   public void testConciseMutableNullVector()
   {
     final WrappedConciseBitmap bitmap = new WrappedConciseBitmap();
-    populate(bitmap, nulls);
-    assertNullVector(bitmap, nulls);
+    populate(bitmap, NULLS);
+    assertNullVector(bitmap, NULLS);
 
     final WrappedConciseBitmap bitmap2 = new WrappedConciseBitmap();
-    populate(bitmap2, alternatingNulls);
-    assertNullVector(bitmap2, alternatingNulls);
+    populate(bitmap2, NULLS_PATTERN);
+    assertNullVector(bitmap2, NULLS_PATTERN);
   }
 
   @Test
   public void testConciseImmutableNullVector()
   {
     final WrappedConciseBitmap bitmap = new WrappedConciseBitmap();
-    populate(bitmap, nulls);
+    populate(bitmap, NULLS);
     final ImmutableBitmap immutable = new WrappedImmutableConciseBitmap(
         ImmutableConciseSet.newImmutableFromMutable(bitmap.getBitmap())
     );
-    assertNullVector(immutable, nulls);
+    assertNullVector(immutable, NULLS);
 
     final WrappedConciseBitmap bitmap2 = new WrappedConciseBitmap();
-    populate(bitmap2, alternatingNulls);
+    populate(bitmap2, NULLS_PATTERN);
     final ImmutableBitmap immutable2 = new WrappedImmutableConciseBitmap(
         ImmutableConciseSet.newImmutableFromMutable(bitmap2.getBitmap())
     );
-    assertNullVector(immutable2, alternatingNulls);
+    assertNullVector(immutable2, NULLS_PATTERN);
   }
 
   @Test
   public void testRoaringMutableNullVector()
   {
     WrappedRoaringBitmap bitmap = new WrappedRoaringBitmap();
-    populate(bitmap, nulls);
-    assertNullVector(bitmap, nulls);
+    populate(bitmap, NULLS);
+    assertNullVector(bitmap, NULLS);
 
     WrappedRoaringBitmap bitmap2 = new WrappedRoaringBitmap();
-    populate(bitmap2, alternatingNulls);
-    assertNullVector(bitmap2, alternatingNulls);
+    populate(bitmap2, NULLS_PATTERN);
+    assertNullVector(bitmap2, NULLS_PATTERN);
   }
 
   @Test
   public void testRoaringImmutableNullVector()
   {
     WrappedRoaringBitmap bitmap = new WrappedRoaringBitmap();
-    populate(bitmap, nulls);
-    assertNullVector(bitmap.toImmutableBitmap(), nulls);
+    populate(bitmap, NULLS);
+    assertNullVector(bitmap.toImmutableBitmap(), NULLS);
 
     WrappedRoaringBitmap bitmap2 = new WrappedRoaringBitmap();
-    populate(bitmap2, alternatingNulls);
-    assertNullVector(bitmap2.toImmutableBitmap(), alternatingNulls);
+    populate(bitmap2, NULLS_PATTERN);
+    assertNullVector(bitmap2.toImmutableBitmap(), NULLS_PATTERN);
   }
 
   public static void populate(MutableBitmap bitmap, Set<Integer> setBits)
