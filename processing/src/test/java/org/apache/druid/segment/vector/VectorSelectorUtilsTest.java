@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.vector;
 
+import com.google.common.collect.Sets;
 import org.apache.druid.collections.IntSetTestUtility;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -31,64 +32,106 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.PeekableIntIterator;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 public class VectorSelectorUtilsTest
 {
+  private static final Set<Integer> nulls = IntSetTestUtility.getSetBits();
+  private static final Set<Integer> alternatingNulls = alternatngPattern(10, 12);
+
   @Test
   public void testBitSetNullVector()
   {
     final WrappedBitSetBitmap bitmap = new WrappedBitSetBitmap();
-    populate(bitmap);
-    assertNullVector(bitmap);
+    populate(bitmap, nulls);
+    assertNullVector(bitmap, nulls);
+
+    final WrappedBitSetBitmap bitmap2 = new WrappedBitSetBitmap();
+    populate(bitmap2, alternatingNulls);
+    assertNullVector(bitmap2, alternatingNulls);
   }
 
   @Test
   public void testConciseMutableNullVector()
   {
     final WrappedConciseBitmap bitmap = new WrappedConciseBitmap();
-    populate(bitmap);
-    assertNullVector(bitmap);
+    populate(bitmap, nulls);
+    assertNullVector(bitmap, nulls);
+
+    final WrappedConciseBitmap bitmap2 = new WrappedConciseBitmap();
+    populate(bitmap2, alternatingNulls);
+    assertNullVector(bitmap2, alternatingNulls);
   }
 
   @Test
   public void testConciseImmutableNullVector()
   {
     final WrappedConciseBitmap bitmap = new WrappedConciseBitmap();
-    populate(bitmap);
+    populate(bitmap, nulls);
     final ImmutableBitmap immutable = new WrappedImmutableConciseBitmap(
         ImmutableConciseSet.newImmutableFromMutable(bitmap.getBitmap())
     );
-    assertNullVector(immutable);
+    assertNullVector(immutable, nulls);
+
+    final WrappedConciseBitmap bitmap2 = new WrappedConciseBitmap();
+    populate(bitmap2, alternatingNulls);
+    final ImmutableBitmap immutable2 = new WrappedImmutableConciseBitmap(
+        ImmutableConciseSet.newImmutableFromMutable(bitmap2.getBitmap())
+    );
+    assertNullVector(immutable2, alternatingNulls);
   }
 
   @Test
   public void testRoaringMutableNullVector()
   {
     WrappedRoaringBitmap bitmap = new WrappedRoaringBitmap();
-    populate(bitmap);
-    assertNullVector(bitmap);
+    populate(bitmap, nulls);
+    assertNullVector(bitmap, nulls);
+
+    WrappedRoaringBitmap bitmap2 = new WrappedRoaringBitmap();
+    populate(bitmap2, alternatingNulls);
+    assertNullVector(bitmap2, alternatingNulls);
   }
 
   @Test
   public void testRoaringImmutableNullVector()
   {
     WrappedRoaringBitmap bitmap = new WrappedRoaringBitmap();
-    populate(bitmap);
-    assertNullVector(bitmap.toImmutableBitmap());
+    populate(bitmap, nulls);
+    assertNullVector(bitmap.toImmutableBitmap(), nulls);
+
+    WrappedRoaringBitmap bitmap2 = new WrappedRoaringBitmap();
+    populate(bitmap2, alternatingNulls);
+    assertNullVector(bitmap2.toImmutableBitmap(), alternatingNulls);
   }
 
-  public static void populate(MutableBitmap bitmap)
+  public static void populate(MutableBitmap bitmap, Set<Integer> setBits)
   {
-    for (int i : IntSetTestUtility.getSetBits()) {
+    for (int i : setBits) {
       bitmap.add(i);
     }
   }
 
-  private void assertNullVector(ImmutableBitmap bitmap)
+  private static Set<Integer> alternatngPattern(int smallSize, int rowCount)
   {
+    ArrayList<Integer> bits = new ArrayList<>();
+    boolean flipped = true;
+    for (int i = 0; i < rowCount; i++) {
+      if (i > 0 && i % smallSize == 0) {
+        flipped = !flipped;
+      }
+      if (flipped) {
+        bits.add(i);
+      }
+    }
+    return Sets.newTreeSet(bits);
+  }
+
+  private void assertNullVector(ImmutableBitmap bitmap, Set<Integer> nulls)
+  {
+    // test entire set in one vector
     PeekableIntIterator iterator = bitmap.peekableIterator();
-    Set<Integer> nulls = IntSetTestUtility.getSetBits();
     final int vectorSize = 32;
     final boolean[] nullVector = new boolean[vectorSize];
     ReadableVectorOffset someOffset = new NoFilterVectorOffset(vectorSize, 0, vectorSize);
@@ -98,6 +141,7 @@ public class VectorSelectorUtilsTest
       Assert.assertEquals(nulls.contains(i), nullVector[i]);
     }
 
+    // test entire set split into 4 chunks with smaller vectors
     iterator = bitmap.peekableIterator();
     final int smallerVectorSize = 8;
     boolean[] smallVector = null;
@@ -111,11 +155,11 @@ public class VectorSelectorUtilsTest
           Assert.assertEquals(nulls.contains(offset + i), smallVector[i]);
         }
       }
-      smallVector = null;
     }
 
+    // a magical vector perfectly sized to the number of nulls with a bitmap vector offset of just the nulls
     iterator = bitmap.peekableIterator();
-    ReadableVectorOffset allTheNulls = new BitmapVectorOffset(8, bitmap, 0, 22);
+    ReadableVectorOffset allTheNulls = new BitmapVectorOffset(nulls.size(), bitmap, 0, 32);
     smallVector = VectorSelectorUtils.populateNullVector(smallVector, allTheNulls, iterator);
     for (int i = 0; i < nulls.size(); i++) {
       Assert.assertTrue(smallVector[i]);

@@ -61,11 +61,16 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
       {
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
+        final boolean[] nulls = selector.getNullVector();
+        final boolean hasNulls = canHaveNulls && nulls != null;
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
+          if (hasNulls && nulls[rowNum]) {
+            continue;
+          }
           if (vector[rowNum] == matchValFloat) {
             selection[numRows++] = rowNum;
           }
@@ -92,12 +97,19 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
       {
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
+        final boolean[] nulls = selector.getNullVector();
+        final boolean hasNulls = canHaveNulls && nulls != null;
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (predicate.applyFloat(vector[rowNum])) {
+          if (hasNulls && nulls[rowNum]) {
+            if (predicate.applyNull()) {
+              selection[numRows++] = rowNum;
+            }
+          }
+          else if (predicate.applyFloat(vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }

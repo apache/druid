@@ -57,7 +57,8 @@ public class VectorSelectorUtils
         final int row = i + startOffset;
         nullIterator.advanceIfNeeded(row);
         if (!nullIterator.hasNext()) {
-          break;
+          retVal[i] = false;
+          continue;
         }
         retVal[i] = row == nullIterator.peekNext();
       }
@@ -71,7 +72,8 @@ public class VectorSelectorUtils
         final int row = currentOffsets[i];
         nullIterator.advanceIfNeeded(row);
         if (!nullIterator.hasNext()) {
-          break;
+          retVal[i] = false;
+          continue;
         }
         retVal[i] = row == nullIterator.peekNext();
       }

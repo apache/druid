@@ -24,8 +24,20 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import junitparams.converters.Nullable;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -62,6 +74,7 @@ import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -90,6 +103,8 @@ import java.util.Set;
 
 public abstract class BaseFilterTest extends InitializedNullHandlingTest
 {
+  static final String TIMESTAMP_COLUMN = "timestamp";
+
   static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.of(
           new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
@@ -97,6 +112,61 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new ExpressionVirtualColumn("exprLong", "1 + 2", ValueType.LONG, TestExprMacroTable.INSTANCE)
       )
   );
+
+  static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000"));
+  static final DimensionsSpec DEFAULT_DIM_SPEC = new DimensionsSpec(
+      ImmutableList.<DimensionSchema>builder()
+          .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "timeDim")))
+          .add(new DoubleDimensionSchema("d0"))
+          .add(new FloatDimensionSchema("f0"))
+          .add(new LongDimensionSchema("l0"))
+          .build(),
+      null,
+      null
+  );
+
+  static final InputRowParser<Map<String, Object>> DEFAULT_PARSER = new MapInputRowParser(
+      new TimeAndDimsParseSpec(
+          DEFAULT_TIMESTAMP_SPEC,
+          DEFAULT_DIM_SPEC
+      )
+  );
+
+  static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
+      makeDefaultSchemaRow("0", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
+      makeDefaultSchemaRow("1", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
+      makeDefaultSchemaRow("2", "2", ImmutableList.of(""), "2017-05-25", null, 5.5f, 40L),
+      makeDefaultSchemaRow("3", "1", ImmutableList.of("a"), "2020-01-25", 120.0245, 110.0f, null),
+      makeDefaultSchemaRow("4", "abdef", ImmutableList.of("c"), null, 60.0, null, 9001L),
+      makeDefaultSchemaRow("5", "abc", null, "2020-01-25", 765.432, 123.45f, 12345L)
+  );
+
+  static final IncrementalIndexSchema DEFAULT_INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
+      .withDimensionsSpec(DEFAULT_DIM_SPEC)
+      .withMetrics(new CountAggregatorFactory("count"))
+      .build();
+
+  static InputRow makeDefaultSchemaRow(
+      @Nullable String dim0,
+      @Nullable String dim1,
+      @Nullable List<String> dim2,
+      @Nullable String timeDim,
+      @Nullable Double d0,
+      @Nullable Float f0,
+      @Nullable Long l0)
+  {
+    // for row selector to work correctly as part of the test matrix, default value coercion needs to happen to columns
+    Map<String, Object> mapRow = new HashMap<>(6);
+    mapRow.put("dim0", NullHandling.nullToEmptyIfNeeded(dim0));
+    mapRow.put("dim1", NullHandling.nullToEmptyIfNeeded(dim1));
+    mapRow.put("dim2", dim2 != null ? dim2 : NullHandling.defaultStringValue());
+    mapRow.put("timeDim", NullHandling.nullToEmptyIfNeeded(timeDim));
+    mapRow.put("d0", d0 != null ? d0 : NullHandling.defaultDoubleValue());
+    mapRow.put("f0", f0 != null ? f0 : NullHandling.defaultFloatValue());
+    mapRow.put("l0", l0 != null ? l0 : NullHandling.defaultLongValue());
+    return DEFAULT_PARSER.parseBatch(mapRow).get(0);
+  }
+
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -225,9 +295,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
               );
               final IndexBuilder indexBuilder = IndexBuilder
                   .create()
+                  .schema(DEFAULT_INDEX_SCHEMA)
                   .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
                   .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-
               constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
             }
           }
