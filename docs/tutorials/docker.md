@@ -54,7 +54,7 @@ Special environment variables:
 * `DRUID_MAXNEWSIZE` -- set Java max new size`
 * `DRUID_NEWSIZE` -- set Java new size
 * `DRUID_MAXDIRECTMEMORYSIZE` -- set Java max direct memory size
-* `DRUID_COMMON_CONFIG` -- full path to a file for druid 'common' properties
+* `DRUID_CONFIG_COMMON` -- full path to a file for druid 'common' properties
 * `DRUID_CONFIG_${service}` -- full path to a file for druid 'service' properties
 
 In addition to the special environment variables, the script which launches Druid in the container will also attempt to use any environment variable starting with the `druid_` prefix as a command-line configuration. For example, an environment variable
