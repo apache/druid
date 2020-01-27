@@ -550,9 +550,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   private void resolveWaitingFutures()
   {
-    LinkedHashSet<CustomSettableFuture> waitingFuturesCopy = new LinkedHashSet<>();
+    LinkedHashSet<CustomSettableFuture> waitingFuturesCopy;
     synchronized (waitingFutures) {
-      waitingFuturesCopy.addAll(waitingFutures);
+      waitingFuturesCopy = new LinkedHashSet<>(waitingFutures);
       waitingFutures.clear();
     }
     for (CustomSettableFuture future : waitingFuturesCopy) {

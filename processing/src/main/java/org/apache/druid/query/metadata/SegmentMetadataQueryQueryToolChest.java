@@ -295,8 +295,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     List<Interval> newIntervals = null;
     if (arg1.getIntervals() != null) {
-      newIntervals = new ArrayList<>();
-      newIntervals.addAll(arg1.getIntervals());
+      newIntervals = new ArrayList<>(arg1.getIntervals());
     }
     if (arg2.getIntervals() != null) {
       if (newIntervals == null) {

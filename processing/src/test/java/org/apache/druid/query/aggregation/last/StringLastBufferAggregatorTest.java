@@ -78,7 +78,7 @@ public class StringLastBufferAggregatorTest
 
 
     Assert.assertEquals("expected last string value", "DDDD", sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), new Long(sp.lhs));
+    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), sp.lhs);
 
   }
 
@@ -116,7 +116,7 @@ public class StringLastBufferAggregatorTest
 
 
     Assert.assertEquals("expected last string value", "DDDD", sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), new Long(sp.lhs));
+    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), sp.lhs);
   }
 
   @Test
@@ -154,7 +154,7 @@ public class StringLastBufferAggregatorTest
 
 
     Assert.assertEquals("expected last string value", strings[2], sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[2]), new Long(sp.lhs));
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[2]), sp.lhs);
 
   }
 

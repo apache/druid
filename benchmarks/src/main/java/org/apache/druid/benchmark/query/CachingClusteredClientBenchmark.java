@@ -564,7 +564,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private class SimpleQueryRunner implements QueryRunner<Object>
+  private static class SimpleQueryRunner implements QueryRunner<Object>
   {
     private final QueryRunnerFactoryConglomerate conglomerate;
     private final QueryableIndexSegment segment;
