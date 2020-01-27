@@ -19,11 +19,23 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 public class JoinablesTest
 {
@@ -73,5 +85,71 @@ public class JoinablesTest
     Assert.assertTrue(Joinables.isPrefixedBy("foo", "f"));
     Assert.assertTrue(Joinables.isPrefixedBy("foo", "fo"));
     Assert.assertFalse(Joinables.isPrefixedBy("foo", "foo"));
+  }
+
+  @Test
+  public void test_createSegmentMapFn_noClauses()
+  {
+    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+        ImmutableList.of(),
+        NoopJoinableFactory.INSTANCE,
+        new AtomicLong()
+    );
+
+    Assert.assertSame(Function.identity(), segmentMapFn);
+  }
+
+  @Test
+  public void test_createSegmentMapFn_unusableClause()
+  {
+    final LookupDataSource lookupDataSource = new LookupDataSource("lookyloo");
+    final PreJoinableClause clause = new PreJoinableClause(
+        "j.",
+        lookupDataSource,
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil())
+    );
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("dataSource is not joinable");
+
+    final Function<Segment, Segment> ignored = Joinables.createSegmentMapFn(
+        ImmutableList.of(clause),
+        NoopJoinableFactory.INSTANCE,
+        new AtomicLong()
+    );
+  }
+
+  @Test
+  public void test_createSegmentMapFn_usableClause()
+  {
+    final LookupDataSource lookupDataSource = new LookupDataSource("lookyloo");
+    final JoinConditionAnalysis conditionAnalysis = JoinConditionAnalysis.forExpression(
+        "x == \"j.x\"",
+        "j.",
+        ExprMacroTable.nil()
+    );
+    final PreJoinableClause clause = new PreJoinableClause(
+        "j.",
+        lookupDataSource,
+        JoinType.LEFT,
+        conditionAnalysis
+    );
+
+    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+        ImmutableList.of(clause),
+        (dataSource, condition) -> {
+          if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
+            return Optional.of(
+                LookupJoinable.wrap(new MapLookupExtractor(ImmutableMap.of("k", "v"), false))
+            );
+          } else {
+            return Optional.empty();
+          }
+        },
+        new AtomicLong()
+    );
+
+    Assert.assertNotSame(Function.identity(), segmentMapFn);
   }
 }

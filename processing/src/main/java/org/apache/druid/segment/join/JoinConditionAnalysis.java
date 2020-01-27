@@ -49,6 +49,7 @@ import java.util.Optional;
 public class JoinConditionAnalysis
 {
   private final String originalExpression;
+  private final String rightPrefix;
   private final List<Equality> equiConditions;
   private final List<Expr> nonEquiConditions;
   private final boolean isAlwaysFalse;
@@ -57,19 +58,23 @@ public class JoinConditionAnalysis
 
   private JoinConditionAnalysis(
       final String originalExpression,
+      final String rightPrefix,
       final List<Equality> equiConditions,
       final List<Expr> nonEquiConditions
   )
   {
     this.originalExpression = Preconditions.checkNotNull(originalExpression, "originalExpression");
+    this.rightPrefix = Preconditions.checkNotNull(rightPrefix, "rightPrefix");
     this.equiConditions = Collections.unmodifiableList(equiConditions);
     this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
     // if any nonEquiCondition is an expression and it evaluates to false
     isAlwaysFalse = nonEquiConditions.stream()
-            .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings()).asBoolean());
+                                     .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings())
+                                                                                .asBoolean());
     // if there are no equiConditions and all nonEquiConditions are literals and the evaluate to true
     isAlwaysTrue = equiConditions.isEmpty() && nonEquiConditions.stream()
-            .allMatch(expr -> expr.isLiteral() && expr.eval(ExprUtils.nilBindings()).asBoolean());
+                                                                .allMatch(expr -> expr.isLiteral() && expr.eval(
+                                                                    ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
   }
 
@@ -113,14 +118,14 @@ public class JoinConditionAnalysis
       }
     }
 
-    return new JoinConditionAnalysis(condition, equiConditions, nonEquiConditions);
+    return new JoinConditionAnalysis(condition, rightPrefix, equiConditions, nonEquiConditions);
   }
 
   private static boolean isLeftExprAndRightColumn(final Expr a, final Expr b, final String rightPrefix)
   {
-    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> c.startsWith(rightPrefix))
+    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> Joinables.isPrefixedBy(c, rightPrefix))
            && b.getIdentifierIfIdentifier() != null
-           && b.getIdentifierIfIdentifier().startsWith(rightPrefix);
+           && Joinables.isPrefixedBy(b.getIdentifierIfIdentifier(), rightPrefix);
   }
 
   /**
@@ -181,13 +186,14 @@ public class JoinConditionAnalysis
       return false;
     }
     JoinConditionAnalysis that = (JoinConditionAnalysis) o;
-    return Objects.equals(originalExpression, that.originalExpression);
+    return Objects.equals(originalExpression, that.originalExpression) &&
+           Objects.equals(rightPrefix, that.rightPrefix);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(originalExpression);
+    return Objects.hash(originalExpression, rightPrefix);
   }
 
   @Override

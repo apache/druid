@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
  * Represents everything about a join clause except for the left-hand datasource. In other words, if the full join
  * clause is "t1 JOIN t2 ON t1.x = t2.x" then this class represents "JOIN t2 ON x = t2.x" -- it does not include
  * references to the left-hand "t1".
+ *
+ * Created from {@link org.apache.druid.query.planning.PreJoinableClause} by {@link Joinables#createSegmentMapFn}.
  */
 public class JoinableClause
 {
@@ -101,7 +103,7 @@ public class JoinableClause
    */
   public boolean includesColumn(final String columnName)
   {
-    return columnName.startsWith(prefix) && columnName.length() > prefix.length();
+    return Joinables.isPrefixedBy(columnName, prefix);
   }
 
   /**
