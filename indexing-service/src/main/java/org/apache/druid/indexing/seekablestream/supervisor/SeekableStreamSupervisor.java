@@ -1145,7 +1145,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       if (resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
         // metadata can be null
-        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
         if (metadata != null && !checkSourceMetadataMatch(metadata)) {
           throw new IAE(
               "Datasource metadata instance does not match required, found instance of [%s]",
@@ -1578,7 +1578,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       throw new RuntimeException(e);
     }
 
-    final DataSourceMetadata rawDataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+    final DataSourceMetadata rawDataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
 
     if (rawDataSourceMetadata != null && !checkSourceMetadataMatch(rawDataSourceMetadata)) {
       throw new IAE(
@@ -2057,8 +2057,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // Mark partitions as expired in metadata
       @SuppressWarnings("unchecked")
       SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
-          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) indexerMetadataStorageCoordinator.getDataSourceMetadata(
-              dataSource);
+          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>)
+              indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
 
       SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> cleanedMetadata =
           createDataSourceMetadataWithExpiredPartitions(currentMetadata, newlyExpiredPartitions);
@@ -2805,10 +2805,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
             .stream()
-            .filter(x -> x.getValue().get() != null)
+            .filter(entry -> entry.getValue().get() != null)
             .collect(
                 Collectors.collectingAndThen(
-                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
+                    Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()),
                     ImmutableMap::copyOf
                 )
             );
@@ -2818,10 +2818,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           simpleUnfilteredStartingOffsets = unfilteredStartingOffsets
               .entrySet()
               .stream()
-              .filter(x -> x.getValue().get() != null)
+              .filter(entry -> entry.getValue().get() != null)
               .collect(
                   Collectors.collectingAndThen(
-                      Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
+                      Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()),
                       ImmutableMap::copyOf
                   )
               );
@@ -2829,15 +2829,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           simpleUnfilteredStartingOffsets = simpleStartingOffsets;
         }
 
-        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = !useExclusiveStartingSequence
-                                                                      ? Collections.emptySet()
-                                                                      : startingOffsets
-                                                                          .entrySet()
-                                                                          .stream()
-                                                                          .filter(x -> x.getValue().get() != null
-                                                                                       && x.getValue().isExclusive())
-                                                                          .map(Entry::getKey)
-                                                                          .collect(Collectors.toSet());
+        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
+        if (!useExclusiveStartingSequence) {
+          exclusiveStartSequenceNumberPartitions = Collections.emptySet();
+        } else {
+          exclusiveStartSequenceNumberPartitions = startingOffsets
+              .entrySet()
+              .stream()
+              .filter(x -> x.getValue().get() != null
+                           && x.getValue().isExclusive())
+              .map(Entry::getKey)
+              .collect(Collectors.toSet());
+        }
 
         activelyReadingTaskGroups.put(
             groupId,
@@ -2988,7 +2991,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
-    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
         && checkSourceMetadataMatch(dataSourceMetadata)) {
       @SuppressWarnings("unchecked")
