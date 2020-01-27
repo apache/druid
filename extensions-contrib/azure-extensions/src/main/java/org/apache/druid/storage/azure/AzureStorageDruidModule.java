@@ -42,7 +42,7 @@ import java.util.List;
 public class AzureStorageDruidModule implements DruidModule
 {
 
-  public static final String SCHEME = "azure";
+  static final String SCHEME = "azure";
   public static final String STORAGE_CONNECTION_STRING = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s";
   public static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
