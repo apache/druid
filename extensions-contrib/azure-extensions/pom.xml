@@ -143,17 +143,6 @@
                 <version>0.8.4</version>
                 <configuration>
                     <excludes>
-                        <!-- Ignore generated code -->
-                        <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
-                        <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
-                        <exclude>org/apache/druid/data/input/influx/InfluxLineProtocol*</exclude>  <!-- extensions-contrib/influx-extensions -->
-
-                        <!-- Ignore non-production code -->
-                        <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
-                        <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
-                        <exclude>org/testng/DruidTestRunnerFactory*</exclude>  <!-- benchmarks -->
-                        <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
-
                         <!-- Ignore firehose code -->
                         <exclude>org/apache/druid/firehose/azure/**/*</exclude> <!-- integration-tests -->
                     </excludes>
@@ -169,42 +158,33 @@
                                 <limit>
                                     <counter>LINE</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.81</minimum>
+                                    <minimum>0.80</minimum>
                                 </limit>
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.71</minimum>
+                                    <minimum>0.70</minimum>
                                 </limit>
                                 <limit>
                                     <counter>COMPLEXITY</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.74</minimum>
+                                    <minimum>0.73</minimum>
                                 </limit>
                                 <limit>
                                     <counter>METHOD</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.77</minimum>
+                                    <minimum>0.76</minimum>
                                 </limit>
                                 <limit>
                                     <counter>CLASS</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.84</minimum>
+                                    <minimum>0.83</minimum>
                                 </limit>
                             </limits>
                         </rule>
                     </rules> 
                 </configuration>
                 <executions>
-                    <execution>
-                        <id>prepare-agent</id>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                        <configuration>
-                            <propertyName>jacocoArgLine</propertyName>
-                        </configuration>
-                    </execution>
                     <execution>
                         <id>report</id>
                         <phase>test</phase>
