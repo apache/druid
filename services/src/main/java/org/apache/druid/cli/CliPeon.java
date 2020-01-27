@@ -46,6 +46,7 @@ import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -90,6 +91,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.segment.join.DefaultJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
@@ -206,6 +209,7 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(JoinableFactory.class).to(DefaultJoinableFactory.class).in(LazySingleton.class);
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             bindRealtimeCache(binder);
@@ -263,6 +267,7 @@ public class CliPeon extends GuiceRunnable
         new QueryablePeonModule(),
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
+        new IndexingServiceTuningConfigModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule()
     );

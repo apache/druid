@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import java.util.Set;
 
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
 {
@@ -110,7 +110,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   public abstract T asDruidConvention();
 
   /**
-   * Get a list of names of datasources read by this DruidRel
+   * Get the set of names of table datasources read by this DruidRel
    */
-  public abstract List<String> getDataSourceNames();
+  public abstract Set<String> getDataSourceNames();
 }

@@ -209,4 +209,51 @@ public class StorageLocationSelectorStrategyTest
     Assert.assertArrayEquals(new File[]{localStorageFolder1, localStorageFolder2, localStorageFolder3}, result);
   }
 
+  @Test
+  public void testMostAvailableSizeLocationSelectorStrategy() throws Exception
+  {
+    List<StorageLocation> storageLocations = new ArrayList<>();
+
+    final File localStorageFolder1 = tmpFolder.newFolder("local_storage_folder_1");
+    final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder_2");
+    final File localStorageFolder3 = tmpFolder.newFolder("local_storage_folder_3");
+
+    StorageLocation storageLocation1 = new StorageLocation(localStorageFolder1, 10000000000L, null);
+    storageLocations.add(storageLocation1);
+    StorageLocation storageLocation2 = new StorageLocation(localStorageFolder2, 20000000000L, null);
+    storageLocations.add(storageLocation2);
+    StorageLocation storageLocation3 = new StorageLocation(localStorageFolder3, 15000000000L, null);
+    storageLocations.add(storageLocation3);
+
+    StorageLocationSelectorStrategy mostAvailableStrategy = new MostAvailableSizeStorageLocationSelectorStrategy(storageLocations);
+
+    Iterator<StorageLocation> locations = mostAvailableStrategy.getLocations();
+
+    StorageLocation loc1 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_2",
+        localStorageFolder2, loc1.getPath());
+
+    StorageLocation loc2 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_3",
+        localStorageFolder3, loc2.getPath());
+
+    StorageLocation loc3 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
+        localStorageFolder1, loc3.getPath());
+
+    storageLocation2.reserve("tmp_loc2", "__seg2", 6000000000L);
+    locations = mostAvailableStrategy.getLocations();
+
+    loc1 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_3",
+        localStorageFolder3, loc1.getPath());
+
+    loc2 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_2",
+        localStorageFolder2, loc2.getPath());
+
+    loc3 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
+        localStorageFolder1, loc3.getPath());
+  }
 }

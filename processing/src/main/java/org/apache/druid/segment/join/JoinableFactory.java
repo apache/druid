@@ -17,15 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.segment.join;
 
-import java.util.List;
+import org.apache.druid.query.DataSource;
 
-public class DataSourceUtil
+import java.util.Optional;
+
+/**
+ * Utility for creating {@link Joinable} objects.
+ */
+public interface JoinableFactory
 {
-  public static String getMetricName(DataSource dataSource)
-  {
-    final List<String> names = dataSource.getNames();
-    return names.size() == 1 ? names.get(0) : names.toString();
-  }
+  /**
+   * Create a Joinable object. This may be an expensive operation involving loading data, creating a hash table, etc.
+   *
+   * @param dataSource the datasource to join on
+   * @param condition  the condition to join on
+   *
+   * @return a Joinable if this datasource + condition combo is joinable; empty if not
+   */
+  Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition);
 }
