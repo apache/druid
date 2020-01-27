@@ -3093,9 +3093,9 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.2.1
+version: 2.2.2
 license_category: binary
-module: extensions/druid-kafka-indexing-service
+module: extensions/druid-kafkakafka-indexing-service
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
@@ -3967,7 +3967,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.1.1
+version: 2.2.2
 libraries:
   - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
