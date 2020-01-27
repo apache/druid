@@ -88,8 +88,14 @@ public class AzureStorage
   public InputStream getBlobInputStream(final String containerName, final String blobPath)
       throws URISyntaxException, StorageException
   {
+    return getBlobInputStream(0L, containerName, blobPath);
+  }
+
+  public InputStream getBlobInputStream(long offset, final String containerName, final String blobPath)
+      throws URISyntaxException, StorageException
+  {
     CloudBlobContainer container = getCloudBlobContainer(containerName);
-    return container.getBlockBlobReference(blobPath).openInputStream();
+    return container.getBlockBlobReference(blobPath).openInputStream(offset, null, null, null, null);
   }
 
   public boolean getBlobExists(String container, String blobPath) throws URISyntaxException, StorageException
