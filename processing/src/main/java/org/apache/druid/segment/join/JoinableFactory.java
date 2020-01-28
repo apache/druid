@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.annotations.Beta;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.query.DataSource;
 
 import java.util.Optional;
@@ -26,6 +28,8 @@ import java.util.Optional;
 /**
  * Utility for creating {@link Joinable} objects.
  */
+@Beta
+@ExtensionPoint
 public interface JoinableFactory
 {
   /**
