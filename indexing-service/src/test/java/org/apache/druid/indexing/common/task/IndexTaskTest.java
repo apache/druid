@@ -41,6 +41,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
@@ -459,7 +460,7 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             null,
-            createTuningConfigWithNumShards(1, null, true),
+            createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 1, null), true),
             false
         ),
         null,
@@ -501,7 +502,7 @@ public class IndexTaskTest extends IngestionTestBase
             null,
             null,
             null,
-            createTuningConfigWithNumShards(2, ImmutableList.of("dim"), true),
+            createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")), true),
             false
         ),
         null,
@@ -558,7 +559,7 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testAppendToExisting() throws Exception
+  public void testWriteNewSegmentsWithAppendToExistingWithLinearPartitioningSuccessfullyAppend() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
@@ -787,7 +788,7 @@ public class IndexTaskTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null,
@@ -835,7 +836,7 @@ public class IndexTaskTest extends IngestionTestBase
                 true,
                 null
             ),
-            createTuningConfig(3, 2, null, 2L, null, null, true, true),
+            createTuningConfig(3, 2, null, 2L, null, true, true),
             false
         ),
         null,
@@ -882,7 +883,7 @@ public class IndexTaskTest extends IngestionTestBase
                 true,
                 null
             ),
-            createTuningConfig(3, 2, null, 2L, null, null, false, true),
+            createTuningConfig(3, 2, null, 2L, null, false, true),
             false
         ),
         null,
@@ -950,7 +951,7 @@ public class IndexTaskTest extends IngestionTestBase
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, null, false, false), // ignore parse exception,
+        createTuningConfig(2, null, null, null, null, false, false), // ignore parse exception,
         false
     );
 
@@ -998,7 +999,7 @@ public class IndexTaskTest extends IngestionTestBase
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, null, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, false, true), // report parse exception
         false
     );
 
@@ -1418,7 +1419,7 @@ public class IndexTaskTest extends IngestionTestBase
             0
         ),
         null,
-        createTuningConfig(2, 1, null, null, null, null, true, true), // report parse exception
+        createTuningConfig(2, 1, null, null, null, true, true), // report parse exception
         false
     );
 
@@ -1483,7 +1484,7 @@ public class IndexTaskTest extends IngestionTestBase
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, null, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, false, true), // report parse exception
         false
     );
 
@@ -1538,7 +1539,7 @@ public class IndexTaskTest extends IngestionTestBase
                   true,
                   null
               ),
-              createTuningConfig(3, 2, null, 2L, null, null, false, true),
+              createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
           null,
@@ -1607,7 +1608,7 @@ public class IndexTaskTest extends IngestionTestBase
                   true,
                   null
               ),
-              createTuningConfig(3, 2, null, 2L, null, null, false, true),
+              createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
           null,
@@ -1662,15 +1663,13 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        null,
         forceGuaranteedRollup,
         true
     );
   }
 
-  private static IndexTuningConfig createTuningConfigWithNumShards(
-      int numShards,
-      @Nullable List<String> partitionDimensions,
+  private static IndexTuningConfig createTuningConfigWithPartitionsSpec(
+      PartitionsSpec partitionsSpec,
       boolean forceGuaranteedRollup
   )
   {
@@ -1679,8 +1678,7 @@ public class IndexTaskTest extends IngestionTestBase
         1,
         null,
         null,
-        numShards,
-        partitionDimensions,
+        partitionsSpec,
         forceGuaranteedRollup,
         true
     );
@@ -1691,8 +1689,7 @@ public class IndexTaskTest extends IngestionTestBase
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
       @Nullable Long maxTotalRows,
-      @Nullable Integer numShards,
-      @Nullable List<String> partitionDimensions,
+      @Nullable PartitionsSpec partitionsSpec,
       boolean forceGuaranteedRollup,
       boolean reportParseException
   )
@@ -1704,9 +1701,9 @@ public class IndexTaskTest extends IngestionTestBase
         maxBytesInMemory,
         maxTotalRows,
         null,
-        numShards,
-        partitionDimensions,
         null,
+        null,
+        partitionsSpec,
         INDEX_SPEC,
         null,
         null,

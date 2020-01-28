@@ -39,7 +39,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -973,7 +973,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           "seq",
           prevSegmentId,
           interval,
-          new NumberedOverwritingShardSpecFactory(0, 1, (short) (i + 1)),
+          new NumberedOverwriteShardSpecFactory(0, 1, (short) (i + 1)),
           "version",
           false
       );
@@ -1032,10 +1032,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testAllocatePendingSegmentsForHashBasedNumberedShardSpec() throws IOException
   {
-    final ShardSpecFactory shardSpecFactory = new HashBasedNumberedShardSpecFactory(
-        null,
-        5
-    );
+    final ShardSpecFactory shardSpecFactory = new HashBasedNumberedShardSpecFactory(null, 5);
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
 

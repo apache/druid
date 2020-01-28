@@ -56,7 +56,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpecFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -950,7 +950,7 @@ public class TaskLockboxTest
     final Task task = NoopTask.create();
     lockbox.add(task);
     allocateSegmentsAndAssert(task, "seq", 3, NumberedShardSpecFactory.instance());
-    allocateSegmentsAndAssert(task, "seq2", 2, new NumberedOverwritingShardSpecFactory(0, 3, (short) 1));
+    allocateSegmentsAndAssert(task, "seq2", 2, new NumberedOverwriteShardSpecFactory(0, 3, (short) 1));
 
     final List<TaskLock> locks = lockbox.findLocksForTask(task);
     Assert.assertEquals(5, locks.size());

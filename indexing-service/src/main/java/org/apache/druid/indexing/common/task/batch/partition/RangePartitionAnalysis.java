@@ -17,69 +17,95 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexing.common.task.batch.partition;
 
 import com.google.common.collect.Maps;
-import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-/**
- * Allocates all necessary range-partitioned segments locally at the beginning and reuses them.
- *
- * @see CachingLocalSegmentAllocatorHelper
- */
-public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
+public class RangePartitionAnalysis
+    implements CompletePartitionAnalysis<PartitionBoundaries, SingleDimensionPartitionsSpec>
 {
-  private final String dataSource;
-  private final String partitionDimension;
-  private final Map<Interval, PartitionBoundaries> intervalsToPartitions;
-  private final IndexTaskSegmentAllocator delegate;
+  private final Map<Interval, PartitionBoundaries> intervalToPartitionBoundaries = new HashMap<>();
+  private final SingleDimensionPartitionsSpec partitionsSpec;
 
-  public RangePartitionCachingLocalSegmentAllocator(
-      TaskToolbox toolbox,
-      String taskId,
-      String supervisorTaskId,
-      String dataSource,
-      String partitionDimension,
-      Map<Interval, PartitionBoundaries> intervalsToPartitions
-  ) throws IOException
+  public RangePartitionAnalysis(SingleDimensionPartitionsSpec partitionsSpec)
   {
-    this.dataSource = dataSource;
-    this.partitionDimension = partitionDimension;
-    this.intervalsToPartitions = intervalsToPartitions;
-
-    this.delegate = new CachingLocalSegmentAllocatorHelper(
-        toolbox,
-        taskId,
-        supervisorTaskId,
-        this::getIntervalToSegmentIds
-    );
+    this.partitionsSpec = partitionsSpec;
   }
 
-  private Map<Interval, List<SegmentIdWithShardSpec>> getIntervalToSegmentIds(Function<Interval, String> versionFinder)
+  @Override
+  public SingleDimensionPartitionsSpec getPartitionsSpec()
   {
-    Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds =
-        Maps.newHashMapWithExpectedSize(intervalsToPartitions.size());
+    return partitionsSpec;
+  }
 
-    intervalsToPartitions.forEach(
-        (interval, partitionBoundaries) ->
-            intervalToSegmentIds.put(
-                interval,
-                translatePartitionBoundaries(interval, partitionBoundaries, versionFinder)
-            )
+  @Override
+  public void updateBucket(Interval interval, PartitionBoundaries bucketAnalysis)
+  {
+    intervalToPartitionBoundaries.put(interval, bucketAnalysis);
+  }
+
+  @Override
+  public PartitionBoundaries getBucketAnalysis(Interval interval)
+  {
+    return intervalToPartitionBoundaries.get(interval);
+  }
+
+  @Override
+  public Set<Interval> getAllIntervalsToIndex()
+  {
+    return Collections.unmodifiableSet(intervalToPartitionBoundaries.keySet());
+  }
+
+  public void forEach(BiConsumer<Interval, PartitionBoundaries> consumer)
+  {
+    intervalToPartitionBoundaries.forEach(consumer);
+  }
+
+  @Override
+  public int numTimePartitions()
+  {
+    return intervalToPartitionBoundaries.size();
+  }
+
+  @Override
+  public Map<Interval, List<SegmentIdWithShardSpec>> convertToIntervalToSegmentIds(
+      TaskToolbox toolbox,
+      String dataSource,
+      Function<Interval, String> versionFinder
+  )
+  {
+    final String partitionDimension = partitionsSpec.getPartitionDimension();
+    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
+        numTimePartitions()
+    );
+
+    forEach((interval, partitionBoundaries) ->
+                intervalToSegmentIds.put(
+                    interval,
+                    translatePartitionBoundaries(
+                        dataSource,
+                        interval,
+                        partitionDimension,
+                        partitionBoundaries,
+                        versionFinder
+                    )
+                )
     );
 
     return intervalToSegmentIds;
@@ -87,10 +113,12 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
 
   /**
    * Translate {@link PartitionBoundaries} into the corresponding
-   * {@link org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec} with segment id.
+   * {@link SingleDimensionPartitionsSpec} with segment id.
    */
-  private List<SegmentIdWithShardSpec> translatePartitionBoundaries(
+  private static List<SegmentIdWithShardSpec> translatePartitionBoundaries(
+      String dataSource,
       Interval interval,
+      String partitionDimension,
       PartitionBoundaries partitionBoundaries,
       Function<Interval, String> versionFinder
   )
@@ -101,8 +129,10 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
 
     return IntStream.range(0, partitionBoundaries.size() - 1)
                     .mapToObj(i -> createSegmentIdWithShardSpec(
+                        dataSource,
                         interval,
                         versionFinder.apply(interval),
+                        partitionDimension,
                         partitionBoundaries.get(i),
                         partitionBoundaries.get(i + 1),
                         i
@@ -110,9 +140,11 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
                     .collect(Collectors.toList());
   }
 
-  private SegmentIdWithShardSpec createSegmentIdWithShardSpec(
+  private static SegmentIdWithShardSpec createSegmentIdWithShardSpec(
+      String dataSource,
       Interval interval,
       String version,
+      String partitionDimension,
       String partitionStart,
       @Nullable String partitionEnd,
       int partitionNum
@@ -131,22 +163,5 @@ public class RangePartitionCachingLocalSegmentAllocator implements IndexTaskSegm
             partitionNum
         )
     );
-  }
-
-  @Override
-  public String getSequenceName(Interval interval, InputRow inputRow)
-  {
-    return delegate.getSequenceName(interval, inputRow);
-  }
-
-  @Override
-  public SegmentIdWithShardSpec allocate(
-      InputRow row,
-      String sequenceName,
-      String previousSegmentId,
-      boolean skipSegmentLineageCheck
-  ) throws IOException
-  {
-    return delegate.allocate(row, sequenceName, previousSegmentId, skipSegmentLineageCheck);
   }
 }

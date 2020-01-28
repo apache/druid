@@ -19,17 +19,21 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
+import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,11 +45,8 @@ import java.util.stream.Collectors;
 
 /**
  * Allocates all necessary segments locally at the beginning and reuses them.
- *
- * @see HashPartitionCachingLocalSegmentAllocator
- * @see RangePartitionCachingLocalSegmentAllocator
  */
-class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
+public class CachingLocalSegmentAllocator implements CachingSegmentAllocator
 {
   private final String taskId;
   private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
@@ -59,22 +60,34 @@ class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
      *
      * @return Information for segment preallocation
      */
-    Map<Interval, List<SegmentIdWithShardSpec>> create(Function<Interval, String> versionFinder);
+    Map<Interval, List<SegmentIdWithShardSpec>> create(
+        TaskToolbox toolbox,
+        String dataSource,
+        Function<Interval, String> versionFinder
+    );
   }
 
-  CachingLocalSegmentAllocatorHelper(
+  CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
+      String dataSource,
       String taskId,
-      String supervisorTaskId,
+      @Nullable SupervisorTaskAccess supervisorTaskAccess,
       IntervalToSegmentIdsCreator intervalToSegmentIdsCreator
   ) throws IOException
   {
     this.taskId = taskId;
     this.sequenceNameToSegmentId = new HashMap<>();
 
+    final TaskAction<List<TaskLock>> action;
+    if (supervisorTaskAccess == null) {
+      action = new LockListAction();
+    } else {
+      action = new SurrogateAction<>(supervisorTaskAccess.getSupervisorTaskId(), new LockListAction());
+    }
+
     final Map<Interval, String> intervalToVersion =
         toolbox.getTaskActionClient()
-               .submit(new SurrogateAction<>(supervisorTaskId, new LockListAction()))
+               .submit(action)
                .stream()
                .collect(Collectors.toMap(
                    TaskLock::getInterval,
@@ -82,7 +95,11 @@ class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
                ));
     Function<Interval, String> versionFinder = interval -> findVersion(intervalToVersion, interval);
 
-    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToIds = intervalToSegmentIdsCreator.create(versionFinder);
+    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToIds = intervalToSegmentIdsCreator.create(
+        toolbox,
+        dataSource,
+        versionFinder
+    );
     final Map<Interval, List<ShardSpec>> shardSpecMap = new HashMap<>();
 
     for (Entry<Interval, List<SegmentIdWithShardSpec>> entry : intervalToIds.entrySet()) {
@@ -115,14 +132,11 @@ class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
       boolean skipSegmentLineageCheck
   )
   {
-    return sequenceNameToSegmentId.get(sequenceName);
-  }
-
-  @Override
-  public String getSequenceName(Interval interval, InputRow inputRow)
-  {
-    // Sequence name is based solely on the shardSpec, and there will only be one segment per sequence.
-    return getSequenceName(interval, shardSpecs.getShardSpec(interval, inputRow));
+    return Preconditions.checkNotNull(
+        sequenceNameToSegmentId.get(sequenceName),
+        "Missing segmentId for the sequence[%s]",
+        sequenceName
+    );
   }
 
   /**
@@ -135,5 +149,11 @@ class CachingLocalSegmentAllocatorHelper implements IndexTaskSegmentAllocator
     // Note: We do not use String format here since this can be called in a tight loop
     // and it's faster to add strings together than it is to use String#format
     return taskId + "_" + interval + "_" + shardSpec.getPartitionNum();
+  }
+
+  @Override
+  public ShardSpecs getShardSpecs()
+  {
+    return shardSpecs;
   }
 }

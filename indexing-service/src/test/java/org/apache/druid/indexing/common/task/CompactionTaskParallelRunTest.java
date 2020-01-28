@@ -236,7 +236,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null,

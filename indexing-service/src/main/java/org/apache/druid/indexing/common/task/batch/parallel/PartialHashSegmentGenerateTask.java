@@ -26,22 +26,24 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.HashPartitionCachingLocalSegmentAllocator;
+import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
+import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.stream.Collectors;
 
 /**
@@ -125,14 +127,18 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   }
 
   @Override
-  IndexTaskSegmentAllocator createSegmentAllocator(TaskToolbox toolbox) throws IOException
+  CachingSegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
+      throws IOException
   {
-    return new HashPartitionCachingLocalSegmentAllocator(
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
+    final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
+    return SegmentAllocators.forNonLinearPartitioning(
         toolbox,
-        getId(),
-        supervisorTaskId,
         getDataSource(),
-        createShardSpecs()
+        getId(),
+        new SupervisorTaskAccess(supervisorTaskId, taskClient),
+        createHashPartitionAnalysisFromPartitionsSpec(granularitySpec, partitionsSpec)
     );
   }
 
@@ -158,17 +164,24 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     );
   }
 
-  private Map<Interval, Pair<ShardSpecFactory, Integer>> createShardSpecs()
+  /**
+   * Creates shard specs based on the given configurations. The return value is a map between intervals created
+   * based on the segment granularity and the shard specs to be created.
+   * Note that the shard specs to be created is a pair of {@link ShardSpecFactory} and number of segments per interval
+   * and filled only when {@link #isGuaranteedRollup} = true. Otherwise, the return value contains only the set of
+   * intervals generated based on the segment granularity.
+   */
+  public static HashPartitionAnalysis createHashPartitionAnalysisFromPartitionsSpec(
+      GranularitySpec granularitySpec,
+      @Nonnull HashedPartitionsSpec partitionsSpec
+  )
   {
-    GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
-
-    return createShardSpecWithoutInputScan(
-        granularitySpec,
-        ingestionSchema.getIOConfig(),
-        tuningConfig,
-        partitionsSpec
-    );
+    final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
+    final int numBucketsPerInterval = partitionsSpec.getNumShards() == null
+                                      ? 1
+                                      : partitionsSpec.getNumShards();
+    final HashPartitionAnalysis partitionAnalysis = new HashPartitionAnalysis(partitionsSpec);
+    intervals.forEach(interval -> partitionAnalysis.updateBucket(interval, numBucketsPerInterval));
+    return partitionAnalysis;
   }
 }

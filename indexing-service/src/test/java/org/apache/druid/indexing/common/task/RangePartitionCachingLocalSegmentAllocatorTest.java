@@ -21,11 +21,13 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
+import org.apache.druid.indexing.common.task.batch.partition.PartitionBoundaries;
+import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -79,7 +81,8 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       INTERVAL_NORMAL, NORMAL_PARTITIONS
   );
 
-  private RangePartitionCachingLocalSegmentAllocator target;
+  private CachingSegmentAllocator target;
+  private SequenceNameFunction sequenceNameFunction;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -93,14 +96,18 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
                            .map(RangePartitionCachingLocalSegmentAllocatorTest::createTaskLock)
                            .collect(Collectors.toList())
     );
-    target = new RangePartitionCachingLocalSegmentAllocator(
-        toolbox,
-        TASKID,
-        SUPERVISOR_TASKID,
-        DATASOURCE,
-        PARTITION_DIMENSION,
-        INTERVAL_TO_PARTITONS
+    final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
+        new SingleDimensionPartitionsSpec(null, 1, PARTITION_DIMENSION, false)
     );
+    INTERVAL_TO_PARTITONS.forEach(partitionAnalysis::updateBucket);
+    target = SegmentAllocators.forNonLinearPartitioning(
+        toolbox,
+        DATASOURCE,
+        TASKID,
+        new SupervisorTaskAccessWithNullClient(SUPERVISOR_TASKID),
+        partitionAnalysis
+    );
+    sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(TASKID, target.getShardSpecs());
   }
 
   @Test
@@ -112,7 +119,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     exception.expect(IllegalStateException.class);
     exception.expectMessage("Failed to get shardSpec");
 
-    String sequenceName = target.getSequenceName(interval, row);
+    String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
     allocate(row, sequenceName);
   }
 
@@ -148,7 +155,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     // getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow
     Interval interval = INTERVAL_NORMAL;
     InputRow row = createInputRow(interval, PARTITION9);
-    String sequenceName = target.getSequenceName(interval, row);
+    String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
     String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, interval, 1);
     Assert.assertEquals(expectedSequenceName, sequenceName);
   }
@@ -189,7 +196,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       @Nullable String partitionEnd
   )
   {
-    String sequenceName = target.getSequenceName(interval, row);
+    String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
     SegmentIdWithShardSpec segmentIdWithShardSpec = allocate(row, sequenceName);
 
     Assert.assertEquals(
@@ -205,12 +212,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
 
   private SegmentIdWithShardSpec allocate(InputRow row, String sequenceName)
   {
-    try {
-      return target.allocate(row, sequenceName, null, false);
-    }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return target.allocate(row, sequenceName, null, false);
   }
 
   private static TaskToolbox createToolbox(List<TaskLock> taskLocks)

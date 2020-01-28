@@ -20,23 +20,37 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
-import org.joda.time.Interval;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+
+import java.io.IOException;
 
 /**
- * Segment allocator interface for {@link IndexTask}. It has 3 different modes for allocating segments.
+ * Segment allocator that allocates new segments using the supervisor task per request.
  */
-public interface IndexTaskSegmentAllocator extends SegmentAllocator
+public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAllocator
 {
-  /**
-   * SequenceName is the key to create the segmentId. If previousSegmentId is given, {@link SegmentAllocator} allocates
-   * segmentId depending on sequenceName and previousSegmentId. If it's missing, it allocates segmentId using
-   * sequenceName and interval. For {@link IndexTask}, it always provides the previousSegmentId to
-   * SegmentAllocator.
-   * See {@link org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator#allocatePendingSegment} for details.
-   *
-   * Implementations should return the correct sequenceName based on the given interval and inputRow, which is passed
-   * to SegmentAllocator.
-   */
-  String getSequenceName(Interval interval, InputRow inputRow);
+  private final String supervisorTaskId;
+  private final ParallelIndexSupervisorTaskClient taskClient;
+
+  SupervisorTaskCoordinatingSegmentAllocator(
+      String supervisorTaskId,
+      ParallelIndexSupervisorTaskClient taskClient
+  )
+  {
+    this.supervisorTaskId = supervisorTaskId;
+    this.taskClient = taskClient;
+  }
+
+  @Override
+  public SegmentIdWithShardSpec allocate(
+      InputRow row,
+      String sequenceName,
+      String previousSegmentId,
+      boolean skipSegmentLineageCheck
+  ) throws IOException
+  {
+    return taskClient.allocateSegment(supervisorTaskId, row.getTimestamp());
+  }
 }

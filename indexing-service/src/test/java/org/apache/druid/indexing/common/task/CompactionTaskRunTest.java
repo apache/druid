@@ -386,7 +386,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null,
@@ -727,7 +727,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 ),
                 false
             ),
-            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, null, false, true)
+            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -797,7 +797,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             appendToExisting
         ),
         null,

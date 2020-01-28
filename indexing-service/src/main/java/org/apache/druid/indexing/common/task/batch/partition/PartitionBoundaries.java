@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel.distribution;
+package org.apache.druid.indexing.common.task.batch.partition;
 
 import com.google.common.collect.ForwardingList;
 

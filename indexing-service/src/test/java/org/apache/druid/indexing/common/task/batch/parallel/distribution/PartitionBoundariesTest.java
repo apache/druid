@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
+import org.apache.druid.indexing.common.task.batch.partition.PartitionBoundaries;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;

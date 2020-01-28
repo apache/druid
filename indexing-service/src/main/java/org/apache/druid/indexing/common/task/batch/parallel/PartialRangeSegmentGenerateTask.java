@@ -28,12 +28,13 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
-import org.apache.druid.indexing.common.task.RangePartitionCachingLocalSegmentAllocator;
+import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.common.task.batch.partition.PartitionBoundaries;
+import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.timeline.DataSegment;
@@ -149,15 +150,19 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @Override
-  IndexTaskSegmentAllocator createSegmentAllocator(TaskToolbox toolbox) throws IOException
+  CachingSegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
+      throws IOException
   {
-    return new RangePartitionCachingLocalSegmentAllocator(
+    final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
+        (SingleDimensionPartitionsSpec) ingestionSchema.getTuningConfig().getPartitionsSpec()
+    );
+    intervalToPartitions.forEach(partitionAnalysis::updateBucket);
+    return SegmentAllocators.forNonLinearPartitioning(
         toolbox,
-        getId(),
-        supervisorTaskId,
         getDataSource(),
-        getPartitionDimension(ingestionSchema),
-        intervalToPartitions
+        getId(),
+        new SupervisorTaskAccess(supervisorTaskId, taskClient),
+        partitionAnalysis
     );
   }
 

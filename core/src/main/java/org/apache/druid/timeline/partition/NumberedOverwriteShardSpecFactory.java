@@ -25,14 +25,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
-public class NumberedOverwritingShardSpecFactory implements ShardSpecFactory
+public class NumberedOverwriteShardSpecFactory implements ShardSpecFactory
 {
   private final int startRootPartitionId;
   private final int endRootPartitionId;
   private final short minorVersion;
 
   @JsonCreator
-  public NumberedOverwritingShardSpecFactory(
+  public NumberedOverwriteShardSpecFactory(
       @JsonProperty("startRootPartitionId") int startRootPartitionId,
       @JsonProperty("endRootPartitionId") int endRootPartitionId,
       @JsonProperty("minorVersion") short minorVersion
