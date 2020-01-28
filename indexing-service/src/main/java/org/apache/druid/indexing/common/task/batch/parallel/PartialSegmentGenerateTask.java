@@ -45,7 +45,7 @@ import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -188,7 +188,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           pushTimeout,
           inputRowIteratorBuilder
       );
-      final SegmentsAndMetadata pushed = inputSourceProcessor.process(
+      final SegmentsAndCommitMetadata pushed = inputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,

@@ -313,7 +313,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
 
-    spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+    HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,
         jsonMapper,
         new OverlordActionBasedUsedSegmentsRetriever(toolbox)

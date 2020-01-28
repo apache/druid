@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -141,16 +142,16 @@ public class SegmentLockHelper
 
         if (!nonAlignedSegments.isEmpty()) {
           throw new ISE(
-              "Non-aligned segments[%s] for granularity[%s]",
-              nonAlignedSegments.stream().map(DataSegment::getId).collect(Collectors.toList()),
+              "Non-aligned segments %s for granularity[%s]",
+              SegmentUtils.commaSeparatedIdentifiers(nonAlignedSegments),
               knownSegmentGranularity
           );
         }
       }
     } else {
       throw new ISE(
-          "Found different granularities in segments[%s]",
-          segments.stream().map(DataSegment::getId).collect(Collectors.toList())
+          "Found different granularities in segments %s",
+          SegmentUtils.commaSeparatedIdentifiers(segments)
       );
     }
   }
@@ -167,8 +168,8 @@ public class SegmentLockHelper
           .allMatch(segment -> segment.getVersion().equals(segmentsInInterval.get(0).getVersion()));
       Preconditions.checkState(
           hasSameVersion,
-          "Segments[%s] should have same version",
-          segmentsInInterval.stream().map(DataSegment::getId).collect(Collectors.toList())
+          "Segments %s should have same version",
+          SegmentUtils.commaSeparatedIdentifiers(segmentsInInterval)
       );
       final List<LockResult> lockResults = actionClient.submit(
           new SegmentLockTryAcquireAction(

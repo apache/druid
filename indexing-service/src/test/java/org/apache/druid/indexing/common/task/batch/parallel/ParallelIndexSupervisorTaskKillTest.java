@@ -119,7 +119,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     // completeSubTaskSpecs should be empty because no task has reported its status to TaskMonitor
     Assert.assertTrue(runner.getCompleteSubTaskSpecs().isEmpty());
 
-    Assert.assertEquals(4, runner.getTaskMonitor().getNumKilledTasks());
+    Assert.assertEquals(4, runner.getTaskMonitor().getNumCanceledTasks());
   }
 
   @Test(timeout = 5000L)
@@ -159,7 +159,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
       Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     }
 
-    Assert.assertEquals(3, runner.getTaskMonitor().getNumKilledTasks());
+    Assert.assertEquals(3, runner.getTaskMonitor().getNumCanceledTasks());
   }
 
   private ParallelIndexSupervisorTask newTask(

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
@@ -88,7 +87,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("previousSegmentId") String previousSegmentId,
       @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck,
-      @JsonProperty("shardSpecFactory") @Nullable ShardSpecFactory shardSpecFactory, // nullable for backward compatibility
+      // nullable for backward compatibility
+      @JsonProperty("shardSpecFactory") @Nullable ShardSpecFactory shardSpecFactory,
       @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity // nullable for backward compatibility
   )
   {
@@ -189,28 +189,26 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 
       final Interval rowInterval = queryGranularity.bucket(timestamp);
 
-      final Set<DataSegment> usedSegmentsForRow = new HashSet<>(
-          msc.getUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE)
-      );
+      final Set<DataSegment> usedSegmentsForRow =
+          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
 
-      final SegmentIdWithShardSpec identifier = usedSegmentsForRow.isEmpty() ?
-                                                tryAllocateFirstSegment(toolbox, task, rowInterval) :
-                                                tryAllocateSubsequentSegment(
-                                                    toolbox,
-                                                    task,
-                                                    rowInterval,
-                                                    usedSegmentsForRow.iterator().next()
-                                                );
+      final SegmentIdWithShardSpec identifier;
+      if (usedSegmentsForRow.isEmpty()) {
+        identifier = tryAllocateFirstSegment(toolbox, task, rowInterval);
+      } else {
+        identifier = tryAllocateSubsequentSegment(toolbox, task, rowInterval, usedSegmentsForRow.iterator().next());
+      }
       if (identifier != null) {
         return identifier;
       }
 
       // Could not allocate a pending segment. There's a chance that this is because someone else inserted a segment
-      // overlapping with this row between when we called "mdc.getUsedSegmentsForInterval" and now. Check it again,
+      // overlapping with this row between when we called "msc.retrieveUsedSegmentsForInterval" and now. Check it again,
       // and if it's different, repeat.
 
-      if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE))
-                       .equals(usedSegmentsForRow)) {
+      Set<DataSegment> newUsedSegmentsForRow =
+          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
+      if (!newUsedSegmentsForRow.equals(usedSegmentsForRow)) {
         if (attempt < MAX_ATTEMPTS) {
           final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
           log.debug(
