@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -31,9 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
 public class MapDataSourceJoinableFactoryWarehouseTest
@@ -81,47 +78,5 @@ public class MapDataSourceJoinableFactoryWarehouseTest
     EasyMock.replay(noopJoinableFactory);
     Optional<Joinable> joinable = target.build(noopDataSource, condition);
     Assert.assertEquals(mockJoinable, joinable.get());
-  }
-
-  /**
-   * A datasource that returns nothing. Only used to test un-registered datasources.
-   */
-  private static class NoopDataSource implements DataSource
-  {
-    @Override
-    public Set<String> getTableNames()
-    {
-      return null;
-    }
-
-    @Override
-    public List<DataSource> getChildren()
-    {
-      return null;
-    }
-
-    @Override
-    public DataSource withChildren(List<DataSource> children)
-    {
-      return null;
-    }
-
-    @Override
-    public boolean isCacheable()
-    {
-      return false;
-    }
-
-    @Override
-    public boolean isGlobal()
-    {
-      return false;
-    }
-
-    @Override
-    public boolean isConcrete()
-    {
-      return false;
-    }
   }
 }
