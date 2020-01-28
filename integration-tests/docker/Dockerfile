@@ -19,9 +19,11 @@ ARG DOCKER_IMAGE=imply/druiditbase:openjdk-1.8.0_191-1
 # Base image is built from integration-tests/docker-base in the Druid repo
 FROM $DOCKER_IMAGE
 
+# Verify Java version
 ARG DOCKER_IMAGE
 ENV DOCKER_IMAGE_USED=$DOCKER_IMAGE
 RUN echo "Built using base docker image DOCKER_IMAGE_USED=$DOCKER_IMAGE_USED"
+RUN java -version
 
 RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
 
