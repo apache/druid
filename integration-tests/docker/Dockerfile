@@ -13,8 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# This is default value for base image in case DOCKER_IMAGE is not given when building
+ARG DOCKER_IMAGE=imply/druiditbase:openjdk-1.8.0_191-1
 # Base image is built from integration-tests/docker-base in the Druid repo
-FROM imply/druiditbase:openjdk-11.0.5-1
+FROM $DOCKER_IMAGE
+
+ARG DOCKER_IMAGE
+ENV DOCKER_IMAGE_USED=$DOCKER_IMAGE
+RUN echo "Built using base docker image DOCKER_IMAGE_USED=$DOCKER_IMAGE_USED"
 
 RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
 
