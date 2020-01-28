@@ -36,23 +36,18 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
 
@@ -156,16 +151,6 @@ public class Filters
       final DruidPredicateFactory predicateFactory
   )
   {
-    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-
-    // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
-    if (capabilities != null && capabilities.getType() == ValueType.LONG) {
-      return getLongPredicateMatcher(
-          columnSelectorFactory.makeColumnValueSelector(columnName),
-          predicateFactory.makeLongPredicate()
-      );
-    }
-
     final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
         DimensionHandlerUtils.createColumnSelectorPlus(
             ValueMatcherColumnSelectorStrategyFactory.instance(),
@@ -452,28 +437,6 @@ public class Filters
       }
     }
     return false;
-  }
-
-  public static ValueMatcher getLongPredicateMatcher(
-      final BaseLongColumnValueSelector longSelector,
-      final DruidLongPredicate predicate
-  )
-  {
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        return predicate.applyLong(longSelector.getLong());
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("longSelector", longSelector);
-        inspector.visit("predicate", predicate);
-      }
-    };
   }
 
   @Nullable
