@@ -22,7 +22,7 @@ title: "Docker"
   ~ under the License.
   -->
   
-In this quickstart, we will download the Druid docker image from [Apache Druid on Dockerhub](https://hub.docker.com/r/apache/druid) and set it up on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/). The cluster will be ready to load data
+In this quickstart, we will download the Druid docker image from [Apache Druid on Docker Hub](https://hub.docker.com/r/apache/druid) and set it up on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/). The cluster will be ready to load data
 after completing this initial setup.
 
 Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.md) and the
@@ -34,7 +34,7 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 ## Getting started
 
-The Druid source code contains [an example `docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) which can pull an image from dockerhub and is suited to be used as an example environment and to experiment with Docker based Druid configuration and deployments.
+The Druid source code contains [an example `docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) which can pull an image from Docker Hub and is suited to be used as an example environment and to experiment with Docker based Druid configuration and deployments.
 
 ### Compose file
 
@@ -47,11 +47,11 @@ Configuration of the Druid Docker container is done via environment variables, w
 Special environment variables:
 
 * `JAVA_OPTS` -- set java options
-* `DRUID_LOG4J` -- set the entire log4j.xml verbatim
+* `DRUID_LOG4J` -- set the entire `log4j.xml` verbatim
 * `DRUID_LOG_LEVEL` -- override the default log level in default log4j
-* `DRUID_XMX` -- set Java Xmx
-* `DRUID_XMS` -- set Java Xms
-* `DRUID_MAXNEWSIZE` -- set Java max new size`
+* `DRUID_XMX` -- set Java `Xmx`
+* `DRUID_XMS` -- set Java `Xms`
+* `DRUID_MAXNEWSIZE` -- set Java max new size
 * `DRUID_NEWSIZE` -- set Java new size
 * `DRUID_MAXDIRECTMEMORYSIZE` -- set Java max direct memory size
 * `DRUID_CONFIG_COMMON` -- full path to a file for druid 'common' properties
@@ -65,7 +65,7 @@ would be translated into
 
 ```-Ddruid.metadata.storage.type=postgresql```
  
-for the Druid process in the container. 
+for the Druid process in the container.
 
 The Druid `docker-compose.yml` example utilizes a single environment file to specify the complete Druid configuration, however in production use cases we suggest using either `DRUID_COMMON_CONFIG` and `DRUID_CONFIG_${service}` or specially tailored service specific environment files.
 
