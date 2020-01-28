@@ -57,4 +57,17 @@ public class AzureByteSource extends ByteSource
       throw new RuntimeException(e);
     }
   }
+
+  public InputStream openStream(long offset) throws IOException
+  {
+    try {
+      return azureStorage.getBlobInputStream(offset, containerName, blobPath);
+    }
+    catch (StorageException | URISyntaxException e) {
+      if (AzureUtils.AZURE_RETRY.apply(e)) {
+        throw new IOException("Recoverable exception", e);
+      }
+      throw new RuntimeException(e);
+    }
+  }
 }
