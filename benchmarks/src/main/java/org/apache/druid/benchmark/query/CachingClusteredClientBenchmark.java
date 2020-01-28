@@ -597,7 +597,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
+  private static class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
   {
     SingleSegmentDruidServer(DruidServer server, SimpleQueryRunner runner)
     {
