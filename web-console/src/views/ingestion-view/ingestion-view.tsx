@@ -520,6 +520,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       >
         <p>{`Are you sure you want to hard reset supervisor '${resetSupervisorId}'?`}</p>
         <p>Hard resetting a supervisor will lead to data loss or data duplication.</p>
+        <p>
+          The reason for using this operation is to recover from a state in which the supervisor
+          ceases operating due to missing offsets.
+        </p>
       </AsyncActionDialog>
     );
   }
