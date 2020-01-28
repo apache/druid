@@ -37,10 +37,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Map;
-import java.util.Properties;
 
 public class JoinableFactoryModuleTest
 {
@@ -49,8 +46,7 @@ public class JoinableFactoryModuleTest
   @Before
   public void setUp()
   {
-    Properties props = new Properties();
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties();
   }
 
   @Test
@@ -75,24 +71,21 @@ public class JoinableFactoryModuleTest
   public void testJoinableFactoryCanBind()
   {
     injector = makeInjectorWithProperties(
-        new Properties(),
-        binder -> DruidBinders.joinableFactoryBinder(binder).addBinding(NoopDataSource.class).toInstance(NoopJoinableFactory.INSTANCE));
+        binder -> DruidBinders
+            .joinableFactoryBinder(binder).addBinding(NoopDataSource.class).toInstance(NoopJoinableFactory.INSTANCE));
     Map<Class<? extends DataSource>, JoinableFactory> joinableFactories =
         injector.getInstance(Key.get(new TypeLiteral<Map<Class<? extends DataSource>, JoinableFactory>>() {}));
     Assert.assertEquals(2, joinableFactories.size());
     Assert.assertEquals(NoopJoinableFactory.INSTANCE, joinableFactories.get(NoopDataSource.class));
   }
 
-  private Injector makeInjectorWithProperties(final Properties props, Module... otherModules)
+  private Injector makeInjectorWithProperties(Module... otherModules)
   {
     ImmutableList.Builder<Module> modulesBuilder =
         ImmutableList.<Module>builder()
                      .add(new JoinableFactoryModule())
                      .add(binder -> {
                        binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-                       binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-                       binder.bind(JsonConfigurator.class).in(LazySingleton.class);
-                       binder.bind(Properties.class).toInstance(props);
                      });
     for (Module otherModule : otherModules) {
       modulesBuilder.add(otherModule);
