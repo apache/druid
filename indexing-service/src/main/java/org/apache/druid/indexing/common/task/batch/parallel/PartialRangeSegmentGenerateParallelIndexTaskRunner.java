@@ -24,7 +24,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBoundaries;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.joda.time.Interval;
 

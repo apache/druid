@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.partition;
+package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.ForwardingList;
 
@@ -73,5 +73,10 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
   protected List<String> delegate()
   {
     return delegate;
+  }
+
+  public int numBuckets()
+  {
+    return delegate.size() - 1;
   }
 }

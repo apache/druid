@@ -22,7 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.quantiles.ItemsSketch;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBoundaries;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
