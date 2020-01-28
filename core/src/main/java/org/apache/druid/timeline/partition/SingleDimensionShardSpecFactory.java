@@ -29,18 +29,15 @@ import java.util.Objects;
 public class SingleDimensionShardSpecFactory implements ShardSpecFactory
 {
   private final String partitionDimension;
-  private final int numBuckets;
   private final PartitionBoundaries partitionBoundaries;
 
   @JsonCreator
   public SingleDimensionShardSpecFactory(
       @JsonProperty("partitionDimension") String partitionDimension,
-      @JsonProperty("numBuckets") int numBuckets,
       @JsonProperty("partitionBoundaries") PartitionBoundaries partitionBoundaries
   )
   {
     this.partitionDimension = partitionDimension;
-    this.numBuckets = numBuckets;
     this.partitionBoundaries = partitionBoundaries;
   }
 
@@ -48,12 +45,6 @@ public class SingleDimensionShardSpecFactory implements ShardSpecFactory
   public String getPartitionDimension()
   {
     return partitionDimension;
-  }
-
-  @JsonProperty
-  public int getNumBuckets()
-  {
-    return numBuckets;
   }
 
   @JsonProperty
@@ -104,14 +95,13 @@ public class SingleDimensionShardSpecFactory implements ShardSpecFactory
       return false;
     }
     SingleDimensionShardSpecFactory that = (SingleDimensionShardSpecFactory) o;
-    return numBuckets == that.numBuckets &&
-           Objects.equals(partitionDimension, that.partitionDimension) &&
+    return Objects.equals(partitionDimension, that.partitionDimension) &&
            Objects.equals(partitionBoundaries, that.partitionBoundaries);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionDimension, numBuckets, partitionBoundaries);
+    return Objects.hash(partitionDimension, partitionBoundaries);
   }
 }
