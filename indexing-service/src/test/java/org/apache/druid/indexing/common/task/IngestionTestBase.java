@@ -49,10 +49,10 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import org.apache.druid.metadata.MetadataSegmentManager;
-import org.apache.druid.metadata.MetadataSegmentManagerConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SQLMetadataSegmentManager;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -93,7 +93,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentLoaderFactory segmentLoaderFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
-  private MetadataSegmentManager segmentManager;
+  private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
 
   @Before
@@ -110,9 +110,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector()
     );
-    segmentManager = new SQLMetadataSegmentManager(
+    segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
-        MetadataSegmentManagerConfig::new,
+        SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector()
     );
@@ -167,9 +167,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return storageCoordinator;
   }
 
-  public MetadataSegmentManager getMetadataSegmentManager()
+  public SegmentsMetadataManager getSegmentsMetadataManager()
   {
-    return segmentManager;
+    return segmentsMetadataManager;
   }
 
   public TaskLockbox getLockbox()
