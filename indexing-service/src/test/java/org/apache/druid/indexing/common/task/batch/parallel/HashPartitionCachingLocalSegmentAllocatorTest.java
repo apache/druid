@@ -89,7 +89,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
   }
 
   @Test
-  public void allocatesCorrectShardSpec()
+  public void allocatesCorrectShardSpec() throws IOException
   {
     InputRow row = createInputRow();
 
