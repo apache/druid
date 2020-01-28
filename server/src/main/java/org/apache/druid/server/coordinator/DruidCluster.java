@@ -70,10 +70,7 @@ public class DruidCluster
     this.realtimes = realtimes == null ? new HashSet<>() : new HashSet<>(realtimes);
     this.historicals = CollectionUtils.mapValues(
         historicals,
-        holders -> CollectionUtils.newTreeSet(
-            Comparator.reverseOrder(),
-            holders
-        )
+        holders -> CollectionUtils.newTreeSet(Comparator.reverseOrder(), holders)
     );
   }
 

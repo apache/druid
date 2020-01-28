@@ -20,7 +20,7 @@
 package org.apache.druid.indexing;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.junit.Test;
 
 public class ClientCompactQueryTuningConfigTest
@@ -29,6 +29,6 @@ public class ClientCompactQueryTuningConfigTest
   public void testEqualsContract()
   {
     // If this test failed, make sure to validate that toString was also updated correctly!
-    EqualsVerifier.forClass(ClientCompactQueryTuningConfig.class).usingGetClass().verify();
+    EqualsVerifier.forClass(ClientCompactionTaskQueryTuningConfig.class).usingGetClass().verify();
   }
 }

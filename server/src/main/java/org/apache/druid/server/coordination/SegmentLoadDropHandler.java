@@ -45,7 +45,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;

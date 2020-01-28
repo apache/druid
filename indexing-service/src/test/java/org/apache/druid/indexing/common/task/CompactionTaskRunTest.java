@@ -182,9 +182,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
@@ -520,7 +523,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedSegments.addAll(appendResult.rhs);
 
     final Set<DataSegment> usedSegments = new HashSet<>(
-        getStorageCoordinator().getUsedSegmentsForIntervals(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
             Segments.ONLY_VISIBLE

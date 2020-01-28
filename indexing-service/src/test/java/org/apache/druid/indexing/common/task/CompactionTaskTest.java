@@ -1245,7 +1245,10 @@ public class CompactionTaskTest
     }
 
     @Override
-    public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+    public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+        String dataSource,
+        List<Interval> intervals
+    )
     {
       return ImmutableSet.copyOf(segmentMap.keySet());
     }
