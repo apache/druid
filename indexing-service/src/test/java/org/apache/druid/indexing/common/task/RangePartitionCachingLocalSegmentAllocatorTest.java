@@ -212,7 +212,12 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
 
   private SegmentIdWithShardSpec allocate(InputRow row, String sequenceName)
   {
-    return target.allocate(row, sequenceName, null, false);
+    try {
+      return target.allocate(row, sequenceName, null, false);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static TaskToolbox createToolbox(List<TaskLock> taskLocks)
