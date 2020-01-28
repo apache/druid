@@ -39,7 +39,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
   private static final String SEGMENT_FILE_NAME = "segment";
   private static final String CONTAINER_NAME = "container";
-  private static final String BLOB_PATH = "/path/to/storage/index.zip";
+  private static final String BLOB_PATH = "path/to/storage/index.zip";
   private static final String BLOB_PATH_HADOOP = AzureDataSegmentPuller.AZURE_STORAGE_HOST_ADDRESS + "/path/to/storage/index.zip";
   private AzureStorage azureStorage;
 

@@ -69,7 +69,7 @@ public class AzureDataSegmentPuller
       if (blobPathIsHadoop) {
         // Remove azure's hadoop prefix to match realtime ingestion path
         actualBlobPath = blobPath.substring(
-            blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length());
+            blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
       } else {
         actualBlobPath = blobPath;
       }
