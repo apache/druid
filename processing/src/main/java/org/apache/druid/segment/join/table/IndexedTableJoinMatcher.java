@@ -19,9 +19,12 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
@@ -240,13 +243,36 @@ public class IndexedTableJoinMatcher implements JoinMatcher
    */
   private static class ConditionMatcherFactory implements ColumnProcessorFactory<Supplier<IntIterator>>
   {
+    private static final int MAX_NUM_CACHE = 10;
+    private static final int CACHE_MAX_SIZE = 1000;
+
     private final ValueType keyType;
     private final IndexedTable.Index index;
+
+    // DimensionSelector -> (int) dimension id -> (IntList) row numbers
+    private final LoadingCache<DimensionSelector, LoadingCache<Integer, IntList>> dimensionCaches;
 
     ConditionMatcherFactory(ValueType keyType, IndexedTable.Index index)
     {
       this.keyType = keyType;
       this.index = index;
+
+      this.dimensionCaches =
+          Caffeine.newBuilder()
+                  .maximumSize(MAX_NUM_CACHE)
+                  .build(
+                      selector ->
+                          Caffeine.newBuilder()
+                                  .maximumSize(CACHE_MAX_SIZE)
+                                  .build(dimensionId -> getRowNumbers(selector, dimensionId))
+                  );
+
+    }
+
+    private IntList getRowNumbers(DimensionSelector selector, int dimensionId)
+    {
+      final String key = selector.lookupName(dimensionId);
+      return index.find(key);
     }
 
     @Override
@@ -262,8 +288,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
         final IndexedInts row = selector.getRow();
 
         if (row.size() == 1) {
-          final String key = selector.lookupName(row.get(0));
-          return index.find(key).iterator();
+          int dimensionId = row.get(0);
+          //noinspection ConstantConditions (cache cannot return nulls since nulls are never stored in cache)
+          return dimensionCaches.get(selector).get(dimensionId).iterator();
         } else {
           // Multi-valued rows are not handled by the join system right now; treat them as nulls.
           return IntIterators.EMPTY_ITERATOR;

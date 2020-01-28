@@ -80,6 +80,10 @@
             <artifactId>fastutil</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.ning</groupId>
             <artifactId>compress-lzf</artifactId>
         </dependency>
