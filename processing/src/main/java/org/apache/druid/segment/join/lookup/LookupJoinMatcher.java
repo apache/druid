@@ -227,33 +227,41 @@ public class LookupJoinMatcher implements JoinMatcher
         return;
       }
 
+      Iterator<Supplier<String>> keySupplierIterator = keySuppliers.iterator();
+      String theKey = keySupplierIterator.next().get();
+
+      if (theKey == null) {
+        currentEntry.set(null);
+        return;
+      }
+
       // In order to match, all keySuppliers must return the same string, which must be a key in the lookup.
-      String theKey = null;
-
-      for (Supplier<String> keySupplier : keySuppliers) {
-        final String key = keySupplier.get();
-
-        if (key == null || (theKey != null && !theKey.equals(key))) {
+      while (keySupplierIterator.hasNext()) {
+        if (!theKey.equals(keySupplierIterator.next().get())) {
           currentEntry.set(null);
           return;
-        } else {
-          theKey = key;
         }
       }
 
       // All keySuppliers matched. Check if they are actually in the lookup.
-      final String theValue = extractor.apply(theKey);
+      checkInLookup(theKey);
+    }
+  }
 
-      if (theValue != null) {
-        assert theKey != null;
-        currentEntry.set(Pair.of(theKey, theValue));
+  private void checkInLookup(String theKey)
+  {
+    // All keySuppliers matched. Check if they are actually in the lookup.
+    final String theValue = extractor.apply(theKey);
 
-        if (matchedKeys != null) {
-          matchedKeys.add(theKey);
-        }
-      } else {
-        currentEntry.set(null);
+    if (theValue != null) {
+      assert theKey != null;
+      currentEntry.set(Pair.of(theKey, theValue));
+
+      if (matchedKeys != null) {
+        matchedKeys.add(theKey);
       }
+    } else {
+      currentEntry.set(null);
     }
   }
 
