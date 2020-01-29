@@ -429,6 +429,11 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.handlePendingNotices();
 
     Assert.assertEquals(ImmutableSet.of("one", "two"), lookupReferencesManager.getAllLookupNames());
+
+    Assert.assertEquals(
+        ImmutableSet.of("one", "two"),
+        ((LookupExtractorFactoryContainerProvider) lookupReferencesManager).getAllLookupNames()
+    );
   }
 
   @Test
