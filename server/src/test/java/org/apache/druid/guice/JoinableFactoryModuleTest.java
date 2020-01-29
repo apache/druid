@@ -30,7 +30,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.MapDataSourceJoinableFactoryWarehouse;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.junit.Assert;
@@ -53,7 +53,7 @@ public class JoinableFactoryModuleTest
   public void testInjectJoinableFactoryIsSingleton()
   {
     JoinableFactory factory = injector.getInstance(JoinableFactory.class);
-    Assert.assertEquals(MapDataSourceJoinableFactoryWarehouse.class, factory.getClass());
+    Assert.assertEquals(MapJoinableFactory.class, factory.getClass());
     JoinableFactory otherFactory = injector.getInstance(JoinableFactory.class);
     Assert.assertSame(factory, otherFactory);
   }
