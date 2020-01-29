@@ -186,9 +186,9 @@ public class ChangeRequestHistory<T>
 
   private void resolveWaitingFutures()
   {
-    final LinkedHashMap<CustomSettableFuture, Counter> waitingFuturesCopy = new LinkedHashMap<>();
+    final LinkedHashMap<CustomSettableFuture, Counter> waitingFuturesCopy;
     synchronized (waitingFutures) {
-      waitingFuturesCopy.putAll(waitingFutures);
+      waitingFuturesCopy = new LinkedHashMap<>(waitingFutures);
       waitingFutures.clear();
     }
 

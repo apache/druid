@@ -129,8 +129,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     // build combined list of aggregators and averagers so that limit spec building is happy
-    List<AggregatorFactory> combinedAggregatorSpecs = new ArrayList<>();
-    combinedAggregatorSpecs.addAll(this.aggregatorSpecs);
+    List<AggregatorFactory> combinedAggregatorSpecs = new ArrayList<>(this.aggregatorSpecs);
     for (AveragerFactory<?, ?> avg : this.averagerSpecs) {
       combinedAggregatorSpecs.add(new AveragerFactoryWrapper(avg, ""));
     }

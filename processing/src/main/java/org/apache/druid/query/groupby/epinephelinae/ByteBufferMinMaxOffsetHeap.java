@@ -496,15 +496,15 @@ public class ByteBufferMinMaxOffsetHeap
       return "[]";
     }
 
-    String ret = "[";
+    StringBuilder ret = new StringBuilder("[");
     for (int i = 0; i < heapSize; i++) {
-      ret += buf.getInt(i * Integer.BYTES);
+      ret.append(buf.getInt(i * Integer.BYTES));
       if (i < heapSize - 1) {
-        ret += ", ";
+        ret.append(", ");
       }
     }
 
-    ret += "]";
-    return ret;
+    ret.append("]");
+    return ret.toString();
   }
 }

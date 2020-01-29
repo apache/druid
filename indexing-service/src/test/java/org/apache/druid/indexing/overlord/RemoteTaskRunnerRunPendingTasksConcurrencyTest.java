@@ -37,7 +37,7 @@ import org.junit.Test;
 public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
 {
   private RemoteTaskRunner remoteTaskRunner;
-  private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
+  private final RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
 
   @Before
   public void setUp() throws Exception
@@ -157,8 +157,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     }
 
     ZooKeeper zk = rtrTestUtils.getCuratorFramework().getZookeeperClient().getZooKeeper();
-    while (zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker0", false).size() < 1
-           && zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker1", false).size() < 1) {
+    while (zk.getChildren(RemoteTaskRunnerTestUtils.TASKS_PATH + "/worker0", false).size() < 1
+           && zk.getChildren(RemoteTaskRunnerTestUtils.TASKS_PATH + "/worker1", false).size() < 1) {
       Thread.sleep(5);
     }
   }
@@ -170,8 +170,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     }
 
     ZooKeeper zk = rtrTestUtils.getCuratorFramework().getZookeeperClient().getZooKeeper();
-    while (zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker0", false).size() < 1
-           || zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker1", false).size() < 1) {
+    while (zk.getChildren(RemoteTaskRunnerTestUtils.TASKS_PATH + "/worker0", false).size() < 1
+           || zk.getChildren(RemoteTaskRunnerTestUtils.TASKS_PATH + "/worker1", false).size() < 1) {
       Thread.sleep(5);
     }
   }
