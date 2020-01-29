@@ -60,7 +60,6 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -594,7 +593,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         walker,
         plannerConfig,
         viewManager,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        authorizerMapper
     );
 
     final PlannerFactory plannerFactory = new PlannerFactory(
