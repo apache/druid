@@ -55,9 +55,7 @@ public class InlineJoinableFactoryTest
   public void testBuildNonInline()
   {
     expectedException.expect(ClassCastException.class);
-    expectedException.expectMessage(
-        "org.apache.druid.query.TableDataSource cannot be cast to org.apache.druid.query.InlineDataSource"
-    );
+    expectedException.expectMessage("TableDataSource cannot be cast");
 
     final Optional<Joinable> ignored = factory.build(new TableDataSource("foo"), makeCondition("x == \"j.y\""));
   }

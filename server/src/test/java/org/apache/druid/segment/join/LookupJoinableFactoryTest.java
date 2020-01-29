@@ -91,9 +91,7 @@ public class LookupJoinableFactoryTest
   public void testBuildNonLookup()
   {
     expectedException.expect(ClassCastException.class);
-    expectedException.expectMessage(
-        "org.apache.druid.query.TableDataSource cannot be cast to org.apache.druid.query.LookupDataSource"
-    );
+    expectedException.expectMessage("TableDataSource cannot be cast");
 
     final Optional<Joinable> ignored = factory.build(new TableDataSource("foo"), makeCondition("x == \"j.k\""));
   }
