@@ -361,7 +361,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
             return null;
           }
         },
-        ForkJoinPool.commonPool()
+        ForkJoinPool.commonPool(),
+        null
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

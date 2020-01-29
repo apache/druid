@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
@@ -170,6 +171,9 @@ public class SqlResource
         yielder0.close();
         throw new RuntimeException(e);
       }
+    }
+    catch (QueryCapacityExceededException cap) {
+      return Response.status(429).entity(cap.getMessage()).build();
     }
     catch (ForbiddenException e) {
       throw e; // let ForbiddenExceptionMapper handle this

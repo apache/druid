@@ -2473,7 +2473,8 @@ public class CachingClusteredClientTest
             return 4;
           }
         },
-        ForkJoinPool.commonPool()
+        ForkJoinPool.commonPool(),
+        null
     );
   }
 

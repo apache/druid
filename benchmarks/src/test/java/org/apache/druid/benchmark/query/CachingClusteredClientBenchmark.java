@@ -338,7 +338,8 @@ public class CachingClusteredClientBenchmark
         new CacheConfig(),
         new DruidHttpClientConfig(),
         processingConfig,
-        forkJoinPool
+        forkJoinPool,
+        null
     );
   }
 

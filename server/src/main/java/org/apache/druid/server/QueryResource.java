@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
@@ -310,6 +311,11 @@ public class QueryResource implements QueryCountStatsProvider
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotError(e);
     }
+    catch (QueryCapacityExceededException cap) {
+      failedQueryCount.incrementAndGet();
+      queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
+      return ioReaderWriter.gotLimited(cap);
+    }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
       // send an error response if this is thrown.
@@ -433,6 +439,11 @@ public class QueryResource implements QueryCountStatsProvider
                              .writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e))
                      )
                      .build();
+    }
+
+    Response gotLimited(QueryCapacityExceededException e)
+    {
+      return Response.status(429).entity(e.getMessage()).build();
     }
   }
 

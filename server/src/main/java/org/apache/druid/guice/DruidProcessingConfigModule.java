@@ -21,8 +21,12 @@ package org.apache.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryScheduler;
+import org.apache.druid.query.QuerySchedulerProvider;
 
 public class DruidProcessingConfigModule implements Module
 {
@@ -31,5 +35,11 @@ public class DruidProcessingConfigModule implements Module
   public void configure(Binder binder)
   {
     ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
+
+    // clintropolis todo: find me a better home
+    binder.bind(QueryScheduler.class)
+          .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
+          .in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
   }
 }

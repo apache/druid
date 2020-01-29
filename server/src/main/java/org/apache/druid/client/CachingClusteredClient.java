@@ -58,6 +58,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -113,6 +114,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final DruidHttpClientConfig httpClientConfig;
   private final DruidProcessingConfig processingConfig;
   private final ForkJoinPool pool;
+  private final QueryScheduler scheduler;
 
   @Inject
   public CachingClusteredClient(
@@ -124,7 +126,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       CacheConfig cacheConfig,
       @Client DruidHttpClientConfig httpClientConfig,
       DruidProcessingConfig processingConfig,
-      @Merging ForkJoinPool pool
+      @Merging ForkJoinPool pool,
+      QueryScheduler scheduler
   )
   {
     this.warehouse = warehouse;
@@ -136,6 +139,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.httpClientConfig = httpClientConfig;
     this.processingConfig = processingConfig;
     this.pool = pool;
+    this.scheduler = scheduler;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -224,7 +228,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   {
     private final QueryPlus<T> queryPlus;
     private final ResponseContext responseContext;
-    private final Query<T> query;
+    private Query<T> query;
     private final QueryToolChest<T, Query<T>> toolChest;
     @Nullable
     private final CacheStrategy<T, Object, Query<T>> strategy;
@@ -302,13 +306,21 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
+
+      query = scheduler.schedule(
+          queryPlus.withQuery(query),
+          segments.stream().map(x -> x.getSegmentDescriptor()).collect(Collectors.toSet())
+      );
+
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
-      return new LazySequence<>(() -> {
+      LazySequence<T> sequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
         return merge(sequencesByInterval);
       });
+
+      return scheduler.run(query, sequence);
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
