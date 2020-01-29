@@ -22,9 +22,9 @@ package org.apache.druid.emitter.prometheus;
 import com.google.common.collect.ImmutableMap;
 import io.prometheus.client.CollectorRegistry;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.junit.Assert;
 import org.junit.Test;
 
-import org.junit.Assert;
 
 public class PrometheusEmitterTest
 {
