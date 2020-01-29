@@ -28,6 +28,38 @@
         ]
     },
     {
+        "description": "timeseries, 1 datasketch agg, all",
+        "query": {
+            "queryType": "timeseries",
+            "dataSource": "wikipedia_editstream",
+            "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+            "granularity": "all",
+            "aggregations": [
+                {
+                    "type": "HLLSketchBuild",
+                    "name": "sketch",
+                    "fieldName": "user",
+                    "lgK": 12,
+                    "tgtHllType": "HLL_4",
+                    "round": true
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "result": {
+                    "sketch": 216700
+                }
+            }
+        ]
+    },
+    {
         "description": "timeseries, all aggs, all",
         "query": {
             "queryType": "timeseries",
@@ -1174,12 +1206,12 @@
                     {
                         "dimension": "page",
                         "value": "League_of_Legends",
-			"count":21
+                        "count":21
                     },
                     {
                         "dimension": "page",
                         "value": "The_best_ADs_in_The_League_of_legends",
-			"count":2
+                        "count":2
                     }
                 ]
             }
