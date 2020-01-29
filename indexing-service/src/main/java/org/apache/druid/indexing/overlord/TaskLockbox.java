@@ -534,7 +534,7 @@ public class TaskLockbox
         request.getSequenceName(),
         request.getPrevisousSegmentId(),
         request.getInterval(),
-        request.getShardSpecFactory(),
+        request.getShardSpecBuilder(),
         version,
         request.isSkipSegmentLineageCheck()
     );

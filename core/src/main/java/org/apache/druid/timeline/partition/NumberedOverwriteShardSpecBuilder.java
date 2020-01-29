@@ -25,14 +25,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
-public class NumberedOverwriteShardSpecFactory implements ShardSpecFactory
+public class NumberedOverwriteShardSpecBuilder implements ShardSpecBuilder
 {
   private final int startRootPartitionId;
   private final int endRootPartitionId;
   private final short minorVersion;
 
   @JsonCreator
-  public NumberedOverwriteShardSpecFactory(
+  public NumberedOverwriteShardSpecBuilder(
       @JsonProperty("startRootPartitionId") int startRootPartitionId,
       @JsonProperty("endRootPartitionId") int endRootPartitionId,
       @JsonProperty("minorVersion") short minorVersion
@@ -62,7 +62,7 @@ public class NumberedOverwriteShardSpecFactory implements ShardSpecFactory
   }
 
   @Override
-  public ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     // specOfPreviousMaxPartitionId is the max partitionId of the same shardSpec
     // and could be null if all existing segments are first-generation segments.
@@ -77,7 +77,7 @@ public class NumberedOverwriteShardSpecFactory implements ShardSpecFactory
   }
 
   @Override
-  public ShardSpec create(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec build(ObjectMapper objectMapper, int partitionId)
   {
     return new NumberedOverwriteShardSpec(partitionId, startRootPartitionId, endRootPartitionId, minorVersion);
   }

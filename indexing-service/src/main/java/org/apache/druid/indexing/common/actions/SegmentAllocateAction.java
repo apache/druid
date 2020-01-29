@@ -37,8 +37,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedShardSpecBuilder;
+import org.apache.druid.timeline.partition.ShardSpecBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -75,7 +75,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   private final String sequenceName;
   private final String previousSegmentId;
   private final boolean skipSegmentLineageCheck;
-  private final ShardSpecFactory shardSpecFactory;
+  private final ShardSpecBuilder shardSpecBuilder;
   private final LockGranularity lockGranularity;
 
   @JsonCreator
@@ -88,7 +88,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       @JsonProperty("previousSegmentId") String previousSegmentId,
       @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck,
       // nullable for backward compatibility
-      @JsonProperty("shardSpecFactory") @Nullable ShardSpecFactory shardSpecFactory,
+      @JsonProperty("shardSpecFactory") @Nullable ShardSpecBuilder shardSpecBuilder,
       @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity // nullable for backward compatibility
   )
   {
@@ -102,7 +102,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     this.sequenceName = Preconditions.checkNotNull(sequenceName, "sequenceName");
     this.previousSegmentId = previousSegmentId;
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
-    this.shardSpecFactory = shardSpecFactory == null ? NumberedShardSpecFactory.instance() : shardSpecFactory;
+    this.shardSpecBuilder = shardSpecBuilder == null ? NumberedShardSpecBuilder.instance() : shardSpecBuilder;
     this.lockGranularity = lockGranularity == null ? LockGranularity.TIME_CHUNK : lockGranularity;
   }
 
@@ -149,9 +149,9 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   }
 
   @JsonProperty
-  public ShardSpecFactory getShardSpecFactory()
+  public ShardSpecBuilder getShardSpecBuilder()
   {
-    return shardSpecFactory;
+    return shardSpecBuilder;
   }
 
   @JsonProperty
@@ -293,7 +293,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
             task.getGroupId(),
             dataSource,
             tryInterval,
-            shardSpecFactory,
+            shardSpecBuilder,
             task.getPriority(),
             sequenceName,
             previousSegmentId,
@@ -355,7 +355,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
            ", sequenceName='" + sequenceName + '\'' +
            ", previousSegmentId='" + previousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
-           ", shardSpecFactory=" + shardSpecFactory +
+           ", shardSpecFactory=" + shardSpecBuilder +
            ", lockGranularity=" + lockGranularity +
            '}';
   }

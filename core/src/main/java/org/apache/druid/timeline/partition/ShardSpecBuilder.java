@@ -31,12 +31,12 @@ import javax.annotation.Nullable;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @Type(name = "numbered", value = NumberedShardSpecFactory.class),
-    @Type(name = "hashed", value = HashBasedNumberedShardSpecFactory.class),
-    @Type(name = "single_dim", value = SingleDimensionShardSpecFactory.class),
-    @Type(name = "numbered_overwrite", value = NumberedOverwriteShardSpecFactory.class),
+    @Type(name = "numbered", value = NumberedShardSpecBuilder.class),
+    @Type(name = "hashed", value = HashBasedNumberedShardSpecBuilder.class),
+    @Type(name = "single_dim", value = SingleDimensionShardSpecBuilder.class),
+    @Type(name = "numbered_overwrite", value = NumberedOverwriteShardSpecBuilder.class),
 })
-public interface ShardSpecFactory
+public interface ShardSpecBuilder
 {
   /**
    * Create a new shardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
@@ -44,12 +44,12 @@ public interface ShardSpecFactory
    * Note that {@code specOfPreviousMaxPartitionId} can also be null for {@link OverwriteShardSpec} if all segments
    * in the timeChunk are first-generation segments.
    */
-  ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
+  ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 
   /**
    * Create a new shardSpec having the given partitionId.
    */
-  ShardSpec create(ObjectMapper objectMapper, int partitionId);
+  ShardSpec build(ObjectMapper objectMapper, int partitionId);
 
   /**
    * Return the class of the shardSpec created by this factory.

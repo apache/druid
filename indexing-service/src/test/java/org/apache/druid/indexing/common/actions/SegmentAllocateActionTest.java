@@ -39,13 +39,13 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecBuilder;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.druid.timeline.partition.LinearShardSpecFactory;
+import org.apache.druid.timeline.partition.LinearShardSpecBuilder;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedShardSpecBuilder;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.apache.druid.timeline.partition.ShardSpecBuilder;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -652,7 +652,7 @@ public class SegmentAllocateActionTest
         Granularities.HOUR,
         "s1",
         null,
-        LinearShardSpecFactory.instance()
+        LinearShardSpecBuilder.instance()
     );
     final SegmentIdWithShardSpec id2 = allocate(
         task,
@@ -661,7 +661,7 @@ public class SegmentAllocateActionTest
         Granularities.HOUR,
         "s1",
         id1.toString(),
-        LinearShardSpecFactory.instance()
+        LinearShardSpecBuilder.instance()
     );
 
     assertSameIdentifier(
@@ -902,7 +902,7 @@ public class SegmentAllocateActionTest
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    objectMapper.registerSubtypes(NumberedShardSpecFactory.class);
+    objectMapper.registerSubtypes(NumberedShardSpecBuilder.class);
 
     final SegmentAllocateAction action = new SegmentAllocateAction(
         DATA_SOURCE,
@@ -912,7 +912,7 @@ public class SegmentAllocateActionTest
         "s1",
         "prev",
         false,
-        NumberedShardSpecFactory.instance(),
+        NumberedShardSpecBuilder.instance(),
         lockGranularity
     );
 
@@ -965,7 +965,7 @@ public class SegmentAllocateActionTest
         "seq",
         null,
         true,
-        new HashBasedNumberedShardSpecFactory(ImmutableList.of("dim1"), 2),
+        new HashBasedNumberedShardSpecBuilder(ImmutableList.of("dim1"), 2),
         lockGranularity
     );
     final SegmentIdWithShardSpec segmentIdentifier = action.perform(task, taskActionTestKit.getTaskActionToolbox());
@@ -996,7 +996,7 @@ public class SegmentAllocateActionTest
         preferredSegmentGranularity,
         sequenceName,
         sequencePreviousId,
-        NumberedShardSpecFactory.instance()
+        NumberedShardSpecBuilder.instance()
     );
   }
 
@@ -1007,7 +1007,7 @@ public class SegmentAllocateActionTest
       final Granularity preferredSegmentGranularity,
       final String sequenceName,
       final String sequencePreviousId,
-      final ShardSpecFactory shardSpecFactory
+      final ShardSpecBuilder shardSpecBuilder
   )
   {
     final SegmentAllocateAction action = new SegmentAllocateAction(
@@ -1018,7 +1018,7 @@ public class SegmentAllocateActionTest
         sequenceName,
         sequencePreviousId,
         false,
-        shardSpecFactory,
+        shardSpecBuilder,
         lockGranularity
     );
     return action.perform(task, taskActionTestKit.getTaskActionToolbox());
