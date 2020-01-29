@@ -180,9 +180,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
           )
       ));
 
-      Map<String, List<ImmutableWorkerInfo>> workersByCategories = workers.stream().collect(Collectors.groupingBy(
-          immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
-      );
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = ProvisioningUtil.getWorkersByCategories(workers);
 
       // Merge categories of tasks and workers
       Set<String> allCategories = new HashSet<>(tasksByCategories.keySet());
@@ -423,9 +421,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
 
       boolean didTerminate = false;
 
-      Map<String, List<ImmutableWorkerInfo>> workersByCategories = zkWorkers.stream().collect(Collectors.groupingBy(
-          immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
-      );
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = ProvisioningUtil.getWorkersByCategories(zkWorkers);
 
       Set<String> allCategories = workersByCategories.keySet();
       log.debug(

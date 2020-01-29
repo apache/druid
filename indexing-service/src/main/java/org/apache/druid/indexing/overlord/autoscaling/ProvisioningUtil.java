@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -172,5 +173,14 @@ public class ProvisioningUtil
     return autoScaler.getCategory() == null
            ? CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
            : autoScaler.getCategory();
+  }
+
+  public static Map<String, List<ImmutableWorkerInfo>> getWorkersByCategories(Collection<ImmutableWorkerInfo> workers)
+  {
+    return workers.stream().collect(Collectors.groupingBy(
+        immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory() == null
+                               ? WorkerConfig.DEFAULT_CATEGORY
+                               : immutableWorkerInfo.getWorker().getCategory())
+    );
   }
 }

@@ -164,9 +164,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           workerCategorySpec
       );
 
-      Map<String, List<ImmutableWorkerInfo>> workersByCategories = workers.stream().collect(Collectors.groupingBy(
-          immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
-      );
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = ProvisioningUtil.getWorkersByCategories(workers);
 
       // Merge categories of tasks and workers
       Set<String> allCategories = new HashSet<>(tasksByCategories.keySet());
@@ -310,9 +308,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           workerCategorySpec
       );
 
-      Map<String, List<ImmutableWorkerInfo>> workersByCategories = workers.stream().collect(Collectors.groupingBy(
-          immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
-      );
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = ProvisioningUtil.getWorkersByCategories(workers);
 
       Set<String> allCategories = workersByCategories.keySet();
       log.debug(
