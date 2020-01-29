@@ -274,8 +274,8 @@ jobs:
         For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
         "
 
-    # Integration tests Java Compile version is control by the machine environment jdk (set by the jdk key)
-    # Integration tests Java Runtime version is control by the JVM_RUNTIME env property (set env key to -Djvm.runtime=<JVM_RUNTIME_VERSION>)
+    # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
+    # Integration tests Java Runtime version is set by the JVM_RUNTIME env property (set env key to -Djvm.runtime=<JVM_RUNTIME_VERSION>)
     # (Currently integration tests only support running with jvm runtime 8 and 11)
     # START - Integration tests for Compile with Java 8 and Run with Java 8
     - &integration_batch_index
