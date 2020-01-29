@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark.query;
 
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
@@ -44,8 +45,6 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -116,12 +115,10 @@ public class SqlVsNativeBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     this.walker = closer.register(new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index));
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
-
+    final SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
+        rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),

@@ -27,6 +27,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.ServerInventoryView;
@@ -118,6 +120,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
@@ -799,42 +802,6 @@ public class CalciteTests
     }
   }
 
-  public static DruidSchema createMockSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
-  )
-  {
-    return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
-  }
-
-  public static DruidSchema createMockSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
-      final ViewManager viewManager
-  )
-  {
-    final DruidSchema schema = new DruidSchema(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
-        plannerConfig,
-        viewManager,
-        TEST_AUTHENTICATOR_ESCALATOR
-    );
-
-    try {
-      schema.start();
-      schema.awaitInitialization();
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    schema.stop();
-    return schema;
-  }
-
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return PARSER.parseBatch((Map<String, Object>) map).get(0);
@@ -893,6 +860,40 @@ public class CalciteTests
     return schema;
   }
 
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
+    SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    InformationSchema informationSchema = new InformationSchema(rootSchema, authorizerMapper);
+    rootSchema.add(druidSchema.getSchemaName(), druidSchema);
+    rootSchema.add(informationSchema.getSchemaName(), informationSchema);
+    rootSchema.add(systemSchema.getSchemaName(), systemSchema);
+    return rootSchema;
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
+    SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    InformationSchema informationSchema = new InformationSchema(rootSchema, authorizerMapper);
+    rootSchema.add(druidSchema.getSchemaName(), druidSchema);
+    rootSchema.add(informationSchema.getSchemaName(), informationSchema);
+    rootSchema.add(systemSchema.getSchemaName(), systemSchema);
+    return rootSchema;
+  }
   /**
    * Some Calcite exceptions (such as that thrown by
    * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
@@ -906,5 +907,41 @@ public class CalciteTests
       curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
     }
     return curThrowable;
+  }
+
+  private static DruidSchema createMockSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig
+  )
+  {
+    return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
+  }
+
+  private static DruidSchema createMockSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager
+  )
+  {
+    final DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        new TestServerInventoryView(walker.getSegments()),
+        plannerConfig,
+        viewManager,
+        TEST_AUTHENTICATOR_ESCALATOR
+    );
+
+    try {
+      schema.start();
+      schema.awaitInitialization();
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    schema.stop();
+    return schema;
   }
 }

@@ -17,42 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.planner;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Scopes;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.guice.JsonConfigProvider;
 
-class AvaticaServerConfig
+/**
+ * The module responsible for provide bindings for the Calcite Planner.
+ */
+public class DruidSqlCalcitePlannerModule implements Module
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Override
+  public void configure(Binder binder)
   {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
+    binder.bind(SchemaPlus.class).toProvider(RootSchemaProvider.class).in(Scopes.SINGLETON);
+    binder.bind(PlannerFactory.class).to(PlannerFactory.class);
+    binder.bind(DruidOperatorTable.class).to(DruidOperatorTable.class);
   }
 }

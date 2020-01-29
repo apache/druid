@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
@@ -40,8 +41,6 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -193,12 +192,10 @@ public class SqlBenchmark
     );
     closer.register(walker);
 
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate.lhs, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
-
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate.lhs, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
+        rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate.lhs),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),

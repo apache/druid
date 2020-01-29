@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -59,6 +60,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -68,8 +70,6 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -589,13 +589,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   ) throws Exception
   {
     final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig, viewManager);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
-
+    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        viewManager,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
+        rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,

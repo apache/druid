@@ -87,7 +87,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @ManageLifecycle
-public class DruidSchema extends AbstractSchema
+public class DruidSchema extends AbstractSchema implements DruidCalciteSchema
 {
   // Newest segments first, so they override older ones.
   private static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
@@ -332,6 +332,12 @@ public class DruidSchema extends AbstractSchema
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return NAME;
   }
 
   @Override

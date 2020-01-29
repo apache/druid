@@ -35,6 +35,7 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
@@ -57,8 +58,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -160,8 +159,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
@@ -183,11 +180,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             }
         )
     );
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
 
     testRequestLogger = new TestRequestLogger();
     final PlannerFactory plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
+        rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
@@ -818,16 +816,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
-              druidSchema,
-              systemSchema,
+              rootSchema,
               CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
               operatorTable,
               macroTable,

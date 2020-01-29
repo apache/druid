@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -35,8 +36,6 @@ import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -87,13 +86,12 @@ public class DruidStatementTest extends CalciteTestBase
   {
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final PlannerFactory plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
+        rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,

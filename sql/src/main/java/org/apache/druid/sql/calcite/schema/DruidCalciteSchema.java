@@ -17,42 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.apache.calcite.schema.Schema;
 
-class AvaticaServerConfig
+/**
+ * A calcite schema that has a name which it should be registered to.
+ */
+public interface DruidCalciteSchema extends Schema
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
-  {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
-  }
+  /**
+   * @return The name that this schema should be registered to.
+   */
+  String getSchemaName();
 }

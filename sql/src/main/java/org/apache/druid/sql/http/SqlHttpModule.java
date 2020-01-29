@@ -17,42 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.Jerseys;
 
-class AvaticaServerConfig
+/**
+ * The Module responsible for providing bindings to the sql http endpoint
+ */
+public class SqlHttpModule implements Module
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Override
+  public void configure(Binder binder)
   {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    Jerseys.addResource(binder, SqlResource.class);
   }
 }

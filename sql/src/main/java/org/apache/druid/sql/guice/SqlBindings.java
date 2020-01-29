@@ -23,7 +23,11 @@ import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.schema.DruidCalciteSchema;
 
+/**
+ * Utility class that provides bindings to extendable components in the SqlModule
+ */
 public class SqlBindings
 {
   public static void addAggregator(
@@ -40,5 +44,13 @@ public class SqlBindings
   )
   {
     Multibinder.newSetBinder(binder, SqlOperatorConversion.class).addBinding().to(clazz);
+  }
+
+  /**
+   * Returns a multiBinder that can modules can use to bind {@link DruidCalciteSchema} to be used by the SqlModule
+   */
+  public static Multibinder<DruidCalciteSchema> calciteSchemaBinder(final Binder binder)
+  {
+    return Multibinder.newSetBinder(binder, DruidCalciteSchema.class);
   }
 }

@@ -19,40 +19,24 @@
 
 package org.apache.druid.sql.avatica;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.server.initialization.jetty.JettyBindings;
+import org.apache.druid.server.metrics.MetricsModule;
 
-class AvaticaServerConfig
+/**
+ * The module responsible for providing bindings to Avatica
+ */
+public class AvaticaModule implements Module
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Override
+  public void configure(Binder binder)
   {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
+    binder.bind(AvaticaMonitor.class).in(LazySingleton.class);
+    JettyBindings.addHandler(binder, DruidAvaticaHandler.class);
+    MetricsModule.register(binder, AvaticaMonitor.class);
   }
 }

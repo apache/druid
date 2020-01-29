@@ -59,9 +59,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-public class InformationSchema extends AbstractSchema
+public class InformationSchema extends AbstractSchema implements DruidCalciteSchema
 {
-  public static final String NAME = "INFORMATION_SCHEMA";
+  private static final String NAME = "INFORMATION_SCHEMA";
 
   private static final String CATALOG_NAME = "druid";
   private static final String SCHEMATA_TABLE = "SCHEMATA";
@@ -132,6 +132,12 @@ public class InformationSchema extends AbstractSchema
   protected Map<String, Table> getTableMap()
   {
     return tableMap;
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return NAME;
   }
 
   class SchemataTable extends AbstractTable implements ScannableTable

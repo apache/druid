@@ -93,9 +93,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SystemSchema extends AbstractSchema
+public class SystemSchema extends AbstractSchema implements DruidCalciteSchema
 {
-  public static final String NAME = "sys";
+  private static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
@@ -230,6 +230,12 @@ public class SystemSchema extends AbstractSchema
   public Map<String, Table> getTableMap()
   {
     return tableMap;
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return NAME;
   }
 
   /**

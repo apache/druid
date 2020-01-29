@@ -17,42 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 
-class AvaticaServerConfig
+/**
+ * Module that provides SQL aggregations.
+ * To add an aggregation use {@link org.apache.druid.sql.guice.SqlBindings#addAggregator(Binder, Class)}
+ */
+public class AggregationModule implements Module
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Override
+  public void configure(Binder binder)
   {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    // Add empty SqlAggregator binder.
+    Multibinder.newSetBinder(binder, SqlAggregator.class);
   }
 }
