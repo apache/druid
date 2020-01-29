@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -32,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -182,9 +184,9 @@ public class JoinConditionAnalysis
   /**
    * Returns the distinct column keys from the RHS required to evaluate the equi conditions.
    */
-  public List<String> getRightKeyColumns()
+  public Set<String> getRightEquiConditionKeys()
   {
-    return rightKeyColumns;
+    return ImmutableSet.copyOf(rightKeyColumns);
   }
 
   @Override
