@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -295,11 +296,16 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   @Override
-  @Nullable
-  public LookupExtractorFactoryContainer get(String lookupName)
+  public Optional<LookupExtractorFactoryContainer> get(String lookupName)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    return stateRef.get().lookupMap.get(lookupName);
+    return Optional.ofNullable(stateRef.get().lookupMap.get(lookupName));
+  }
+
+  @Override
+  public Set<String> getAllLookupNames()
+  {
+    return stateRef.get().lookupMap.keySet();
   }
 
   // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
