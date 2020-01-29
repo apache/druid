@@ -812,8 +812,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           .flatMap(report -> report.getNewSegments().stream())
           .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
-      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
-                            .equals(newSegments)) {
+      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers).equals(newSegments)) {
         LOG.info("Our segments really do exist, awaiting handoff.");
       } else {
         throw new ISE("Failed to publish segments[%s]", newSegments);

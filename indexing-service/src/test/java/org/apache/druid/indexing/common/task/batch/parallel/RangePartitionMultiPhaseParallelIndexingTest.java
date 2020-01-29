@@ -100,22 +100,30 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       0
   );
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.SEGMENT, true}
+        new Object[]{LockGranularity.TIME_CHUNK, false, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 2},
+        new Object[]{LockGranularity.SEGMENT, true, 2},
+        new Object[]{LockGranularity.SEGMENT, true, 1}  // currently spawns subtask instead of running in supervisor
     );
   }
 
   private File inputDir;
   private SetMultimap<Interval, String> intervalToDim1;
 
-  public RangePartitionMultiPhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
+  private final int maxNumConcurrentSubTasks;
+
+  public RangePartitionMultiPhaseParallelIndexingTest(
+      LockGranularity lockGranularity,
+      boolean useInputFormatApi,
+      int maxNumConcurrentSubTasks
+  )
   {
     super(lockGranularity, useInputFormatApi);
+    this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
   }
 
   @Override
@@ -169,7 +177,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             null,
             DIM1,
             false
-        )
+        ),
+        maxNumConcurrentSubTasks
     );
     assertRangePartitions(publishedSegments);
   }
@@ -361,7 +370,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       );
     }
   }
-
 
   private static class TestPartialGenericSegmentMergeParallelIndexTaskRunner
       extends PartialGenericSegmentMergeParallelIndexTaskRunner

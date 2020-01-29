@@ -267,7 +267,11 @@ public class JoinConditionAnalysisTest
   {
     EqualsVerifier.forClass(JoinConditionAnalysis.class)
                   .usingGetClass()
-                  .withIgnoredFields("equiConditions", "nonEquiConditions")
+                  .withIgnoredFields(
+                          // These fields are tightly coupled with originalExpression
+                          "equiConditions", "nonEquiConditions",
+                          // These fields are calculated from nonEquiConditions
+                          "isAlwaysTrue", "isAlwaysFalse", "canHashJoin")
                   .verify();
   }
 

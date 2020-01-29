@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -113,13 +115,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -177,13 +177,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -243,13 +241,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -331,13 +327,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -426,13 +420,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -493,13 +485,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -584,10 +574,7 @@ public class GroupByQueryQueryToolChestTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null);
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
@@ -768,6 +755,64 @@ public class GroupByQueryQueryToolChestTest
                     makeRow(query, "2000-01-02", "dim", "bar", "rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
                 )
             )
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnGroupBys()
+  {
+    Assert.assertTrue(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        new GroupByQuery.Builder()
+                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                            .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                            .setGranularity(Granularities.ALL)
+                            .build()
+                    )
+                )
+                .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                .setGranularity(Granularities.ALL)
+                .build()
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnTimeseries()
+  {
+    Assert.assertFalse(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                  .granularity(Granularities.ALL)
+                  .build()
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnGroupByOfTimeseries()
+  {
+    Assert.assertFalse(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        Druids.newTimeseriesQueryBuilder()
+                              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                              .granularity(Granularities.ALL)
+                              .build()
+                    )
+                )
+                .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                .setGranularity(Granularities.ALL)
+                .build()
         )
     );
   }

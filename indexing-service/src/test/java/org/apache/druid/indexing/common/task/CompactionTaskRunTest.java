@@ -61,6 +61,7 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -181,9 +182,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
@@ -520,7 +524,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedSegments.addAll(appendResult.rhs);
 
     final Set<DataSegment> usedSegments = new HashSet<>(
-        getStorageCoordinator().getUsedSegmentsForIntervals(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
             Segments.ONLY_VISIBLE
@@ -877,6 +881,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
+        NoopJoinableFactory.INSTANCE,
         null,
         loader,
         objectMapper,

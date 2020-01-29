@@ -257,10 +257,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
   public void testMinTopNThreshold()
   {
     TopNQueryConfig config = new TopNQueryConfig();
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        config,
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(config);
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,

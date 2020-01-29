@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -77,23 +76,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
       };
 
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
+  public TimeseriesQueryQueryToolChest()
   {
-    this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());
+    this(DefaultTimeseriesQueryMetricsFactory.instance());
   }
 
   @Inject
-  public TimeseriesQueryQueryToolChest(
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      TimeseriesQueryMetricsFactory queryMetricsFactory
-  )
+  public TimeseriesQueryQueryToolChest(TimeseriesQueryMetricsFactory queryMetricsFactory)
   {
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -375,15 +368,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(
-        (queryPlus, responseContext) -> {
-          TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
-          if (timeseriesQuery.getDimensionsFilter() != null) {
-            timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-            queryPlus = queryPlus.withQuery(timeseriesQuery);
-          }
-          return runner.run(queryPlus, responseContext);
-        }, this);
+    return (queryPlus, responseContext) -> {
+      TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
+      if (timeseriesQuery.getDimensionsFilter() != null) {
+        timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+        queryPlus = queryPlus.withQuery(timeseriesQuery);
+      }
+      return runner.run(queryPlus, responseContext);
+    };
   }
 
   @Override

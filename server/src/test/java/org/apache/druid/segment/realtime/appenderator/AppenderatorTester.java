@@ -37,7 +37,6 @@ import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -58,6 +57,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -240,13 +240,7 @@ public class AppenderatorTester implements AutoCloseable
         new DefaultQueryRunnerFactoryConglomerate(
             ImmutableMap.of(
                 TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(
-                        new IntervalChunkingQueryRunnerDecorator(
-                            queryExecutor,
-                            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-                            emitter
-                        )
-                    ),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 ),
@@ -288,6 +282,7 @@ public class AppenderatorTester implements AutoCloseable
         },
         emitter,
         queryExecutor,
+        NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),
         new CachePopulatorStats()

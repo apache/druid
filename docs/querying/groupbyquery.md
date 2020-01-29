@@ -257,8 +257,6 @@ by using a finite-sized merge buffer pool. By default, the number of merge buffe
 threads. You can adjust this as necessary to balance concurrency and memory usage.
 - groupBy v1 supports caching on either the Broker or Historical processes, whereas groupBy v2 only supports caching on
 Historical processes.
-- groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the Broker, whereas groupBy v2
-ignores chunkPeriod.
 - groupBy v2 supports both array-based aggregation and hash-based aggregation. The array-based aggregation is used only
 when the grouping key is a single indexed string column. In array-based aggregation, the dictionary-encoded value is used
 as the index, so the aggregated values in the array can be accessed directly without finding buckets based on hashing.
