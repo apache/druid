@@ -27,13 +27,18 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Optional;
 
 public class InlineJoinableFactoryTest
 {
   private static final String PREFIX = "j.";
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private final InlineJoinableFactory factory = new InlineJoinableFactory();
 
@@ -49,10 +54,12 @@ public class InlineJoinableFactoryTest
   @Test
   public void testBuildNonInline()
   {
-    Assert.assertEquals(
-        Optional.empty(),
-        factory.build(new TableDataSource("foo"), makeCondition("x == \"j.y\""))
+    expectedException.expect(ClassCastException.class);
+    expectedException.expectMessage(
+        "org.apache.druid.query.TableDataSource cannot be cast to org.apache.druid.query.InlineDataSource"
     );
+
+    final Optional<Joinable> ignored = factory.build(new TableDataSource("foo"), makeCondition("x == \"j.y\""));
   }
 
   @Test

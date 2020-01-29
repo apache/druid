@@ -414,9 +414,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
     EasyMock.expect(
-        druidLeaderClient.makeRequest(
-            HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-        )
+        druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true")
     ).andReturn(request);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.OK,
@@ -543,7 +541,10 @@ public class LookupReferencesManagerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(ImmutableSet.of("test"), lookupReferencesManager.getAllLookupNames());
+    Assert.assertEquals(
+        ImmutableSet.of("test", "testMockForRealModeWithMainThread"),
+        lookupReferencesManager.getAllLookupNames()
+    );
 
     lookupReferencesManager.remove("test");
 
@@ -551,7 +552,10 @@ public class LookupReferencesManagerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(ImmutableSet.of(), lookupReferencesManager.getAllLookupNames());
+    Assert.assertEquals(
+        ImmutableSet.of("testMockForRealModeWithMainThread"),
+        lookupReferencesManager.getAllLookupNames()
+    );
 
     lookupReferencesManager.stop();
 
