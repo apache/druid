@@ -39,7 +39,7 @@ public class PreJoinableClause
   private final JoinType joinType;
   private final JoinConditionAnalysis condition;
 
-  PreJoinableClause(
+  public PreJoinableClause(
       final String prefix,
       final DataSource dataSource,
       final JoinType joinType,

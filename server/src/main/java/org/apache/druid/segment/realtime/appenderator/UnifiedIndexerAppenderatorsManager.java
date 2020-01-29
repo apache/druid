@@ -51,6 +51,7 @@ import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -101,6 +102,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private final Map<String, DatasourceBundle> datasourceBundles = new HashMap<>();
 
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final WorkerConfig workerConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -114,6 +116,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @Inject
   public UnifiedIndexerAppenderatorsManager(
       @Processing ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       WorkerConfig workerConfig,
       Cache cache,
       CacheConfig cacheConfig,
@@ -124,6 +127,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   )
   {
     this.queryExecutorService = queryExecutorService;
+    this.joinableFactory = joinableFactory;
     this.workerConfig = workerConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -151,6 +155,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats
@@ -320,6 +325,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),
           queryExecutorService,
+          joinableFactory,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
           cachePopulatorStats

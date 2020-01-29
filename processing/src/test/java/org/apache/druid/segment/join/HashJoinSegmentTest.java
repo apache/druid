@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
@@ -40,9 +41,11 @@ public class HashJoinSegmentTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private QueryableIndexSegment baseSegment;
-  private HashJoinSegment hashJoinSegmentNoClauses;
-  private HashJoinSegment hashJoinSegmentManyClauses;
+  private HashJoinSegment hashJoinSegment;
 
   @BeforeClass
   public static void setUpStatic()
@@ -58,12 +61,7 @@ public class HashJoinSegmentTest
         SegmentId.dummy("facts")
     );
 
-    hashJoinSegmentNoClauses = new HashJoinSegment(
-        baseSegment,
-        ImmutableList.of()
-    );
-
-    hashJoinSegmentManyClauses = new HashJoinSegment(
+    hashJoinSegment = new HashJoinSegment(
         baseSegment,
         ImmutableList.of(
             new JoinableClause(
@@ -83,55 +81,37 @@ public class HashJoinSegmentTest
   }
 
   @Test
-  public void test_getId_noClauses()
+  public void test_constructor_noClauses()
   {
-    Assert.assertEquals(baseSegment.getId(), hashJoinSegmentNoClauses.getId());
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
+
+    final HashJoinSegment ignored = new HashJoinSegment(baseSegment, ImmutableList.of());
   }
 
   @Test
-  public void test_getId_manyClauses()
+  public void test_getId()
   {
-    Assert.assertEquals(baseSegment.getId(), hashJoinSegmentManyClauses.getId());
+    Assert.assertEquals(baseSegment.getId(), hashJoinSegment.getId());
   }
 
   @Test
-  public void test_getDataInterval_noClauses()
+  public void test_getDataInterval()
   {
-    Assert.assertEquals(baseSegment.getDataInterval(), hashJoinSegmentNoClauses.getDataInterval());
+    Assert.assertEquals(baseSegment.getDataInterval(), hashJoinSegment.getDataInterval());
   }
 
   @Test
-  public void test_getDataInterval_manyClauses()
+  public void test_asQueryableIndex()
   {
-    Assert.assertEquals(baseSegment.getDataInterval(), hashJoinSegmentManyClauses.getDataInterval());
+    Assert.assertNull(hashJoinSegment.asQueryableIndex());
   }
 
   @Test
-  public void test_asQueryableIndex_noClauses()
-  {
-    Assert.assertNull(hashJoinSegmentNoClauses.asQueryableIndex());
-  }
-
-  @Test
-  public void test_asQueryableIndex_manyClauses()
-  {
-    Assert.assertNull(hashJoinSegmentManyClauses.asQueryableIndex());
-  }
-
-  @Test
-  public void test_asStorageAdapter_noClauses()
+  public void test_asStorageAdapter()
   {
     Assert.assertThat(
-        hashJoinSegmentNoClauses.asStorageAdapter(),
-        CoreMatchers.instanceOf(HashJoinSegmentStorageAdapter.class)
-    );
-  }
-
-  @Test
-  public void test_asStorageAdapter_manyClauses()
-  {
-    Assert.assertThat(
-        hashJoinSegmentManyClauses.asStorageAdapter(),
+        hashJoinSegment.asStorageAdapter(),
         CoreMatchers.instanceOf(HashJoinSegmentStorageAdapter.class)
     );
   }

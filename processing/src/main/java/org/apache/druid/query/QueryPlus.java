@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
 
@@ -123,14 +122,6 @@ public final class QueryPlus<T>
     } else {
       return new QueryPlus<>(query, null, identity);
     }
-  }
-
-  /**
-   * Equivalent of withQuery(getQuery().withQuerySegmentSpec(spec)).
-   */
-  public QueryPlus<T> withQuerySegmentSpec(QuerySegmentSpec spec)
-  {
-    return new QueryPlus<>(query.withQuerySegmentSpec(spec), queryMetrics, identity);
   }
 
   /**

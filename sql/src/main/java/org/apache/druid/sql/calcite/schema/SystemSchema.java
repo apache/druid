@@ -285,17 +285,14 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
       }
 
-      // get published segments from metadata segment cache (if enabled in sql planner config), else directly from
-      // coordinator
+      // Get published segments from metadata segment cache (if enabled in sql planner config), else directly from
+      // Coordinator.
       final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(
-              metadataStoreSegments,
-              root
-          ))
+          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
             try {
               final DataSegment segment = val.getDataSegment();
@@ -353,7 +350,8 @@ public class SystemSchema extends AbstractSchema
                   numReplicas,
                   val.getValue().getNumRows(),
                   IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
-                  IS_AVAILABLE_TRUE, // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                  IS_AVAILABLE_TRUE,
                   val.getValue().isRealtime(),
                   IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
                   jsonMapper.writeValueAsString(val.getKey())
@@ -398,8 +396,10 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment -> Collections
-          .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
+      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment ->
+          Collections.singletonList(
+              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource())
+          );
 
       final Iterable<Entry<SegmentId, AvailableSegmentMetadata>> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(

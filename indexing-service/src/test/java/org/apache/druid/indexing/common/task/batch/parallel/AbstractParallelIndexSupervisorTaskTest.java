@@ -54,6 +54,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -259,7 +260,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public String killTask(String taskId)
+    public String cancelTask(String taskId)
     {
       final Future<TaskStatus> taskStatusFuture = tasks.remove(taskId);
       if (taskStatusFuture != null) {
@@ -301,6 +302,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        NoopJoinableFactory.INSTANCE,
         null,
         newSegmentLoader(temporaryFolder.newFolder()),
         getObjectMapper(),

@@ -30,7 +30,9 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
@@ -81,6 +83,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -104,8 +107,15 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * The client representation of this task is {@link ClientCompactionTaskQuery}. JSON
+ * serialization fields of this class must correspond to those of {@link
+ * ClientCompactionTaskQuery}.
+ */
 public class CompactionTask extends AbstractBatchIndexTask
 {
+  private static final Logger log = new Logger(CompactionTask.class);
+
   /**
    * The CompactionTask creates and runs multiple IndexTask instances. When the {@link AppenderatorsManager}
    * is asked to clean up, it does so on a per-task basis keyed by task ID. However, the subtask IDs of the
@@ -118,8 +128,11 @@ public class CompactionTask extends AbstractBatchIndexTask
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
 
-  private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
+
+  static {
+    Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
+  }
 
   private final CompactionIOConfig ioConfig;
   @Nullable
