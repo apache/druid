@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Represents analysis of a join condition.
@@ -55,6 +56,7 @@ public class JoinConditionAnalysis
   private final boolean isAlwaysFalse;
   private final boolean isAlwaysTrue;
   private final boolean canHashJoin;
+  private final List<String> rightKeyColumns;
 
   private JoinConditionAnalysis(
       final String originalExpression,
@@ -76,6 +78,7 @@ public class JoinConditionAnalysis
                                                                 .allMatch(expr -> expr.isLiteral() && expr.eval(
                                                                     ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
+    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toList());
   }
 
   /**
@@ -174,6 +177,14 @@ public class JoinConditionAnalysis
   public boolean canHashJoin()
   {
     return canHashJoin;
+  }
+
+  /**
+   * Returns the distinct column keys from the RHS required to evaluate the equi conditions.
+   */
+  public List<String> getRightKeyColumns()
+  {
+    return rightKeyColumns;
   }
 
   @Override

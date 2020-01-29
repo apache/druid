@@ -27,7 +27,6 @@ import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * A {@link JoinableFactory} for {@link InlineDataSource}. It works by building an {@link IndexedTable}.
@@ -39,8 +38,7 @@ public class InlineJoinableFactory implements JoinableFactory
   {
     if (condition.canHashJoin() && dataSource instanceof InlineDataSource) {
       final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
-      final List<String> rightKeyColumns =
-          condition.getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toList());
+      final List<String> rightKeyColumns = condition.getRightKeyColumns();
 
       return Optional.of(
           new IndexedTableJoinable(
