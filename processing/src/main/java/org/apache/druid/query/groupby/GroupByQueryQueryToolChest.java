@@ -664,6 +664,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   @Override
+  public boolean canPerformSubquery(Query<?> subquery)
+  {
+    Query<?> current = subquery;
+
+    while (current != null) {
+      if (!(current instanceof GroupByQuery)) {
+        return false;
+      }
+
+      if (current.getDataSource() instanceof QueryDataSource) {
+        current = ((QueryDataSource) current.getDataSource()).getQuery();
+      } else {
+        current = null;
+      }
+    }
+
+    return true;
+  }
+
+  @Override
   public List<String> resultArrayFields(final GroupByQuery query)
   {
     return query.getResultRowOrder();

@@ -24,9 +24,11 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.java.util.metrics.Monitor;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.DruidNode;
 
 /**
@@ -59,5 +61,14 @@ public class DruidBinders
   public static Multibinder<Class<? extends Monitor>> metricMonitorBinder(Binder binder)
   {
     return Multibinder.newSetBinder(binder, new TypeLiteral<Class<? extends Monitor>>(){});
+  }
+
+  public static MapBinder<Class<? extends DataSource>, JoinableFactory> joinableFactoryBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<Class<? extends DataSource>>() {},
+        new TypeLiteral<JoinableFactory>() {}
+    );
   }
 }

@@ -201,7 +201,7 @@ public class TieredBrokerHostSelector<T>
 
     if (brokerServiceName == null) {
       // For Union Queries tier will be selected on the rules for first dataSource.
-      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
+      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getTableNames(), null));
 
       // find the rule that can apply to the entire set of intervals
       DateTime now = DateTimes.nowUtc();

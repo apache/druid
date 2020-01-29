@@ -64,7 +64,7 @@ public class StringFirstAggregator implements Aggregator
           valueSelector
       );
 
-      if (inPair != null && inPair.rhs != null && inPair.lhs < firstTime) {
+      if (inPair != null && inPair.lhs < firstTime) {
         firstTime = inPair.lhs;
         firstValue = StringUtils.fastLooseChop(inPair.rhs, maxStringBytes);
       }
@@ -73,11 +73,8 @@ public class StringFirstAggregator implements Aggregator
 
       if (time < firstTime) {
         final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
-
-        if (value != null) {
-          firstTime = time;
-          firstValue = StringUtils.fastLooseChop(value, maxStringBytes);
-        }
+        firstTime = time;
+        firstValue = StringUtils.fastLooseChop(value, maxStringBytes);
       }
     }
   }

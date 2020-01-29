@@ -30,6 +30,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -93,24 +94,13 @@ public class MultipleSpecificSegmentSpec implements QuerySegmentSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     MultipleSpecificSegmentSpec that = (MultipleSpecificSegmentSpec) o;
-
-    if (descriptors != null ? !descriptors.equals(that.descriptors) : that.descriptors != null) {
-      return false;
-    }
-    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(descriptors, that.descriptors);
   }
 
   @Override
   public int hashCode()
   {
-    int result = descriptors != null ? descriptors.hashCode() : 0;
-    result = 31 * result + (intervals != null ? intervals.hashCode() : 0);
-    return result;
+    return Objects.hash(descriptors);
   }
 }

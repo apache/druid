@@ -70,7 +70,7 @@ import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
@@ -484,7 +484,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
-              final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+              final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
               pushedSegments.addAll(pushed.getSegments());
               LOG.info("Pushed segments[%s]", pushed.getSegments());
             }
@@ -503,7 +503,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         }
       }
 
-      final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+      final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
       LOG.info("Pushed segments[%s]", pushed.getSegments());
       appenderator.close();

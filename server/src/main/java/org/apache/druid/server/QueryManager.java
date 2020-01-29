@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryWatcher;
 
-import java.util.List;
 import java.util.Set;
 
 public class QueryManager implements QueryWatcher
@@ -61,7 +60,7 @@ public class QueryManager implements QueryWatcher
   public void registerQuery(Query query, final ListenableFuture future)
   {
     final String id = query.getId();
-    final List<String> datasources = query.getDataSource().getNames();
+    final Set<String> datasources = query.getDataSource().getTableNames();
     queries.put(id, future);
     queryDatasources.putAll(id, datasources);
     future.addListener(

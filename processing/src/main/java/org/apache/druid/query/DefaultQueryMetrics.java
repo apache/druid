@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -30,7 +31,9 @@ import org.joda.time.Interval;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * DefaultQueryMetrics is unsafe for use from multiple threads. It fails with RuntimeException on access not from the
@@ -42,8 +45,21 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
 
-  /** Non final to give subclasses ability to reassign it. */
+  /**
+   * Non final to give subclasses ability to reassign it.
+   */
   protected Thread ownerThread = Thread.currentThread();
+
+  private static String getTableNamesAsString(DataSource dataSource)
+  {
+    final Set<String> names = dataSource.getTableNames();
+
+    if (names.size() == 1) {
+      return Iterables.getOnlyElement(names);
+    } else {
+      return names.stream().sorted().collect(Collectors.toList()).toString();
+    }
+  }
 
   protected void checkModifiedFromOwnerThread()
   {
@@ -77,7 +93,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void dataSource(QueryType query)
   {
-    setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()));
+    setDimension(DruidMetrics.DATASOURCE, getTableNamesAsString(query.getDataSource()));
   }
 
   @Override
