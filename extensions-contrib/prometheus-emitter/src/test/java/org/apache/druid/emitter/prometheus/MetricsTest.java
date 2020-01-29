@@ -19,7 +19,6 @@
 
 package org.apache.druid.emitter.prometheus;
 
-import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import org.junit.Assert;
 import org.junit.Test;
