@@ -42,6 +42,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
@@ -86,6 +87,7 @@ public class TaskToolbox
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final MonitorScheduler monitorScheduler;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final SegmentLoader segmentLoader;
   private final ObjectMapper jsonMapper;
   private final File taskWorkDir;
@@ -116,6 +118,7 @@ public class TaskToolbox
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper jsonMapper,
@@ -146,6 +149,7 @@ public class TaskToolbox
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.queryExecutorService = queryExecutorService;
+    this.joinableFactory = joinableFactory;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoader = segmentLoader;
     this.jsonMapper = jsonMapper;
@@ -227,6 +231,11 @@ public class TaskToolbox
   public ExecutorService getQueryExecutorService()
   {
     return queryExecutorService;
+  }
+
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
   }
 
   public MonitorScheduler getMonitorScheduler()

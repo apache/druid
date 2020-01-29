@@ -139,7 +139,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     );
   }
 
-  public static HadoopIngestionSpec updateSegmentListIfDatasourcePathSpecIsUsed(
+  public static void updateSegmentListIfDatasourcePathSpecIsUsed(
       HadoopIngestionSpec spec,
       ObjectMapper jsonMapper,
       UsedSegmentsRetriever segmentsRetriever
@@ -173,7 +173,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           DatasourceIngestionSpec.class
       );
 
-      Collection<DataSegment> usedVisibleSegments = segmentsRetriever.getUsedSegmentsForIntervals(
+      Collection<DataSegment> usedVisibleSegments = segmentsRetriever.retrieveUsedSegmentsForIntervals(
           ingestionSpecObj.getDataSource(),
           ingestionSpecObj.getIntervals(),
           Segments.ONLY_VISIBLE
@@ -213,8 +213,6 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         datasourcePathSpec.put(segments, windowedSegments);
       }
     }
-
-    return spec;
   }
 
 }

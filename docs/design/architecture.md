@@ -69,8 +69,8 @@ if every single data server is lost and re-provisioned.
 For more details, please see the [Deep storage](../dependencies/deep-storage.md) page.
 
 ### Metadata storage
-The metadata storage holds various shared system metadata such as segment availability information and task information.
-In a clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
+The metadata storage holds various shared system metadata such as segment usage information and task information. In a
+clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
 deployment, it is typically going to be a locally-stored Apache Derby database.
 
 For more details, please see the [Metadata storage](../dependencies/metadata-storage.md) page.

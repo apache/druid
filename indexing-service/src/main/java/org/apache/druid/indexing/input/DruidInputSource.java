@@ -370,8 +370,10 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     Collection<DataSegment> usedSegments;
     while (true) {
       try {
-        usedSegments =
-            coordinatorClient.getDatabaseSegmentDataSourceSegments(dataSource, Collections.singletonList(interval));
+        usedSegments = coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
+            dataSource,
+            Collections.singletonList(interval)
+        );
         break;
       }
       catch (Throwable e) {
@@ -405,7 +407,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         Comparators.intervalsByStartThenEnd()
     );
     for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds, "segmentIds")) {
-      final DataSegment segment = coordinatorClient.getDatabaseSegmentDataSourceSegment(
+      final DataSegment segment = coordinatorClient.fetchUsedSegment(
           dataSource,
           windowedSegmentId.getSegmentId()
       );

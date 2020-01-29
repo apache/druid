@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
@@ -59,7 +58,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
@@ -90,6 +88,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -127,7 +126,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -135,6 +133,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
@@ -218,8 +217,17 @@ public class CachingClusteredClientBenchmark
                                                  .size(0)
                                                  .build();
       final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
-      LOG.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-      final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+      LOG.info(
+          "Starting benchmark setup using cacheDir[%s], rows[%,d].",
+          segmentGenerator.getCacheDir(),
+          rowsPerSegment
+      );
+      final QueryableIndex index = segmentGenerator.generate(
+          dataSegment,
+          schemaInfo,
+          Granularities.NONE,
+          rowsPerSegment
+      );
       queryableIndexes.put(dataSegment, index);
     }
 
@@ -261,9 +269,7 @@ public class CachingClusteredClientBenchmark
             .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -275,10 +281,7 @@ public class CachingClusteredClientBenchmark
                         "TopNQueryRunnerFactory-bufferPool",
                         () -> ByteBuffer.allocate(PROCESSING_BUFFER_SIZE)
                     ),
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
@@ -375,14 +378,8 @@ public class CachingClusteredClientBenchmark
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        strategySelector,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-    );
-    return new GroupByQueryRunnerFactory(
-        strategySelector,
-        toolChest
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
+    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 
   @TearDown(Level.Trial)
@@ -530,12 +527,10 @@ public class CachingClusteredClientBenchmark
                .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
     }
 
-    @Nullable
     @Override
-    public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+    public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
     {
-      final String table = Iterables.getOnlyElement(dataSource.getNames());
-      return timelines.get(table);
+      return Optional.ofNullable(timelines.get(analysis.getBaseTableDataSource().get().getName()));
     }
 
     @Override
@@ -575,7 +570,11 @@ public class CachingClusteredClientBenchmark
     private final QueryRunnerFactoryConglomerate conglomerate;
     private final QueryableIndexSegment segment;
 
-    public SimpleQueryRunner(QueryRunnerFactoryConglomerate conglomerate, SegmentId segmentId, QueryableIndex queryableIndex)
+    public SimpleQueryRunner(
+        QueryRunnerFactoryConglomerate conglomerate,
+        SegmentId segmentId,
+        QueryableIndex queryableIndex
+    )
     {
       this.conglomerate = conglomerate;
       this.segment = new QueryableIndexSegment(queryableIndex, segmentId);

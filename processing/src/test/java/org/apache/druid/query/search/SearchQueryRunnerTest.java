@@ -59,6 +59,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
@@ -71,16 +72,14 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
-public class SearchQueryRunnerTest
+public class SearchQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(SearchQueryRunnerTest.class);
   private static final SearchQueryConfig CONFIG = new SearchQueryConfig();
-  private static final SearchQueryQueryToolChest TOOL_CHEST = new SearchQueryQueryToolChest(
-      CONFIG,
-      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-  );
+  private static final SearchQueryQueryToolChest TOOL_CHEST = new SearchQueryQueryToolChest(CONFIG);
   private static final SearchStrategySelector SELECTOR = new SearchStrategySelector(Suppliers.ofInstance(CONFIG));
 
   @Parameterized.Parameters(name = "{0}")
@@ -169,11 +168,15 @@ public class SearchQueryRunnerTest
               ResponseContext responseContext
           )
           {
-            final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-01-12/2011-02-28")))
+            final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-01-12/2011-02-28")))
+                )
             );
-            final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-03-01/2011-04-15")))
+            final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-03-01/2011-04-15")))
+                )
             );
             return Sequences.concat(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext));
           }

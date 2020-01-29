@@ -32,8 +32,6 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface StorageAdapter extends CursorFactory
 {
-  @PublicApi
-  String getSegmentIdentifier();
   Interval getInterval();
   Indexed<String> getAvailableDimensions();
   Iterable<String> getAvailableMetrics();

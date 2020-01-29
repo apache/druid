@@ -31,7 +31,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -80,6 +79,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -94,7 +94,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -930,7 +930,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                              ? getSegmentLockHelper().getLockedExistingSegments()
                                              : null;
       // Probably we can publish atomicUpdateGroup along with segments.
-      final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
+      final SegmentsAndCommitMetadata published =
+          awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
       appenderator.close();
 
       ingestionState = IngestionState.COMPLETED;
@@ -949,7 +950,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info("Published segments: %s", Lists.transform(published.getSegments(), DataSegment::getId));
+        log.info("Published segments: %s", SegmentUtils.commaSeparatedIdentifiers(published.getSegments()));
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
@@ -972,8 +973,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  private static SegmentsAndMetadata awaitPublish(
-      ListenableFuture<SegmentsAndMetadata> publishFuture,
+  private static SegmentsAndCommitMetadata awaitPublish(
+      ListenableFuture<SegmentsAndCommitMetadata> publishFuture,
       long publishTimeout
   ) throws ExecutionException, InterruptedException, TimeoutException
   {
@@ -1171,7 +1172,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  @JsonTypeName("index")
   public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   {
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();

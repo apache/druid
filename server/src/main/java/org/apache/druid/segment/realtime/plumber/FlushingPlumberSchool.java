@@ -34,6 +34,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
@@ -54,6 +55,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -68,6 +70,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject @Processing ExecutorService queryExecutorService,
+      @JacksonInject JoinableFactory joinableFactory,
       @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
       @JacksonInject Cache cache,
@@ -84,6 +87,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         null,
         null,
         queryExecutorService,
+        joinableFactory,
         indexMergerV9,
         indexIO,
         cache,
@@ -97,6 +101,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
+    this.joinableFactory = joinableFactory;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
@@ -123,6 +128,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
+        joinableFactory,
         indexMergerV9,
         indexIO,
         cache,
