@@ -31,7 +31,9 @@ import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -40,6 +42,9 @@ import java.util.Set;
 public class LookupJoinableFactoryTest
 {
   private static final String PREFIX = "j.";
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private final LookupJoinableFactory factory;
   private final LookupDataSource lookupDataSource = new LookupDataSource("country_code_to_name");
@@ -85,10 +90,12 @@ public class LookupJoinableFactoryTest
   @Test
   public void testBuildNonLookup()
   {
-    Assert.assertEquals(
-        Optional.empty(),
-        factory.build(new TableDataSource("foo"), makeCondition("x == \"j.k\""))
+    expectedException.expect(ClassCastException.class);
+    expectedException.expectMessage(
+        "org.apache.druid.query.TableDataSource cannot be cast to org.apache.druid.query.LookupDataSource"
     );
+
+    final Optional<Joinable> ignored = factory.build(new TableDataSource("foo"), makeCondition("x == \"j.k\""));
   }
 
   @Test
