@@ -33,7 +33,7 @@ import org.junit.runner.RunWith;
 import java.util.Optional;
 
 @RunWith(EasyMockRunner.class)
-public class MapDataSourceJoinableFactoryWarehouseTest
+public class MapJoinableFactoryTest
 {
   @Mock
   private InlineDataSource inlineDataSource;
@@ -45,14 +45,14 @@ public class MapDataSourceJoinableFactoryWarehouseTest
   @Mock
   private Joinable mockJoinable;
 
-  private MapDataSourceJoinableFactoryWarehouse target;
+  private MapJoinableFactory target;
 
   @Before
   public void setUp()
   {
     noopDataSource = new NoopDataSource();
 
-    target = new MapDataSourceJoinableFactoryWarehouse(
+    target = new MapJoinableFactory(
         ImmutableMap.of(NoopDataSource.class, noopJoinableFactory));
   }
   @Test
