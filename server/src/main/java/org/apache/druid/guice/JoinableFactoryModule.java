@@ -28,7 +28,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.MapDataSourceJoinableFactoryWarehouse;
+import org.apache.druid.segment.join.MapJoinableFactory;
 
 import java.util.Map;
 
@@ -54,7 +54,7 @@ public class JoinableFactoryModule implements Module
       binder.bind(factory).in(LazySingleton.class);
     });
 
-    binder.bind(JoinableFactory.class).to(MapDataSourceJoinableFactoryWarehouse.class)
+    binder.bind(JoinableFactory.class).to(MapJoinableFactory.class)
           .in(Scopes.SINGLETON);
   }
 }

@@ -44,6 +44,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -83,7 +84,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       this.conditionMatchers = condition.getEquiConditions()
                                         .stream()
                                         .map(eq -> makeConditionMatcher(table, leftSelectorFactory, eq))
-                                        .collect(Collectors.toList());
+                                        .collect(Collectors.toCollection(ArrayList::new));
     } else {
       throw new IAE(
           "Cannot build hash-join matcher on non-equi-join condition: %s",

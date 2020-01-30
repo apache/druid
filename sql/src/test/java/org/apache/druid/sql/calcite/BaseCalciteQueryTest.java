@@ -231,7 +231,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public SpecificSegmentsQuerySegmentWalker walker = null;
   public QueryLogHook queryLogHook;
 
-  {
+  static {
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
