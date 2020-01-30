@@ -1,6 +1,7 @@
-# Based on the SequenceIQ hadoop-docker project hosted at
-# https://github.com/sequenceiq/hadoop-docker, and modified at
-# the Apache Software Foundation (ASF).
+# Based on the following projects/files:
+# - SequenceIQ hadoop-docker project hosted at https://github.com/sequenceiq/hadoop-docker
+# - AdoptOpenJDK openjdk-docker project hosted at https://github.com/AdoptOpenJDK/openjdk-docker
+# and modified at the Apache Software Foundation (ASF).
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +18,7 @@
 FROM ubuntu:16.04
 
 # Install Java JDK 11 (OpenJDK 11.0.5)
+# Sourced from AdoptOpenJDK openjdk-docker project (https://github.com/AdoptOpenJDK/openjdk-docker)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates fontconfig locales \
     && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
