@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.ValueType;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An interface to a table where some columns (the 'key columns') have indexes that enable fast lookups.
@@ -36,7 +37,7 @@ public interface IndexedTable
   /**
    * Returns the columns of this table that have indexes.
    */
-  List<String> keyColumns();
+  Set<String> keyColumns();
 
   /**
    * Returns all columns of this table, including the key and non-key columns.
