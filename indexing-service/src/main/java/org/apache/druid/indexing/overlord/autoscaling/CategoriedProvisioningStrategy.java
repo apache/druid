@@ -205,7 +205,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         return didProvision;
       }
 
-      Map<String, AutoScaler> autoscalersByCategory = mapAutoscalerByCategory(workerConfig.getAutoScalers());
+      Map<String, AutoScaler> autoscalersByCategory = ProvisioningUtil.mapAutoscalerByCategory(workerConfig.getAutoScalers());
 
       for (String category : allCategories) {
         List<Task> categoryTasks = tasksByCategories.getOrDefault(category, Collections.emptyList());
@@ -430,7 +430,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
           allCategories
       );
 
-      Map<String, AutoScaler> autoscalersByCategory = mapAutoscalerByCategory(workerConfig.getAutoScalers());
+      Map<String, AutoScaler> autoscalersByCategory = ProvisioningUtil.mapAutoscalerByCategory(workerConfig.getAutoScalers());
 
       for (String category : allCategories) {
         Set<String> currentlyProvisioning = this.currentlyProvisioning.getOrDefault(category, Collections.emptySet());
@@ -656,23 +656,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       return autoScaler == null
              ? autoscalersByCategory.get(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
              : autoScaler;
-    }
-
-    private Map<String, AutoScaler> mapAutoscalerByCategory(List<AutoScaler> autoScalers)
-    {
-      Map<String, AutoScaler> result = autoScalers.stream().collect(Collectors.groupingBy(
-          autoScaler -> autoScaler.getCategory() == null
-                        ? CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
-                        : autoScaler.getCategory(),
-          Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0))
-      ));
-
-      if (result.size() != autoScalers.size()) {
-        log.warn(
-            "Probably autoscalers with duplicated categories were defined. The first instance of each duplicate category will be used.");
-      }
-
-      return result;
     }
 
     @Nullable

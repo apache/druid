@@ -190,7 +190,7 @@ public class WorkerSelectUtils
   )
   {
     return ImmutableMap.copyOf(
-        Maps.filterValues(workerMap, workerInfo -> workerInfo.getWorker().getCategory().equals(category))
+        Maps.filterValues(workerMap, workerInfo -> category.equals(workerInfo.getWorker().getCategory()))
     );
   }
 
