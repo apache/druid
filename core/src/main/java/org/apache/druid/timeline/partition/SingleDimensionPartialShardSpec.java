@@ -84,7 +84,7 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     final int partitionId;
     if (specOfPreviousMaxPartitionId != null) {
@@ -94,11 +94,11 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
     } else {
       partitionId = 0;
     }
-    return build(objectMapper, partitionId);
+    return complete(objectMapper, partitionId);
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
     // TODO: bucketId and numBuckets should be added to SingleDimensionShardSpec in a follow-up PR.
     return new SingleDimensionShardSpec(

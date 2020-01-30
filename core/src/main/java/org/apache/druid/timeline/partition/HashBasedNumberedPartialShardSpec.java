@@ -57,7 +57,7 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     final HashBasedNumberedShardSpec prevSpec = (HashBasedNumberedShardSpec) specOfPreviousMaxPartitionId;
     return new HashBasedNumberedShardSpec(
@@ -69,7 +69,7 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
     return new HashBasedNumberedShardSpec(partitionId, numBuckets, partitionDimensions, objectMapper);
   }

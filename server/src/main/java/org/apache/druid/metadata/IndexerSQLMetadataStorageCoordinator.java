@@ -867,7 +867,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       if (maxId == null) {
-        final ShardSpec shardSpec = partialShardSpec.build(jsonMapper, null);
+        final ShardSpec shardSpec = partialShardSpec.complete(jsonMapper, null);
         String version = versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks;
         return new SegmentIdWithShardSpec(dataSource, interval, version, shardSpec);
       } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(maxVersion) > 0) {
@@ -880,7 +880,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         );
         return null;
       } else {
-        final ShardSpec newShardSpec = partialShardSpec.build(jsonMapper, maxId.getShardSpec());
+        final ShardSpec newShardSpec = partialShardSpec.complete(jsonMapper, maxId.getShardSpec());
         return new SegmentIdWithShardSpec(
             dataSource,
             maxId.getInterval(),

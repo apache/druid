@@ -45,12 +45,12 @@ public interface PartialShardSpec
    * Note that {@code specOfPreviousMaxPartitionId} can also be null for {@link OverwriteShardSpec} if all segments
    * in the timeChunk are first-generation segments.
    */
-  ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
+  ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 
   /**
    * Create a new shardSpec having the given partitionId.
    */
-  ShardSpec build(ObjectMapper objectMapper, int partitionId);
+  ShardSpec complete(ObjectMapper objectMapper, int partitionId);
 
   /**
    * Return the class of the shardSpec created by this factory.

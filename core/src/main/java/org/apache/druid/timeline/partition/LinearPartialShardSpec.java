@@ -37,7 +37,7 @@ public class LinearPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     return new LinearShardSpec(
         specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getPartitionNum() + 1
@@ -45,7 +45,7 @@ public class LinearPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
     return new LinearShardSpec(partitionId);
   }

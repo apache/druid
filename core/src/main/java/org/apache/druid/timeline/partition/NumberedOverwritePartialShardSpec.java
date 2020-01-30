@@ -62,7 +62,7 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     // specOfPreviousMaxPartitionId is the max partitionId of the same shardSpec
     // and could be null if all existing segments are first-generation segments.
@@ -77,7 +77,7 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
     return new NumberedOverwriteShardSpec(partitionId, startRootPartitionId, endRootPartitionId, minorVersion);
   }

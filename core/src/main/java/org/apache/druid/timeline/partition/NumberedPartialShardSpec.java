@@ -37,7 +37,7 @@ public class NumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     if (specOfPreviousMaxPartitionId == null) {
       return new NumberedShardSpec(0, 0);
@@ -48,7 +48,7 @@ public class NumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec build(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
     return new NumberedShardSpec(partitionId, 0);
   }
