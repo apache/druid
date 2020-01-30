@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -58,7 +57,7 @@ public class JoinConditionAnalysis
   private final boolean isAlwaysFalse;
   private final boolean isAlwaysTrue;
   private final boolean canHashJoin;
-  private final List<String> rightKeyColumns;
+  private final Set<String> rightKeyColumns;
 
   private JoinConditionAnalysis(
       final String originalExpression,
@@ -80,7 +79,7 @@ public class JoinConditionAnalysis
                                                                 .allMatch(expr -> expr.isLiteral() && expr.eval(
                                                                     ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
-    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toList());
+    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toSet());
   }
 
   /**
@@ -186,7 +185,7 @@ public class JoinConditionAnalysis
    */
   public Set<String> getRightEquiConditionKeys()
   {
-    return ImmutableSet.copyOf(rightKeyColumns);
+    return rightKeyColumns;
   }
 
   @Override
