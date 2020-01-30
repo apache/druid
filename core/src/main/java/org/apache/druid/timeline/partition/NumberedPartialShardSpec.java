@@ -23,16 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
-public class NumberedShardSpecBuilder implements ShardSpecBuilder
+public class NumberedPartialShardSpec implements PartialShardSpec
 {
-  private static final NumberedShardSpecBuilder INSTANCE = new NumberedShardSpecBuilder();
+  private static final NumberedPartialShardSpec INSTANCE = new NumberedPartialShardSpec();
 
-  public static NumberedShardSpecBuilder instance()
+  public static NumberedPartialShardSpec instance()
   {
     return INSTANCE;
   }
 
-  private NumberedShardSpecBuilder()
+  private NumberedPartialShardSpec()
   {
   }
 

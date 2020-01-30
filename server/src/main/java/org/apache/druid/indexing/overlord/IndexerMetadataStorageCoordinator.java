@@ -22,7 +22,7 @@ package org.apache.druid.indexing.overlord;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.ShardSpecBuilder;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -157,7 +157,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first
    *                                segment
    * @param interval                interval for which to allocate a segment
-   * @param shardSpecBuilder        shardSpecFactory containing all necessary information to create a shardSpec for the
+   * @param partialShardSpec        shardSpecFactory containing all necessary information to create a shardSpec for the
    *                                new segmentId
    * @param maxVersion              use this version if we have no better version to use. The returned segment
    *                                identifier may have a version lower than this one, but will not have one higher.
@@ -171,7 +171,7 @@ public interface IndexerMetadataStorageCoordinator
       String sequenceName,
       @Nullable String previousSegmentId,
       Interval interval,
-      ShardSpecBuilder shardSpecBuilder,
+      PartialShardSpec partialShardSpec,
       String maxVersion,
       boolean skipSegmentLineageCheck
   );

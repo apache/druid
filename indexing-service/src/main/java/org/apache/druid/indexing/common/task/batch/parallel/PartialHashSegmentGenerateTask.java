@@ -35,7 +35,7 @@ import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalys
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.ShardSpecBuilder;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -167,7 +167,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   /**
    * Creates shard specs based on the given configurations. The return value is a map between intervals created
    * based on the segment granularity and the shard specs to be created.
-   * Note that the shard specs to be created is a pair of {@link ShardSpecBuilder} and number of segments per interval
+   * Note that the shard specs to be created is a pair of {@link PartialShardSpec} and number of segments per interval
    * and filled only when {@link #isGuaranteedRollup} = true. Otherwise, the return value contains only the set of
    * intervals generated based on the segment granularity.
    */

@@ -27,14 +27,14 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
-public class HashBasedNumberedShardSpecBuilder implements ShardSpecBuilder
+public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
 {
   @Nullable
   private final List<String> partitionDimensions;
   private final int numBuckets;
 
   @JsonCreator
-  public HashBasedNumberedShardSpecBuilder(
+  public HashBasedNumberedPartialShardSpec(
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JsonProperty("numPartitions") int numBuckets
   )
@@ -89,7 +89,7 @@ public class HashBasedNumberedShardSpecBuilder implements ShardSpecBuilder
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    HashBasedNumberedShardSpecBuilder that = (HashBasedNumberedShardSpecBuilder) o;
+    HashBasedNumberedPartialShardSpec that = (HashBasedNumberedPartialShardSpec) o;
     return numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions);
   }

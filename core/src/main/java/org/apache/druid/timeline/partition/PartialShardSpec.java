@@ -27,16 +27,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.annotation.Nullable;
 
 /**
- * Factory to be used to allocate segments remotely in the overlord.
+ * Class to contain all information of a {@link ShardSpec} except for the partition ID.
+ * This class is mainly used by the indexing tasks to allocate new segments using the Overlord.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @Type(name = "numbered", value = NumberedShardSpecBuilder.class),
-    @Type(name = "hashed", value = HashBasedNumberedShardSpecBuilder.class),
-    @Type(name = "single_dim", value = SingleDimensionShardSpecBuilder.class),
-    @Type(name = "numbered_overwrite", value = NumberedOverwriteShardSpecBuilder.class),
+    @Type(name = "numbered", value = NumberedPartialShardSpec.class),
+    @Type(name = "hashed", value = HashBasedNumberedPartialShardSpec.class),
+    @Type(name = "single_dim", value = SingleDimensionPartialShardSpec.class),
+    @Type(name = "numbered_overwrite", value = NumberedOverwritePartialShardSpec.class),
 })
-public interface ShardSpecBuilder
+public interface PartialShardSpec
 {
   /**
    * Create a new shardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the

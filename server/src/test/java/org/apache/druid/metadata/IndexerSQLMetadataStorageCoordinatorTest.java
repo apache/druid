@@ -34,16 +34,16 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecBuilder;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
-import org.apache.druid.timeline.partition.NumberedOverwriteShardSpecBuilder;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpecBuilder;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
-import org.apache.druid.timeline.partition.ShardSpecBuilder;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -853,7 +853,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testAllocatePendingSegment()
   {
-    final ShardSpecBuilder shardSpecBuilder = NumberedShardSpecBuilder.instance();
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
@@ -861,7 +861,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         null,
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         "version",
         false
     );
@@ -873,7 +873,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         identifier.toString(),
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         identifier.getVersion(),
         false
     );
@@ -885,7 +885,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         identifier1.toString(),
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         identifier1.getVersion(),
         false
     );
@@ -897,7 +897,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         identifier1.toString(),
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         identifier1.getVersion(),
         false
     );
@@ -910,7 +910,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq1",
         null,
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         "version",
         false
     );
@@ -921,7 +921,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testDeletePendingSegment() throws InterruptedException
   {
-    final ShardSpecBuilder shardSpecBuilder = NumberedShardSpecBuilder.instance();
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     String prevSegmentId = null;
@@ -934,7 +934,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           "seq",
           prevSegmentId,
           interval,
-          shardSpecBuilder,
+          partialShardSpec,
           "version",
           false
       );
@@ -949,7 +949,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           "seq",
           prevSegmentId,
           interval,
-          shardSpecBuilder,
+          partialShardSpec,
           "version",
           false
       );
@@ -973,7 +973,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           "seq",
           prevSegmentId,
           interval,
-          new NumberedOverwriteShardSpecBuilder(0, 1, (short) (i + 1)),
+          new NumberedOverwritePartialShardSpec(0, 1, (short) (i + 1)),
           "version",
           false
       );
@@ -1032,7 +1032,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testAllocatePendingSegmentsForHashBasedNumberedShardSpec() throws IOException
   {
-    final ShardSpecBuilder shardSpecBuilder = new HashBasedNumberedShardSpecBuilder(null, 5);
+    final PartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(null, 5);
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
 
@@ -1041,7 +1041,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq",
         null,
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         "version",
         true
     );
@@ -1071,7 +1071,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq2",
         null,
         interval,
-        shardSpecBuilder,
+        partialShardSpec,
         "version",
         true
     );
@@ -1101,7 +1101,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq3",
         null,
         interval,
-        new HashBasedNumberedShardSpecBuilder(null, 3),
+        new HashBasedNumberedPartialShardSpec(null, 3),
         "version",
         true
     );

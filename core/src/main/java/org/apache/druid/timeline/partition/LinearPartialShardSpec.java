@@ -23,16 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
-public class LinearShardSpecBuilder implements ShardSpecBuilder
+public class LinearPartialShardSpec implements PartialShardSpec
 {
-  private static final LinearShardSpecBuilder INSTANCE = new LinearShardSpecBuilder();
+  private static final LinearPartialShardSpec INSTANCE = new LinearPartialShardSpec();
 
-  public static LinearShardSpecBuilder instance()
+  public static LinearPartialShardSpec instance()
   {
     return INSTANCE;
   }
 
-  private LinearShardSpecBuilder()
+  private LinearPartialShardSpec()
   {
   }
 

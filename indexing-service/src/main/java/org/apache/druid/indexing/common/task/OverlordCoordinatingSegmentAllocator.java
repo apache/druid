@@ -33,9 +33,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.timeline.partition.NumberedOverwriteShardSpecBuilder;
-import org.apache.druid.timeline.partition.NumberedShardSpecBuilder;
-import org.apache.druid.timeline.partition.ShardSpecBuilder;
+import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -65,7 +65,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
           final Interval interval = granularitySpec
               .bucketInterval(row.getTimestamp())
               .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
-          final ShardSpecBuilder shardSpecBuilder = createShardSpecFactory(
+          final PartialShardSpec partialShardSpec = createShardSpecFactory(
               appendToExisting,
               partitionsSpec,
               taskLockHelper,
@@ -82,7 +82,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
                     sequenceName,
                     previousSegmentId,
                     skipSegmentLineageCheck,
-                    shardSpecBuilder,
+                    partialShardSpec,
                     taskLockHelper.getLockGranularityToUse()
                 )
             );
@@ -95,7 +95,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
                 sequenceName,
                 previousSegmentId,
                 skipSegmentLineageCheck,
-                shardSpecBuilder,
+                partialShardSpec,
                 taskLockHelper.getLockGranularityToUse()
             );
           }
@@ -115,7 +115,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
     return internalAllocator.allocate(row, sequenceName, previousSegmentId, skipSegmentLineageCheck);
   }
 
-  private static ShardSpecBuilder createShardSpecFactory(
+  private static PartialShardSpec createShardSpecFactory(
       boolean appendToExisting,
       PartitionsSpec partitionsSpec,
       TaskLockHelper taskLockHelper,
@@ -130,14 +130,14 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
           if (overwritingRootGenerationPartitions == null) {
             throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);
           }
-          return new NumberedOverwriteShardSpecBuilder(
+          return new NumberedOverwritePartialShardSpec(
               overwritingRootGenerationPartitions.getStartRootPartitionId(),
               overwritingRootGenerationPartitions.getEndRootPartitionId(),
               overwritingRootGenerationPartitions.getMinorVersionForNewSegments()
           );
         }
       }
-      return NumberedShardSpecBuilder.instance();
+      return NumberedPartialShardSpec.instance();
     } else {
       throw new ISE(
           "%s is not supported for partitionsSpec[%s]",
