@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
@@ -31,6 +32,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -67,6 +69,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -190,19 +194,34 @@ public class JoinAndLookupBenchmark
     final ExprMacroTable exprMacroTable = new ExprMacroTable(
         ImmutableList.of(
             new LookupExprMacro(
-                lookupName -> {
-                  if (LOOKUP_COUNTRY_CODE_TO_NAME.equals(lookupName)) {
-                    return new LookupExtractorFactoryContainer(
-                        "0",
-                        new MapLookupExtractorFactory(countryCodeToNameMap, false)
-                    );
-                  } else if (LOOKUP_COUNTRY_NUMBER_TO_NAME.equals(lookupName)) {
-                    return new LookupExtractorFactoryContainer(
-                        "0",
-                        new MapLookupExtractorFactory(countryNumberToNameMap, false)
-                    );
-                  } else {
-                    return null;
+                new LookupExtractorFactoryContainerProvider()
+                {
+                  @Override
+                  public Set<String> getAllLookupNames()
+                  {
+                    return ImmutableSet.of(LOOKUP_COUNTRY_CODE_TO_NAME, LOOKUP_COUNTRY_NUMBER_TO_NAME);
+                  }
+
+                  @Override
+                  public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+                  {
+                    if (LOOKUP_COUNTRY_CODE_TO_NAME.equals(lookupName)) {
+                      return Optional.of(
+                          new LookupExtractorFactoryContainer(
+                              "0",
+                              new MapLookupExtractorFactory(countryCodeToNameMap, false)
+                          )
+                      );
+                    } else if (LOOKUP_COUNTRY_NUMBER_TO_NAME.equals(lookupName)) {
+                      return Optional.of(
+                          new LookupExtractorFactoryContainer(
+                              "0",
+                              new MapLookupExtractorFactory(countryNumberToNameMap, false)
+                          )
+                      );
+                    } else {
+                      return Optional.empty();
+                    }
                   }
                 }
             )
