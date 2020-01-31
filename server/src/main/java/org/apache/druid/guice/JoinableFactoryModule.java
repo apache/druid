@@ -26,9 +26,11 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.MapDataSourceJoinableFactoryWarehouse;
+import org.apache.druid.segment.join.LookupJoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactory;
 
 import java.util.Map;
 
@@ -41,7 +43,10 @@ public class JoinableFactoryModule implements Module
    * Default mappings of datasources to factories.
    */
   private static final Map<Class<? extends DataSource>, Class<? extends JoinableFactory>> FACTORY_MAPPINGS =
-      ImmutableMap.of(InlineDataSource.class, InlineJoinableFactory.class);
+      ImmutableMap.of(
+          InlineDataSource.class, InlineJoinableFactory.class,
+          LookupDataSource.class, LookupJoinableFactory.class
+      );
 
   @Override
   public void configure(Binder binder)
@@ -54,7 +59,7 @@ public class JoinableFactoryModule implements Module
       binder.bind(factory).in(LazySingleton.class);
     });
 
-    binder.bind(JoinableFactory.class).to(MapDataSourceJoinableFactoryWarehouse.class)
+    binder.bind(JoinableFactory.class).to(MapJoinableFactory.class)
           .in(Scopes.SINGLETON);
   }
 }

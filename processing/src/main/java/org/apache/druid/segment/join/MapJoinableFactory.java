@@ -31,12 +31,12 @@ import java.util.Optional;
  *
  * Datasources can register a factory via a DruidBinder
  */
-public class MapDataSourceJoinableFactoryWarehouse implements JoinableFactory
+public class MapJoinableFactory implements JoinableFactory
 {
   private final Map<Class<? extends DataSource>, JoinableFactory> joinableFactories;
 
   @Inject
-  MapDataSourceJoinableFactoryWarehouse(Map<Class<? extends DataSource>, JoinableFactory> joinableFactories)
+  MapJoinableFactory(Map<Class<? extends DataSource>, JoinableFactory> joinableFactories)
   {
     // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
     // Class doesn't override Object.equals().

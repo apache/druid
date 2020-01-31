@@ -28,15 +28,18 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.MapDataSourceJoinableFactoryWarehouse;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class JoinableFactoryModuleTest
@@ -53,7 +56,7 @@ public class JoinableFactoryModuleTest
   public void testInjectJoinableFactoryIsSingleton()
   {
     JoinableFactory factory = injector.getInstance(JoinableFactory.class);
-    Assert.assertEquals(MapDataSourceJoinableFactoryWarehouse.class, factory.getClass());
+    Assert.assertEquals(MapJoinableFactory.class, factory.getClass());
     JoinableFactory otherFactory = injector.getInstance(JoinableFactory.class);
     Assert.assertSame(factory, otherFactory);
   }
@@ -63,7 +66,7 @@ public class JoinableFactoryModuleTest
   {
     Map<Class<? extends DataSource>, JoinableFactory> joinableFactories =
         injector.getInstance(Key.get(new TypeLiteral<Map<Class<? extends DataSource>, JoinableFactory>>() {}));
-    Assert.assertEquals(1, joinableFactories.size());
+    Assert.assertEquals(2, joinableFactories.size());
     Assert.assertEquals(InlineJoinableFactory.class, joinableFactories.get(InlineDataSource.class).getClass());
   }
 
@@ -75,23 +78,25 @@ public class JoinableFactoryModuleTest
             .joinableFactoryBinder(binder).addBinding(NoopDataSource.class).toInstance(NoopJoinableFactory.INSTANCE));
     Map<Class<? extends DataSource>, JoinableFactory> joinableFactories =
         injector.getInstance(Key.get(new TypeLiteral<Map<Class<? extends DataSource>, JoinableFactory>>() {}));
-    Assert.assertEquals(2, joinableFactories.size());
+    Assert.assertEquals(3, joinableFactories.size());
     Assert.assertEquals(NoopJoinableFactory.INSTANCE, joinableFactories.get(NoopDataSource.class));
   }
 
   private Injector makeInjectorWithProperties(Module... otherModules)
   {
-    ImmutableList.Builder<Module> modulesBuilder =
+    final LookupExtractorFactoryContainerProvider lookupProvider =
+        LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap());
+
+    final ImmutableList.Builder<Module> modulesBuilder =
         ImmutableList.<Module>builder()
-                     .add(new JoinableFactoryModule())
-                     .add(binder -> {
-                       binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-                     });
-    for (Module otherModule : otherModules) {
+            .add(new JoinableFactoryModule())
+            .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
+            .add(binder -> binder.bindScope(LazySingleton.class, Scopes.SINGLETON));
+
+    for (final Module otherModule : otherModules) {
       modulesBuilder.add(otherModule);
     }
-    return Guice.createInjector(
-        modulesBuilder.build()
-    );
+
+    return Guice.createInjector(modulesBuilder.build());
   }
 }

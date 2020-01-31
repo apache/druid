@@ -47,21 +47,20 @@ final class LimitedSequence<T> extends YieldingSequenceBase<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    final LimitedYieldingAccumulator<OutType, T> limitedAccumulator = new LimitedYieldingAccumulator<>(
-        accumulator
-    );
+    final LimitedYieldingAccumulator<OutType> limitedAccumulator = new LimitedYieldingAccumulator<>(accumulator);
     final Yielder<OutType> subYielder = baseSequence.toYielder(initValue, limitedAccumulator);
     return new LimitedYielder<>(subYielder, limitedAccumulator);
   }
 
+  @SuppressWarnings("InnerClassMayBeStatic") // False alarm: flagged by IDEA inspections, but can't actually be static.
   private class LimitedYielder<OutType> implements Yielder<OutType>
   {
     private final Yielder<OutType> subYielder;
-    private final LimitedYieldingAccumulator<OutType, T> limitedAccumulator;
+    private final LimitedYieldingAccumulator<OutType> limitedAccumulator;
 
     LimitedYielder(
         Yielder<OutType> subYielder,
-        LimitedYieldingAccumulator<OutType, T> limitedAccumulator
+        LimitedYieldingAccumulator<OutType> limitedAccumulator
     )
     {
       this.subYielder = subYielder;
@@ -104,7 +103,7 @@ final class LimitedSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
-  private class LimitedYieldingAccumulator<OutType, T> extends DelegatingYieldingAccumulator<OutType, T>
+  private class LimitedYieldingAccumulator<OutType> extends DelegatingYieldingAccumulator<OutType, T>
   {
     long count;
     boolean interruptYield = false;

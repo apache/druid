@@ -100,7 +100,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+            LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
                     "a", "xa",
                     "abc", "xabc"

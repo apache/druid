@@ -225,15 +225,15 @@ public class CalciteTests
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
 
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+        final LookupExtractorFactoryContainerProvider lookupProvider =
+            LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
                     "a", "xa",
-                    "abc", "xabc"
+                    "abc", "xabc",
+                    "nosuchkey", "mysteryvalue"
                 )
-            )
-        );
-
+            );
+        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
       }
   );
 
