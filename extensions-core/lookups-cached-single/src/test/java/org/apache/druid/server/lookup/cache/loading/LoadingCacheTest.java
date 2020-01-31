@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 @RunWith(Parameterized.class)
@@ -83,7 +84,7 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testPut()
+  public void testPut() throws ExecutionException
   {
     loadingCache.get("key2", new Function<String, String>()
     {
@@ -97,7 +98,7 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testInvalidate()
+  public void testInvalidate() throws ExecutionException
   {
     loadingCache.get("key2", new Function<String, String>()
     {
@@ -113,7 +114,7 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testInvalidateAll()
+  public void testInvalidateAll() throws ExecutionException
   {
     loadingCache.get("key2", new Function<String, String>()
     {
@@ -129,7 +130,7 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testInvalidateAll1()
+  public void testInvalidateAll1() throws ExecutionException
   {
     loadingCache.invalidateAll();
     loadingCache.get("key2", new Function<String, String>()

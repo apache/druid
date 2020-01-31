@@ -30,14 +30,15 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 /**
  * Loading  lookup will load the key\value pair upon request on the key it self, the general algorithm is load key if absent.
  * Once the key/value  pair is loaded eviction will occur according to the cache eviction policy.
- * This module comes with two loading cache implementations, the first {@link org.apache.druid.server.lookup.cache.loading.OnHeapLoadingCache}is onheap backed by a Guava cache implementation, the second {@link org.apache.druid.server.lookup.cache.loading.OffHeapLoadingCache}is MapDB offheap implementation.
+ * This module comes with three loading cache implementations, the first {@link org.apache.druid.server.lookup.cache.loading.OnHeapLoadingCache}is onheap backed by a Guava cache implementation,
+ * the second {@link org.apache.druid.server.lookup.cache.loading.OnHeapCaffeineLoadingCache}is onheap backed by a Caffeine cache implementation,
+ * the third {@link org.apache.druid.server.lookup.cache.loading.OffHeapLoadingCache}is MapDB offheap implementation.
  * Both implementations offer various eviction strategies.
  */
 public class LoadingLookup extends LookupExtractor

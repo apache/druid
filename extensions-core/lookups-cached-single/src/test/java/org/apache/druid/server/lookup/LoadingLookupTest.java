@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 public class LoadingLookupTest extends InitializedNullHandlingTest
@@ -40,7 +41,7 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   LoadingLookup loadingLookup = new LoadingLookup(dataFetcher, lookupCache, reverseLookupCache);
 
   @Test
-  public void testApplyEmptyOrNull()
+  public void testApplyEmptyOrNull() throws ExecutionException
   {
     EasyMock.expect(lookupCache.get(EasyMock.eq(""), EasyMock.anyObject(Function.class)))
             .andReturn("empty").atLeastOnce();
@@ -66,7 +67,7 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testApply()
+  public void testApply() throws ExecutionException
   {
     EasyMock.expect(lookupCache.get(EasyMock.eq("key"), EasyMock.anyObject(Function.class))).andReturn("value").once();
     EasyMock.replay(lookupCache);
@@ -75,7 +76,7 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnapplyAll()
+  public void testUnapplyAll() throws ExecutionException
   {
     EasyMock.expect(reverseLookupCache.get(EasyMock.eq("value"), EasyMock.anyObject(Function.class)))
             .andReturn(Collections.singletonList("key"))
@@ -93,6 +94,28 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
     EasyMock.replay(lookupCache, reverseLookupCache);
     loadingLookup.close();
     EasyMock.verify(lookupCache, reverseLookupCache);
+  }
+
+  @Test
+  public void testApplyWithExecutionError() throws ExecutionException
+  {
+    EasyMock.expect(lookupCache.get(EasyMock.eq("key"), EasyMock.anyObject(Function.class)))
+            .andThrow(new ExecutionException(null))
+            .once();
+    EasyMock.replay(lookupCache);
+    Assert.assertNull(loadingLookup.apply("key"));
+    EasyMock.verify(lookupCache);
+  }
+
+  @Test
+  public void testUnApplyWithExecutionError() throws ExecutionException
+  {
+    EasyMock.expect(reverseLookupCache.get(EasyMock.eq("value"), EasyMock.anyObject(Function.class)))
+            .andThrow(new ExecutionException(null))
+            .once();
+    EasyMock.replay(reverseLookupCache);
+    Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply("value"));
+    EasyMock.verify(reverseLookupCache);
   }
 
   @Test

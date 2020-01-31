@@ -22,11 +22,13 @@ package org.apache.druid.server.lookup.cache.loading;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -36,9 +38,13 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
 {
   private static final Logger log = new Logger(OnHeapLoadingCache.class);
   private static final int DEFAULT_INITIAL_CAPACITY = 16;
+  //See com.google.common.cache.CacheBuilder#DEFAULT_CONCURRENCY_LEVEL
+  private static final int DEFAULT_CONCURRENCY_LEVEL = 4;
 
   private final Cache<K, V> cache;
   private final AtomicBoolean isClosed = new AtomicBoolean(false);
+  @JsonProperty
+  private final int concurrencyLevel;
   @JsonProperty
   private final int initialCapacity;
   @JsonProperty
@@ -65,18 +71,20 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
    */
   @JsonCreator
   public OnHeapLoadingCache(
-      @JsonProperty("concurrencyLevel") int concurrencyLevel,
-      @JsonProperty("initialCapacity") int initialCapacity,
-      @JsonProperty("maximumSize") Long maximumSize,
-      @JsonProperty("expireAfterAccess") Long expireAfterAccess,
-      @JsonProperty("expireAfterWrite") Long expireAfterWrite
+          @JsonProperty("concurrencyLevel") int concurrencyLevel,
+          @JsonProperty("initialCapacity") int initialCapacity,
+          @JsonProperty("maximumSize") Long maximumSize,
+          @JsonProperty("expireAfterAccess") Long expireAfterAccess,
+          @JsonProperty("expireAfterWrite") Long expireAfterWrite
   )
   {
+    this.concurrencyLevel = concurrencyLevel <= 0 ? DEFAULT_CONCURRENCY_LEVEL : concurrencyLevel;
     this.initialCapacity = initialCapacity <= 0 ? DEFAULT_INITIAL_CAPACITY : initialCapacity;
     this.maximumSize = maximumSize;
     this.expireAfterAccess = expireAfterAccess;
     this.expireAfterWrite = expireAfterWrite;
-    Caffeine builder = Caffeine.newBuilder()
+    CacheBuilder builder = CacheBuilder.newBuilder()
+            .concurrencyLevel(this.concurrencyLevel)
             .initialCapacity(this.initialCapacity)
             .recordStats();
     if (this.expireAfterAccess != null) {
@@ -117,9 +125,15 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
   }
 
   @Override
-  public V get(K key, Function<? super K, ? extends V> valueLoader)
+  public V get(K key, Function<? super K, ? extends V> valueLoader) throws ExecutionException
   {
-    return cache.get(key, valueLoader);
+    Callable<? extends V> compatibleValueLoader = new Callable() {
+      @Override
+      public V call() {
+        return valueLoader.apply(key);
+      }
+    };
+    return cache.get(key, compatibleValueLoader);
   }
 
   @Override
@@ -145,9 +159,9 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
   public LookupCacheStats getStats()
   {
     return new LookupCacheStats(
-        cache.stats().hitCount(),
-        cache.stats().missCount(),
-        cache.stats().evictionCount()
+            cache.stats().hitCount(),
+            cache.stats().missCount(),
+            cache.stats().evictionCount()
     );
   }
 
@@ -178,6 +192,9 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
 
     OnHeapLoadingCache<?, ?> that = (OnHeapLoadingCache<?, ?>) o;
 
+    if (concurrencyLevel != that.concurrencyLevel) {
+      return false;
+    }
     if (initialCapacity != that.initialCapacity) {
       return false;
     }
@@ -185,8 +202,8 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
       return false;
     }
     if (expireAfterAccess != null
-        ? !expireAfterAccess.equals(that.expireAfterAccess)
-        : that.expireAfterAccess != null) {
+            ? !expireAfterAccess.equals(that.expireAfterAccess)
+            : that.expireAfterAccess != null) {
       return false;
     }
     return expireAfterWrite != null ? expireAfterWrite.equals(that.expireAfterWrite) : that.expireAfterWrite == null;
@@ -196,7 +213,8 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
   @Override
   public int hashCode()
   {
-    int result = initialCapacity;
+    int result = concurrencyLevel;
+    result = 31 * result + initialCapacity;
     result = 31 * result + (maximumSize != null ? maximumSize.hashCode() : 0);
     result = 31 * result + (expireAfterAccess != null ? expireAfterAccess.hashCode() : 0);
     result = 31 * result + (expireAfterWrite != null ? expireAfterWrite.hashCode() : 0);

@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 /**
@@ -37,14 +38,17 @@ import java.util.function.Function;
  * <p>Implementations of this interface are expected to be thread-safe, and can be safely accessed
  * by multiple concurrent threads.
  *
- * This interface borrows ideas (and in some cases methods and javadoc) from Guava and JCache cache interface.
- * Thanks Guava and JSR !
+ * This interface borrows ideas (and in some cases methods and javadoc) from Guava, Caffeine and JCache cache interface.
+ * Thanks Guava, Caffeine and JSR !
+ *
+ * Note: Guava implementation may be deleted in future releases.
  * We elected to make this as close as possible to JSR API like that users can build bridges between all the existing implementations of JSR.
  */
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "guava", value = OnHeapLoadingCache.class),
+    @JsonSubTypes.Type(name = "caffeine", value = OnHeapCaffeineLoadingCache.class),
     @JsonSubTypes.Type(name = "mapDb", value = OffHeapLoadingCache.class)
 })
 public interface LoadingCache<K, V> extends Closeable
@@ -73,12 +77,13 @@ public interface LoadingCache<K, V> extends Closeable
    * <p><b>Warning:</b> as with {@link CacheLoader#load}, {@code valueLoader} <b>must not</b> return
    * {@code null}; it may either return a non-null value or throw an exception.
    *
+   * @throws ExecutionException if a checked exception was thrown while loading the value
    * @throws UncheckedExecutionException if an unchecked exception was thrown while loading the
    *     value
    * @throws ExecutionError if an error was thrown while loading the value
    *
    */
-  V get(K key, Function<? super K, ? extends V> valueLoader);
+  V get(K key, Function<? super K, ? extends V> valueLoader) throws ExecutionException;
 
   /**
    * Copies all of the mappings from the specified map to the cache. This method is used for bulk put.
