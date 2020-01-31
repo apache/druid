@@ -20,7 +20,6 @@
 package org.apache.druid.storage.azure;
 
 import com.microsoft.azure.storage.ResultContinuation;
-import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -131,10 +130,10 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
   {
     while (blobItemIterator.hasNext() || continuationToken != null || prefixesIterator.hasNext()) {
       while (blobItemIterator.hasNext()) {
-        ListBlobItem blobItem = blobItemIterator.next();
+        ListBlobItemDruid blobItem = new ListBlobItemDruid(blobItemIterator.next());
         /* skip directory objects */
-        if (blobItem instanceof CloudBlob) {
-          currentBlobItem = new CloudBlobDruid((CloudBlob) blobItem);
+        if (blobItem.isCloudBlob()) {
+          currentBlobItem = blobItem.getCloudBlob();
           return;
         }
       }

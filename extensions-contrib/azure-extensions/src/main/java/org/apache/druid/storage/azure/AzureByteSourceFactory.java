@@ -19,45 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
-import com.microsoft.azure.storage.blob.ListBlobItem;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
-public class ListBlobItemDruid
+public interface AzureByteSourceFactory
 {
-  private final ListBlobItem delegate;
-
-  public ListBlobItemDruid(ListBlobItem delegate)
-  {
-    this.delegate = delegate;
-  }
-
-  public String getContainerName() throws URISyntaxException, StorageException
-  {
-    return delegate.getContainer().getName();
-  }
-
-  public URI getUri()
-  {
-    return delegate.getUri();
-  }
-
-  public CloudBlobDruid getCloudBlob()
-  {
-    return new CloudBlobDruid((CloudBlob) delegate);
-  }
-
-  public boolean isCloudBlob()
-  {
-    return delegate instanceof CloudBlob;
-  }
-
-  @Override
-  public String toString()
-  {
-    return delegate.toString();
-  }
+  AzureByteSource create(String containerName, String blobPath);
 }

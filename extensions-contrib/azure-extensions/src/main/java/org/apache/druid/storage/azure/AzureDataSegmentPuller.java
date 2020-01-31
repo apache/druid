@@ -41,13 +41,16 @@ public class AzureDataSegmentPuller
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
   private final AzureStorage azureStorage;
+  private final AzureByteSourceFactory byteSourceFactory;
 
   @Inject
   public AzureDataSegmentPuller(
-      AzureStorage azureStorage
+      AzureStorage azureStorage,
+      AzureByteSourceFactory byteSourceFactory
   )
   {
     this.azureStorage = azureStorage;
+    this.byteSourceFactory = byteSourceFactory;
   }
 
   FileUtils.FileCopyResult getSegmentFiles(
@@ -74,7 +77,7 @@ public class AzureDataSegmentPuller
         actualBlobPath = blobPath;
       }
 
-      final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, actualBlobPath);
+      final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,

@@ -24,6 +24,7 @@ import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.AzureByteSource;
+import org.apache.druid.storage.azure.AzureByteSourceFactory;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
 
@@ -38,13 +39,13 @@ public class AzureEntity extends RetryingInputEntity
   private final CloudObjectLocation location;
   private final AzureByteSource byteSource;
 
-  AzureEntity(AzureStorage storage, CloudObjectLocation location)
+  AzureEntity(AzureStorage storage, CloudObjectLocation location, AzureByteSourceFactory byteSourceFactory)
   {
     log.info("In AzureEntity Constructor:\nstorage: %s\nlocation: %s\nbucket: %s\npath: %s",
              storage, location, location.getBucket(), location.getPath()
     );
     this.location = location;
-    this.byteSource = new AzureByteSource(storage, location.getBucket(), location.getPath());
+    this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath());
   }
 
   @Nullable

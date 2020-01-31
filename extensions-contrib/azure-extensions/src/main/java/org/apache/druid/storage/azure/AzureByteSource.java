@@ -20,6 +20,8 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -34,10 +36,11 @@ public class AzureByteSource extends ByteSource
   private final String containerName;
   private final String blobPath;
 
+  @AssistedInject
   public AzureByteSource(
       AzureStorage azureStorage,
-      String containerName,
-      String blobPath
+      @Assisted("containerName") String containerName,
+      @Assisted("blobPath") String blobPath
   )
   {
     log.info("In AzureEntity Constructor:\ncontainerName: %s\nblobPath: %s",
