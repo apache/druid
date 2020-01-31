@@ -149,15 +149,6 @@ public class DruidProcessingModule implements Module
     );
   }
 
-//  @Provides
-//  public QueryScheduler getQueryScheduler(QuerySchedulerProvider config)
-//  {
-//    if (config == null) {
-//      return new QueryScheduler(100, new NoQuerySchedulingStrategy());
-//    }
-//    return new QueryScheduler(config.getNumThreads(), config.getStrategy());
-//  }
-
   @Provides
   @Merging
   public ForkJoinPool getMergeProcessingPool(LifecycleForkJoinPoolProvider poolProvider)

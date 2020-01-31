@@ -74,6 +74,7 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
@@ -98,6 +99,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
@@ -2474,7 +2476,7 @@ public class CachingClusteredClientTest
           }
         },
         ForkJoinPool.commonPool(),
-        null
+        new QueryScheduler(8, NoQuerySchedulingStrategy.INSTANCE)
     );
   }
 

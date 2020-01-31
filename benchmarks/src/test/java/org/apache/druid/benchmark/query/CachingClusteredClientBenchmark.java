@@ -71,6 +71,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
@@ -89,6 +90,7 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -339,7 +341,7 @@ public class CachingClusteredClientBenchmark
         new DruidHttpClientConfig(),
         processingConfig,
         forkJoinPool,
-        null
+        new QueryScheduler(8, NoQuerySchedulingStrategy.INSTANCE)
     );
   }
 

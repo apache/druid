@@ -31,6 +31,9 @@ import java.util.Set;
 public class NoQuerySchedulingStrategy implements QuerySchedulingStrategy
 {
   private static final Object2IntMap<String> NONE = new Object2IntArrayMap<>();
+
+  public static NoQuerySchedulingStrategy INSTANCE = new NoQuerySchedulingStrategy();
+
   @Override
   public Object2IntMap<String> getLaneLimits()
   {

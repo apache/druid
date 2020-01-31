@@ -44,6 +44,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -100,7 +101,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper smileMapper;
   protected final ObjectMapper serializeDateTimeAsLongJsonMapper;
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
-  protected final QueryManager queryManager;
+  protected final QueryScheduler queryScheduler;
   protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
@@ -114,7 +115,7 @@ public class QueryResource implements QueryCountStatsProvider
       QueryLifecycleFactory queryLifecycleFactory,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      QueryManager queryManager,
+      QueryScheduler queryScheduler,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
       GenericQueryMetricsFactory queryMetricsFactory
@@ -125,7 +126,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.smileMapper = smileMapper;
     this.serializeDateTimeAsLongJsonMapper = serializeDataTimeAsLong(jsonMapper);
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
-    this.queryManager = queryManager;
+    this.queryScheduler = queryScheduler;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
     this.queryMetricsFactory = queryMetricsFactory;
@@ -139,9 +140,9 @@ public class QueryResource implements QueryCountStatsProvider
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
     }
-    Set<String> datasources = queryManager.getQueryDatasources(queryId);
+    Set<String> datasources = queryScheduler.getQueryDatasources(queryId);
     if (datasources == null) {
-      log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
+      log.warn("QueryId [%s] not registered with QueryScheduler, cannot cancel", queryId);
       datasources = new TreeSet<>();
     }
 
@@ -155,7 +156,7 @@ public class QueryResource implements QueryCountStatsProvider
       throw new ForbiddenException(authResult.toString());
     }
 
-    queryManager.cancelQuery(queryId);
+    queryScheduler.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
   }
 

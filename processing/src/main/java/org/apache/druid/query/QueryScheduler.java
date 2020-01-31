@@ -19,8 +19,13 @@
 
 package org.apache.druid.query;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 
 import java.util.HashMap;
@@ -30,12 +35,15 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 
-public class QueryScheduler
+public class QueryScheduler implements QueryWatcher
 {
   // maybe instead use a fancy library?
-  private final Semaphore totes;
+  private final Semaphore activeQueries;
   private final Map<String, Semaphore> lanes;
   private final QuerySchedulingStrategy strategy;
+
+  private final SetMultimap<String, ListenableFuture<?>> queries;
+  private final SetMultimap<String, String> queryDatasources;
   private final Set<Query<?>> runningQueries;
 
   public QueryScheduler(
@@ -44,19 +52,25 @@ public class QueryScheduler
   )
   {
     this.strategy = strategy;
-    this.totes = new Semaphore(totalNumThreads);
+    this.activeQueries = new Semaphore(totalNumThreads);
     this.lanes = new HashMap<>();
 
     for (Object2IntMap.Entry<String> entry : strategy.getLaneLimits().object2IntEntrySet()) {
       lanes.put(entry.getKey(), new Semaphore(entry.getIntValue()));
     }
+    this.queries = Multimaps.synchronizedSetMultimap(
+        HashMultimap.create()
+    );
+    this.queryDatasources = Multimaps.synchronizedSetMultimap(
+        HashMultimap.create()
+    );
     this.runningQueries = Sets.newConcurrentHashSet();
   }
 
   public <T> Query<T> schedule(QueryPlus<T> query, Set<SegmentDescriptor> descriptors)
   {
     try {
-      if (totes.tryAcquire(0, TimeUnit.MILLISECONDS)) {
+      if (activeQueries.tryAcquire(0, TimeUnit.MILLISECONDS)) {
         Query<T> prioritizedAndLaned = strategy.prioritizeQuery(query, descriptors);
         String lane = prioritizedAndLaned.getContextValue("queryLane");
         if (lanes.containsKey(lane)) {
@@ -69,7 +83,8 @@ public class QueryScheduler
           return prioritizedAndLaned;
         }
       }
-    } catch (InterruptedException ex) {
+    }
+    catch (InterruptedException ex) {
       throw new QueryCapacityExceededException();
     }
     throw new QueryCapacityExceededException();
@@ -77,12 +92,23 @@ public class QueryScheduler
 
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
-    return resultSequence.withBaggage(() -> complete(query));
+    // if really doing release on the bagage, should merge most of schedule into here to tie acquire with release
+    // alternatively, if we want to release as late as possible, rework this to release in the registered queries future
+    // listener, though we need a guaranteed unique queryId and slight refactor to make this work..
+    return resultSequence.withBaggage(() -> {
+      if (runningQueries.remove(query)) {
+        String lane = query.getContextValue("queryLane");
+        if (lanes.containsKey(lane)) {
+          lanes.get(lane).release();
+        }
+        activeQueries.release();
+      }
+    });
   }
 
   public int getTotalAvailableCapacity()
   {
-    return totes.availablePermits();
+    return activeQueries.availablePermits();
   }
 
   public int getLaneAvailableCapacity(String lane)
@@ -93,21 +119,40 @@ public class QueryScheduler
     return -1;
   }
 
-  private void complete(Query<?> query)
-  {
-//    try {
-//      Thread.sleep(10000);
-//    }
-//    catch (InterruptedException ie) {
-//      // eat it
-//    }
 
-    if (runningQueries.remove(query)) {
-      String lane = query.getContextValue("queryLane");
-      if (lanes.containsKey(lane)) {
-        lanes.get(lane).release();
-      }
-      totes.release();
+  public boolean cancelQuery(String id)
+  {
+    queryDatasources.removeAll(id);
+    Set<ListenableFuture<?>> futures = queries.removeAll(id);
+    boolean success = true;
+    for (ListenableFuture<?> future : futures) {
+      success = success && future.cancel(true);
     }
+    return success;
+  }
+
+  @Override
+  public void registerQuery(Query<?> query, final ListenableFuture<?> future)
+  {
+    final String id = query.getId();
+    final Set<String> datasources = query.getDataSource().getTableNames();
+    queries.put(id, future);
+    queryDatasources.putAll(id, datasources);
+    future.addListener(
+        () -> {
+          // if you re-use queryId and cancel queries... you are going to have a bad time
+          queries.remove(id, future);
+
+          for (String datasource : datasources) {
+            queryDatasources.remove(id, datasource);
+          }
+        },
+        Execs.directExecutor()
+    );
+  }
+
+  public Set<String> getQueryDatasources(final String queryId)
+  {
+    return queryDatasources.get(queryId);
   }
 }

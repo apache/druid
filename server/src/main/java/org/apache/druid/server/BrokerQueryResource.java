@@ -29,6 +29,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -58,7 +59,7 @@ public class BrokerQueryResource extends QueryResource
       QueryLifecycleFactory queryLifecycleFactory,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      QueryManager queryManager,
+      QueryScheduler queryScheduler,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
       GenericQueryMetricsFactory queryMetricsFactory,
@@ -69,7 +70,7 @@ public class BrokerQueryResource extends QueryResource
         queryLifecycleFactory,
         jsonMapper,
         smileMapper,
-        queryManager,
+        queryScheduler,
         authConfig,
         authorizerMapper,
         queryMetricsFactory

@@ -43,10 +43,12 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -331,7 +333,8 @@ public class CachingClusteredClientFunctionalityTest
           }
         },
         ForkJoinPool.commonPool(),
-        null
+        // need at least 9 total since runner doesn't actually run queries and release semaphores
+        new QueryScheduler(10, NoQuerySchedulingStrategy.INSTANCE)
     );
   }
 

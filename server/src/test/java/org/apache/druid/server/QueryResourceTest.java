@@ -36,11 +36,13 @@ import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -109,7 +111,7 @@ public class QueryResourceTest
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
 
   private QueryResource queryResource;
-  private QueryManager queryManager;
+  private QueryScheduler queryScheduler;
   private TestRequestLogger testRequestLogger;
 
   @BeforeClass
@@ -125,7 +127,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-    queryManager = new QueryManager();
+    queryScheduler = new QueryScheduler(20, NoQuerySchedulingStrategy.INSTANCE);
     testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
@@ -139,7 +141,7 @@ public class QueryResourceTest
         ),
         JSON_MAPPER,
         JSON_MAPPER,
-        queryManager,
+        queryScheduler,
         new AuthConfig(),
         null,
         new DefaultGenericQueryMetricsFactory()
@@ -361,7 +363,7 @@ public class QueryResourceTest
         ),
         JSON_MAPPER,
         JSON_MAPPER,
-        queryManager,
+        queryScheduler,
         new AuthConfig(),
         authMapper,
         new DefaultGenericQueryMetricsFactory()
@@ -475,7 +477,7 @@ public class QueryResourceTest
         ),
         JSON_MAPPER,
         JSON_MAPPER,
-        queryManager,
+        queryScheduler,
         new AuthConfig(),
         authMapper,
         new DefaultGenericQueryMetricsFactory()
@@ -511,7 +513,7 @@ public class QueryResourceTest
         }
     );
 
-    queryManager.registerQuery(query, future);
+    queryScheduler.registerQuery(query, future);
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
@@ -597,7 +599,7 @@ public class QueryResourceTest
         ),
         JSON_MAPPER,
         JSON_MAPPER,
-        queryManager,
+        queryScheduler,
         new AuthConfig(),
         authMapper,
         new DefaultGenericQueryMetricsFactory()
@@ -633,7 +635,7 @@ public class QueryResourceTest
         }
     );
 
-    queryManager.registerQuery(query, future);
+    queryScheduler.registerQuery(query, future);
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
