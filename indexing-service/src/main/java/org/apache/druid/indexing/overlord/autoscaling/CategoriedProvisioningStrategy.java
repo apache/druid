@@ -325,7 +325,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
 
       // If there are no worker, spin up minWorkerCount (or 1 if minWorkerCount is 0), we cannot determine the exact capacity here to fulfill the need
       // since we are not aware of the expectedWorkerCapacity.
-      int moreWorkersNeeded = currValidWorkers == 0 ? Math.max(minWorkerCount, 1) : getWorkersNeededToAssignTasks(
+      int moreWorkersNeeded = currValidWorkers == 0 ? Math.max(minWorkerCount, pendingTasks.isEmpty() ? 0 : 1) : getWorkersNeededToAssignTasks(
           remoteTaskRunnerConfig,
           workerConfig,
           pendingTasks,
