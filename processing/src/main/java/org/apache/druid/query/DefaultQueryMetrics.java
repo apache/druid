@@ -143,12 +143,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void server(String host)
-  {
-    setDimension("server", host);
-  }
-
-  @Override
   public void remoteAddress(String remoteAddress)
   {
     setDimension("remoteAddress", remoteAddress);
@@ -248,13 +242,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
   {
     return reportMillisTimeMetric("query/node/ttfb", timeNs);
-  }
-
-  @Override
-  public QueryMetrics<QueryType> reportBackPressureTime(long timeNs)
-  {
-    // Don't emit by default.
-    return this;
   }
 
   @Override

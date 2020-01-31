@@ -213,8 +213,6 @@ public interface QueryMetrics<QueryType extends Query<?>>
    */
   void context(QueryType query);
 
-  void server(String host);
-
   void remoteAddress(String remoteAddress);
 
   void status(String status);
@@ -287,11 +285,6 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Registers "time to first byte" metric.
    */
   QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs);
-
-  /**
-   * Registers "time that channel is unreadable (backpressure)" metric.
-   */
-  QueryMetrics<QueryType> reportBackPressureTime(long timeNs);
 
   /**
    * Registers "node time" metric.

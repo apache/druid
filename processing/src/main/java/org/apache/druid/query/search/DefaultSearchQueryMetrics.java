@@ -106,12 +106,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
-  public void server(String host)
-  {
-    delegateQueryMetrics.server(host);
-  }
-
-  @Override
   public void remoteAddress(String remoteAddress)
   {
     delegateQueryMetrics.remoteAddress(remoteAddress);
@@ -211,12 +205,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportNodeTimeToFirstByte(long timeNs)
   {
     return delegateQueryMetrics.reportNodeTimeToFirstByte(timeNs);
-  }
-
-  @Override
-  public QueryMetrics reportBackPressureTime(long timeNs)
-  {
-    return delegateQueryMetrics.reportBackPressureTime(timeNs);
   }
 
   @Override
