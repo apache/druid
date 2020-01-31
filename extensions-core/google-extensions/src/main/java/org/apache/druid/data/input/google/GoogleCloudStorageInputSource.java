@@ -84,7 +84,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   private Iterable<StorageObject> storageObjectIterable()
   {
     return () ->
-        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), RetryUtils.DEFAULT_MAX_TRIES);
+        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), MAX_LISTING_LENGTH);
   }
 
   @Override

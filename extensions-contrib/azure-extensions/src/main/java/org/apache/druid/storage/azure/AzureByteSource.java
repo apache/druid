@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +29,7 @@ import java.net.URISyntaxException;
 
 public class AzureByteSource extends ByteSource
 {
-
+  private final Logger log = new Logger(AzureByteSource.class);
   private final AzureStorage azureStorage;
   private final String containerName;
   private final String blobPath;
@@ -39,6 +40,9 @@ public class AzureByteSource extends ByteSource
       String blobPath
   )
   {
+    log.info("In AzureEntity Constructor:\ncontainerName: %s\nblobPath: %s",
+             containerName, blobPath
+    );
     this.azureStorage = azureStorage;
     this.containerName = containerName;
     this.blobPath = blobPath;
@@ -61,6 +65,9 @@ public class AzureByteSource extends ByteSource
   public InputStream openStream(long offset) throws IOException
   {
     try {
+      log.info("openStream:offset: %d\ncontainerName: %s\nblobPath: %s",
+               offset, containerName, blobPath
+      );
       return azureStorage.getBlobInputStream(offset, containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {
