@@ -19,15 +19,13 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- */
 public class SequenceTestHelper
 {
   public static void testAll(Sequence<Integer> seq, List<Integer> nums) throws IOException

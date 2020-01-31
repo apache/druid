@@ -313,7 +313,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     Assert.assertEquals("product_2", value3.getDimensionValue("product"));
   }
 
-  public static final String readFileFromClasspathAsString(String fileName) throws IOException
+  public static String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

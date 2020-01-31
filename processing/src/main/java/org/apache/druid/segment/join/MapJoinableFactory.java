@@ -22,31 +22,35 @@ package org.apache.druid.segment.join;
 import com.google.inject.Inject;
 import org.apache.druid.query.DataSource;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Optional;
 
-public class DefaultJoinableFactory implements JoinableFactory
+/**
+ * A {@link JoinableFactory} that delegates to the appropriate factory based on the type of the datasource.
+ *
+ * Datasources can register a factory via a DruidBinder
+ */
+public class MapJoinableFactory implements JoinableFactory
 {
-  private final List<JoinableFactory> factories;
+  private final Map<Class<? extends DataSource>, JoinableFactory> joinableFactories;
 
   @Inject
-  public DefaultJoinableFactory(final InlineJoinableFactory inlineJoinableFactory)
+  MapJoinableFactory(Map<Class<? extends DataSource>, JoinableFactory> joinableFactories)
   {
-    // Just one right now, but we expect there to be more in the future, and maybe even an extension mechanism.
-    this.factories = Collections.singletonList(inlineJoinableFactory);
+    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
+    // Class doesn't override Object.equals().
+    this.joinableFactories = new IdentityHashMap<>(joinableFactories);
   }
 
   @Override
-  public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
+  public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
-    for (JoinableFactory factory : factories) {
-      final Optional<Joinable> maybeJoinable = factory.build(dataSource, condition);
-      if (maybeJoinable.isPresent()) {
-        return maybeJoinable;
-      }
+    JoinableFactory factory = joinableFactories.get(dataSource.getClass());
+    if (factory == null) {
+      return Optional.empty();
+    } else {
+      return factory.build(dataSource, condition);
     }
-
-    return Optional.empty();
   }
 }

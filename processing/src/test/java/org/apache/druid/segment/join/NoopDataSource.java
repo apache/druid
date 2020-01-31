@@ -17,27 +17,51 @@
  * under the License.
  */
 
-package org.apache.druid.query.lookup;
+package org.apache.druid.segment.join;
 
-import java.util.Optional;
+import org.apache.druid.query.DataSource;
+
+import java.util.List;
 import java.util.Set;
 
 /**
- * Provides {@link LookupExtractorFactoryContainer} to query and indexing time dimension transformations.
- *
- * The most important production implementation is LookupReferencesManager.
+ * A datasource that returns nothing. Only used to test un-registered datasources.
  */
-public interface LookupExtractorFactoryContainerProvider
+public class NoopDataSource implements DataSource
 {
-  /**
-   * Returns the set of all lookup names that {@link #get} can return containers for. Note that because the underlying
-   * set of valid lookups might change over time, it is not guaranteed that calling {@link #get} on the results will
-   * actually yield a container (it might have been removed).
-   */
-  Set<String> getAllLookupNames();
+  @Override
+  public Set<String> getTableNames()
+  {
+    return null;
+  }
 
-  /**
-   * Returns a lookup container for the provided lookupName, if it exists.
-   */
-  Optional<LookupExtractorFactoryContainer> get(String lookupName);
+  @Override
+  public List<DataSource> getChildren()
+  {
+    return null;
+  }
+
+  @Override
+  public DataSource withChildren(List<DataSource> children)
+  {
+    return null;
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean isGlobal()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean isConcrete()
+  {
+    return false;
+  }
 }
