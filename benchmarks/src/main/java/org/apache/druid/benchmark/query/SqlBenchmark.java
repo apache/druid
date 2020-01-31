@@ -192,7 +192,7 @@ public class SqlBenchmark
     );
     closer.register(walker);
 
-    SchemaPlus rootSchema =
+    final SchemaPlus rootSchema =
         CalciteTests.createMockRootSchema(conglomerate.lhs, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     plannerFactory = new PlannerFactory(
         rootSchema,

@@ -17,22 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.aggregation;
+package org.apache.druid.sql.calcite.planner;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
+import com.google.inject.Scopes;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.guice.JsonConfigProvider;
 
 /**
- * Module that provides SQL aggregations.
- * To add an aggregation use {@link org.apache.druid.sql.guice.SqlBindings#addAggregator(Binder, Class)}
+ * The module responsible for provide bindings for the Calcite Planner.
  */
-public class AggregationModule implements Module
+public class CalcitePlannerModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    // Add empty SqlAggregator binder.
-    Multibinder.newSetBinder(binder, SqlAggregator.class);
+    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
+    binder.bind(SchemaPlus.class).toProvider(RootSchemaProvider.class).in(Scopes.SINGLETON);
+    binder.bind(PlannerFactory.class).to(PlannerFactory.class);
+    binder.bind(DruidOperatorTable.class).to(DruidOperatorTable.class);
   }
 }

@@ -25,10 +25,10 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.sql.avatica.AvaticaModule;
-import org.apache.druid.sql.calcite.aggregation.AggregationModule;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidSqlCalcitePlannerModule;
+import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -58,8 +58,8 @@ public class SqlModule implements Module
       binder.bind(ViewManager.class).to(NoopViewManager.class).in(LazySingleton.class);
 
       binder.install(new DruidCalciteSchemaModule());
-      binder.install(new DruidSqlCalcitePlannerModule());
-      binder.install(new AggregationModule());
+      binder.install(new CalcitePlannerModule());
+      binder.install(new SqlAggregationModule());
 
       // QueryLookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupExtractorFactoryContainerProvider injected.
       SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);

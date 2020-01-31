@@ -19,27 +19,33 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Scopes;
-import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.sql.guice.SqlBindings;
+import com.google.inject.Inject;
+import org.apache.calcite.schema.Schema;
 
 /**
- * The module responsible for providing bindings
+ * The schema for druid tables to be accessible via sql.
  */
-public class DruidCalciteSchemaModule implements Module
+class DruidSqlSchema implements DruidCalciteSchema
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    // DruidSchema needs to listen to changes for incoming segments
-    LifecycleModule.register(binder, DruidSchema.class);
+  public static final String NAME = "druid";
 
-    // Binder to inject different schema to Calcite
-    SqlBindings.addSchema(binder, DruidSqlSchema.class);
-    SqlBindings.addSchema(binder, SystemSqlSchema.class);
-    SqlBindings.addSchema(binder, InformationSqlSchema.class);
+  private final DruidSchema druidSchema;
+
+  @Inject
+  DruidSqlSchema(DruidSchema druidSchema)
+  {
+    this.druidSchema = druidSchema;
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return NAME;
+  }
+
+  @Override
+  public Schema getSchema()
+  {
+    return druidSchema;
   }
 }

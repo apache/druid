@@ -87,15 +87,13 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @ManageLifecycle
-public class DruidSchema extends AbstractSchema implements DruidCalciteSchema
+public class DruidSchema extends AbstractSchema
 {
   // Newest segments first, so they override older ones.
   private static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
       .comparing((SegmentId segmentId) -> segmentId.getInterval().getStart())
       .reversed()
       .thenComparing(Function.identity());
-
-  public static final String NAME = "druid";
 
   private static final EmittingLogger log = new EmittingLogger(DruidSchema.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
@@ -332,12 +330,6 @@ public class DruidSchema extends AbstractSchema implements DruidCalciteSchema
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
-  }
-
-  @Override
-  public String getSchemaName()
-  {
-    return NAME;
   }
 
   @Override

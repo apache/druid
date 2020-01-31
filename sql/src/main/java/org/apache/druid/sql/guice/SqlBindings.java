@@ -20,6 +20,7 @@
 package org.apache.druid.sql.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -49,8 +50,11 @@ public class SqlBindings
   /**
    * Returns a multiBinder that can modules can use to bind {@link DruidCalciteSchema} to be used by the SqlModule
    */
-  public static Multibinder<DruidCalciteSchema> calciteSchemaBinder(final Binder binder)
+  public static void addSchema(
+      final Binder binder,
+      final Class<? extends DruidCalciteSchema> clazz
+  )
   {
-    return Multibinder.newSetBinder(binder, DruidCalciteSchema.class);
+    Multibinder.newSetBinder(binder, DruidCalciteSchema.class).addBinding().to(clazz).in(Scopes.SINGLETON);
   }
 }

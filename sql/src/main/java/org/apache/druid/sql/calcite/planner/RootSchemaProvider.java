@@ -48,7 +48,7 @@ public class RootSchemaProvider implements Provider<SchemaPlus>
   public SchemaPlus get()
   {
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    calciteSchemas.forEach(schema -> rootSchema.add(schema.getSchemaName(), schema));
+    calciteSchemas.forEach(schema -> rootSchema.add(schema.getSchemaName(), schema.getSchema()));
     return rootSchema;
   }
 }

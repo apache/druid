@@ -22,12 +22,17 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.calcite.schema.Schema;
 
 /**
- * A calcite schema that has a name which it should be registered to.
+ * A calcite schema and the name that it needs to be bound to so that it is available in Druid SQL.
  */
-public interface DruidCalciteSchema extends Schema
+public interface DruidCalciteSchema
 {
   /**
    * @return The name that this schema should be registered to.
    */
   String getSchemaName();
+
+  /**
+   * @return The Schema that Calcite should use.
+   */
+  Schema getSchema();
 }
