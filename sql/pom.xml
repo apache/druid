@@ -216,6 +216,12 @@
       <artifactId>hamcrest-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-assistedinject</artifactId>
+      <version>3.0</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>

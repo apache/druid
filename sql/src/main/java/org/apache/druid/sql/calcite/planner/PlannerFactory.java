@@ -41,7 +41,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
 import java.util.Map;
 import java.util.Properties;
@@ -64,6 +64,7 @@ public class PlannerFactory
   private final PlannerConfig plannerConfig;
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
+  private final String druidSchemaName;
 
   @Inject
   public PlannerFactory(
@@ -73,7 +74,8 @@ public class PlannerFactory
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper,
-      final @Json ObjectMapper jsonMapper
+      final @Json ObjectMapper jsonMapper,
+      final @DruidSchemaName String druidSchemaName
   )
   {
     this.rootSchema = rootSchema;
@@ -83,6 +85,7 @@ public class PlannerFactory
     this.plannerConfig = plannerConfig;
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
+    this.druidSchemaName = druidSchemaName;
   }
 
   public DruidPlanner createPlanner(
@@ -115,7 +118,7 @@ public class PlannerFactory
         .executor(new DruidRexExecutor(plannerContext))
         .context(Contexts.EMPTY_CONTEXT)
         .typeSystem(DruidTypeSystem.INSTANCE)
-        .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))
+        .defaultSchema(rootSchema.getSubSchema(druidSchemaName))
         .sqlToRelConverterConfig(sqlToRelConverterConfig)
         .context(new Context()
         {

@@ -147,7 +147,8 @@ public class SqlResourceTest extends CalciteTestBase
         macroTable,
         plannerConfig,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        CalciteTests.DRUID_SCHEMA_NAME
     );
 
     resource = new SqlResource(

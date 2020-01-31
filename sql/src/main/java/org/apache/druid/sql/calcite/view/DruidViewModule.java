@@ -17,35 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.sql.calcite.view;
 
-import com.google.inject.Inject;
-import org.apache.calcite.schema.Schema;
+import com.google.inject.AbstractModule;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 
 /**
- * The schema for druid tables to be accessible via sql.
+ * This module is responsible for providing bindings for views in Druid.
  */
-class DruidSqlSchema implements DruidCalciteSchema
+public class DruidViewModule extends AbstractModule
 {
-  private final DruidSchema druidSchema;
-  private final String druidSchemaName;
-
-  @Inject
-  DruidSqlSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
-  {
-    this.druidSchema = druidSchema;
-    this.druidSchemaName = druidSchemaName;
-  }
-
   @Override
-  public String getSchemaName()
+  public void configure()
   {
-    return druidSchemaName;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return druidSchema;
+    install(new FactoryModuleBuilder().build(DruidViewMacroFactory.class));
   }
 }

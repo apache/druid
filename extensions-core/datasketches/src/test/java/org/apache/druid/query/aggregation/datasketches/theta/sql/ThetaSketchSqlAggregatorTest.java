@@ -190,7 +190,8 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }

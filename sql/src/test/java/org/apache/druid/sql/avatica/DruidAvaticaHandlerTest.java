@@ -191,7 +191,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         macroTable,
         plannerConfig,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        CalciteTests.DRUID_SCHEMA_NAME
     );
     druidMeta = new DruidMeta(
         new SqlLifecycleFactory(
@@ -830,7 +831,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               macroTable,
               plannerConfig,
               AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-              CalciteTests.getJsonMapper()
+              CalciteTests.getJsonMapper(),
+              CalciteTests.DRUID_SCHEMA_NAME
           )
         ),
         smallFrameConfig,

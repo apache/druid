@@ -176,7 +176,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }

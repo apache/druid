@@ -587,7 +587,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ObjectMapper objectMapper
   ) throws Exception
   {
-    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+    final InProcessViewManager viewManager =
+        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
     SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
@@ -603,7 +604,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         macroTable,
         plannerConfig,
         authorizerMapper,
-        objectMapper
+        objectMapper,
+        CalciteTests.DRUID_SCHEMA_NAME
     );
     final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
 

@@ -17,35 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.sql.calcite.view;
 
-import com.google.inject.Inject;
-import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
 
 /**
- * The schema for druid tables to be accessible via sql.
+ * A factory to create a {@link DruidViewMacro} that is used by Guice for Assisted injection.
  */
-class DruidSqlSchema implements DruidCalciteSchema
+public interface DruidViewMacroFactory
 {
-  private final DruidSchema druidSchema;
-  private final String druidSchemaName;
-
-  @Inject
-  DruidSqlSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
-  {
-    this.druidSchema = druidSchema;
-    this.druidSchemaName = druidSchemaName;
-  }
-
-  @Override
-  public String getSchemaName()
-  {
-    return druidSchemaName;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return druidSchema;
-  }
+  /**
+   * Creates an instance of {@link DruidViewMacro}
+   */
+  DruidViewMacro create(PlannerFactory plannerFactory, Escalator escalator, String viewSql);
 }

@@ -178,7 +178,8 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }

@@ -17,35 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.sql.calcite.util;
 
-import com.google.inject.Inject;
-import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.view.DruidViewMacro;
+import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 
-/**
- * The schema for druid tables to be accessible via sql.
- */
-class DruidSqlSchema implements DruidCalciteSchema
+public class TestDruidViewMacroFactory implements DruidViewMacroFactory
 {
-  private final DruidSchema druidSchema;
-  private final String druidSchemaName;
-
-  @Inject
-  DruidSqlSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
-  {
-    this.druidSchema = druidSchema;
-    this.druidSchemaName = druidSchemaName;
-  }
-
   @Override
-  public String getSchemaName()
+  public DruidViewMacro create(
+      PlannerFactory plannerFactory,
+      Escalator escalator,
+      String viewSql
+  )
   {
-    return druidSchemaName;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return druidSchema;
+    return new DruidViewMacro(plannerFactory, escalator, viewSql, CalciteTests.DRUID_SCHEMA_NAME);
   }
 }

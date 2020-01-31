@@ -123,6 +123,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
@@ -153,6 +154,9 @@ public class CalciteTests
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String DRUID_SCHEMA_NAME = "druid";
+  public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+  public static final String SYSTEM_SCHEMA_NAME = "sys";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -532,6 +536,8 @@ public class CalciteTests
     // No instantiation.
   }
 
+  public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
+
   /**
    * Returns a new {@link QueryRunnerFactoryConglomerate} and a {@link Closer} which should be closed at the end of the
    * test.
@@ -870,10 +876,11 @@ public class CalciteTests
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
     SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    InformationSchema informationSchema = new InformationSchema(rootSchema, authorizerMapper);
-    rootSchema.add(druidSchema.getSchemaName(), druidSchema);
-    rootSchema.add(informationSchema.getSchemaName(), informationSchema);
-    rootSchema.add(systemSchema.getSchemaName(), systemSchema);
+    InformationSchema informationSchema =
+        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
+    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
     return rootSchema;
   }
 
@@ -888,12 +895,14 @@ public class CalciteTests
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
     SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    InformationSchema informationSchema = new InformationSchema(rootSchema, authorizerMapper);
-    rootSchema.add(druidSchema.getSchemaName(), druidSchema);
-    rootSchema.add(informationSchema.getSchemaName(), informationSchema);
-    rootSchema.add(systemSchema.getSchemaName(), systemSchema);
+    InformationSchema informationSchema =
+        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
+    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
     return rootSchema;
   }
+
   /**
    * Some Calcite exceptions (such as that thrown by
    * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},

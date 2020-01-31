@@ -110,11 +110,13 @@ public class InformationSchema extends AbstractSchema
   private final SchemaPlus rootSchema;
   private final Map<String, Table> tableMap;
   private final AuthorizerMapper authorizerMapper;
+  private final String druidSchemaName;
 
   @Inject
   public InformationSchema(
       final SchemaPlus rootSchema,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      @DruidSchemaName String druidSchemaName
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
@@ -124,6 +126,7 @@ public class InformationSchema extends AbstractSchema
         COLUMNS_TABLE, new ColumnsTable()
     );
     this.authorizerMapper = authorizerMapper;
+    this.druidSchemaName = druidSchemaName;
   }
 
   @Override
@@ -449,7 +452,7 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (DruidSchema.NAME.equals(subSchema.getName())) {
+    if (druidSchemaName.equals(subSchema.getName())) {
       // The "druid" schema's tables represent Druid datasources which require authorization
       return ImmutableSet.copyOf(
           AuthorizationUtils.filterAuthorizedResources(
@@ -470,7 +473,7 @@ public class InformationSchema extends AbstractSchema
       final AuthenticationResult authenticationResult
   )
   {
-    if (DruidSchema.NAME.equals(subSchema.getName())) {
+    if (druidSchemaName.equals(subSchema.getName())) {
       // The "druid" schema's functions represent views on Druid datasources, authorize them as if they were
       // datasources for now
       return ImmutableSet.copyOf(

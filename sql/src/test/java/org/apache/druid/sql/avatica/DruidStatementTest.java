@@ -97,7 +97,8 @@ public class DruidStatementTest extends CalciteTestBase
         macroTable,
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        CalciteTests.DRUID_SCHEMA_NAME
     );
     this.sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
   }

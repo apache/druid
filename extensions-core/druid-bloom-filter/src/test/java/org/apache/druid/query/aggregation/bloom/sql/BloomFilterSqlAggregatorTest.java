@@ -207,7 +207,8 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            jsonMapper
+            jsonMapper,
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }
