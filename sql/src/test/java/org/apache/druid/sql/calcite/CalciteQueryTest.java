@@ -7663,7 +7663,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 3L},
+            new Object[]{NULL_STRING, 3L},
             new Object[]{"xabc", 1L}
         )
     );
@@ -7701,7 +7701,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 3L},
+            new Object[]{NULL_STRING, 3L},
             new Object[]{"xabc", 1L}
         )
     );
@@ -7802,9 +7802,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NULL_STRING, "a", NULL_STRING, "xa"},
+            new Object[]{"", "a", NULL_STRING, "xa"},
             new Object[]{"10.1", NULL_STRING, NULL_STRING, NULL_STRING},
-            new Object[]{"2", NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"2", "", NULL_STRING, NULL_STRING},
             new Object[]{"1", "a", NULL_STRING, "xa"},
             new Object[]{"def", "abc", NULL_STRING, "xabc"},
             new Object[]{"abc", NULL_STRING, "xabc", NULL_STRING}
@@ -7845,7 +7845,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"a", "xa", "xa"},
             new Object[]{NULL_STRING, NULL_STRING, NULL_STRING},
-            new Object[]{NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"", NULL_STRING, NULL_STRING},
             new Object[]{"a", "xa", "xa"},
             new Object[]{"abc", "xabc", "xabc"},
             new Object[]{NULL_STRING, NULL_STRING, NULL_STRING}
@@ -7891,9 +7891,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NULL_STRING, "a", NULL_STRING, "xa", "xa"},
+            new Object[]{"", "a", NULL_STRING, "xa", "xa"},
             new Object[]{"10.1", NULL_STRING, NULL_STRING, NULL_STRING, NULL_STRING},
-            new Object[]{"2", NULL_STRING, NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"2", "", NULL_STRING, NULL_STRING, NULL_STRING},
             new Object[]{"1", "a", NULL_STRING, "xa", "xa"},
             new Object[]{"def", "abc", NULL_STRING, "xabc", "xabc"},
             new Object[]{"abc", NULL_STRING, "xabc", NULL_STRING, NULL_STRING}
@@ -7926,7 +7926,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"", NULL_STRING, NULL_STRING},
             new Object[]{"10.1", NULL_STRING, NULL_STRING},
             new Object[]{"2", NULL_STRING, NULL_STRING},
             new Object[]{"1", NULL_STRING, NULL_STRING},
@@ -7993,7 +7993,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NULL_STRING, 1f, 1L, NULL_STRING, NULL_STRING},
+            new Object[]{"", 1f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"10.1", 2f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"2", 3f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"1", 4f, 1L, NULL_STRING, NULL_STRING},
