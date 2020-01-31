@@ -147,7 +147,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
     }
 
-    // Right rel: allow direct embedding of scans/mappings, excluduing joins (those must be done as subqueries).
+    // Right rel: allow direct embedding of scans/mappings, excluding joins (those must be done as subqueries).
     if (DruidRels.isScanOrMapping(rightDruidRel, false)) {
       rightDataSource = rightQuery.getDataSource();
     } else {
