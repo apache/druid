@@ -19,9 +19,19 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * An annotation to get the name of the schenma to access druid tables in SQL.
  */
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
 public @interface DruidSchemaName
 {
 }

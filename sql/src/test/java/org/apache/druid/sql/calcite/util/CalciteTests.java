@@ -834,7 +834,8 @@ public class CalciteTests
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
   )
   {
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
@@ -857,7 +858,7 @@ public class CalciteTests
         ),
         new TestServerInventoryView(walker.getSegments()),
         EasyMock.createMock(ServerInventoryView.class),
-        TEST_AUTHORIZER_MAPPER,
+        authorizerMapper,
         druidLeaderClient,
         druidLeaderClient,
         EasyMock.createMock(DruidNodeDiscoveryProvider.class),
@@ -874,7 +875,8 @@ public class CalciteTests
   )
   {
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
-    SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     InformationSchema informationSchema =
         new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
@@ -893,7 +895,8 @@ public class CalciteTests
   )
   {
     DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
-    SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     InformationSchema informationSchema =
         new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);

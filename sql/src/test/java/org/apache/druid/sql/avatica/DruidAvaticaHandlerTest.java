@@ -43,21 +43,24 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -161,6 +164,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
+    testRequestLogger = new TestRequestLogger();
 
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -176,33 +182,24 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
                 binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
                 binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+                binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+                binder.bind(SchemaPlus.class).toInstance(rootSchema);
+                binder.bind(QueryLifecycleFactory.class)
+                      .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
+                binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
+                binder.bind(ExprMacroTable.class).toInstance(macroTable);
+                binder.bind(PlannerConfig.class).toInstance(plannerConfig);
+                binder.bind(String.class)
+                      .annotatedWith(DruidSchemaName.class)
+                      .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
+                binder.bind(AvaticaServerConfig.class).toInstance(AVATICA_CONFIG);
+                binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
               }
             }
         )
     );
-    SchemaPlus rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
 
-    testRequestLogger = new TestRequestLogger();
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        operatorTable,
-        macroTable,
-        plannerConfig,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
-    );
-    druidMeta = new DruidMeta(
-        new SqlLifecycleFactory(
-            plannerFactory,
-            new NoopServiceEmitter(),
-            testRequestLogger
-        ),
-        AVATICA_CONFIG,
-        injector
-    );
+    druidMeta = injector.getInstance(DruidMeta.class);
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
         new DruidNode("dummy", "dummy", false, 1, null, true, false),
