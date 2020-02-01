@@ -32,8 +32,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -82,6 +84,7 @@ import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -318,6 +321,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT DISTINCT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA",
         ImmutableList.of(),
         ImmutableList.of(
+            new Object[]{"lookup"},
             new Object[]{"druid"},
             new Object[]{"sys"},
             new Object[]{"INFORMATION_SCHEMA"}
@@ -344,6 +348,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
             .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
             .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
             .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
@@ -371,6 +376,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
             .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
             .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
             .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
@@ -488,7 +494,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStar() throws Exception
   {
-    String hyperLogLogCollectorClassName = HLLC_STRING;
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
         QUERY_CONTEXT_DEFAULT,
@@ -504,23 +509,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), 1L, "", "a", "[\"a\",\"b\"]", 1f, 1.0, hyperLogLogCollectorClassName},
-            new Object[]{
-                timestamp("2000-01-02"), 1L, "10.1", NULL_VALUE, "[\"b\",\"c\"]", 2f, 2.0, hyperLogLogCollectorClassName
-            },
-            new Object[]{timestamp("2000-01-03"), 1L, "2", "", "d", 3f, 3.0, hyperLogLogCollectorClassName},
-            new Object[]{timestamp("2001-01-01"), 1L, "1", "a", "", 4f, 4.0, hyperLogLogCollectorClassName},
-            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_VALUE, 5f, 5.0, hyperLogLogCollectorClassName},
-            new Object[]{
-                timestamp("2001-01-03"),
-                1L,
-                "abc",
-                NULL_VALUE,
-                NULL_VALUE,
-                6f,
-                6.0,
-                hyperLogLogCollectorClassName
-            }
+            new Object[]{timestamp("2000-01-01"), 1L, "", "a", "[\"a\",\"b\"]", 1f, 1.0, HLLC_STRING},
+            new Object[]{timestamp("2000-01-02"), 1L, "10.1", NULL_STRING, "[\"b\",\"c\"]", 2f, 2.0, HLLC_STRING},
+            new Object[]{timestamp("2000-01-03"), 1L, "2", "", "d", 3f, 3.0, HLLC_STRING},
+            new Object[]{timestamp("2001-01-01"), 1L, "1", "a", "", 4f, 4.0, HLLC_STRING},
+            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_STRING, 5f, 5.0, HLLC_STRING},
+            new Object[]{timestamp("2001-01-03"), 1L, "abc", NULL_STRING, NULL_STRING, 6f, 6.0, HLLC_STRING}
         )
     );
   }
@@ -617,7 +611,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{timestamp("2000-01-01"), 1L, "", "a", "[\"a\",\"b\"]", 1.0f, 1.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-02"), 1L, "10.1", NULL_VALUE, "[\"b\",\"c\"]", 2.0f, 2.0, HLLC_STRING}
+            new Object[]{timestamp("2000-01-02"), 1L, "10.1", NULL_STRING, "[\"b\",\"c\"]", 2.0f, 2.0, HLLC_STRING}
         )
     );
   }
@@ -642,7 +636,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{NULL_VALUE}
+            new Object[]{NULL_STRING}
         )
     );
   }
@@ -691,8 +685,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2001-01-03"), 1L, "abc", NULL_VALUE, NULL_VALUE, 6f, 6d, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_VALUE, 5f, 5d, HLLC_STRING}
+            new Object[]{timestamp("2001-01-03"), 1L, "abc", NULL_STRING, NULL_STRING, 6f, 6d, HLLC_STRING},
+            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_STRING, 5f, 5d, HLLC_STRING}
         )
     );
   }
@@ -718,11 +712,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{timestamp("2000-01-01"), 1L, "", "a", "[\"a\",\"b\"]", 1f, 1.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-02"), 1L, "10.1", NULL_VALUE, "[\"b\",\"c\"]", 2f, 2.0, HLLC_STRING},
+            new Object[]{timestamp("2000-01-02"), 1L, "10.1", NULL_STRING, "[\"b\",\"c\"]", 2f, 2.0, HLLC_STRING},
             new Object[]{timestamp("2000-01-03"), 1L, "2", "", "d", 3f, 3.0, HLLC_STRING},
             new Object[]{timestamp("2001-01-01"), 1L, "1", "a", "", 4f, 4.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_VALUE, 5f, 5.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-03"), 1L, "abc", NULL_VALUE, NULL_VALUE, 6f, 6.0, HLLC_STRING}
+            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_STRING, 5f, 5.0, HLLC_STRING},
+            new Object[]{timestamp("2001-01-03"), 1L, "abc", NULL_STRING, NULL_STRING, 6f, 6.0, HLLC_STRING}
         )
     );
   }
@@ -744,7 +738,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", "a"},
-            new Object[]{NULL_VALUE, NULL_VALUE}
+            new Object[]{NULL_STRING, NULL_STRING}
         )
     );
   }
@@ -2612,10 +2606,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", NULL_VALUE},
-            new Object[]{"1", NULL_VALUE},
+            new Object[]{"", NULL_STRING},
+            new Object[]{"1", NULL_STRING},
             new Object[]{"10.1", "0.1"},
-            new Object[]{"2", NULL_VALUE},
+            new Object[]{"2", NULL_STRING},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"}
         )
@@ -2664,9 +2658,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1", "0.1"},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"},
-            new Object[]{"1", NULL_VALUE},
-            new Object[]{"2", NULL_VALUE},
-            new Object[]{"", NULL_VALUE}
+            new Object[]{"1", NULL_STRING},
+            new Object[]{"2", NULL_STRING},
+            new Object[]{"", NULL_STRING}
         )
     );
   }
@@ -2694,10 +2688,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", NULL_VALUE},
-            new Object[]{"1", NULL_VALUE},
+            new Object[]{"", NULL_STRING},
+            new Object[]{"1", NULL_STRING},
             new Object[]{"10.1", "0.1"},
-            new Object[]{"2", NULL_VALUE},
+            new Object[]{"2", NULL_STRING},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"}
         )
@@ -2735,9 +2729,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1", "0.1"},
             new Object[]{"abc", "bc"},
             new Object[]{"def", "ef"},
-            new Object[]{"1", NULL_VALUE},
-            new Object[]{"2", NULL_VALUE},
-            new Object[]{"", NULL_VALUE}
+            new Object[]{"1", NULL_STRING},
+            new Object[]{"2", NULL_STRING},
+            new Object[]{"", NULL_STRING}
         )
     );
   }
@@ -3452,7 +3446,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{timestamp("2000-01-01"), 1L, "", "a", "[\"a\",\"b\"]", 1.0f, 1.0d, HLLC_STRING},
             new Object[]{timestamp("2001-01-01"), 1L, "1", "a", "", 4.0f, 4.0d, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_VALUE, 5.0f, 5.0d, HLLC_STRING}
+            new Object[]{timestamp("2001-01-02"), 1L, "def", "abc", NULL_STRING, 5.0f, 5.0d, HLLC_STRING}
         )
     );
   }
@@ -7602,6 +7596,416 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterAndGroupByLookupUsingJoinOperatorAllowNulls() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT lookyloo.v, COUNT(*)\n"
+        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xa' OR lookyloo.v IS NULL\n"
+        + "GROUP BY lookyloo.v",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(or(not(selector("j0.v", "xa", null)), selector("j0.v", null, null)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterAndGroupByLookupUsingJoinOperator() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT lookyloo.v, COUNT(*)\n"
+        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xa'\n"
+        + "GROUP BY lookyloo.v",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(not(selector("j0.v", "xa", null)))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterAndGroupByLookupUsingJoinOperatorBackwards() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    // Like "testFilterAndGroupByLookupUsingJoinOperator", but with the table and lookup reversed.
+    testQuery(
+        "SELECT lookyloo.v, COUNT(*)\n"
+        + "FROM lookup.lookyloo RIGHT JOIN foo ON foo.dim2 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xa'\n"
+        + "GROUP BY lookyloo.v",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(not(selector("j0.v", "xa", null)))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByInnerJoinOnLookupUsingJoinOperator() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT lookyloo.v, COUNT(*)\n"
+        + "FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k\n"
+        + "GROUP BY lookyloo.v",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectOnLookupUsingInnerJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, lookyloo.*\n"
+        + "FROM foo INNER JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim2", "j0.k", "j0.v")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", "a", "xa"},
+            new Object[]{"a", "a", "xa"},
+            new Object[]{"abc", "abc", "xabc"}
+        )
+    );
+  }
+
+  @Test
+  public void testLeftJoinTwoLookupsUsingJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, dim2, l1.v, l2.v\n"
+        + "FROM foo\n"
+        + "LEFT JOIN lookup.lookyloo l1 ON foo.dim1 = l1.k\n"
+        + "LEFT JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            new LookupDataSource("lookyloo"),
+                            "j0.",
+                            equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                            JoinType.LEFT
+                        ),
+                        new LookupDataSource("lookyloo"),
+                        "_j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("_j0.v", "dim1", "dim2", "j0.v")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", NULL_STRING, "xa"},
+            new Object[]{"10.1", NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"2", "", NULL_STRING, NULL_STRING},
+            new Object[]{"1", "a", NULL_STRING, "xa"},
+            new Object[]{"def", "abc", NULL_STRING, "xabc"},
+            new Object[]{"abc", NULL_STRING, "xabc", NULL_STRING}
+        )
+    );
+  }
+
+  @Test
+  public void testLeftJoinLookupOntoLookupUsingJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim2, l1.v, l2.v\n"
+        + "FROM foo\n"
+        + "LEFT JOIN lookup.lookyloo l1 ON foo.dim2 = l1.k\n"
+        + "LEFT JOIN lookup.lookyloo l2 ON l1.k = l2.k",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            new LookupDataSource("lookyloo"),
+                            "j0.",
+                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                            JoinType.LEFT
+                        ),
+                        new LookupDataSource("lookyloo"),
+                        "_j0.",
+                        equalsCondition(DruidExpression.fromColumn("j0.k"), DruidExpression.fromColumn("_j0.k")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("_j0.v", "dim2", "j0.v")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", "xa", "xa"},
+            new Object[]{NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"", NULL_STRING, NULL_STRING},
+            new Object[]{"a", "xa", "xa"},
+            new Object[]{"abc", "xabc", "xabc"},
+            new Object[]{NULL_STRING, NULL_STRING, NULL_STRING}
+        )
+    );
+  }
+
+  @Test
+  public void testLeftJoinThreeLookupsUsingJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, dim2, l1.v, l2.v, l3.v\n"
+        + "FROM foo\n"
+        + "LEFT JOIN lookup.lookyloo l1 ON foo.dim1 = l1.k\n"
+        + "LEFT JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k\n"
+        + "LEFT JOIN lookup.lookyloo l3 ON l2.k = l3.k",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            ),
+                            new LookupDataSource("lookyloo"),
+                            "_j0.",
+                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                            JoinType.LEFT
+                        ),
+                        new LookupDataSource("lookyloo"),
+                        "__j0.",
+                        equalsCondition(DruidExpression.fromColumn("_j0.k"), DruidExpression.fromColumn("__j0.k")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__j0.v", "_j0.v", "dim1", "dim2", "j0.v")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", NULL_STRING, "xa", "xa"},
+            new Object[]{"10.1", NULL_STRING, NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"2", "", NULL_STRING, NULL_STRING, NULL_STRING},
+            new Object[]{"1", "a", NULL_STRING, "xa", "xa"},
+            new Object[]{"def", "abc", NULL_STRING, "xabc", "xabc"},
+            new Object[]{"abc", NULL_STRING, "xabc", NULL_STRING, NULL_STRING}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectOnLookupUsingLeftJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, lookyloo.*\n"
+        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xxx' OR lookyloo.v IS NULL",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(or(not(selector("j0.v", "xxx", null)), selector("j0.v", null, null)))
+                .columns("dim1", "j0.k", "j0.v")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", NULL_STRING, NULL_STRING},
+            new Object[]{"10.1", NULL_STRING, NULL_STRING},
+            new Object[]{"2", NULL_STRING, NULL_STRING},
+            new Object[]{"1", NULL_STRING, NULL_STRING},
+            new Object[]{"def", NULL_STRING, NULL_STRING},
+            new Object[]{"abc", "abc", "xabc"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectOnLookupUsingRightJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, lookyloo.*\n"
+        + "FROM foo RIGHT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xxx' OR lookyloo.v IS NULL",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        JoinType.RIGHT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(or(not(selector("j0.v", "xxx", null)), selector("j0.v", null, null)))
+                .columns("dim1", "j0.k", "j0.v")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", "abc", "xabc"},
+            new Object[]{NULL_STRING, "a", "xa"},
+            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectOnLookupUsingFullJoinOperator() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, m1, cnt, lookyloo.*\n"
+        + "FROM foo FULL JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xxx' OR lookyloo.v IS NULL",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                        JoinType.FULL
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(or(not(selector("j0.v", "xxx", null)), selector("j0.v", null, null)))
+                .columns("cnt", "dim1", "j0.k", "j0.v", "m1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 1f, 1L, NULL_STRING, NULL_STRING},
+            new Object[]{"10.1", 2f, 1L, NULL_STRING, NULL_STRING},
+            new Object[]{"2", 3f, 1L, NULL_STRING, NULL_STRING},
+            new Object[]{"1", 4f, 1L, NULL_STRING, NULL_STRING},
+            new Object[]{"def", 5f, 1L, NULL_STRING, NULL_STRING},
+            new Object[]{"abc", 6f, 1L, "abc", "xabc"},
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "a", "xa"},
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"}
+        )
+    );
+  }
+
+  @Test
   public void testCountDistinctOfLookup() throws Exception
   {
     // Cannot vectorize due to "cardinality" aggregator.
@@ -7628,6 +8032,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           "a0",
                           null,
                           ImmutableList.of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
+                          false,
+                          true
+                      )
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountDistinctOfLookupUsingJoinOperator() throws Exception
+  {
+    // Cannot yet vectorize the JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COUNT(DISTINCT lookyloo.v)\n"
+        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                          new TableDataSource(CalciteTests.DATASOURCE1),
+                          new LookupDataSource("lookyloo"),
+                          "j0.",
+                          equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
+                          JoinType.LEFT
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new CardinalityAggregatorFactory(
+                          "a0",
+                          null,
+                          ImmutableList.of(DefaultDimensionSpec.of("j0.v")),
                           false,
                           true
                       )
@@ -10648,8 +11092,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  
-  
+
+
 
   @Test
   public void testQueryContextOuterLimit() throws Exception

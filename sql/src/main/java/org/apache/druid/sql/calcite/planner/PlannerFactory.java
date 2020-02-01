@@ -42,6 +42,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 
 import java.util.Map;
@@ -59,6 +60,7 @@ public class PlannerFactory
       .build();
 
   private final DruidSchema druidSchema;
+  private final LookupSchema lookupSchema;
   private final SystemSchema systemSchema;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
@@ -70,6 +72,7 @@ public class PlannerFactory
   @Inject
   public PlannerFactory(
       final DruidSchema druidSchema,
+      final LookupSchema lookupSchema,
       final SystemSchema systemSchema,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
@@ -80,6 +83,7 @@ public class PlannerFactory
   )
   {
     this.druidSchema = druidSchema;
+    this.lookupSchema = lookupSchema;
     this.systemSchema = systemSchema;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
@@ -96,6 +100,7 @@ public class PlannerFactory
   {
     final SchemaPlus rootSchema = Calcites.createRootSchema(
         druidSchema,
+        lookupSchema,
         systemSchema,
         authorizerMapper
     );
