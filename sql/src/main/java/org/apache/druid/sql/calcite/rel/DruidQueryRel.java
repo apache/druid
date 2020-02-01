@@ -38,7 +38,7 @@ import javax.annotation.Nonnull;
 import java.util.Set;
 
 /**
- * DruidRel that uses a "table" dataSource.
+ * DruidRel that operates on top of a {@link DruidTable} directly (no joining or subqueries).
  */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {

@@ -514,10 +514,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Set<DataSegment> expectedSegments = new HashSet<>();
     final Pair<TaskStatus, List<DataSegment>> compactionResult = runTask(compactionTask);
     Assert.assertTrue(compactionResult.lhs.isSuccess());
-    expectedSegments.addAll(compactionResult.rhs);
+    final Set<DataSegment> expectedSegments = new HashSet<>(compactionResult.rhs);
 
     final Pair<TaskStatus, List<DataSegment>> appendResult = runAppendTask();
     Assert.assertTrue(appendResult.lhs.isSuccess());

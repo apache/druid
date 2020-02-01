@@ -187,6 +187,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
+        CalciteTests.createMockLookupSchema(),
         systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
@@ -827,6 +828,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
               druidSchema,
+              CalciteTests.createMockLookupSchema(),
               systemSchema,
               CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
               operatorTable,

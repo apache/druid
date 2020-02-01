@@ -48,7 +48,7 @@ import org.joda.time.Interval;
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
   private final ServiceEmitter emitter;
-  private final CachingClusteredClient baseClient;
+  private final QuerySegmentWalker baseClient;
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
@@ -56,10 +56,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
 
-  @Inject
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
-      CachingClusteredClient baseClient,
+      QuerySegmentWalker baseClient,
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
@@ -76,6 +75,30 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
+  }
+
+  @Inject
+  ClientQuerySegmentWalker(
+      ServiceEmitter emitter,
+      CachingClusteredClient baseClient,
+      QueryToolChestWarehouse warehouse,
+      RetryQueryRunnerConfig retryConfig,
+      ObjectMapper objectMapper,
+      ServerConfig serverConfig,
+      Cache cache,
+      CacheConfig cacheConfig
+  )
+  {
+    this(
+        emitter,
+        (QuerySegmentWalker) baseClient,
+        warehouse,
+        retryConfig,
+        objectMapper,
+        serverConfig,
+        cache,
+        cacheConfig
+    );
   }
 
   @Override
