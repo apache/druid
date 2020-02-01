@@ -65,7 +65,7 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final DateTimeFormatter formatter = formatString == null
-                                        ? ISODateTimeFormat.dateTime()
+                                        ? ISODateTimeFormat.dateTime().withZone(timeZone)
                                         : DateTimeFormat.forPattern(formatString).withZone(timeZone);
 
     class TimestampFormatExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr

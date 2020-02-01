@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -72,7 +73,7 @@ public class IndexedTableJoinableTest
       inlineDataSource.getRowsAsList(),
       inlineDataSource.rowAdapter(),
       inlineDataSource.getRowSignature(),
-      ImmutableList.of("str")
+      ImmutableSet.of("str")
   );
 
   @Test

@@ -19,40 +19,38 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.inject.Inject;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.join.table.IndexedTable;
-import org.apache.druid.segment.join.table.IndexedTableJoinable;
-import org.apache.druid.segment.join.table.RowBasedIndexedTable;
+import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.join.lookup.LookupJoinable;
 
 import java.util.Optional;
-import java.util.Set;
 
 /**
- * A {@link JoinableFactory} for {@link InlineDataSource}. It works by building an {@link IndexedTable}.
+ * A {@link JoinableFactory} for {@link LookupDataSource}.
  *
  * It is not valid to pass any other DataSource type to the "build" method.
  */
-public class InlineJoinableFactory implements JoinableFactory
+public class LookupJoinableFactory implements JoinableFactory
 {
+  private final LookupExtractorFactoryContainerProvider lookupProvider;
+
+  @Inject
+  public LookupJoinableFactory(LookupExtractorFactoryContainerProvider lookupProvider)
+  {
+    this.lookupProvider = lookupProvider;
+  }
+
   @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
-    final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+    final LookupDataSource lookupDataSource = (LookupDataSource) dataSource;
 
     if (condition.canHashJoin()) {
-      final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();
-
-      return Optional.of(
-          new IndexedTableJoinable(
-              new RowBasedIndexedTable<>(
-                  inlineDataSource.getRowsAsList(),
-                  inlineDataSource.rowAdapter(),
-                  inlineDataSource.getRowSignature(),
-                  rightKeyColumns
-              )
-          )
-      );
+      final String lookupName = lookupDataSource.getLookupName();
+      return lookupProvider.get(lookupName)
+                           .map(c -> LookupJoinable.wrap(c.getLookupExtractorFactory().get()));
     } else {
       return Optional.empty();
     }
