@@ -336,10 +336,10 @@ public class JoinFilterAnalyzer
     SelectorFilter selectorFilter = (SelectorFilter) filter;
 
     String filteringColumn = selectorFilter.getDimension();
-    for (String prefix : prefixes.keySet()) {
-      if (filteringColumn.startsWith(prefix)) {
+    for (Map.Entry<String, JoinableClause> prefixAndClause : prefixes.entrySet()) {
+      if (filteringColumn.startsWith(prefixAndClause.getKey())) {
         List<JoinFilterColumnCorrelationAnalysis> correlations = correlationCache.computeIfAbsent(
-            prefix,
+            prefixAndClause.getKey(),
             p -> findCorrelatedBaseTableColumns(
                 baseAdapter,
                 p,
@@ -361,7 +361,7 @@ public class JoinFilterAnalyzer
                 selectorFilter.getDimension(),
                 selectorFilter.getValue(),
                 correlationAnalysis.getJoinColumn(),
-                prefixes.get(prefix)
+                prefixAndClause.getValue()
             );
 
             if (correlatedValues == null) {
