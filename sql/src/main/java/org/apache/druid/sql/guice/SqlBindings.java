@@ -55,6 +55,7 @@ public class SqlBindings
       final Class<? extends DruidCalciteSchema> clazz
   )
   {
-    Multibinder.newSetBinder(binder, DruidCalciteSchema.class).addBinding().to(clazz).in(Scopes.SINGLETON);
+    binder.bind(clazz).in(Scopes.SINGLETON);
+    Multibinder.newSetBinder(binder, DruidCalciteSchema.class).addBinding().to(clazz);
   }
 }

@@ -17,25 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.aggregation;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Scopes;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.guice.JsonConfigProvider;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-/**
- * The module responsible for provide bindings for the Calcite Planner.
- */
-public class CalcitePlannerModule implements Module
+import java.util.Set;
+
+public class SqlAggregationModuleTest
 {
-  @Override
-  public void configure(Binder binder)
+  private SqlAggregationModule target;
+  private Injector injector;
+
+  @Before
+  public void setUp()
   {
-    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    binder.bind(SchemaPlus.class).toProvider(RootSchemaProvider.class).in(Scopes.SINGLETON);
-    binder.bind(PlannerFactory.class);
-    binder.bind(DruidOperatorTable.class);
+    target = new SqlAggregationModule();
+    injector = Guice.createInjector(target);
+  }
+
+  @Test
+  public void testEmptySqlAggregatorsAreBound()
+  {
+    Set<SqlAggregator> sqlAggregators = injector.getInstance(Key.get(new TypeLiteral<Set<SqlAggregator>>(){}));
+    Assert.assertNotNull(sqlAggregators);
+    Assert.assertTrue(sqlAggregators.isEmpty());
   }
 }

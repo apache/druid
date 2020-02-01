@@ -27,7 +27,7 @@ import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.metrics.MetricsModule;
 
 /**
- * The module responsible for providing bindings to Avatica
+ * The module responsible for providing bindings to Avatica.
  */
 public class AvaticaModule implements Module
 {

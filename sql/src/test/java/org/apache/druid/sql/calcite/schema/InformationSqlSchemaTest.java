@@ -17,25 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Scopes;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.guice.JsonConfigProvider;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-/**
- * The module responsible for provide bindings for the Calcite Planner.
- */
-public class CalcitePlannerModule implements Module
+public class InformationSqlSchemaTest
 {
-  @Override
-  public void configure(Binder binder)
+  private static final String SCHEMA_NAME = "INFORMATION_SCHEMA";
+
+  @Mock
+  private InformationSchema informationSchema;
+
+  private InformationSqlSchema target;
+
+  @Before
+  public void setUp()
   {
-    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    binder.bind(SchemaPlus.class).toProvider(RootSchemaProvider.class).in(Scopes.SINGLETON);
-    binder.bind(PlannerFactory.class);
-    binder.bind(DruidOperatorTable.class);
+    target = new InformationSqlSchema(informationSchema);
+  }
+
+  @Test
+  public void testGetSchemaNameShouldReturnName()
+  {
+    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
+  }
+
+  @Test
+  public void testGetSchemaShouldReturnSchema()
+  {
+    Assert.assertEquals(informationSchema, target.getSchema());
   }
 }

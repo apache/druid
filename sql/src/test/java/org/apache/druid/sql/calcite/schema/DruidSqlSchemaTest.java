@@ -17,25 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Scopes;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.guice.JsonConfigProvider;
+import org.easymock.EasyMockRunner;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-/**
- * The module responsible for provide bindings for the Calcite Planner.
- */
-public class CalcitePlannerModule implements Module
+@RunWith(EasyMockRunner.class)
+public class DruidSqlSchemaTest
 {
-  @Override
-  public void configure(Binder binder)
+  private static final String SCHEMA_NAME = "SCHEMA_NAME";
+
+  @Mock
+  private DruidSchema druidSchema;
+
+  private DruidSqlSchema target;
+
+  @Before
+  public void setUp()
   {
-    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    binder.bind(SchemaPlus.class).toProvider(RootSchemaProvider.class).in(Scopes.SINGLETON);
-    binder.bind(PlannerFactory.class);
-    binder.bind(DruidOperatorTable.class);
+    target = new DruidSqlSchema(druidSchema, SCHEMA_NAME);
+  }
+
+  @Test
+  public void testGetSchemaNameShouldReturnName()
+  {
+    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
+  }
+
+  @Test
+  public void testGetSchemaShouldReturnSchema()
+  {
+    Assert.assertEquals(druidSchema, target.getSchema());
   }
 }
