@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -36,6 +36,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -45,9 +46,14 @@ import org.apache.druid.segment.join.JoinMatcher;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -242,32 +248,36 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   /**
    * Makes suppliers that returns the list of IndexedTable rows that match the values from selectors.
    */
-  private static class ConditionMatcherFactory implements ColumnProcessorFactory<Supplier<IntIterator>>
+  @VisibleForTesting
+  static class ConditionMatcherFactory implements ColumnProcessorFactory<Supplier<IntIterator>>
   {
+    @VisibleForTesting
+    static final int CACHE_MAX_SIZE = 1000;
+
     private static final int MAX_NUM_CACHE = 10;
-    private static final int CACHE_MAX_SIZE = 1000;
 
     private final ValueType keyType;
     private final IndexedTable.Index index;
 
     // DimensionSelector -> (int) dimension id -> (IntList) row numbers
-    private final LoadingCache<DimensionSelector, LoadingCache<Integer, IntList>> dimensionCaches;
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")  // updated via computeIfAbsent
+    private final LruLoadingHashMap<DimensionSelector, Int2IntListMap> dimensionCaches;
 
     ConditionMatcherFactory(ValueType keyType, IndexedTable.Index index)
     {
       this.keyType = keyType;
       this.index = index;
 
-      this.dimensionCaches =
-          Caffeine.newBuilder()
-                  .maximumSize(MAX_NUM_CACHE)
-                  .build(
-                      selector ->
-                          Caffeine.newBuilder()
-                                  .maximumSize(CACHE_MAX_SIZE)
-                                  .build(dimensionId -> getRowNumbers(selector, dimensionId))
-                  );
-
+      this.dimensionCaches = new LruLoadingHashMap<>(
+          MAX_NUM_CACHE,
+          selector -> {
+            int cardinality = selector.getValueCardinality();
+            IntFunction<IntList> loader = dimensionId -> getRowNumbers(selector, dimensionId);
+            return cardinality <= CACHE_MAX_SIZE
+                   ? new Int2IntListLookupTable(cardinality, loader)
+                   : new Int2IntListLruCache(CACHE_MAX_SIZE, loader);
+          }
+      );
     }
 
     private IntList getRowNumbers(DimensionSelector selector, int dimensionId)
@@ -290,8 +300,16 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
         if (row.size() == 1) {
           int dimensionId = row.get(0);
-          //noinspection ConstantConditions (cache cannot return nulls since nulls are never stored in cache)
-          return dimensionCaches.get(selector).get(dimensionId).iterator();
+          final IntList rowNumbers;
+          if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
+            // If the cardinality is unknown, then the selector does not have a "real" dictionary and the dimension id
+            // is not valid oustide the context of a specific row. This means we cannot use a cache and must fall
+            // back to this slow code path.
+            rowNumbers = getRowNumbers(selector, dimensionId);
+          } else {
+            rowNumbers = dimensionCaches.getAndLoadIfAbsent(selector).getAndLoadIfAbsent(dimensionId);
+          }
+          return rowNumbers.iterator();
         } else {
           // Multi-valued rows are not handled by the join system right now; treat them as nulls.
           return IntIterators.EMPTY_ITERATOR;
@@ -333,6 +351,114 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     public Supplier<IntIterator> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
     {
       return () -> IntIterators.EMPTY_ITERATOR;
+    }
+  }
+
+  @VisibleForTesting
+  static class LruLoadingHashMap<K, V> extends LinkedHashMap<K, V>
+  {
+    private final int maxSize;
+    private final Function<K, V> loader;
+
+    LruLoadingHashMap(int maxSize, Function<K, V> loader)
+    {
+      super(capacity(maxSize));
+      this.maxSize = maxSize;
+      this.loader = loader;
+    }
+
+    V getAndLoadIfAbsent(K key)
+    {
+      return computeIfAbsent(key, loader);
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry eldest)
+    {
+      return size() > maxSize;
+    }
+
+    private static int capacity(int expectedSize)
+    {
+      // This is the calculation used in JDK8 to resize when a putAll happens; it seems to be the most conservative
+      // calculation we can make. 0.75 is the default load factor.
+      return (int) ((float) expectedSize / 0.75F + 1.0F);
+    }
+  }
+
+  private interface Int2IntListMap
+  {
+    IntList getAndLoadIfAbsent(int key);
+  }
+
+  /**
+   * Lookup table for keys in the range from 0 to maxSize - 1
+   */
+  @VisibleForTesting
+  static class Int2IntListLookupTable implements Int2IntListMap
+  {
+    private final IntList[] lookup;
+    private final IntFunction<IntList> loader;
+
+    Int2IntListLookupTable(int maxSize, IntFunction<IntList> loader)
+    {
+      this.loader = loader;
+      this.lookup = new IntList[maxSize];
+      Arrays.fill(lookup, null);
+    }
+
+    @Override
+    public IntList getAndLoadIfAbsent(int key)
+    {
+      IntList value = lookup[key];
+
+      if (value == null) {
+        value = loader.apply(key);
+        lookup[key] = value;
+      }
+
+      return value;
+    }
+  }
+
+  /**
+   * LRU cache optimized for primitive int keys
+   */
+  @VisibleForTesting
+  static class Int2IntListLruCache implements Int2IntListMap
+  {
+    private final Int2ObjectLinkedOpenHashMap<IntList> cache;
+    private final int maxSize;
+    private final IntFunction<IntList> loader;
+
+    Int2IntListLruCache(int maxSize, IntFunction<IntList> loader)
+    {
+      this.cache = new Int2ObjectLinkedOpenHashMap<>(maxSize);
+      this.maxSize = maxSize;
+      this.loader = loader;
+    }
+
+    @Override
+    public IntList getAndLoadIfAbsent(int key)
+    {
+      IntList value = cache.getAndMoveToFirst(key);
+
+      if (value == null) {
+        value = loader.apply(key);
+        cache.putAndMoveToFirst(key, value);
+      }
+
+      if (cache.size() > maxSize) {
+        cache.removeLast();
+      }
+
+      return value;
+    }
+
+    @VisibleForTesting
+    IntList get(int key)
+    {
+      return cache.get(key);
     }
   }
 }
