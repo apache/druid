@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -42,7 +43,8 @@ public class JoinableFactoryModule implements Module
   /**
    * Default mappings of datasources to factories.
    */
-  private static final Map<Class<? extends DataSource>, Class<? extends JoinableFactory>> FACTORY_MAPPINGS =
+  @VisibleForTesting
+  static final Map<Class<? extends DataSource>, Class<? extends JoinableFactory>> FACTORY_MAPPINGS =
       ImmutableMap.of(
           InlineDataSource.class, InlineJoinableFactory.class,
           LookupDataSource.class, LookupJoinableFactory.class

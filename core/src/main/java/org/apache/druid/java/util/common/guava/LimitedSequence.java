@@ -52,7 +52,9 @@ final class LimitedSequence<T> extends YieldingSequenceBase<T>
     return new LimitedYielder<>(subYielder, limitedAccumulator);
   }
 
-  @SuppressWarnings("InnerClassMayBeStatic") // False alarm: flagged by IDEA inspections, but can't actually be static.
+  // False alarm: This is flagged as InnerClassMayBeStatic by IDEA inspections, but can't actually be static, because
+  // it depends on the non-static inner class LimitedYieldingAccumulator.
+  @SuppressWarnings("InnerClassMayBeStatic")
   private class LimitedYielder<OutType> implements Yielder<OutType>
   {
     private final Yielder<OutType> subYielder;
