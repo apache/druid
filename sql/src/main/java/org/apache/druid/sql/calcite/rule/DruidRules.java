@@ -90,7 +90,8 @@ public class DruidRules
         DruidOuterQueryRule.PROJECT_AGGREGATE,
         DruidOuterQueryRule.AGGREGATE_SORT_PROJECT,
         DruidUnionRule.instance(),
-        DruidSortUnionRule.instance()
+        DruidSortUnionRule.instance(),
+        DruidJoinRule.instance()
     );
   }
 
