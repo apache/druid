@@ -24,11 +24,11 @@ import org.junit.Test;
 
 public class OnHeapCaffeineLoadingCacheTest
 {
-    @Test
-    public void testIsClosed()
-    {
-        OnHeapCaffeineLoadingCache onHeapCaffeineLookupLoadingCache = new OnHeapCaffeineLoadingCache(15, 100L, 10L, 10L);
-        onHeapCaffeineLookupLoadingCache.close();
-        Assert.assertTrue(onHeapCaffeineLookupLoadingCache.isClosed());
-    }
+  @Test
+  public void testIsClosed()
+  {
+    OnHeapCaffeineLoadingCache onHeapCaffeineLookupLoadingCache = new OnHeapCaffeineLoadingCache(15, 100L, 10L, 10L);
+    onHeapCaffeineLookupLoadingCache.close();
+    Assert.assertTrue(onHeapCaffeineLookupLoadingCache.isClosed());
+  }
 }

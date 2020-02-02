@@ -34,170 +34,170 @@ import java.util.function.Function;
 
 public class OnHeapCaffeineLoadingCache<K, V> implements LoadingCache<K, V>
 {
-    private static final Logger log = new Logger(OnHeapLoadingCache.class);
-    private static final int DEFAULT_INITIAL_CAPACITY = 16;
+  private static final Logger log = new Logger(OnHeapLoadingCache.class);
+  private static final int DEFAULT_INITIAL_CAPACITY = 16;
 
-    private final Cache<K, V> cache;
-    private final AtomicBoolean isClosed = new AtomicBoolean(false);
-    @JsonProperty
-    private final int initialCapacity;
-    @JsonProperty
-    private final Long maximumSize;
-    @JsonProperty
-    private final Long expireAfterAccess;
-    @JsonProperty
-    private final Long expireAfterWrite;
+  private final Cache<K, V> cache;
+  private final AtomicBoolean isClosed = new AtomicBoolean(false);
+  @JsonProperty
+  private final int initialCapacity;
+  @JsonProperty
+  private final Long maximumSize;
+  @JsonProperty
+  private final Long expireAfterAccess;
+  @JsonProperty
+  private final Long expireAfterWrite;
 
 
-    /**
-     * @param initialCapacity   default to {@code DEFAULT_INITIAL_CAPACITY}
-     * @param maximumSize       Max number of entries that the cache can hold, When set to zero, elements will be evicted immediately after being loaded into the
-     *                          cache.
-     *                          When set to null, cache maximum size is infinity
-     * @param expireAfterAccess Specifies that each entry should be automatically removed from the cache once a fixed duration
-     *                          has elapsed after the entry's creation, the most recent replacement of its value, or its last
-     *                          access. Access time is reset by all cache read and write operations.
-     *                          No read-time-based eviction when set to null.
-     * @param expireAfterWrite  Specifies that each entry should be automatically removed from the cache once a fixed duration
-     *                          has elapsed after the entry's creation, or the most recent replacement of its value.
-     *                          No write-time-based eviction when set to null.
-     */
-    @JsonCreator
-    public OnHeapCaffeineLoadingCache(
-            @JsonProperty("initialCapacity") int initialCapacity,
-            @JsonProperty("maximumSize") Long maximumSize,
-            @JsonProperty("expireAfterAccess") Long expireAfterAccess,
-            @JsonProperty("expireAfterWrite") Long expireAfterWrite
-    )
-    {
-        this.initialCapacity = initialCapacity <= 0 ? DEFAULT_INITIAL_CAPACITY : initialCapacity;
-        this.maximumSize = maximumSize;
-        this.expireAfterAccess = expireAfterAccess;
-        this.expireAfterWrite = expireAfterWrite;
-        Caffeine builder = Caffeine.newBuilder()
-                .initialCapacity(this.initialCapacity)
-                .recordStats();
-        if (this.expireAfterAccess != null) {
-            builder.expireAfterAccess(expireAfterAccess, TimeUnit.MILLISECONDS);
-        }
-        if (this.expireAfterWrite != null) {
-            builder.expireAfterWrite(this.expireAfterWrite, TimeUnit.MILLISECONDS);
-        }
-        if (this.maximumSize != null) {
-            builder.maximumSize(this.maximumSize);
-        }
-
-        this.cache = builder.build();
-
-        if (isClosed.getAndSet(false)) {
-            log.info("Caffeine Based OnHeapCache started with spec [%s]", cache.toString());
-        }
+  /**
+   * @param initialCapacity   default to {@code DEFAULT_INITIAL_CAPACITY}
+   * @param maximumSize       Max number of entries that the cache can hold, When set to zero, elements will be evicted immediately after being loaded into the
+   *                          cache.
+   *                          When set to null, cache maximum size is infinity
+   * @param expireAfterAccess Specifies that each entry should be automatically removed from the cache once a fixed duration
+   *                          has elapsed after the entry's creation, the most recent replacement of its value, or its last
+   *                          access. Access time is reset by all cache read and write operations.
+   *                          No read-time-based eviction when set to null.
+   * @param expireAfterWrite  Specifies that each entry should be automatically removed from the cache once a fixed duration
+   *                          has elapsed after the entry's creation, or the most recent replacement of its value.
+   *                          No write-time-based eviction when set to null.
+   */
+  @JsonCreator
+  public OnHeapCaffeineLoadingCache(
+          @JsonProperty("initialCapacity") int initialCapacity,
+          @JsonProperty("maximumSize") Long maximumSize,
+          @JsonProperty("expireAfterAccess") Long expireAfterAccess,
+          @JsonProperty("expireAfterWrite") Long expireAfterWrite
+  )
+  {
+    this.initialCapacity = initialCapacity <= 0 ? DEFAULT_INITIAL_CAPACITY : initialCapacity;
+    this.maximumSize = maximumSize;
+    this.expireAfterAccess = expireAfterAccess;
+    this.expireAfterWrite = expireAfterWrite;
+    Caffeine builder = Caffeine.newBuilder()
+        .initialCapacity(this.initialCapacity)
+        .recordStats();
+    if (this.expireAfterAccess != null) {
+      builder.expireAfterAccess(expireAfterAccess, TimeUnit.MILLISECONDS);
+    }
+    if (this.expireAfterWrite != null) {
+      builder.expireAfterWrite(this.expireAfterWrite, TimeUnit.MILLISECONDS);
+    }
+    if (this.maximumSize != null) {
+      builder.maximumSize(this.maximumSize);
     }
 
+    this.cache = builder.build();
 
-    @Override
-    public V getIfPresent(K key)
-    {
-        return cache.getIfPresent(key);
+    if (isClosed.getAndSet(false)) {
+      log.info("Caffeine Based OnHeapCache started with spec [%s]", cache.toString());
+    }
+  }
+
+
+  @Override
+  public V getIfPresent(K key)
+  {
+    return cache.getIfPresent(key);
+  }
+
+  @Override
+  public void putAll(Map<? extends K, ? extends V> m)
+  {
+    cache.putAll(m);
+  }
+
+
+  @Override
+  public Map<K, V> getAllPresent(Iterable<K> keys)
+  {
+    return cache.getAllPresent(keys);
+  }
+
+  @Override
+  public V get(K key, Function<? super K, ? extends V> valueLoader)
+  {
+    return cache.get(key, valueLoader);
+  }
+
+  @Override
+  public void invalidate(K key)
+  {
+    cache.invalidate(key);
+  }
+
+  @Override
+  public void invalidateAll(Iterable<K> keys)
+  {
+    cache.invalidateAll(keys);
+  }
+
+  @Override
+  public void invalidateAll()
+  {
+    cache.invalidateAll();
+    cache.cleanUp();
+  }
+
+  @Override
+  public LookupCacheStats getStats()
+  {
+    return new LookupCacheStats(
+        cache.stats().hitCount(),
+        cache.stats().missCount(),
+        cache.stats().evictionCount()
+    );
+  }
+
+  @Override
+  public boolean isClosed()
+  {
+    return isClosed.get();
+  }
+
+  @Override
+  public void close()
+  {
+    if (!isClosed.getAndSet(true)) {
+      cache.cleanUp();
+    }
+  }
+
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof OnHeapCaffeineLoadingCache)) {
+      return false;
     }
 
-    @Override
-    public void putAll(Map<? extends K, ? extends V> m)
-    {
-        cache.putAll(m);
+    OnHeapCaffeineLoadingCache<?, ?> that = (OnHeapCaffeineLoadingCache<?, ?>) o;
+
+    if (initialCapacity != that.initialCapacity) {
+      return false;
     }
-
-
-    @Override
-    public Map<K, V> getAllPresent(Iterable<K> keys)
-    {
-        return cache.getAllPresent(keys);
+    if (maximumSize != null ? !maximumSize.equals(that.maximumSize) : that.maximumSize != null) {
+      return false;
     }
-
-    @Override
-    public V get(K key, Function<? super K, ? extends V> valueLoader)
-    {
-        return cache.get(key, valueLoader);
+    if (expireAfterAccess != null
+        ? !expireAfterAccess.equals(that.expireAfterAccess)
+        : that.expireAfterAccess != null) {
+      return false;
     }
+    return expireAfterWrite != null ? expireAfterWrite.equals(that.expireAfterWrite) : that.expireAfterWrite == null;
 
-    @Override
-    public void invalidate(K key)
-    {
-        cache.invalidate(key);
-    }
+  }
 
-    @Override
-    public void invalidateAll(Iterable<K> keys)
-    {
-        cache.invalidateAll(keys);
-    }
-
-    @Override
-    public void invalidateAll()
-    {
-        cache.invalidateAll();
-        cache.cleanUp();
-    }
-
-    @Override
-    public LookupCacheStats getStats()
-    {
-        return new LookupCacheStats(
-                cache.stats().hitCount(),
-                cache.stats().missCount(),
-                cache.stats().evictionCount()
-        );
-    }
-
-    @Override
-    public boolean isClosed()
-    {
-        return isClosed.get();
-    }
-
-    @Override
-    public void close()
-    {
-        if (!isClosed.getAndSet(true)) {
-            cache.cleanUp();
-        }
-    }
-
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof OnHeapCaffeineLoadingCache)) {
-            return false;
-        }
-
-        OnHeapCaffeineLoadingCache<?, ?> that = (OnHeapCaffeineLoadingCache<?, ?>) o;
-
-        if (initialCapacity != that.initialCapacity) {
-            return false;
-        }
-        if (maximumSize != null ? !maximumSize.equals(that.maximumSize) : that.maximumSize != null) {
-            return false;
-        }
-        if (expireAfterAccess != null
-                ? !expireAfterAccess.equals(that.expireAfterAccess)
-                : that.expireAfterAccess != null) {
-            return false;
-        }
-        return expireAfterWrite != null ? expireAfterWrite.equals(that.expireAfterWrite) : that.expireAfterWrite == null;
-
-    }
-
-    @Override
-    public int hashCode()
-    {
-        int result = initialCapacity;
-        result = 31 * result + (maximumSize != null ? maximumSize.hashCode() : 0);
-        result = 31 * result + (expireAfterAccess != null ? expireAfterAccess.hashCode() : 0);
-        result = 31 * result + (expireAfterWrite != null ? expireAfterWrite.hashCode() : 0);
-        return result;
-    }
+  @Override
+  public int hashCode()
+  {
+    int result = initialCapacity;
+    result = 31 * result + (maximumSize != null ? maximumSize.hashCode() : 0);
+    result = 31 * result + (expireAfterAccess != null ? expireAfterAccess.hashCode() : 0);
+    result = 31 * result + (expireAfterWrite != null ? expireAfterWrite.hashCode() : 0);
+    return result;
+  }
 }

@@ -127,7 +127,8 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
   @Override
   public V get(K key, Function<? super K, ? extends V> valueLoader) throws ExecutionException
   {
-    Callable<? extends V> compatibleValueLoader = new Callable() {
+    Callable<? extends V> compatibleValueLoader = new Callable()
+    {
       @Override
       public V call() {
         return valueLoader.apply(key);
