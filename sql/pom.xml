@@ -119,6 +119,10 @@
       <artifactId>guice</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-assistedinject</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
     </dependency>
@@ -172,6 +176,11 @@
       <version>${checkerframework.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Tests -->
     <dependency>
@@ -215,12 +224,6 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.inject.extensions</groupId>
-      <artifactId>guice-assistedinject</artifactId>
-      <version>3.0</version>
-      <scope>compile</scope>
     </dependency>
   </dependencies>
 
