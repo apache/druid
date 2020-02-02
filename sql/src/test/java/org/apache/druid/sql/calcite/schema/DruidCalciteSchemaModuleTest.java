@@ -35,6 +35,8 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
@@ -80,6 +82,8 @@ public class DruidCalciteSchemaModuleTest
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   @Mock
   private ObjectMapper objectMapper;
+  @Mock
+  private LookupReferencesManager lookupReferencesManager;
 
   private DruidCalciteSchemaModule target;
   private Injector injector;
@@ -110,6 +114,7 @@ public class DruidCalciteSchemaModuleTest
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
           binder.bind(ObjectMapper.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
         },
         new LifecycleModule(),
         target);
@@ -153,9 +158,45 @@ public class DruidCalciteSchemaModuleTest
   public void testDruidCalciteSchemasAreInjected()
   {
     Set<DruidCalciteSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<DruidCalciteSchema>>(){}));
-    Assert.assertEquals(3, sqlSchemas.size());
+    Assert.assertEquals(4, sqlSchemas.size());
     Assert.assertEquals(
-        ImmutableSet.of(InformationSqlSchema.class, SystemSqlSchema.class, DruidSqlSchema.class),
+        ImmutableSet.of(InformationSqlSchema.class, SystemSqlSchema.class, DruidSqlSchema.class, LookupSqlSchema.class),
         sqlSchemas.stream().map(DruidCalciteSchema::getClass).collect(Collectors.toSet()));
+  }
+
+  @Test
+  public void testDruidSchemaIsInjectedAsSingleton()
+  {
+    DruidSchema schema = injector.getInstance(DruidSchema.class);
+    Assert.assertNotNull(schema);
+    DruidSchema other = injector.getInstance(DruidSchema.class);
+    Assert.assertSame(other, schema);
+  }
+
+  @Test
+  public void testSystemSchemaIsInjectedAsSingleton()
+  {
+    SystemSchema schema = injector.getInstance(SystemSchema.class);
+    Assert.assertNotNull(schema);
+    SystemSchema other = injector.getInstance(SystemSchema.class);
+    Assert.assertSame(other, schema);
+  }
+
+  @Test
+  public void testInformationSchemaIsInjectedAsSingleton()
+  {
+    InformationSchema schema = injector.getInstance(InformationSchema.class);
+    Assert.assertNotNull(schema);
+    InformationSchema other = injector.getInstance(InformationSchema.class);
+    Assert.assertSame(other, schema);
+  }
+
+  @Test
+  public void testLookupSchemaIsInjectedAsSingleton()
+  {
+    LookupSchema schema = injector.getInstance(LookupSchema.class);
+    Assert.assertNotNull(schema);
+    LookupSchema other = injector.getInstance(LookupSchema.class);
+    Assert.assertSame(other, schema);
   }
 }

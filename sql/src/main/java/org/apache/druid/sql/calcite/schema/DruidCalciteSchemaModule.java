@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Scopes;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -38,10 +39,14 @@ public class DruidCalciteSchemaModule implements Module
 
     // DruidSchema needs to listen to changes for incoming segments
     LifecycleModule.register(binder, DruidSchema.class);
+    binder.bind(SystemSchema.class).in(Scopes.SINGLETON);
+    binder.bind(InformationSchema.class).in(Scopes.SINGLETON);
+    binder.bind(LookupSchema.class).in(Scopes.SINGLETON);
 
     // Binder to inject different schema to Calcite
     SqlBindings.addSchema(binder, DruidSqlSchema.class);
     SqlBindings.addSchema(binder, SystemSqlSchema.class);
     SqlBindings.addSchema(binder, InformationSqlSchema.class);
+    SqlBindings.addSchema(binder, LookupSqlSchema.class);
   }
 }

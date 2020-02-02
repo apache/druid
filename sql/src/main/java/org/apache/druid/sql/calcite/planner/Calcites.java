@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.calcite.rel.core.Sort;
@@ -49,8 +50,10 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.nio.charset.Charset;
 import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
@@ -118,6 +121,7 @@ public class Calcites
 
   }
 
+  @Nullable
   public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
   {
     if (SqlTypeName.FLOAT == sqlTypeName) {
@@ -326,23 +330,23 @@ public class Calcites
   }
 
   /**
-   * Checks if a RexNode is a literal int or not. If this returns true, then {@code RexLiteral.intValue(literal)} can be
-   * used to get the value of the literal.
-   *
-   * @param rexNode the node
-   *
-   * @return true if this is an int
+   * Find a string that is either equal to "basePrefix", or basePrefix prepended by underscores, and where nothing in
+   * "strings" starts with prefix plus a digit.
    */
-  public static boolean isIntLiteral(final RexNode rexNode)
+  public static String findUnusedPrefixForDigits(final String basePrefix, final Iterable<String> strings)
   {
-    return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
-  }
+    final NavigableSet<String> navigableStrings;
 
-  public static String findUnusedPrefix(final String basePrefix, final NavigableSet<String> strings)
-  {
+    if (strings instanceof NavigableSet) {
+      navigableStrings = (NavigableSet<String>) strings;
+    } else {
+      navigableStrings = new TreeSet<>();
+      Iterables.addAll(navigableStrings, strings);
+    }
+
     String prefix = basePrefix;
 
-    while (!isUnusedPrefix(prefix, strings)) {
+    while (!isUnusedPrefix(prefix, navigableStrings)) {
       prefix = "_" + prefix;
     }
 
