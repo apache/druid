@@ -20,7 +20,7 @@
 package org.apache.druid.indexer.partitions;
 
 /**
- * In Druid, ingested data are primarily partitioned based on time range (GranularitySpec#getSegmentGranularity),
+ * In Druid, ingested data are primarily partitioned based on time range (@link GranularitySpec#getSegmentGranularity),
  * and then secondly partitioned based on the given {@link PartitionsSpec}. This enum lists all supported types for the
  * secondary partitioning.
  */
