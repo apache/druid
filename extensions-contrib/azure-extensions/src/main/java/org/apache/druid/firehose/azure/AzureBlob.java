@@ -26,6 +26,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 
+@Deprecated
 public class AzureBlob
 {
   @JsonProperty
