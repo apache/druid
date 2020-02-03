@@ -20,15 +20,23 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.hamcrest.Matchers;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.List;
 
 public class PartialHashSegmentGenerateTaskTest
 {
@@ -70,5 +78,29 @@ public class PartialHashSegmentGenerateTaskTest
   {
     String id = target.getId();
     Assert.assertThat(id, Matchers.startsWith(PartialHashSegmentGenerateTask.TYPE));
+  }
+
+  @Test
+  public void testCreateHashPartitionAnalysisFromPartitionsSpecWithNumShardsReturningAnalysisOfValidNumBuckets()
+  {
+    final List<Interval> intervals = ImmutableList.of(
+        Intervals.of("2020-01-01/2020-01-02"),
+        Intervals.of("2020-01-02/2020-01-03"),
+        Intervals.of("2020-01-03/2020-01-04")
+    );
+    final int expectedNumBuckets = 5;
+    final HashPartitionAnalysis partitionAnalysis = PartialHashSegmentGenerateTask
+        .createHashPartitionAnalysisFromPartitionsSpec(
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.NONE,
+                intervals
+            ),
+            new HashedPartitionsSpec(null, expectedNumBuckets, null)
+        );
+    Assert.assertEquals(intervals.size(), partitionAnalysis.numTimePartitions());
+    for (Interval interval : intervals) {
+      Assert.assertEquals(expectedNumBuckets, partitionAnalysis.getBucketAnalysis(interval).intValue());
+    }
   }
 }

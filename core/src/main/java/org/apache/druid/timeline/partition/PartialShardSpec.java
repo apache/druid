@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -40,20 +41,21 @@ import javax.annotation.Nullable;
 public interface PartialShardSpec
 {
   /**
-   * Create a new shardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
-   * first call for the timeChunk where the new segment is created.
+   * Creates a new ShardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
+   * first call for the time chunk where the new segment is created.
    * Note that {@code specOfPreviousMaxPartitionId} can also be null for {@link OverwriteShardSpec} if all segments
    * in the timeChunk are first-generation segments.
    */
   ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 
   /**
-   * Create a new shardSpec having the given partitionId.
+   * Creates a new shardSpec having the given partitionId.
    */
   ShardSpec complete(ObjectMapper objectMapper, int partitionId);
 
   /**
-   * Return the class of the shardSpec created by this factory.
+   * Returns the class of the shardSpec created by this factory.
    */
+  @JsonIgnore
   Class<? extends ShardSpec> getShardSpecClass();
 }

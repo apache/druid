@@ -30,13 +30,13 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class CountingLocalTaskActionClient implements TaskActionClient
+public class CountingLocalTaskActionClientForTest implements TaskActionClient
 {
   private final ConcurrentHashMap<Class<? extends TaskAction>, AtomicInteger> actionCountMap =
       new ConcurrentHashMap<>();
   private final LocalTaskActionClient delegate;
 
-  public CountingLocalTaskActionClient(
+  public CountingLocalTaskActionClientForTest(
       Task task,
       TaskStorage storage,
       TaskActionToolbox toolbox

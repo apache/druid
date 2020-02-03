@@ -42,6 +42,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
@@ -1633,6 +1634,35 @@ public class IndexTaskTest extends IngestionTestBase
         Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
       }
     }
+  }
+
+  @Test
+  public void testIndexTaskWitSingleDimPartitionsSpecThrowingException() throws Exception
+  {
+    final IndexTask task = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            useInputFormatApi,
+            jsonMapper,
+            null,
+            null,
+            null,
+            null,
+            createTuningConfigWithPartitionsSpec(new SingleDimensionPartitionsSpec(null, 1, null, false), true),
+            false
+        ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory,
+        appenderatorsManager
+    );
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage(
+        "partitionsSpec[org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec] is not supported"
+    );
+    task.isReady(createActionClient(task));
   }
 
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)

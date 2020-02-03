@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class SingleDimensionPartialShardSpec implements PartialShardSpec
 {
@@ -113,5 +114,28 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
   public Class<? extends ShardSpec> getShardSpecClass()
   {
     return SingleDimensionShardSpec.class;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SingleDimensionPartialShardSpec that = (SingleDimensionPartialShardSpec) o;
+    return bucketId == that.bucketId &&
+           numBuckets == that.numBuckets &&
+           Objects.equals(partitionDimension, that.partitionDimension) &&
+           Objects.equals(start, that.start) &&
+           Objects.equals(end, that.end);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(partitionDimension, bucketId, start, end, numBuckets);
   }
 }

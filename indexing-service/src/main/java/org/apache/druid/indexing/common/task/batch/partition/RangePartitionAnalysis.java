@@ -73,7 +73,7 @@ public class RangePartitionAnalysis
     return Collections.unmodifiableSet(intervalToPartitionBoundaries.keySet());
   }
 
-  public void forEach(BiConsumer<Interval, PartitionBoundaries> consumer)
+  private void forEach(BiConsumer<Interval, PartitionBoundaries> consumer)
   {
     intervalToPartitionBoundaries.forEach(consumer);
   }

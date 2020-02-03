@@ -275,7 +275,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (tuningConfig != null && tuningConfig.getPartitionsSpec() != null) {
       if (tuningConfig.getPartitionsSpec().getType() != SecondaryPartitionType.LINEAR
           && tuningConfig.getPartitionsSpec().getType() != SecondaryPartitionType.HASH) {
-        throw new IAE("partitionsSpec[%s] is not supported", tuningConfig.getPartitionsSpec().getClass().getName());
+        throw new UOE("partitionsSpec[%s] is not supported", tuningConfig.getPartitionsSpec().getClass().getName());
       }
     }
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.dataSchema.getGranularitySpec());

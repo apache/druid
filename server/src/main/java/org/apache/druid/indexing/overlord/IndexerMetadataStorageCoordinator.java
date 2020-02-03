@@ -157,7 +157,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first
    *                                segment
    * @param interval                interval for which to allocate a segment
-   * @param partialShardSpec        shardSpecFactory containing all necessary information to create a shardSpec for the
+   * @param partialShardSpec        partialShardSpec containing all necessary information to create a shardSpec for the
    *                                new segmentId
    * @param maxVersion              use this version if we have no better version to use. The returned segment
    *                                identifier may have a version lower than this one, but will not have one higher.

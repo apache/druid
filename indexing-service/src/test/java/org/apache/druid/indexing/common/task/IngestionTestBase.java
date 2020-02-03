@@ -207,7 +207,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getTestIndexMergerV9();
   }
 
-  public class TestLocalTaskActionClient extends CountingLocalTaskActionClient
+  public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
 
