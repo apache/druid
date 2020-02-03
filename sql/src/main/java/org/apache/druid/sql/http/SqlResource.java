@@ -55,7 +55,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Path("/druid/v2/sql/")
-class SqlResource
+public class SqlResource
 {
   private static final Logger log = new Logger(SqlResource.class);
 

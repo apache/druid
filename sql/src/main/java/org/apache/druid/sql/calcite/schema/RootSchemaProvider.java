@@ -20,32 +20,34 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Inject;
-import org.apache.calcite.schema.Schema;
+import com.google.inject.Provider;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.schema.SchemaPlus;
+
+import java.util.Set;
 
 /**
- * The schema for druid information tables to be accessible via sql.
+ * Provides the RootSchema for calcite with
+ * - metadata schema disabled because it's not needed
+ * - caching disabled because druid's caching is better.
+ *
+ * All the provided schema are added to the rootSchema.
  */
-class InformationSqlSchema implements DruidCalciteSchema
+public class RootSchemaProvider implements Provider<SchemaPlus>
 {
-  private static final String NAME = "INFORMATION_SCHEMA";
-
-  private final InformationSchema informationSchema;
+  private final Set<DruidCalciteSchema> calciteSchemas;
 
   @Inject
-  InformationSqlSchema(InformationSchema informationSchema)
+  RootSchemaProvider(Set<DruidCalciteSchema> calciteSchemas)
   {
-    this.informationSchema = informationSchema;
+    this.calciteSchemas = calciteSchemas;
   }
 
   @Override
-  public String getSchemaName()
+  public SchemaPlus get()
   {
-    return NAME;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return informationSchema;
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    calciteSchemas.forEach(schema -> rootSchema.add(schema.getSchemaName(), schema.getSchema()));
+    return rootSchema;
   }
 }

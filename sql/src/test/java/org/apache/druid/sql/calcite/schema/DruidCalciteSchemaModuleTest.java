@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.TimelineServerView;
@@ -71,8 +72,6 @@ public class DruidCalciteSchemaModuleTest
   @Mock
   AuthorizerMapper authorizerMapper;
   @Mock
-  private SchemaPlus rootSchema;
-  @Mock
   private InventoryView serverInventoryView;
   @Mock
   private DruidLeaderClient coordinatorDruidLeaderClient;
@@ -103,7 +102,6 @@ public class DruidCalciteSchemaModuleTest
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
-          binder.bind(SchemaPlus.class).toInstance(rootSchema);
           binder.bind(InventoryView.class).toInstance(serverInventoryView);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
@@ -146,21 +144,14 @@ public class DruidCalciteSchemaModuleTest
   }
 
   @Test
-  public void testInformationSqlSchemaIsInjectedAsSingleton()
-  {
-    InformationSqlSchema informationSqlSchema = injector.getInstance(InformationSqlSchema.class);
-    Assert.assertNotNull(informationSqlSchema);
-    InformationSqlSchema other = injector.getInstance(InformationSqlSchema.class);
-    Assert.assertSame(other, informationSqlSchema);
-  }
-
-  @Test
   public void testDruidCalciteSchemasAreInjected()
   {
     Set<DruidCalciteSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<DruidCalciteSchema>>(){}));
-    Assert.assertEquals(4, sqlSchemas.size());
+    Set<Class<? extends DruidCalciteSchema>> expectedSchemas =
+        ImmutableSet.of(SystemSqlSchema.class, DruidSqlSchema.class, LookupSqlSchema.class);
+    Assert.assertEquals(expectedSchemas.size(), sqlSchemas.size());
     Assert.assertEquals(
-        ImmutableSet.of(InformationSqlSchema.class, SystemSqlSchema.class, DruidSqlSchema.class, LookupSqlSchema.class),
+        expectedSchemas,
         sqlSchemas.stream().map(DruidCalciteSchema::getClass).collect(Collectors.toSet()));
   }
 
@@ -198,5 +189,38 @@ public class DruidCalciteSchemaModuleTest
     Assert.assertNotNull(schema);
     LookupSchema other = injector.getInstance(LookupSchema.class);
     Assert.assertSame(other, schema);
+  }
+
+  @Test
+  public void testRootSchemaAnnotatedIsInjectedAsSingleton()
+  {
+    SchemaPlus rootSchema = injector.getInstance(
+        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    );
+    Assert.assertNotNull(rootSchema);
+    SchemaPlus other = injector.getInstance(
+        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    );
+    Assert.assertSame(other, rootSchema);
+  }
+
+  @Test
+  public void testRootSchemaIsInjectedAsSingleton()
+  {
+    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    Assert.assertNotNull(rootSchema);
+    SchemaPlus other = injector.getInstance(
+        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    );
+    Assert.assertSame(other, rootSchema);
+  }
+
+  @Test
+  public void testRootSchemaIsInjectedAndHasInformationSchema()
+  {
+    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    InformationSchema expectedSchema = injector.getInstance(InformationSchema.class);
+    Assert.assertNotNull(rootSchema);
+    Assert.assertSame(expectedSchema, rootSchema.getSubSchema("INFORMATION_SCHEMA").unwrap(InformationSchema.class));
   }
 }

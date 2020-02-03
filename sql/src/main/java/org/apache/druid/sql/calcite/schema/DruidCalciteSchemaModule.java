@@ -21,7 +21,12 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+import com.google.inject.name.Names;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -31,11 +36,18 @@ import org.apache.druid.sql.guice.SqlBindings;
 public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
+  static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
 
   @Override
   public void configure(Binder binder)
   {
     binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
+
+    // Should only be used by the information schema
+    binder.bind(SchemaPlus.class)
+          .annotatedWith(Names.named(INCOMPLETE_SCHEMA))
+          .toProvider(RootSchemaProvider.class)
+          .in(Scopes.SINGLETON);
 
     // DruidSchema needs to listen to changes for incoming segments
     LifecycleModule.register(binder, DruidSchema.class);
@@ -46,7 +58,15 @@ public class DruidCalciteSchemaModule implements Module
     // Binder to inject different schema to Calcite
     SqlBindings.addSchema(binder, DruidSqlSchema.class);
     SqlBindings.addSchema(binder, SystemSqlSchema.class);
-    SqlBindings.addSchema(binder, InformationSqlSchema.class);
     SqlBindings.addSchema(binder, LookupSqlSchema.class);
+  }
+
+  @Provides
+  @Singleton
+  private SchemaPlus getRootSchema(@Named(INCOMPLETE_SCHEMA) SchemaPlus rootSchema, InformationSchema informationSchema)
+  {
+    String name = "INFORMATION_SCHEMA";
+    rootSchema.add(name, informationSchema);
+    return rootSchema;
   }
 }

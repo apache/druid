@@ -69,6 +69,8 @@ public class CalcitePlannerModuleTest
   private ExprMacroTable macroTable;
   @Mock
   private AuthorizerMapper authorizerMapper;
+  @Mock
+  private SchemaPlus rootSchema;
 
   private Set<SqlAggregator> aggregators;
   private Set<SqlOperatorConversion> operatorConversions;
@@ -101,6 +103,7 @@ public class CalcitePlannerModuleTest
           binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>(){})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>(){})).toInstance(operatorConversions);
+          binder.bind(SchemaPlus.class).toInstance(rootSchema);
         },
         target
     );
@@ -122,15 +125,6 @@ public class CalcitePlannerModuleTest
     Assert.assertNotNull(PlannerFactory.class);
     PlannerFactory other = injector.getInstance(PlannerFactory.class);
     Assert.assertNotSame(other, plannerFactory);
-  }
-
-  @Test
-  public void testRootSchemaIsInjectedAsSingleton()
-  {
-    SchemaPlus rootSchema = injector.getInstance(SchemaPlus.class);
-    Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(SchemaPlus.class);
-    Assert.assertSame(other, rootSchema);
   }
 
   @Test

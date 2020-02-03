@@ -21,8 +21,6 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.Scopes;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.guice.JsonConfigProvider;
 
 /**
@@ -34,7 +32,6 @@ public class CalcitePlannerModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    binder.bind(SchemaPlus.class).toProvider(RootSchemaProvider.class).in(Scopes.SINGLETON);
     binder.bind(PlannerFactory.class);
     binder.bind(DruidOperatorTable.class);
   }

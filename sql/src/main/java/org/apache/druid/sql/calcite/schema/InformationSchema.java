@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.Enumerable;
@@ -114,7 +115,7 @@ public class InformationSchema extends AbstractSchema
 
   @Inject
   public InformationSchema(
-      final SchemaPlus rootSchema,
+      @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final SchemaPlus rootSchema,
       final AuthorizerMapper authorizerMapper,
       @DruidSchemaName String druidSchemaName
   )
