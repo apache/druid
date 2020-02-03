@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.inject.assistedinject.Assisted;
+import com.microsoft.azure.storage.blob.ListBlobItem;
 
-public interface AzureByteSourceFactory
+public interface ListBlobItemDruidFactory
 {
-  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
+  ListBlobItemDruid create(ListBlobItem blobItem);
 }

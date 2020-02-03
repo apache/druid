@@ -48,6 +48,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   public void before()
   {
     azureStorage = createMock(AzureStorage.class);
+    byteSourceFactory = createMock(AzureByteSourceFactory.class);
   }
 
   @Test
@@ -61,7 +62,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       final InputStream zipStream = new FileInputStream(pulledFile);
 
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
-      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
@@ -93,7 +94,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       final InputStream zipStream = new FileInputStream(pulledFile);
 
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
-      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
@@ -122,7 +123,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     final File outDir = FileUtils.createTempDir();
     try {
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
-      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andThrow(
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
           new URISyntaxException(
               "error",
               "error",
@@ -154,7 +155,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     final File outDir = FileUtils.createTempDir();
     try {
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
-      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andThrow(
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
           new StorageException(null, null, 0, null, null)
       ).atLeastOnce();
 

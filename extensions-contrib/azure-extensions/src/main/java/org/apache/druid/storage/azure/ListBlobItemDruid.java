@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.ListBlobItem;
@@ -30,7 +32,8 @@ public class ListBlobItemDruid
 {
   private final ListBlobItem delegate;
 
-  public ListBlobItemDruid(ListBlobItem delegate)
+  @AssistedInject
+  public ListBlobItemDruid(@Assisted ListBlobItem delegate)
   {
     this.delegate = delegate;
   }

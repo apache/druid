@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.ResultContinuation;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
@@ -29,15 +31,14 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Iterator class used by {@link AzureUtils#blobItemIterator}.
- * <p>
- * As required by the specification of that method, this iterator is computed incrementally in batches of
+ * This iterator is computed incrementally in batches of
  * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
  */
-public class BlobItemIterator implements Iterator<CloudBlobDruid>
+public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
 {
-  private final Logger log = new Logger(BlobItemIterator.class);
+  private final Logger log = new Logger(AzureCloudBlobIterator.class);
   private final AzureStorage storage;
+  private final ListBlobItemDruidFactory blobItemDruidFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
 
@@ -45,26 +46,33 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
   private String currentContainer;
   private String currentPrefix;
   private ResultContinuation continuationToken;
-  private Iterator<ListBlobItem> blobItemIterator;
   private CloudBlobDruid currentBlobItem;
+  private Iterator<ListBlobItem> blobItemIterator;
 
-  BlobItemIterator(
-      final AzureStorage storage,
-      final Iterable<URI> prefixes,
-      final int maxListingLength
+  @AssistedInject
+  AzureCloudBlobIterator(
+      AzureStorage storage,
+      ListBlobItemDruidFactory blobItemDruidFactory,
+      @Assisted final Iterable<URI> prefixes,
+      @Assisted final int maxListingLength
   )
   {
-    log.info("In BlobItemIterator constuctor:\nstorage: %s\nprefixes: %s\nmaxListingLength: %s",
-             storage, prefixes, maxListingLength
-    );
     this.storage = storage;
+    this.blobItemDruidFactory = blobItemDruidFactory;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
+    this.result = null;
     this.currentContainer = null;
+    this.currentPrefix = null;
+    this.continuationToken = null;
+    this.currentBlobItem = null;
+    this.blobItemIterator = null;
 
-    prepareNextRequest();
-    fetchNextBatch();
-    advanceBlobItem();
+    if (prefixesIterator.hasNext()) {
+      prepareNextRequest();
+      fetchNextBatch();
+      advanceBlobItem();
+    }
   }
 
   @Override
@@ -77,12 +85,10 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
   public CloudBlobDruid next()
   {
     if (currentBlobItem == null) {
-      log.info("next: NoSuchElementException");
       throw new NoSuchElementException();
     }
 
     final CloudBlobDruid retVal = currentBlobItem;
-    log.info("next: retVal: %s", retVal);
     advanceBlobItem();
     return retVal;
   }
@@ -92,7 +98,7 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
     URI currentUri = prefixesIterator.next();
     currentContainer = currentUri.getAuthority();
     currentPrefix = AzureUtils.extractAzureKey(currentUri);
-    log.info("prepareNextRequest:\ncurrentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
+    log.debug("prepareNextRequest:\ncurrentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
              currentUri, currentContainer, currentPrefix
     );
     result = null;
@@ -115,7 +121,7 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
       log.warn("fetchNextBatch threw exception: %s", e.getMessage());
       throw new RE(
           e,
-          "Failed to get object summaries from S3 bucket[%s], prefix[%s]",
+          "Failed to get blob item  from Azure container[%s], prefix[%s]",
           currentContainer,
           currentPrefix,
           e.getMessage()
@@ -130,7 +136,7 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
   {
     while (blobItemIterator.hasNext() || continuationToken != null || prefixesIterator.hasNext()) {
       while (blobItemIterator.hasNext()) {
-        ListBlobItemDruid blobItem = new ListBlobItemDruid(blobItemIterator.next());
+        ListBlobItemDruid blobItem = blobItemDruidFactory.create(blobItemIterator.next());
         /* skip directory objects */
         if (blobItem.isCloudBlob()) {
           currentBlobItem = blobItem.getCloudBlob();
@@ -147,7 +153,6 @@ public class BlobItemIterator implements Iterator<CloudBlobDruid>
     }
 
     // Truly nothing left to read.
-    log.info("advanceBlobItem: nothing left to read");
     currentBlobItem = null;
   }
 }

@@ -52,7 +52,6 @@ public class AzureStorage
       CloudBlobClient cloudBlobClient
   )
   {
-    log.info("In AzureStorage Constructor:\n cloudBlobClient: %s", cloudBlobClient);
     this.cloudBlobClient = cloudBlobClient;
   }
 
@@ -117,17 +116,7 @@ public class AzureStorage
       int maxResults
   ) throws StorageException, URISyntaxException
   {
-    log.info("listBlobsWithPrefixInContainerSegmented:\ncontainerName: %s\nprefix: %s\nresultContinuation: %s\nmaxResults: %d",
-             containerName,
-             prefix,
-             continuationToken,
-             maxResults
-    );
     CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
-    log.info(
-        "listBlobsWithPrefixInContainerSegmented:\ncloudBlobContainer: %s",
-        cloudBlobContainer
-    );
     return new ResultSegmentDruid<ListBlobItem>(cloudBlobContainer
                                                     .listBlobsSegmented(
                                                         prefix,

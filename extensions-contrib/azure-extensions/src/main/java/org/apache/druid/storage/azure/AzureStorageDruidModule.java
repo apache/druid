@@ -29,6 +29,7 @@ import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
+import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.firehose.azure.StaticAzureBlobStoreFirehoseFactory;
 import org.apache.druid.guice.Binders;
@@ -96,7 +97,18 @@ public class AzureStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
     binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
     binder.install(new FactoryModuleBuilder()
-                .build(AzureByteSourceFactory.class));
+                       .build(AzureByteSourceFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureEntityFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureCloudBlobIteratorFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureCloudBlobIterableFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(ListBlobItemDruidFactory.class));
+    binder.bind(ICloudSpecificObjectToCloudObjectLocationConverter.class)
+          .to(AzureCloudBlobDruidToCloudObjectLocationConverter.class)
+          .in(LazySingleton.class);
   }
 
   @Provides

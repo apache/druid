@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.inject.assistedinject.Assisted;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 
-public interface AzureByteSourceFactory
+public interface ICloudSpecificObjectToCloudObjectLocationConverter<T>
 {
-  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
+  CloudObjectLocation createCloudObjectLocation(T cloudSpecificImpl);
 }

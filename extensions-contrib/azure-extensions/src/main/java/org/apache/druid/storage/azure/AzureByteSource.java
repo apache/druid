@@ -43,9 +43,6 @@ public class AzureByteSource extends ByteSource
       @Assisted("blobPath") String blobPath
   )
   {
-    log.info("In AzureEntity Constructor:\ncontainerName: %s\nblobPath: %s",
-             containerName, blobPath
-    );
     this.azureStorage = azureStorage;
     this.containerName = containerName;
     this.blobPath = blobPath;
@@ -54,23 +51,12 @@ public class AzureByteSource extends ByteSource
   @Override
   public InputStream openStream() throws IOException
   {
-    try {
-      return azureStorage.getBlobInputStream(containerName, blobPath);
-    }
-    catch (StorageException | URISyntaxException e) {
-      if (AzureUtils.AZURE_RETRY.apply(e)) {
-        throw new IOException("Recoverable exception", e);
-      }
-      throw new RuntimeException(e);
-    }
+    return openStream(0L);
   }
 
   public InputStream openStream(long offset) throws IOException
   {
     try {
-      log.info("openStream:offset: %d\ncontainerName: %s\nblobPath: %s",
-               offset, containerName, blobPath
-      );
       return azureStorage.getBlobInputStream(offset, containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {

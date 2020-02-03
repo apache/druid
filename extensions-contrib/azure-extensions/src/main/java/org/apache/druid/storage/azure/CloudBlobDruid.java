@@ -21,7 +21,6 @@ package org.apache.druid.storage.azure;
 
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 import java.net.URISyntaxException;
 
@@ -34,9 +33,9 @@ public class CloudBlobDruid
     this.delegate = delegate;
   }
 
-  public CloudBlobContainer getContainer() throws URISyntaxException, StorageException
+  public String getContainerName() throws URISyntaxException, StorageException
   {
-    return delegate.getContainer();
+    return delegate.getContainer().getName();
   }
 
   public String getName()

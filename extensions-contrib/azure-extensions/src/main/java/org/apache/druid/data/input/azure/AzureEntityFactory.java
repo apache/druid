@@ -19,6 +19,9 @@
 
 package org.apache.druid.data.input.azure;
 
+import org.apache.druid.data.input.impl.CloudObjectLocation;
+
 public interface AzureEntityFactory
 {
+  AzureEntity create(CloudObjectLocation location);
 }

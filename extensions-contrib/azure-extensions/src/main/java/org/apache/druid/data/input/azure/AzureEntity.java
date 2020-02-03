@@ -20,6 +20,8 @@
 package org.apache.druid.data.input.azure;
 
 import com.google.common.base.Predicate;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -39,11 +41,13 @@ public class AzureEntity extends RetryingInputEntity
   private final CloudObjectLocation location;
   private final AzureByteSource byteSource;
 
-  AzureEntity(AzureStorage storage, CloudObjectLocation location, AzureByteSourceFactory byteSourceFactory)
+  @AssistedInject
+  AzureEntity(
+      AzureStorage storage,
+      @Assisted CloudObjectLocation location,
+      AzureByteSourceFactory byteSourceFactory
+  )
   {
-    log.info("In AzureEntity Constructor:\nstorage: %s\nlocation: %s\nbucket: %s\npath: %s",
-             storage, location, location.getBucket(), location.getPath()
-    );
     this.location = location;
     this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath());
   }
@@ -59,7 +63,6 @@ public class AzureEntity extends RetryingInputEntity
   protected InputStream readFrom(long offset) throws IOException
   {
     // Get data of the given object and open an input stream
-    log.info("offset: %d", offset);
     return byteSource.openStream(offset);
   }
 

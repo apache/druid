@@ -19,9 +19,19 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.inject.assistedinject.Assisted;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 
-public interface AzureByteSourceFactory
+public class AzureCloudBlobDruidToCloudObjectLocationConverter
+    implements ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobDruid>
 {
-  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
+  @Override
+  public CloudObjectLocation createCloudObjectLocation(CloudBlobDruid cloudBlob)
+  {
+    try {
+      return new CloudObjectLocation(cloudBlob.getContainerName(), cloudBlob.getName());
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

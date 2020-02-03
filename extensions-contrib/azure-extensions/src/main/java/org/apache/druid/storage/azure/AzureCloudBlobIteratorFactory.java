@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.inject.assistedinject.Assisted;
+import java.net.URI;
 
-public interface AzureByteSourceFactory
+public interface AzureCloudBlobIteratorFactory
 {
-  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
+  AzureCloudBlobIterator create(Iterable<URI> prefixes, int maxListingLength);
 }

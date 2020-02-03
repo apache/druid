@@ -20,8 +20,28 @@
 package org.apache.druid.storage.azure;
 
 import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
-public interface AzureByteSourceFactory
+import java.net.URI;
+import java.util.Iterator;
+
+public class AzureCloudBlobIterable implements Iterable<CloudBlobDruid>
 {
-  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
+  private final Iterator<CloudBlobDruid> iterator;
+
+  @AssistedInject
+  public AzureCloudBlobIterable(
+      AzureCloudBlobIteratorFactory azureCloudBlobIteratorFactory,
+      @Assisted final Iterable<URI> prefixes,
+      @Assisted final int maxListingLength
+  )
+  {
+    this.iterator = azureCloudBlobIteratorFactory.create(prefixes, maxListingLength);
+  }
+
+  @Override
+  public Iterator<CloudBlobDruid> iterator()
+  {
+    return iterator;
+  }
 }
