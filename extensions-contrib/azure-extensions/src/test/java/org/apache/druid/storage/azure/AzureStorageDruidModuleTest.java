@@ -101,6 +101,21 @@ public class AzureStorageDruidModuleTest
     Assert.assertSame(cloudBlobClient, azureStorage.getCloudBlobClient());
   }
 
+  @Test
+  public void test_getAzureCloudBlobToLocationConverter_expectedConverted()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+    injector = makeInjectorWithProperties(props);
+    AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobLocationConverter1 = injector.getInstance(
+        AzureCloudBlobDruidToCloudObjectLocationConverter.class);
+    AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
+        AzureCloudBlobDruidToCloudObjectLocationConverter.class);
+    Assert.assertSame(azureCloudBlobLocationConverter1, azureCloudBlobLocationConverter2);
+  }
+
   private Injector makeInjectorWithProperties(final Properties props)
   {
     return Guice.createInjector(

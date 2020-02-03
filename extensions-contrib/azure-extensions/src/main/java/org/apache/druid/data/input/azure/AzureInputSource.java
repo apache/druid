@@ -29,10 +29,10 @@ import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.azure.AzureCloudBlobDruidToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.CloudBlobDruid;
-import org.apache.druid.storage.azure.ICloudSpecificObjectToCloudObjectLocationConverter;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -49,14 +49,14 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
   private final AzureStorage storage;
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
-  private final ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobDruid> azureCloudBlobToLocationConverter;
+  private final AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
 
   @JsonCreator
   public AzureInputSource(
       @JacksonInject AzureStorage storage,
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
-      @JacksonInject ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobDruid> azureCloudBlobToLocationConverter,
+      @JacksonInject AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects

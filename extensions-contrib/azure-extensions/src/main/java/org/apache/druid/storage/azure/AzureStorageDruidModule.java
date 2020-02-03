@@ -106,9 +106,6 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(AzureCloudBlobIterableFactory.class));
     binder.install(new FactoryModuleBuilder()
                        .build(ListBlobItemDruidFactory.class));
-    binder.bind(ICloudSpecificObjectToCloudObjectLocationConverter.class)
-          .to(AzureCloudBlobDruidToCloudObjectLocationConverter.class)
-          .in(LazySingleton.class);
   }
 
   @Provides
@@ -135,5 +132,12 @@ public class AzureStorageDruidModule implements DruidModule
   )
   {
     return new AzureStorage(cloudBlobClient);
+  }
+
+  @Provides
+  @LazySingleton
+  public AzureCloudBlobDruidToCloudObjectLocationConverter getAzureCloudBlobToLocationConverter()
+  {
+    return new AzureCloudBlobDruidToCloudObjectLocationConverter();
   }
 }
