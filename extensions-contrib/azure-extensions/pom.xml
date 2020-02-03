@@ -165,7 +165,7 @@
                                 <limit>
                                     <counter>INSTRUCTION</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.77</minimum>
+                                    <minimum>0.79</minimum>
                                 </limit>
                                 <limit>
                                     <counter>LINE</counter>
@@ -194,7 +194,7 @@
                                 </limit>
                             </limits>
                         </rule>
-                    </rules> 
+                    </rules>
                 </configuration>
                 <executions>
                     <execution>
@@ -204,7 +204,7 @@
                             <goal>report</goal>
                             <goal>check</goal>
                         </goals>
-                    </execution> 
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

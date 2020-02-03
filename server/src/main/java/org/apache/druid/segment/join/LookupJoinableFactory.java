@@ -21,32 +21,38 @@ package org.apache.druid.segment.join;
 
 import com.google.inject.Inject;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.join.lookup.LookupJoinable;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
-public class DefaultJoinableFactory implements JoinableFactory
+/**
+ * A {@link JoinableFactory} for {@link LookupDataSource}.
+ *
+ * It is not valid to pass any other DataSource type to the "build" method.
+ */
+public class LookupJoinableFactory implements JoinableFactory
 {
-  private final List<JoinableFactory> factories;
+  private final LookupExtractorFactoryContainerProvider lookupProvider;
 
   @Inject
-  public DefaultJoinableFactory(final InlineJoinableFactory inlineJoinableFactory)
+  public LookupJoinableFactory(LookupExtractorFactoryContainerProvider lookupProvider)
   {
-    // Just one right now, but we expect there to be more in the future, and maybe even an extension mechanism.
-    this.factories = Collections.singletonList(inlineJoinableFactory);
+    this.lookupProvider = lookupProvider;
   }
 
   @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
-    for (JoinableFactory factory : factories) {
-      final Optional<Joinable> maybeJoinable = factory.build(dataSource, condition);
-      if (maybeJoinable.isPresent()) {
-        return maybeJoinable;
-      }
-    }
+    final LookupDataSource lookupDataSource = (LookupDataSource) dataSource;
 
-    return Optional.empty();
+    if (condition.canHashJoin()) {
+      final String lookupName = lookupDataSource.getLookupName();
+      return lookupProvider.get(lookupName)
+                           .map(c -> LookupJoinable.wrap(c.getLookupExtractorFactory().get()));
+    } else {
+      return Optional.empty();
+    }
   }
 }

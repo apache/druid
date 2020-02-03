@@ -254,21 +254,60 @@ public class JavaScriptDimFilter implements DimFilter
     public DruidLongPredicate makeLongPredicate()
     {
       // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
-      return input -> applyObject(input);
+      return new DruidLongPredicate()
+      {
+        @Override
+        public boolean applyLong(long input)
+        {
+          return JavaScriptPredicateFactory.this.applyObject(input);
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return JavaScriptPredicateFactory.this.applyObject(null);
+        }
+      };
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
       // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
-      return input -> applyObject(input);
+      return new DruidFloatPredicate()
+      {
+        @Override
+        public boolean applyFloat(float input)
+        {
+          return JavaScriptPredicateFactory.this.applyObject(input);
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return JavaScriptPredicateFactory.this.applyObject(null);
+        }
+      };
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
       // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
-      return input -> applyObject(input);
+      return new DruidDoublePredicate()
+      {
+        @Override
+        public boolean applyDouble(double input)
+        {
+          return JavaScriptPredicateFactory.this.applyObject(input);
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return JavaScriptPredicateFactory.this.applyObject(null);
+        }
+      };
     }
 
     public boolean applyObject(final Object input)

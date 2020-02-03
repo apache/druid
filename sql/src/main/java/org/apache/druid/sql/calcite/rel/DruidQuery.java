@@ -117,7 +117,32 @@ public class DruidQuery
   private final RelDataType outputRowType;
   private final VirtualColumnRegistry virtualColumnRegistry;
 
-  public DruidQuery(
+  private DruidQuery(
+      final DataSource dataSource,
+      final PlannerContext plannerContext,
+      @Nullable final DimFilter filter,
+      @Nullable final Projection selectProjection,
+      @Nullable final Grouping grouping,
+      @Nullable final Sorting sorting,
+      final RowSignature sourceRowSignature,
+      final RelDataType outputRowType,
+      final VirtualColumnRegistry virtualColumnRegistry
+  )
+  {
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
+    this.filter = filter;
+    this.selectProjection = selectProjection;
+    this.grouping = grouping;
+    this.sorting = sorting;
+    this.sourceRowSignature = Preconditions.checkNotNull(sourceRowSignature, "sourceRowSignature");
+    this.outputRowSignature = computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting);
+    this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
+    this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
+    this.query = computeQuery();
+  }
+
+  public static DruidQuery fromPartialQuery(
       final PartialDruidQuery partialQuery,
       final DataSource dataSource,
       final RowSignature sourceRowSignature,
@@ -126,15 +151,17 @@ public class DruidQuery
       final boolean finalizeAggregations
   )
   {
-    this.dataSource = dataSource;
-    this.outputRowType = partialQuery.leafRel().getRowType();
-    this.sourceRowSignature = sourceRowSignature;
-    this.virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
-    this.plannerContext = plannerContext;
+    final RelDataType outputRowType = partialQuery.leafRel().getRowType();
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
 
     // Now the fun begins.
+    final DimFilter filter;
+    final Projection selectProjection;
+    final Grouping grouping;
+    final Sorting sorting;
+
     if (partialQuery.getWhereFilter() != null) {
-      this.filter = Preconditions.checkNotNull(
+      filter = Preconditions.checkNotNull(
           computeWhereFilter(
               partialQuery,
               plannerContext,
@@ -143,55 +170,64 @@ public class DruidQuery
           )
       );
     } else {
-      this.filter = null;
+      filter = null;
     }
 
     // Only compute "selectProjection" if this is a non-aggregating query. (For aggregating queries, "grouping" will
     // reflect select-project from partialQuery on its own.)
     if (partialQuery.getSelectProject() != null && partialQuery.getAggregate() == null) {
-      this.selectProjection = Preconditions.checkNotNull(
+      selectProjection = Preconditions.checkNotNull(
           computeSelectProjection(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(),
+              computeOutputRowSignature(sourceRowSignature, null, null, null),
               virtualColumnRegistry
           )
       );
     } else {
-      this.selectProjection = null;
+      selectProjection = null;
     }
 
     if (partialQuery.getAggregate() != null) {
-      this.grouping = Preconditions.checkNotNull(
+      grouping = Preconditions.checkNotNull(
           computeGrouping(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(),
+              computeOutputRowSignature(sourceRowSignature, selectProjection, null, null),
               virtualColumnRegistry,
               rexBuilder,
               finalizeAggregations
           )
       );
     } else {
-      this.grouping = null;
+      grouping = null;
     }
 
     if (partialQuery.getSort() != null) {
-      this.sorting = Preconditions.checkNotNull(
+      sorting = Preconditions.checkNotNull(
           computeSorting(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(),
+              computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, null),
               // When sorting follows grouping, virtual columns cannot be used
               partialQuery.getAggregate() != null ? null : virtualColumnRegistry
           )
       );
     } else {
-      this.sorting = null;
+      sorting = null;
     }
 
-    this.outputRowSignature = computeOutputRowSignature();
-    this.query = computeQuery();
+    return new DruidQuery(
+        dataSource,
+        plannerContext,
+        filter,
+        selectProjection,
+        grouping,
+        sorting,
+        sourceRowSignature,
+        outputRowType,
+        virtualColumnRegistry
+    );
   }
 
   @Nonnull
@@ -357,7 +393,7 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<DimensionExpression> dimensions = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefix("d", new TreeSet<>(rowSignature.getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("d", new TreeSet<>(rowSignature.getRowOrder()));
     int outputNameCounter = 0;
 
     for (int i : aggregate.getGroupSet()) {
@@ -426,7 +462,7 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<Aggregation> aggregations = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefix("a", new TreeSet<>(rowSignature.getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("a", new TreeSet<>(rowSignature.getRowOrder()));
 
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
       final String aggName = outputNamePrefix + i;
@@ -525,6 +561,29 @@ public class DruidQuery
     return Sorting.create(orderBys, limit, projection);
   }
 
+  /**
+   * Return the {@link RowSignature} corresponding to the output of a query with the given parameters.
+   */
+  private static RowSignature computeOutputRowSignature(
+      final RowSignature sourceRowSignature,
+      @Nullable final Projection selectProjection,
+      @Nullable final Grouping grouping,
+      @Nullable final Sorting sorting
+  )
+  {
+    if (sorting != null && sorting.getProjection() != null) {
+      return sorting.getProjection().getOutputRowSignature();
+    } else if (grouping != null) {
+      // Sanity check: cannot have both "grouping" and "selectProjection".
+      Preconditions.checkState(selectProjection == null, "Cannot have both 'grouping' and 'selectProjection'");
+      return grouping.getOutputRowSignature();
+    } else if (selectProjection != null) {
+      return selectProjection.getOutputRowSignature();
+    } else {
+      return sourceRowSignature;
+    }
+  }
+
   private VirtualColumns getVirtualColumns(final boolean includeDimensions)
   {
     // 'sourceRowSignature' could provide a list of all defined virtual columns while constructing a query, but we
@@ -570,6 +629,11 @@ public class DruidQuery
     return VirtualColumns.create(columns);
   }
 
+  public DataSource getDataSource()
+  {
+    return dataSource;
+  }
+
   @Nullable
   public Grouping getGrouping()
   {
@@ -589,26 +653,6 @@ public class DruidQuery
   public Query getQuery()
   {
     return query;
-  }
-
-  /**
-   * Return the {@link RowSignature} corresponding to the output of this query. This method may be called during
-   * construction, in which case it returns the output row signature at whatever phase of construction this method
-   * is called at. At the end of construction, the final result is assigned to {@link #outputRowSignature}.
-   */
-  private RowSignature computeOutputRowSignature()
-  {
-    if (sorting != null && sorting.getProjection() != null) {
-      return sorting.getProjection().getOutputRowSignature();
-    } else if (grouping != null) {
-      // Sanity check: cannot have both "grouping" and "selectProjection".
-      Preconditions.checkState(selectProjection == null, "Cannot have both 'grouping' and 'selectProjection'");
-      return grouping.getOutputRowSignature();
-    } else if (selectProjection != null) {
-      return selectProjection.getOutputRowSignature();
-    } else {
-      return sourceRowSignature;
-    }
   }
 
   /**

@@ -128,7 +128,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       );
     }
     catch (Exception e) {
-      // do we want to throw a specfic exception here? Interface only expects IOExceptions to be thrown.
       throw new RuntimeException(e);
     }
     finally {
@@ -178,7 +177,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         .withLoadSpec(this.makeLoadSpec(new URI(azurePath)))
         .withBinaryVersion(binaryVersion);
 
-    log.info("Deleting file [%s]", compressedSegmentData);
+    log.debug("Deleting file [%s]", compressedSegmentData);
     compressedSegmentData.delete();
 
     return outSegment;

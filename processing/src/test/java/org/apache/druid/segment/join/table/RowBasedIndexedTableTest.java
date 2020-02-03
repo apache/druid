@@ -21,6 +21,7 @@ package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinTestHelper;
@@ -64,7 +65,7 @@ public class RowBasedIndexedTableTest
   @Test
   public void test_keyColumns_countries()
   {
-    Assert.assertEquals(ImmutableList.of("countryNumber", "countryIsoCode"), countriesTable.keyColumns());
+    Assert.assertEquals(ImmutableSet.of("countryNumber", "countryIsoCode"), countriesTable.keyColumns());
   }
 
   @Test

@@ -118,6 +118,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
@@ -222,15 +223,15 @@ public class CalciteTests
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
 
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+        final LookupExtractorFactoryContainerProvider lookupProvider =
+            LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
                     "a", "xa",
-                    "abc", "xabc"
+                    "abc", "xabc",
+                    "nosuchkey", "mysteryvalue"
                 )
-            )
-        );
-
+            );
+        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
       }
   );
 
@@ -720,7 +721,10 @@ public class CalciteTests
         .buildMMappedIndex();
 
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(
+        conglomerate,
+        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class)
+    ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
                    .interval(index1.getDataInterval())
@@ -857,6 +861,10 @@ public class CalciteTests
     ).get(0);
   }
 
+  public static LookupSchema createMockLookupSchema()
+  {
+    return new LookupSchema(INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class));
+  }
 
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,

@@ -132,7 +132,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       try {
         if (!groupByJob.waitForCompletion(true)) {
           log.error("Job failed: %s", groupByJob.getJobID());
-          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+          failureCause = Utils.getFailureMessage(groupByJob, HadoopDruidIndexerConfig.JSON_MAPPER);
           return false;
         }
       }
@@ -154,7 +154,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (!Utils.exists(groupByJob, fileSystem, intervalInfoPath)) {
           throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
         }
-        List<Interval> intervals = config.JSON_MAPPER.readValue(
+        List<Interval> intervals = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
             Utils.openInputStream(groupByJob, intervalInfoPath),
             new TypeReference<List<Interval>>() {}
         );
@@ -178,7 +178,7 @@ public class DetermineHashedPartitionsJob implements Jobby
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
-          final Long numRows = config.JSON_MAPPER.readValue(
+          final Long numRows = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
               Utils.openInputStream(groupByJob, partitionInfoPath),
               Long.class
           );
