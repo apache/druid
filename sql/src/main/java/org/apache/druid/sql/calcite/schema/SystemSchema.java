@@ -95,7 +95,6 @@ import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
-  public static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
@@ -285,7 +284,7 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
       }
 
-      // Get published segments from metadata segment cache (if enabled in sql planner config), else directly from
+      // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator.
       final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
@@ -456,7 +455,7 @@ public class SystemSchema extends AbstractSchema
   }
 
   /**
-   * This table contains row per server. It contains all the discovered servers in druid cluster.
+   * This table contains row per server. It contains all the discovered servers in Druid cluster.
    * Some columns like tier and size are only applicable to historical nodes which contain segments.
    */
   static class ServersTable extends AbstractTable implements ScannableTable

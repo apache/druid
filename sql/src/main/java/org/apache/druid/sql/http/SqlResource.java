@@ -151,7 +151,7 @@ public class SqlResource
                   }
                   catch (Exception ex) {
                     e = ex;
-                    log.error(ex, "Unable to send sql response [%s]", sqlQueryId);
+                    log.error(ex, "Unable to send SQL response [%s]", sqlQueryId);
                     throw new RuntimeException(ex);
                   }
                   finally {
