@@ -22,8 +22,11 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlTypeTransforms;
+import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -96,20 +99,37 @@ public class GreatestSqlAggregator extends MultiColumnSqlAggregator
     return finalPostAggregator;
   }
 
+  /**
+   * Calcite SQL function definition
+   */
   private static class GreatestSqlAggFunction extends SqlAggFunction
   {
     GreatestSqlAggFunction()
     {
+      /*
+       * The constructor params are explained as follows,
+       * name: SQL function name
+       * sqlIdentifier: null for built-in functions
+       * kind: SqlKind.GREATEST
+       * returnTypeInference: biggest operand type & nullable if any of the operands is nullable
+       * operandTypeInference: same as return type
+       * operandTypeChecker: variadic function with at least one argument
+       * funcType: System
+       * requiresOrder: No
+       * requiresOver: No
+       * requiresGroupOrder: Not allowed
+       */
       super(
           NAME,
           null,
           SqlKind.GREATEST,
-          ReturnTypes.ARG0_NULLABLE_IF_EMPTY,
-          null,
-          OperandTypes.SAME_VARIADIC,
+          ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE, SqlTypeTransforms.TO_NULLABLE),
+          InferTypes.RETURN_TYPE,
+          OperandTypes.ONE_OR_MORE,
           SqlFunctionCategory.SYSTEM,
           false,
-          false
+          false,
+          Optionality.FORBIDDEN
       );
     }
   }
