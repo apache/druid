@@ -46,7 +46,6 @@ import org.apache.druid.segment.join.JoinMatcher;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -286,6 +285,11 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       return index.find(key);
     }
 
+    private IntList getAndCacheRowNumbers(DimensionSelector selector, int dimensionId)
+    {
+      return dimensionCaches.getAndLoadIfAbsent(selector).getAndLoadIfAbsent(dimensionId);
+    }
+
     @Override
     public ValueType defaultType()
     {
@@ -295,26 +299,44 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public Supplier<IntIterator> makeDimensionProcessor(DimensionSelector selector)
     {
-      return () -> {
-        final IndexedInts row = selector.getRow();
+      // NOTE: The slow (cardinality unknown) and fast (cardinality known) code paths below only differ in the calls to
+      // getRowNumbers() and getAndCacheRowNumbers(), respectively. The majority of the code path is duplicated to avoid
+      // adding indirection to fetch getRowNumbers()/getAndCacheRowNumbers() from a local BiFunction variable that is
+      // set outside of the supplier. Minimizing overhead is desirable since the supplier is called from a hot loop for
+      // joins.
 
-        if (row.size() == 1) {
-          int dimensionId = row.get(0);
-          final IntList rowNumbers;
-          if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
-            // If the cardinality is unknown, then the selector does not have a "real" dictionary and the dimension id
-            // is not valid oustide the context of a specific row. This means we cannot use a cache and must fall
-            // back to this slow code path.
-            rowNumbers = getRowNumbers(selector, dimensionId);
+      if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
+        // If the cardinality is unknown, then the selector does not have a "real" dictionary and the dimension id
+        // is not valid outside the context of a specific row. This means we cannot use a cache and must fall
+        // back to this slow code path.
+        return () -> {
+          final IndexedInts row = selector.getRow();
+
+          if (row.size() == 1) {
+            int dimensionId = row.get(0);
+            IntList rowNumbers = getRowNumbers(selector, dimensionId);
+            return rowNumbers.iterator();
           } else {
-            rowNumbers = dimensionCaches.getAndLoadIfAbsent(selector).getAndLoadIfAbsent(dimensionId);
+            // Multi-valued rows are not handled by the join system right now; treat them as nulls.
+            return IntIterators.EMPTY_ITERATOR;
           }
-          return rowNumbers.iterator();
-        } else {
-          // Multi-valued rows are not handled by the join system right now; treat them as nulls.
-          return IntIterators.EMPTY_ITERATOR;
-        }
-      };
+        };
+      } else {
+        // If the cardinality is known, then the dimension id is still valid outside the context of a specific row and
+        // its mapping to row numbers can be cached.
+        return () -> {
+          final IndexedInts row = selector.getRow();
+
+          if (row.size() == 1) {
+            int dimensionId = row.get(0);
+            IntList rowNumbers = getAndCacheRowNumbers(selector, dimensionId);
+            return rowNumbers.iterator();
+          } else {
+            // Multi-valued rows are not handled by the join system right now; treat them as nulls.
+            return IntIterators.EMPTY_ITERATOR;
+          }
+        };
+      }
     }
 
     @Override
@@ -404,7 +426,6 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     {
       this.loader = loader;
       this.lookup = new IntList[maxSize];
-      Arrays.fill(lookup, null);
     }
 
     @Override
