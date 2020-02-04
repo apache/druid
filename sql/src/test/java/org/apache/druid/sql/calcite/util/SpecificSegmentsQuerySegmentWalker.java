@@ -60,7 +60,7 @@ import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.join.LookupJoinableFactory;
-import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactoryTest;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -109,7 +109,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   )
   {
     this.conglomerate = conglomerate;
-    this.joinableFactory = new MapJoinableFactory(
+    this.joinableFactory = MapJoinableFactoryTest.fromMap(
         ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
             .put(InlineDataSource.class, new InlineJoinableFactory())
             .put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider))

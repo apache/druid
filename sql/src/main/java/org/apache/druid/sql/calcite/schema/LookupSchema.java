@@ -37,8 +37,6 @@ import java.util.Map;
  */
 public class LookupSchema extends AbstractSchema
 {
-  public static final String NAME = "lookup";
-
   private static final RowSignature ROW_SIGNATURE =
       RowSignature.builder()
                   .add(LookupColumnSelectorFactory.KEY_COLUMN, ValueType.STRING)

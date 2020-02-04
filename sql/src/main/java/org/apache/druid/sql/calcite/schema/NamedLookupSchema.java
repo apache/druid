@@ -17,42 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Inject;
+import org.apache.calcite.schema.Schema;
 
-class AvaticaServerConfig
+/**
+ * The schema for Druid lookup tables to be accessible via SQL.
+ */
+public class NamedLookupSchema implements NamedSchema
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  private static final String NAME = "lookup";
 
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
+  private final LookupSchema lookupSchema;
 
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Inject
+  NamedLookupSchema(LookupSchema lookupSchema)
   {
-    return maxConnections;
+    this.lookupSchema = lookupSchema;
   }
 
-  public int getMaxStatementsPerConnection()
+  @Override
+  public String getSchemaName()
   {
-    return maxStatementsPerConnection;
+    return NAME;
   }
 
-  public Period getConnectionIdleTimeout()
+  @Override
+  public Schema getSchema()
   {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    return lookupSchema;
   }
 }

@@ -17,42 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Inject;
+import org.apache.calcite.schema.Schema;
 
-class AvaticaServerConfig
+/**
+ * The schema for Druid tables to be accessible via SQL.
+ */
+class NamedDruidSchema implements NamedSchema
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  private final DruidSchema druidSchema;
+  private final String druidSchemaName;
 
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Inject
+  NamedDruidSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
   {
-    return maxConnections;
+    this.druidSchema = druidSchema;
+    this.druidSchemaName = druidSchemaName;
   }
 
-  public int getMaxStatementsPerConnection()
+  @Override
+  public String getSchemaName()
   {
-    return maxStatementsPerConnection;
+    return druidSchemaName;
   }
 
-  public Period getConnectionIdleTimeout()
+  @Override
+  public Schema getSchema()
   {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    return druidSchema;
   }
 }
