@@ -69,7 +69,7 @@ public class HashTableUtilsTest
   {
     final WritableMemory randomMemory = WritableMemory.allocate(length);
 
-    // Fill with randomy bytes, but use the same seed every run for consistency. This test should pass with
+    // Fill with random bytes, but use the same seed every run for consistency. This test should pass with
     // any seed unless something really pathological happens.
     final Random random = new Random(0);
     final byte[] randomBytes = new byte[length];

@@ -85,10 +85,10 @@ public class MemoryOpenHashTable
     this.valueSize = valueSize;
     this.bucketSize = bucketSize(keySize, valueSize);
 
-    // Our main user today (HashVectorGrouper) needs the tableMemory to be backed by a big-endian ByteBuffer that is
-    // coterminous with the tableMemory, since it's going to feed that buffer into VectorAggregators instead of
-    // interacting with our WritableMemory directly. Nothing about this class actually requires that the Memory be
-    // backed by a ByteBuffer, but we'll check it here anyway for the benefit of our biggest customer.
+    // Our main intended users (VectorGrouper implementations) need the tableMemory to be backed by a big-endian
+    // ByteBuffer that is coterminous with the tableMemory, since it's going to feed that buffer into VectorAggregators
+    // instead of interacting with our WritableMemory directly. Nothing about this class actually requires that the
+    // Memory be backed by a ByteBuffer, but we'll check it here anyway for the benefit of our biggest customer.
     verifyMemoryIsByteBuffer(tableMemory);
 
     if (!tableMemory.getTypeByteOrder().equals(ByteOrder.nativeOrder())) {
@@ -386,7 +386,7 @@ public class MemoryOpenHashTable
    */
   private boolean isOffsetUsed(final int bucketOffset)
   {
-    return tableMemory.getByte(bucketOffset) == 1;
+    return tableMemory.getByte(bucketOffset) == USED_BYTE;
   }
 
   /**

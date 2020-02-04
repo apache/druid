@@ -58,7 +58,7 @@ public class HashTableUtils
 
     switch (length) {
       case 4:
-        return 31 + memory.getInt(position);
+        return memory.getInt(position);
 
       case 8:
         return 31 * (31 + memory.getInt(position)) + memory.getInt(position + Integer.BYTES);
