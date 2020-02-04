@@ -23,8 +23,12 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.java.util.common.ISE;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Provides the RootSchema for calcite with
@@ -35,19 +39,27 @@ import java.util.Set;
  */
 public class RootSchemaProvider implements Provider<SchemaPlus>
 {
-  private final Set<DruidCalciteSchema> calciteSchemas;
+  private final Set<NamedSchema> namedSchemas;
 
   @Inject
-  RootSchemaProvider(Set<DruidCalciteSchema> calciteSchemas)
+  RootSchemaProvider(Set<NamedSchema> namedSchemas)
   {
-    this.calciteSchemas = calciteSchemas;
+    this.namedSchemas = namedSchemas;
   }
 
   @Override
   public SchemaPlus get()
   {
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    calciteSchemas.forEach(schema -> rootSchema.add(schema.getSchemaName(), schema.getSchema()));
+    List<String> schemaNames = namedSchemas.stream()
+                                           .map(NamedSchema::getSchemaName)
+                                           .collect(Collectors.toList());
+    Set<String> uniqueSchemaNames = new HashSet<>(schemaNames);
+    if (uniqueSchemaNames.size() < schemaNames.size()) {
+      throw new ISE("Found multiple schemas registered to the same name. "
+                    + "The list of registered schemas are %s", schemaNames);
+    }
+    namedSchemas.forEach(schema -> rootSchema.add(schema.getSchemaName(), schema.getSchema()));
     return rootSchema;
   }
 }

@@ -31,11 +31,12 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
 /**
- * The module responsible for providing bindings
+ * The module responsible for providing bindings to Calcite schemas.
  */
 public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
+  private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
   static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
 
   @Override
@@ -56,17 +57,16 @@ public class DruidCalciteSchemaModule implements Module
     binder.bind(LookupSchema.class).in(Scopes.SINGLETON);
 
     // Binder to inject different schema to Calcite
-    SqlBindings.addSchema(binder, DruidSqlSchema.class);
-    SqlBindings.addSchema(binder, SystemSqlSchema.class);
-    SqlBindings.addSchema(binder, LookupSqlSchema.class);
+    SqlBindings.addSchema(binder, NamedDruidSchema.class);
+    SqlBindings.addSchema(binder, NamedSystemSchema.class);
+    SqlBindings.addSchema(binder, NamedLookupSchema.class);
   }
 
   @Provides
   @Singleton
   private SchemaPlus getRootSchema(@Named(INCOMPLETE_SCHEMA) SchemaPlus rootSchema, InformationSchema informationSchema)
   {
-    String name = "INFORMATION_SCHEMA";
-    rootSchema.add(name, informationSchema);
+    rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
     return rootSchema;
   }
 }

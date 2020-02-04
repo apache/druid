@@ -128,31 +128,31 @@ public class DruidCalciteSchemaModuleTest
   @Test
   public void testDruidSqlSchemaIsInjectedAsSingleton()
   {
-    DruidSqlSchema druidSqlSchema = injector.getInstance(DruidSqlSchema.class);
-    Assert.assertNotNull(druidSqlSchema);
-    DruidSqlSchema other = injector.getInstance(DruidSqlSchema.class);
-    Assert.assertSame(other, druidSqlSchema);
+    NamedDruidSchema namedDruidSchema = injector.getInstance(NamedDruidSchema.class);
+    Assert.assertNotNull(namedDruidSchema);
+    NamedDruidSchema other = injector.getInstance(NamedDruidSchema.class);
+    Assert.assertSame(other, namedDruidSchema);
   }
 
   @Test
   public void testSystemSqlSchemaIsInjectedAsSingleton()
   {
-    SystemSqlSchema systemSqlSchema = injector.getInstance(SystemSqlSchema.class);
-    Assert.assertNotNull(systemSqlSchema);
-    SystemSqlSchema other = injector.getInstance(SystemSqlSchema.class);
-    Assert.assertSame(other, systemSqlSchema);
+    NamedSystemSchema namedSystemSchema = injector.getInstance(NamedSystemSchema.class);
+    Assert.assertNotNull(namedSystemSchema);
+    NamedSystemSchema other = injector.getInstance(NamedSystemSchema.class);
+    Assert.assertSame(other, namedSystemSchema);
   }
 
   @Test
   public void testDruidCalciteSchemasAreInjected()
   {
-    Set<DruidCalciteSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<DruidCalciteSchema>>(){}));
-    Set<Class<? extends DruidCalciteSchema>> expectedSchemas =
-        ImmutableSet.of(SystemSqlSchema.class, DruidSqlSchema.class, LookupSqlSchema.class);
+    Set<NamedSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<NamedSchema>>(){}));
+    Set<Class<? extends NamedSchema>> expectedSchemas =
+        ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class);
     Assert.assertEquals(expectedSchemas.size(), sqlSchemas.size());
     Assert.assertEquals(
         expectedSchemas,
-        sqlSchemas.stream().map(DruidCalciteSchema::getClass).collect(Collectors.toSet()));
+        sqlSchemas.stream().map(NamedSchema::getClass).collect(Collectors.toSet()));
   }
 
   @Test

@@ -23,16 +23,16 @@ import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
 
 /**
- * The schema for druid lookup tables to be accessible via sql.
+ * The schema for Druid lookup tables to be accessible via SQL.
  */
-public class LookupSqlSchema implements DruidCalciteSchema
+public class NamedLookupSchema implements NamedSchema
 {
   private static final String NAME = "lookup";
 
   private final LookupSchema lookupSchema;
 
   @Inject
-  LookupSqlSchema(LookupSchema lookupSchema)
+  NamedLookupSchema(LookupSchema lookupSchema)
   {
     this.lookupSchema = lookupSchema;
   }

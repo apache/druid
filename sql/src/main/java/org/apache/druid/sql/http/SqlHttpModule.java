@@ -24,7 +24,7 @@ import com.google.inject.Module;
 import org.apache.druid.guice.Jerseys;
 
 /**
- * The Module responsible for providing bindings to the sql http endpoint
+ * The Module responsible for providing bindings to the SQL http endpoint
  */
 public class SqlHttpModule implements Module
 {

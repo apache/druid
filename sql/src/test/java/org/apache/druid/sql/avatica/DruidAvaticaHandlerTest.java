@@ -905,7 +905,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger.clear();
     try {
       client.createStatement().executeQuery("SELECT notexist FROM druid.foo");
-      Assert.fail("invalid sql should throw SQLException");
+      Assert.fail("invalid SQL should throw SQLException");
     }
     catch (SQLException e) {
     }
@@ -919,7 +919,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger.clear();
     try {
       client.createStatement().executeQuery("SELECT count(*) FROM druid.forbiddenDatasource");
-      Assert.fail("unauthorzed sql should throw SQLException");
+      Assert.fail("unauthorzed SQL should throw SQLException");
     }
     catch (SQLException e) {
     }

@@ -19,27 +19,24 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-@RunWith(EasyMockRunner.class)
-public class DruidSqlSchemaTest
+public class NamedSystemSchemaTest
 {
-  private static final String SCHEMA_NAME = "SCHEMA_NAME";
+  private static final String SCHEMA_NAME = "sys";
 
   @Mock
-  private DruidSchema druidSchema;
+  private SystemSchema systemSchema;
 
-  private DruidSqlSchema target;
+  private NamedSystemSchema target;
 
   @Before
   public void setUp()
   {
-    target = new DruidSqlSchema(druidSchema, SCHEMA_NAME);
+    target = new NamedSystemSchema(systemSchema);
   }
 
   @Test
@@ -51,6 +48,6 @@ public class DruidSqlSchemaTest
   @Test
   public void testGetSchemaShouldReturnSchema()
   {
-    Assert.assertEquals(druidSchema, target.getSchema());
+    Assert.assertEquals(systemSchema, target.getSchema());
   }
 }

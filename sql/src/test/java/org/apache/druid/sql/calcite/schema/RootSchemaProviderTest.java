@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.java.util.common.ISE;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -38,14 +39,18 @@ public class RootSchemaProviderTest
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";
   @Mock
-  private DruidCalciteSchema druidSchema1;
+  private NamedSchema druidSchema1;
   @Mock
-  private DruidCalciteSchema druidSchema2;
+  private NamedSchema druidSchema2;
+  @Mock
+  private NamedSchema duplicateSchema1;
   @Mock
   private Schema schema1;
   @Mock
   private Schema schema2;
-  private Set<DruidCalciteSchema> druidSchemas;
+  @Mock
+  private Schema schema3;
+  private Set<NamedSchema> druidSchemas;
 
   private RootSchemaProvider target;
 
@@ -54,9 +59,11 @@ public class RootSchemaProviderTest
   {
     EasyMock.expect(druidSchema1.getSchema()).andStubReturn(schema1);
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
+    EasyMock.expect(duplicateSchema1.getSchema()).andStubReturn(schema3);
     EasyMock.expect(druidSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
     EasyMock.expect(druidSchema2.getSchemaName()).andStubReturn(SCHEMA_2);
-    EasyMock.replay(druidSchema1, druidSchema2);
+    EasyMock.expect(duplicateSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
+    EasyMock.replay(druidSchema1, druidSchema2, duplicateSchema1);
 
     druidSchemas = ImmutableSet.of(druidSchema1, druidSchema2);
     target = new RootSchemaProvider(druidSchemas);
@@ -72,5 +79,12 @@ public class RootSchemaProviderTest
 
     Assert.assertEquals(schema1, rootSchema.getSubSchema(SCHEMA_1).unwrap(schema1.getClass()));
     Assert.assertEquals(schema2, rootSchema.getSubSchema(SCHEMA_2).unwrap(schema2.getClass()));
+  }
+
+  @Test(expected = ISE.class)
+  public void testGetWithDuplicateSchemasShouldThrowISE()
+  {
+    target = new RootSchemaProvider(ImmutableSet.of(druidSchema1, druidSchema2, duplicateSchema1));
+    target.get();
   }
 }

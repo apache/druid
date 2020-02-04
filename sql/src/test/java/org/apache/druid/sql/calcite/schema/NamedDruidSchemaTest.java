@@ -19,33 +19,38 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Inject;
-import org.apache.calcite.schema.Schema;
+import org.easymock.EasyMockRunner;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-/**
- * The schema for druid system tables to be accessible via sql.
- */
-class SystemSqlSchema implements DruidCalciteSchema
+@RunWith(EasyMockRunner.class)
+public class NamedDruidSchemaTest
 {
-  private static final String NAME = "sys";
+  private static final String SCHEMA_NAME = "SCHEMA_NAME";
 
-  private final SystemSchema systemSchema;
+  @Mock
+  private DruidSchema druidSchema;
 
-  @Inject
-  SystemSqlSchema(SystemSchema systemSchema)
+  private NamedDruidSchema target;
+
+  @Before
+  public void setUp()
   {
-    this.systemSchema = systemSchema;
+    target = new NamedDruidSchema(druidSchema, SCHEMA_NAME);
   }
 
-  @Override
-  public String getSchemaName()
+  @Test
+  public void testGetSchemaNameShouldReturnName()
   {
-    return NAME;
+    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
   }
 
-  @Override
-  public Schema getSchema()
+  @Test
+  public void testGetSchemaShouldReturnSchema()
   {
-    return systemSchema;
+    Assert.assertEquals(druidSchema, target.getSchema());
   }
 }

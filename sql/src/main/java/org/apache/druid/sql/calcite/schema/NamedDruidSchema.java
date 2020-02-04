@@ -19,20 +19,33 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
 
 /**
- * A calcite schema and the name that it needs to be bound to so that it is available in Druid SQL.
+ * The schema for Druid tables to be accessible via SQL.
  */
-public interface DruidCalciteSchema
+class NamedDruidSchema implements NamedSchema
 {
-  /**
-   * @return The name that this schema should be registered to.
-   */
-  String getSchemaName();
+  private final DruidSchema druidSchema;
+  private final String druidSchemaName;
 
-  /**
-   * @return The Schema that Calcite should use.
-   */
-  Schema getSchema();
+  @Inject
+  NamedDruidSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
+  {
+    this.druidSchema = druidSchema;
+    this.druidSchemaName = druidSchemaName;
+  }
+
+  @Override
+  public String getSchemaName()
+  {
+    return druidSchemaName;
+  }
+
+  @Override
+  public Schema getSchema()
+  {
+    return druidSchema;
+  }
 }

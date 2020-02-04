@@ -19,38 +19,21 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.easymock.EasyMockRunner;
-import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.apache.calcite.schema.Schema;
 
-@RunWith(EasyMockRunner.class)
-public class LookupSqlSchemaTest
+/**
+ * This interface provides everything that is needed to register a {@link Schema} as a sub schema to the root schema
+ * of Druid SQL. The {@link #getSchemaName()} will be used to access the provided {@link Schema} via SQL.
+ */
+public interface NamedSchema
 {
-  private static final String SCHEMA_NAME = "lookup";
+  /**
+   * @return The name that this schema should be registered to.
+   */
+  String getSchemaName();
 
-  @Mock
-  private LookupSchema lookupSchema;
-
-  private LookupSqlSchema target;
-
-  @Before
-  public void setUp()
-  {
-    target = new LookupSqlSchema(lookupSchema);
-  }
-
-  @Test
-  public void testGetSchemaNameShouldReturnName()
-  {
-    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
-  }
-
-  @Test
-  public void testGetSchemaShouldReturnSchema()
-  {
-    Assert.assertEquals(lookupSchema, target.getSchema());
-  }
+  /**
+   * @return The Schema that Calcite should use.
+   */
+  Schema getSchema();
 }

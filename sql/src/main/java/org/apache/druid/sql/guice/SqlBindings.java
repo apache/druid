@@ -24,7 +24,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.schema.DruidCalciteSchema;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 
 /**
  * Utility class that provides bindings to extendable components in the SqlModule
@@ -48,14 +48,14 @@ public class SqlBindings
   }
 
   /**
-   * Returns a multiBinder that can modules can use to bind {@link DruidCalciteSchema} to be used by the SqlModule
+   * Returns a multiBinder that can modules can use to bind {@link NamedSchema} to be used by the SqlModule
    */
   public static void addSchema(
       final Binder binder,
-      final Class<? extends DruidCalciteSchema> clazz
+      final Class<? extends NamedSchema> clazz
   )
   {
     binder.bind(clazz).in(Scopes.SINGLETON);
-    Multibinder.newSetBinder(binder, DruidCalciteSchema.class).addBinding().to(clazz);
+    Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().to(clazz);
   }
 }

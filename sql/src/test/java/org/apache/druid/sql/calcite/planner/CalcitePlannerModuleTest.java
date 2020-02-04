@@ -34,8 +34,8 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.schema.DruidCalciteSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -56,9 +56,9 @@ public class CalcitePlannerModuleTest
   private static final String DRUID_SCHEMA_NAME = "DRUID_SCHEMA_NAME";
 
   @Mock
-  private DruidCalciteSchema druidSchema1;
+  private NamedSchema druidSchema1;
   @Mock
-  private DruidCalciteSchema druidSchema2;
+  private NamedSchema druidSchema2;
   @Mock
   private Schema schema1;
   @Mock
@@ -74,7 +74,7 @@ public class CalcitePlannerModuleTest
 
   private Set<SqlAggregator> aggregators;
   private Set<SqlOperatorConversion> operatorConversions;
-  private Set<DruidCalciteSchema> calciteSchemas;
+  private Set<NamedSchema> calciteSchemas;
 
   private CalcitePlannerModule target;
   private Injector injector;
@@ -96,7 +96,7 @@ public class CalcitePlannerModuleTest
         binder -> {
           binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          binder.bind(Key.get(new TypeLiteral<Set<DruidCalciteSchema>>(){})).toInstance(calciteSchemas);
+          binder.bind(Key.get(new TypeLiteral<Set<NamedSchema>>(){})).toInstance(calciteSchemas);
           binder.bind(QueryLifecycleFactory.class).toInstance(queryLifecycleFactory);
           binder.bind(ExprMacroTable.class).toInstance(macroTable);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
