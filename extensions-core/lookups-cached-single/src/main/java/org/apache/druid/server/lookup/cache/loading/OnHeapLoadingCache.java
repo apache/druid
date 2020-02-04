@@ -130,7 +130,8 @@ public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
     Callable<? extends V> compatibleValueLoader = new Callable()
     {
       @Override
-      public V call() {
+      public V call()
+      {
         return valueLoader.apply(key);
       }
     };
