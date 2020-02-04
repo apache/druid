@@ -23,17 +23,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -45,6 +45,7 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
@@ -54,6 +55,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -99,6 +102,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
@@ -129,20 +133,24 @@ import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
  * Utility functions for Calcite tests.
@@ -848,15 +856,16 @@ public class CalciteTests
   )
   {
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        EasyMock.createMock(HttpClient.class),
-        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        new FakeHttpClient(),
+        new FakeDruidNodeDiscoveryProvider(),
         NodeRole.COORDINATOR,
         "/simple/leader",
-        new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
-    )
-    {
-    };
-    final SystemSchema schema = new SystemSchema(
+        () -> {
+          throw new UnsupportedOperationException();
+        }
+    );
+
+    return new SystemSchema(
         druidSchema,
         new MetadataSegmentView(
             druidLeaderClient,
@@ -866,14 +875,13 @@ public class CalciteTests
             plannerConfig
         ),
         new TestServerInventoryView(walker.getSegments()),
-        EasyMock.createMock(ServerInventoryView.class),
+        new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
         druidLeaderClient,
-        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        new FakeDruidNodeDiscoveryProvider(),
         getJsonMapper()
     );
-    return schema;
   }
 
   public static SchemaPlus createMockRootSchema(
@@ -969,5 +977,91 @@ public class CalciteTests
 
     schema.stop();
     return schema;
+  }
+
+  /**
+   * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeHttpClient implements HttpClient
+  {
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler
+    )
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration readTimeout
+    )
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  /**
+   * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  {
+    @Override
+    public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  /**
+   * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeServerInventoryView implements ServerInventoryView
+  {
+    @Nullable
+    @Override
+    public DruidServer getInventoryValue(String serverKey)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<DruidServer> getInventory()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isStarted()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
