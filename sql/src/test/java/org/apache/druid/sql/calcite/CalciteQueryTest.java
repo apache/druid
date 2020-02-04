@@ -6171,6 +6171,224 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGreatestSingleColumnPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "      greatest(cnt), greatest(m1), greatest(m2)\n"
+        + "      FROM \"foo\"\n",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new LongMaxAggregatorFactory("a0:0", "cnt"),
+                      new DoubleMaxAggregatorFactory("a1:0", "m1"),
+                      new DoubleMaxAggregatorFactory("a2:0", "m2")
+                  ))
+                  .postAggregators(ImmutableList.of(
+                      new LongGreatestPostAggregator(
+                          "a0",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a0:0")
+                          )
+                      ),
+                      new DoubleGreatestPostAggregator(
+                          "a1",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a1:0")
+                          )
+                      ),
+                      new DoubleGreatestPostAggregator(
+                          "a2",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:0")
+                          )
+                      )
+                                   )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{1L, 6.0F, 6.0D})
+    );
+  }
+
+  @Test
+  public void testLeastSingleColumnPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "      least(cnt), least(m1), least(m2)\n"
+        + "      FROM \"foo\"\n",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new LongMinAggregatorFactory("a0:0", "cnt"),
+                      new DoubleMinAggregatorFactory("a1:0", "m1"),
+                      new DoubleMinAggregatorFactory("a2:0", "m2")
+                  ))
+                  .postAggregators(ImmutableList.of(
+                      new LongLeastPostAggregator(
+                          "a0",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a0:0")
+                          )
+                      ),
+                      new DoubleLeastPostAggregator(
+                          "a1",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a1:0")
+                          )
+                      ),
+                      new DoubleLeastPostAggregator(
+                          "a2",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:0")
+                          )
+                      )
+                                   )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{1L, 1.0F, 1.0D})
+    );
+  }
+
+  @Test
+  public void testGreatestCombinationPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "      greatest(cnt, 10, 10 * 2 + 3),\n"
+        + "      greatest(m1, 10.0, 10.2 * 2.0 + 3.0),\n"
+        + "      greatest(m2, 10.0, 10.2 * 2.0 + 3.0)\n"
+        + "      FROM \"foo\"\n",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new LongMaxAggregatorFactory("a0:0", "cnt"),
+                      new LongMaxAggregatorFactory("a0:1", null, "10", ExprMacroTable.nil()),
+                      new LongMaxAggregatorFactory("a0:2", null, "23", ExprMacroTable.nil()),
+                      new DoubleMaxAggregatorFactory("a1:0", "m1"),
+                      new DoubleMaxAggregatorFactory("a1:1", null, "10.0", ExprMacroTable.nil()),
+                      new DoubleMaxAggregatorFactory("a1:2", null, "23.4", ExprMacroTable.nil()),
+                      new DoubleMaxAggregatorFactory("a2:0", "m2"),
+                      new DoubleMaxAggregatorFactory("a2:1", null, "10.0", ExprMacroTable.nil()),
+                      new DoubleMaxAggregatorFactory("a2:2", null, "23.4", ExprMacroTable.nil())
+                  ))
+                  .postAggregators(ImmutableList.of(
+                      new LongGreatestPostAggregator(
+                          "a0",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a0:0"),
+                              new FieldAccessPostAggregator(null, "a0:1"),
+                              new FieldAccessPostAggregator(null, "a0:2")
+                          )
+                      ),
+                      new DoubleGreatestPostAggregator(
+                          "a1",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a1:0"),
+                              new FieldAccessPostAggregator(null, "a1:1"),
+                              new FieldAccessPostAggregator(null, "a1:2")
+                          )
+                      ),
+                      new DoubleGreatestPostAggregator(
+                          "a2",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:0"),
+                              new FieldAccessPostAggregator(null, "a2:1"),
+                              new FieldAccessPostAggregator(null, "a2:2")
+                          )
+                      ))
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{23L, 23.4D, 23.4D})
+    );
+  }
+
+  @Test
+  public void testLeastCombinationPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "      least(cnt, 10, 10 * 2 + 3),\n"
+        + "      least(m1, 10.0, 10.2 * 2.0 + 3.0),\n"
+        + "      least(m2, 10.0, 10.2 * 2.0 + 3.0)\n"
+        + "      FROM \"foo\"\n",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new LongMinAggregatorFactory("a0:0", "cnt"),
+                      new LongMinAggregatorFactory("a0:1", null, "10", ExprMacroTable.nil()),
+                      new LongMinAggregatorFactory("a0:2", null, "23", ExprMacroTable.nil()),
+                      new DoubleMinAggregatorFactory("a1:0", "m1"),
+                      new DoubleMinAggregatorFactory("a1:1", null, "10.0", ExprMacroTable.nil()),
+                      new DoubleMinAggregatorFactory("a1:2", null, "23.4", ExprMacroTable.nil()),
+                      new DoubleMinAggregatorFactory("a2:0", "m2"),
+                      new DoubleMinAggregatorFactory("a2:1", null, "10.0", ExprMacroTable.nil()),
+                      new DoubleMinAggregatorFactory("a2:2", null, "23.4", ExprMacroTable.nil())
+                  ))
+                  .postAggregators(ImmutableList.of(
+                      new LongLeastPostAggregator(
+                          "a0",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a0:0"),
+                              new FieldAccessPostAggregator(null, "a0:1"),
+                              new FieldAccessPostAggregator(null, "a0:2")
+                          )
+                      ),
+                      new DoubleLeastPostAggregator(
+                          "a1",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a1:0"),
+                              new FieldAccessPostAggregator(null, "a1:1"),
+                              new FieldAccessPostAggregator(null, "a1:2")
+                          )
+                      ),
+                      new DoubleLeastPostAggregator(
+                          "a2",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a2:0"),
+                              new FieldAccessPostAggregator(null, "a2:1"),
+                              new FieldAccessPostAggregator(null, "a2:2")
+                          )
+                      ))
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{1L, 1.0D, 1.0D})
+    );
+  }
+
+  @Test
   public void testAvgDailyCountDistinct() throws Exception
   {
     // Cannot vectorize due to virtual columns.
