@@ -202,6 +202,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
         new PlannerFactory(
             druidSchema,
+            CalciteTests.createMockLookupSchema(),
             systemSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,

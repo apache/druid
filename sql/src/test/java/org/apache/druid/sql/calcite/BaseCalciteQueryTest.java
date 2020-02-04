@@ -32,7 +32,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -58,11 +60,13 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -94,10 +98,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
-  public static final String NULL_VALUE = NullHandling.replaceWithDefault() ? "" : null;
+  public static final String NULL_STRING = NullHandling.defaultStringValue();
+  public static final Float NULL_FLOAT = NullHandling.defaultFloatValue();
+  public static final Long NULL_LONG = NullHandling.defaultLongValue();
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
@@ -329,7 +336,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         false,
         true,
         null,
-        null, 
+        null,
         StringComparators.NUMERIC
     );
   }
@@ -363,6 +370,29 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType
+  )
+  {
+    return JoinDataSource.create(
+        left,
+        right,
+        rightPrefix,
+        condition,
+        joinType,
+        CalciteTests.createExprMacroTable()
+    );
+  }
+
+  public static String equalsCondition(DruidExpression left, DruidExpression right)
+  {
+    return StringUtils.format("(%s == %s)", left.getExpression(), right.getExpression());
+  }
+
   public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression)
   {
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
@@ -371,7 +401,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
     return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                           .legacy(false);
+                                        .legacy(false);
   }
 
   @BeforeClass
@@ -501,17 +531,31 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, authenticationResult, expectedQueries, expectedResults);
   }
 
-  private Query recursivelyOverrideContext(final Query q, final Map<String, Object> context)
+  /**
+   * Override not just the outer query context, but also the contexts of all subqueries.
+   */
+  private <T> Query<T> recursivelyOverrideContext(final Query<T> query, final Map<String, Object> context)
   {
-    final Query q2;
-    if (q.getDataSource() instanceof QueryDataSource) {
-      final Query subQuery = ((QueryDataSource) q.getDataSource()).getQuery();
-      q2 = q.withDataSource(new QueryDataSource(recursivelyOverrideContext(subQuery, context)));
-    } else {
-      q2 = q;
-    }
+    return query.withDataSource(recursivelyOverrideContext(query.getDataSource(), context))
+                .withOverriddenContext(context);
+  }
 
-    return q2.withOverriddenContext(context);
+  /**
+   * Override the contexts of all subqueries of a particular datasource.
+   */
+  private DataSource recursivelyOverrideContext(final DataSource dataSource, final Map<String, Object> context)
+  {
+    if (dataSource instanceof QueryDataSource) {
+      final Query subquery = ((QueryDataSource) dataSource).getQuery();
+      return new QueryDataSource(recursivelyOverrideContext(subquery, context));
+    } else {
+      return dataSource.withChildren(
+          dataSource.getChildren()
+                    .stream()
+                    .map(ds -> recursivelyOverrideContext(ds, context))
+                    .collect(Collectors.toList())
+      );
+    }
   }
 
   public void testQuery(
@@ -595,6 +639,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
+        CalciteTests.createMockLookupSchema(),
         systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,

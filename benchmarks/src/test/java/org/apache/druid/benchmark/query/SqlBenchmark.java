@@ -198,6 +198,7 @@ public class SqlBenchmark
 
     plannerFactory = new PlannerFactory(
         druidSchema,
+        CalciteTests.createMockLookupSchema(),
         systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate.lhs),
         CalciteTests.createOperatorTable(),
