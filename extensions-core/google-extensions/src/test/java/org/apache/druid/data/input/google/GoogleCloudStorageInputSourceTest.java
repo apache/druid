@@ -66,6 +66,7 @@ import java.util.stream.Stream;
 
 public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTest
 {
+  private static final long EXPECTED_MAX_LISTING_LENGTH = 1024L;
   private static final GoogleStorage STORAGE = EasyMock.createMock(GoogleStorage.class);
 
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
@@ -249,7 +250,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     Storage.Objects.List listRequest = EasyMock.createMock(Storage.Objects.List.class);
     EasyMock.expect(STORAGE.list(EasyMock.eq(bucket))).andReturn(listRequest).once();
     EasyMock.expect(listRequest.setPageToken(EasyMock.anyString())).andReturn(listRequest).once();
-    EasyMock.expect(listRequest.setMaxResults(EasyMock.anyLong())).andReturn(listRequest).once();
+    EasyMock.expect(listRequest.setMaxResults(EXPECTED_MAX_LISTING_LENGTH)).andReturn(listRequest).once();
     EasyMock.expect(listRequest.setPrefix(EasyMock.eq(StringUtils.maybeRemoveLeadingSlash(prefix.getPath()))))
             .andReturn(listRequest)
             .once();
