@@ -212,7 +212,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
         currentlyProvisioning.putIfAbsent(category, new HashSet<>());
         Set<String> currentlyProvisioning = this.currentlyProvisioning.get(category);
-        AutoScaler groupAutoscaler = getCategoryAutoscaler(category, autoscalersByCategory);
+        AutoScaler groupAutoscaler = ProvisioningUtil.getAutoscalerByCategory(category, autoscalersByCategory);
 
         didProvision = doProvision(
             category,
@@ -448,7 +448,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
         currentlyTerminating.putIfAbsent(category, new HashSet<>());
         Set<String> currentlyTerminating = this.currentlyTerminating.get(category);
-        AutoScaler groupAutoscaler = getCategoryAutoscaler(category, autoscalersByCategory);
+        AutoScaler groupAutoscaler = ProvisioningUtil.getAutoscalerByCategory(category, autoscalersByCategory);
 
         didTerminate = doTerminate(
             category,
@@ -638,24 +638,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
           currentlyProvisioning,
           autoScaler
       );
-    }
-
-    @Nullable
-    private AutoScaler getCategoryAutoscaler(String category, Map<String, AutoScaler> autoscalersByCategory)
-    {
-      AutoScaler autoScaler = autoscalersByCategory.get(category);
-      boolean isStrongAssignment = !autoscalersByCategory.containsKey(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
-
-      if (autoScaler == null && isStrongAssignment) {
-        log.warn(
-            "No autoscaler found for category %s. Tasks of this category will not be assigned to default autoscaler because of strong affinity.",
-            category
-        );
-        return null;
-      }
-      return autoScaler == null
-             ? autoscalersByCategory.get(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
-             : autoScaler;
     }
 
     @Nullable

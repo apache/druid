@@ -150,7 +150,7 @@ public class ProvisioningUtil
   {
     AutoScaler autoScaler = autoscalersByCategory.get(category);
     boolean isStrongAssignment = !autoscalersByCategory.containsKey(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
-
+    log.debug("Found autoscaler %s for category %s in available categories %s. Is strong assignment=%b. ", autoScaler, category, autoscalersByCategory, isStrongAssignment);
     if (autoScaler == null && isStrongAssignment) {
       log.warn(
           "No autoscaler found for category %s. Tasks of this category will not be assigned to default autoscaler because of strong affinity.",
