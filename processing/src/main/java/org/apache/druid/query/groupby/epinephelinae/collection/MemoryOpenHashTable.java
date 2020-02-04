@@ -152,7 +152,7 @@ public class MemoryOpenHashTable
 
     // Clear used flags.
     for (int bucket = 0; bucket < numBuckets; bucket++) {
-      tableMemory.putByte(bucket * bucketSize, (byte) 0);
+      tableMemory.putByte((long) bucket * bucketSize, (byte) 0);
     }
   }
 

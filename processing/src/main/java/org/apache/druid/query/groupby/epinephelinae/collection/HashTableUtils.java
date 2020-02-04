@@ -50,7 +50,7 @@ public class HashTableUtils
    * @param position position within the memory region
    * @param length   length of memory to hash, starting at the position
    */
-  public static int hashMemory(final Memory memory, final int position, final int length)
+  public static int hashMemory(final Memory memory, final long position, final int length)
   {
     // Special cases for small, common key sizes to speed them up: e.g. one int key, two int keys, one long key, etc.
     // The plus-one sizes (9, 13) are for nullable dimensions. The specific choices of special cases were chosen based
@@ -82,7 +82,7 @@ public class HashTableUtils
       default:
         int hashCode = 1;
         int remainingBytes = length;
-        int pos = position;
+        long pos = position;
 
         while (remainingBytes >= Integer.BYTES) {
           hashCode = 31 * hashCode + memory.getInt(pos);
@@ -120,9 +120,9 @@ public class HashTableUtils
    */
   public static boolean memoryEquals(
       final Memory memory1,
-      final int offset1,
+      final long offset1,
       final Memory memory2,
-      final int offset2,
+      final long offset2,
       final int length
   )
   {
