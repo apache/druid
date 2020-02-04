@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -88,11 +89,14 @@ public class SegmentAllocateActionSerdeTest
         target.getQueryGranularity(),
         Granularity.fromString((String) fromJson.get("queryGranularity"))
     );
-    Assert.assertEquals(target.getPreferredSegmentGranularity(), fromJson.get("preferredSegmentGranularity"));
+    Assert.assertEquals(
+        target.getPreferredSegmentGranularity(),
+        Granularity.fromString((String) fromJson.get("preferredSegmentGranularity"))
+    );
     Assert.assertEquals(target.getSequenceName(), fromJson.get("sequenceName"));
     Assert.assertEquals(target.getPreviousSegmentId(), fromJson.get("previousSegmentId"));
     Assert.assertEquals(target.isSkipSegmentLineageCheck(), fromJson.get("skipSegmentLineageCheck"));
-    Assert.assertEquals(target.getPartialShardSpec(), fromJson.get("shardSpecFactory"));
-    Assert.assertEquals(target.getLockGranularity(), fromJson.get("lockGranularity"));
+    Assert.assertEquals(ImmutableMap.of("type", "numbered"), fromJson.get("shardSpecFactory"));
+    Assert.assertEquals(target.getLockGranularity(), LockGranularity.valueOf((String) fromJson.get("lockGranularity")));
   }
 }
