@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,15 +58,11 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
 
-  /**
-   * If true, {@link org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller} sends kill tasks for
-   * unused segments in all data sources.
-   */
+  /** If true {@link KillUnusedSegments} sends kill tasks for unused segments in all data sources. */
   private final boolean killUnusedSegmentsInAllDataSources;
 
   /**
-   * List of specific data sources for which kill tasks are sent in {@link
-   * org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller}.
+   * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
   private final Set<String> decommissioningNodes;
@@ -73,10 +70,10 @@ public class CoordinatorDynamicConfig
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@link
-   * DruidCoordinatorCleanupPendingSegments}. In other words, segments in these data sources are "protected".
+   * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
    *
    * Pending segments are considered "stale" when their created_time is older than {@link
-   * DruidCoordinatorCleanupPendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
+   * KillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
    */
   private final Set<String> dataSourcesToNotKillStalePendingSegmentsIn;
 
@@ -91,7 +88,7 @@ public class CoordinatorDynamicConfig
   @JsonCreator
   public CoordinatorDynamicConfig(
       // Keeping the legacy 'millisToWaitBeforeDeleting' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("millisToWaitBeforeDeleting")
           long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
@@ -102,17 +99,17 @@ public class CoordinatorDynamicConfig
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
-      // strings in the update request. See https://github.com/apache/incubator-druid/issues/3055.
+      // strings in the update request. See https://github.com/apache/druid/issues/3055.
       // Keeping the legacy 'killDataSourceWhitelist' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killDataSourceWhitelist") Object specificDataSourcesToKillUnusedSegmentsIn,
       // Keeping the legacy 'killAllDataSources' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killAllDataSources") boolean killUnusedSegmentsInAllDataSources,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
       // strings in the update request, as well as for specificDataSourcesToKillUnusedSegmentsIn.
       // Keeping the legacy 'killPendingSegmentsSkipList' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killPendingSegmentsSkipList") Object dataSourcesToNotKillStalePendingSegmentsIn,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,

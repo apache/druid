@@ -69,7 +69,7 @@ def find_next_url(links):
 
 if len(sys.argv) != 5:
   sys.stderr.write('usage: program <github-username> <previous-release-branch> <current-release-branch> <milestone-number>\n')
-  sys.stderr.write("  e.g., program myusername 0.14.0-incubating 0.15.0-incubating 30")
+  sys.stderr.write("  e.g., program myusername 0.17.0 0.18.0 30")
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.")
   sys.exit(1)
 
@@ -100,7 +100,7 @@ for commit_msg in all_release_commits.splitlines():
     release_pr_subjects.add(title)
 
 # Get all closed PRs and filter out with milestone
-next_url = "https://api.github.com/repos/apache/incubator-druid/pulls?state=closed"
+next_url = "https://api.github.com/repos/apache/druid/pulls?state=closed"
 
 while next_url is not None:
     resp = requests.get(next_url, auth=(github_username, os.environ["GIT_TOKEN"]))

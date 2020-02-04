@@ -373,10 +373,7 @@ public class SearchBenchmark
     final SearchQueryConfig config = new SearchQueryConfig().withOverrides(query);
     factory = new SearchQueryRunnerFactory(
         new SearchStrategySelector(Suppliers.ofInstance(config)),
-        new SearchQueryQueryToolChest(
-            config,
-            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new SearchQueryQueryToolChest(config),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }

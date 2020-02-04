@@ -61,14 +61,18 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   /**
    * This method uses synchronization because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
-   * https://github.com/apache/incubator-druid/pull/3956
+   * https://github.com/apache/druid/pull/3956
    */
   @Override
   public void aggregate()
   {
     final IndexedInts keys = keySelector.getRow();
     for (int i = 0; i < valueSelectors.length; i++) {
-      values[i] = valueSelectors[i].getDouble();
+      if (valueSelectors[i].isNull()) {
+        return;
+      } else {
+        values[i] = valueSelectors[i].getDouble();
+      }
     }
     synchronized (this) {
       for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
@@ -81,7 +85,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   /**
    * This method uses synchronization because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
-   * https://github.com/apache/incubator-druid/pull/3956
+   * https://github.com/apache/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
    * aggregate() calls

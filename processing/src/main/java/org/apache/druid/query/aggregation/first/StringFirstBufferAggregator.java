@@ -25,6 +25,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 
 import java.nio.ByteBuffer;
 
@@ -36,18 +37,21 @@ public class StringFirstBufferAggregator implements BufferAggregator
   );
 
   private final BaseLongColumnValueSelector timeSelector;
-  private final BaseObjectColumnValueSelector valueSelector;
+  private final BaseObjectColumnValueSelector<?> valueSelector;
   private final int maxStringBytes;
+  private final boolean needsFoldCheck;
 
   public StringFirstBufferAggregator(
       BaseLongColumnValueSelector timeSelector,
-      BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      BaseObjectColumnValueSelector<?> valueSelector,
+      int maxStringBytes,
+      boolean needsFoldCheck
   )
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
+    this.needsFoldCheck = needsFoldCheck;
   }
 
   @Override
@@ -59,18 +63,36 @@ public class StringFirstBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
-        timeSelector,
-        valueSelector
-    );
+    if (needsFoldCheck) {
+      // Less efficient code path when folding is a possibility (we must read the value selector first just in case
+      // it's a foldable object).
+      final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+          timeSelector,
+          valueSelector
+      );
 
-    if (inPair != null && inPair.rhs != null) {
+      if (inPair != null) {
+        final long firstTime = buf.getLong(position);
+        if (inPair.lhs < firstTime) {
+          StringFirstLastUtils.writePair(
+              buf,
+              position,
+              new SerializablePairLongString(inPair.lhs, inPair.rhs),
+              maxStringBytes
+          );
+        }
+      }
+    } else {
+      final long time = timeSelector.getLong();
       final long firstTime = buf.getLong(position);
-      if (inPair.lhs < firstTime) {
+
+      if (time < firstTime) {
+        final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
+
         StringFirstLastUtils.writePair(
             buf,
             position,
-            new SerializablePairLongString(inPair.lhs, inPair.rhs),
+            new SerializablePairLongString(time, value),
             maxStringBytes
         );
       }

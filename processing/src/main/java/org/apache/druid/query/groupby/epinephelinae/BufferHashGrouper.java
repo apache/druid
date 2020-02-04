@@ -430,7 +430,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     @Override
     public void handleBucketMove(int oldBucketOffset, int newBucketOffset, ByteBuffer oldBuffer, ByteBuffer newBuffer)
     {
-      // relocate aggregators (see https://github.com/apache/incubator-druid/pull/4071)
+      // relocate aggregators (see https://github.com/apache/druid/pull/4071)
       aggregators.relocate(
           oldBucketOffset + baseAggregatorOffset,
           newBucketOffset + baseAggregatorOffset,

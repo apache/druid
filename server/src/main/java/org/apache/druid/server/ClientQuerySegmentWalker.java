@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.PostProcessingOperator;
@@ -37,15 +38,17 @@ import org.apache.druid.query.ResultLevelCachingQueryRunner;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 /**
+ * Query handler for Broker processes (see CliBroker).
  */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
   private final ServiceEmitter emitter;
-  private final CachingClusteredClient baseClient;
+  private final QuerySegmentWalker baseClient;
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
@@ -53,11 +56,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
 
-
-  @Inject
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
-      CachingClusteredClient baseClient,
+      QuerySegmentWalker baseClient,
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
@@ -76,29 +77,69 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
   }
 
+  @Inject
+  ClientQuerySegmentWalker(
+      ServiceEmitter emitter,
+      CachingClusteredClient baseClient,
+      QueryToolChestWarehouse warehouse,
+      RetryQueryRunnerConfig retryConfig,
+      ObjectMapper objectMapper,
+      ServerConfig serverConfig,
+      Cache cache,
+      CacheConfig cacheConfig
+  )
+  {
+    this(
+        emitter,
+        (QuerySegmentWalker) baseClient,
+        warehouse,
+        retryConfig,
+        objectMapper,
+        serverConfig,
+        cache,
+        cacheConfig
+    );
+  }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
+    if (analysis.isConcreteTableBased()) {
+      return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
+    } else {
+      // In the future, we will check here to see if parts of the query are inlinable, and if that inlining would
+      // be able to create a concrete table-based query that we can run through the distributed query stack.
+      throw new ISE("Query dataSource is not table-based, cannot run");
+    }
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
+    if (analysis.isConcreteTableBased()) {
+      return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
+    } else {
+      throw new ISE("Query dataSource is not table-based, cannot run");
+    }
   }
 
   private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    // This does not adhere to the fluent workflow. See https://github.com/apache/incubator-druid/issues/5517
-    return new ResultLevelCachingQueryRunner<>(makeRunner(query, baseClientRunner, toolChest),
-                                               toolChest,
-                                               query,
-                                               objectMapper,
-                                               cache,
-                                               cacheConfig);
+    // This does not adhere to the fluent workflow. See https://github.com/apache/druid/issues/5517
+    return new ResultLevelCachingQueryRunner<>(
+        makeRunner(query, baseClientRunner, toolChest),
+        toolChest,
+        query,
+        objectMapper,
+        cache,
+        cacheConfig
+    );
   }
 
   private <T> QueryRunner<T> makeRunner(
@@ -109,9 +150,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
         query.<String>getContextValue("postProcessing"),
-        new TypeReference<PostProcessingOperator<T>>()
-        {
-        }
+        new TypeReference<PostProcessingOperator<T>>() {}
     );
 
     return new FluentQueryRunnerBuilder<>(toolChest)

@@ -173,11 +173,11 @@ public class ServersResource
     }
 
     if (full != null) {
-      return builder.entity(Iterables.toString(server.iterateAllSegments())).build();
+      return builder.entity(server.iterateAllSegments()).build();
     }
 
     return builder
-        .entity(Iterables.toString(Iterables.transform(server.iterateAllSegments(), DataSegment::getId)))
+        .entity(Iterables.transform(server.iterateAllSegments(), DataSegment::getId))
         .build();
   }
 

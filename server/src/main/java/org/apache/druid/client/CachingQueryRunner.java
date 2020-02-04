@@ -77,8 +77,13 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
-    final boolean populateCache = CacheUtil.populateCacheOnDataNodes(query, strategy, cacheConfig);
-    final boolean useCache = CacheUtil.useCacheOnDataNodes(query, strategy, cacheConfig);
+    final boolean populateCache = CacheUtil.isPopulateSegmentCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.DATA
+    );
+    final boolean useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.DATA);
 
     final Cache.NamedKey key;
     if (strategy != null && (useCache || populateCache)) {

@@ -23,7 +23,7 @@ title: "MySQL Metadata Store"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
 
 > The MySQL extension requires the MySQL Connector/J library which is not included in the Druid distribution.
 > Refer to the following section for instructions on how to install this library.
@@ -108,11 +108,11 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
 
 ### MySQL Firehose
 
-The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses) which can be used to ingest data into Druid from a MySQL database.
+The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a MySQL database.
 
 ```json
 {
-  "type": "index",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
@@ -149,7 +149,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "ioConfig": {
-      "type": "index",
+      "type": "index_parallel",
       "firehose": {
         "type": "sql",
         "database": {
@@ -166,7 +166,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "tuningconfig": {
-      "type": "index"
+      "type": "index_parallel"
     }
   }
 }

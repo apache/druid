@@ -25,9 +25,11 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -131,7 +133,8 @@ public class TimeseriesQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
+    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true)
+                                                                    .apply(fromResultLevelCacheValue);
     Assert.assertEquals(result2, fromResultLevelCacheRes);
 
     final Result<TimeseriesResultValue> result3 = new Result<>(
@@ -181,7 +184,7 @@ public class TimeseriesQueryQueryToolChestTest
                                          )
                                          .build();
 
-    // Test for https://github.com/apache/incubator-druid/issues/4093.
+    // Test for https://github.com/apache/druid/issues/4093.
     Assert.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
@@ -346,6 +349,65 @@ public class TimeseriesQueryQueryToolChestTest
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
+        )
+    );
+  }
+
+  @Test
+  public void testResultArrayFields()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .descending(descending)
+              .granularity(Granularities.HOUR)
+              .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+              .postAggregators(QueryRunnerTestHelper.CONSTANT)
+              .build();
+
+    Assert.assertEquals(
+        ImmutableList.of("__time", "rows", "index", "uniques", "const"),
+        TOOL_CHEST.resultArrayFields(query)
+    );
+  }
+
+  @Test
+  public void testResultsAsArrays()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .descending(descending)
+              .granularity(Granularities.HOUR)
+              .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+              .postAggregators(QueryRunnerTestHelper.CONSTANT)
+              .build();
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{DateTimes.of("2000").getMillis(), 1L, 2L, 3L, 1L},
+            new Object[]{DateTimes.of("2000T01").getMillis(), 4L, 5L, 6L, 1L}
+        ),
+        TOOL_CHEST.resultsAsArrays(
+            query,
+            Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2000"),
+                        new TimeseriesResultValue(
+                            ImmutableMap.of("rows", 1L, "index", 2L, "uniques", 3L, "const", 1L)
+                        )
+                    ),
+                    new Result<>(
+                        DateTimes.of("2000T01"),
+                        new TimeseriesResultValue(
+                            ImmutableMap.of("rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
+                        )
+                    )
+                )
+            )
         )
     );
   }

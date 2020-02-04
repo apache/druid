@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > expired_csr.conf
 [req]

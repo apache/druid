@@ -121,6 +121,7 @@ public class SqlVsNativeBenchmark
 
     plannerFactory = new PlannerFactory(
         druidSchema,
+        CalciteTests.createMockLookupSchema(),
         systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),

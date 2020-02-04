@@ -171,6 +171,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
       new PlannerFactory(
           druidSchema,
+          CalciteTests.createMockLookupSchema(),
           systemSchema,
           CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
           operatorTable,

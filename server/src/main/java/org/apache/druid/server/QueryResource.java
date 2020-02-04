@@ -190,7 +190,7 @@ public class QueryResource implements QueryCountStatsProvider
           "%s[%s_%s_%s]",
           currThreadName,
           query.getType(),
-          query.getDataSource().getNames(),
+          query.getDataSource().getTableNames(),
           queryId
       );
 
@@ -276,7 +276,7 @@ public class QueryResource implements QueryCountStatsProvider
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        //Limit the response-context header, see https://github.com/apache/incubator-druid/issues/2331
+        //Limit the response-context header, see https://github.com/apache/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
         //and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(

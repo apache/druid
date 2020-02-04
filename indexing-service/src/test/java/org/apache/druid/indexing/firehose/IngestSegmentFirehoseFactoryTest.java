@@ -144,7 +144,7 @@ public class IngestSegmentFirehoseFactoryTest
       private final Set<DataSegment> published = new HashSet<>();
 
       @Override
-      public List<DataSegment> getUsedSegmentsForIntervals(
+      public List<DataSegment> retrieveUsedSegmentsForIntervals(
           String dataSource,
           List<Interval> interval,
           Segments visibility
@@ -154,7 +154,7 @@ public class IngestSegmentFirehoseFactoryTest
       }
 
       @Override
-      public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+      public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
       {
         return ImmutableList.of();
       }
@@ -213,7 +213,10 @@ public class IngestSegmentFirehoseFactoryTest
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
         return ImmutableSet.copyOf(SEGMENT_SET);
       }

@@ -19,10 +19,13 @@
 
 package org.apache.druid.benchmark.datagen;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BenchmarkSchemaInfo
 {
@@ -47,6 +50,16 @@ public class BenchmarkSchemaInfo
   public List<BenchmarkColumnSchema> getColumnSchemas()
   {
     return columnSchemas;
+  }
+
+  public DimensionsSpec getDimensionsSpec()
+  {
+    List<DimensionSchema> specs = getColumnSchemas().stream()
+                                                    .filter(x -> !x.isMetric())
+                                                    .map(BenchmarkColumnSchema::getDimensionSchema)
+                                                    .collect(Collectors.toList());
+
+    return new DimensionsSpec(specs);
   }
 
   public List<AggregatorFactory> getAggs()

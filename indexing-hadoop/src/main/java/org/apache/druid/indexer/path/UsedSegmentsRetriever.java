@@ -32,7 +32,8 @@ import java.util.List;
 public interface UsedSegmentsRetriever
 {
   /**
-   * Get all segments which may include any data in the interval and are marked as used.
+   * Retrieve (potentially, from a remote node) all segments which may include any data in the interval and are marked
+   * as used.
    *
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
@@ -48,9 +49,12 @@ public interface UsedSegmentsRetriever
    *         requested interval.
    *
    * @implNote This method doesn't return a {@link java.util.Set} because it's implemented via {@link
-   * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#getUsedSegmentsForIntervals} and which returns
-   * a collection. Producing a {@link java.util.Set} would require an unnecessary copy of segments collection.
+   * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#retrieveUsedSegmentsForIntervals} and which
+   * returns a collection. Producing a {@link java.util.Set} would require an unnecessary copy of segments collection.
    */
-  Collection<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals, Segments visibility)
-      throws IOException;
+  Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  ) throws IOException;
 }
