@@ -6024,7 +6024,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGreatestLongAndDouble() throws Exception
+  public void testGreatestLongAndDoubleWithGroupBy() throws Exception
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -6098,7 +6098,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLeastLongAndDouble() throws Exception
+  public void testLeastLongAndDoubleWithGroupBy() throws Exception
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -6268,78 +6268,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGreatestInvalidPostAggregations() throws Exception
-  {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot create aggregator factory for type[STRING]"
-            )
-        )
-    );
-
-    testQuery("SELECT GREATEST(dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-  }
-
-  @Test
-  public void testLeastInvalidPostAggregations() throws Exception
-  {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot create aggregator factory for type[STRING]"
-            )
-        )
-    );
-
-    testQuery("SELECT LEAST(dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-  }
-
-  @Test
-  public void testGreatestInvalidCombinationPostAggregations() throws Exception
-  {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-    expectedException.expect(ValidationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot infer return type for GREATEST; operand types: [INTEGER, VARCHAR]"
-            )
-        )
-    );
-
-    testQuery("SELECT GREATEST(10, dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-  }
-
-  @Test
-  public void testLeastInvalidCombinationPostAggregations() throws Exception
-  {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-    expectedException.expect(ValidationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot infer return type for LEAST; operand types: [INTEGER, VARCHAR]"
-            )
-        )
-    );
-
-    testQuery("SELECT LEAST(10, dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-  }
-
-  @Test
   public void testGreatestCombinationPostAggregations() throws Exception
   {
     // Cannot vectorize due to virtual columns.
@@ -6459,6 +6387,78 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(new Object[]{1L, 1.0D, 1.0D})
     );
+  }
+
+  @Test
+  public void testGreatestInvalidPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot create aggregator factory for type[STRING]"
+            )
+        )
+    );
+
+    testQuery("SELECT GREATEST(dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+  }
+
+  @Test
+  public void testLeastInvalidPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot create aggregator factory for type[STRING]"
+            )
+        )
+    );
+
+    testQuery("SELECT LEAST(dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+  }
+
+  @Test
+  public void testGreatestInvalidCombinationPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+    expectedException.expect(ValidationException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot infer return type for GREATEST; operand types: [INTEGER, VARCHAR]"
+            )
+        )
+    );
+
+    testQuery("SELECT GREATEST(10, dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+  }
+
+  @Test
+  public void testLeastInvalidCombinationPostAggregations() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+    expectedException.expect(ValidationException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot infer return type for LEAST; operand types: [INTEGER, VARCHAR]"
+            )
+        )
+    );
+
+    testQuery("SELECT LEAST(10, dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
   }
 
   @Test
