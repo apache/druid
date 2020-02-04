@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @Type(name = "numbered", value = NumberedPartialShardSpec.class),
-    @Type(name = "hashed", value = HashBasedNumberedPartialShardSpec.class),
+    @Type(name = HashBasedNumberedPartialShardSpec.TYPE, value = HashBasedNumberedPartialShardSpec.class),
     @Type(name = "single_dim", value = SingleDimensionPartialShardSpec.class),
     @Type(name = "numbered_overwrite", value = NumberedOverwritePartialShardSpec.class),
 })

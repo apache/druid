@@ -98,7 +98,7 @@ public class PartialHashSegmentGenerateTaskTest
             ),
             new HashedPartitionsSpec(null, expectedNumBuckets, null)
         );
-    Assert.assertEquals(intervals.size(), partitionAnalysis.numTimePartitions());
+    Assert.assertEquals(intervals.size(), partitionAnalysis.getNumTimePartitions());
     for (Interval interval : intervals) {
       Assert.assertEquals(expectedNumBuckets, partitionAnalysis.getBucketAnalysis(interval).intValue());
     }

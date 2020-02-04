@@ -813,7 +813,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .stream()
           .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
           .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(partialShardSpec.getShardSpecClass()))) {
-        // All existing segments should have a compatible shardSpec with shardSpecFactory.
+        // All existing segments should have a compatible shardSpec with partialShardSpec.
         return null;
       }
 

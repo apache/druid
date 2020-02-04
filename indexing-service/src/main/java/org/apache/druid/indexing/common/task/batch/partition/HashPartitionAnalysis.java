@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.common.task.batch.partition;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
@@ -66,11 +66,12 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
   @Override
   public Integer getBucketAnalysis(Interval interval)
   {
-    return Preconditions.checkNotNull(
-        intervalToNumBuckets.get(interval),
-        "Missing numBuckets for interval[%s]",
-        interval
-    );
+    final Integer bucketAnalysis = intervalToNumBuckets.get(interval);
+    if (bucketAnalysis == null) {
+      throw new IAE("Missing bucket analysis for interval[%s]", interval);
+    } else {
+      return bucketAnalysis;
+    }
   }
 
   @Override
@@ -80,7 +81,7 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
   }
 
   @Override
-  public int numTimePartitions()
+  public int getNumTimePartitions()
   {
     return intervalToNumBuckets.size();
   }
@@ -98,7 +99,7 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
   )
   {
     final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds =
-        Maps.newHashMapWithExpectedSize(numTimePartitions());
+        Maps.newHashMapWithExpectedSize(getNumTimePartitions());
 
     forEach((interval, numBuckets) -> {
       intervalToSegmentIds.put(

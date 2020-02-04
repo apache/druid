@@ -63,6 +63,8 @@ import java.util.stream.Collectors;
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
+  public static final String TYPE = "segmentAllocate";
+
   private static final Logger log = new Logger(SegmentAllocateAction.class);
 
   // Prevent spinning forever in situations where the segment list just won't stop changing.
@@ -355,7 +357,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
            ", sequenceName='" + sequenceName + '\'' +
            ", previousSegmentId='" + previousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
-           ", shardSpecFactory=" + partialShardSpec +
+           ", partialShardSpec=" + partialShardSpec +
            ", lockGranularity=" + lockGranularity +
            '}';
   }

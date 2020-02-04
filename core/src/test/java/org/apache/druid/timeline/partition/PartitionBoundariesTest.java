@@ -87,7 +87,7 @@ public class PartitionBoundariesTest
   @Test
   public void testGetNumBucketsOfNonEmptyPartitionBoundariesReturningCorrectSize()
   {
-    Assert.assertEquals(3, target.getNumBuckets());
+    Assert.assertEquals(2, target.getNumBuckets());
   }
 
   @Test

@@ -187,7 +187,7 @@ public class LockRequestForNewSegment implements LockRequest
            ", groupId='" + groupId + '\'' +
            ", dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
-           ", shardSpecFactory=" + partialShardSpec +
+           ", partialShardSpec=" + partialShardSpec +
            ", priority=" + priority +
            ", sequenceName='" + sequenceName + '\'' +
            ", previsousSegmentId='" + previsousSegmentId + '\'' +

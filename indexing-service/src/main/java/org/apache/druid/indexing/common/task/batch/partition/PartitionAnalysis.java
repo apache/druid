@@ -39,10 +39,12 @@ public interface PartitionAnalysis<T, P extends PartitionsSpec>
 
   /**
    * Returns the analysis of the secondary bucket for the given time chunk.
+   *
+   * @throws IllegalArgumentException if the bucket analysis is missing for the given interval
    */
   T getBucketAnalysis(Interval interval);
 
   Set<Interval> getAllIntervalsToIndex();
 
-  int numTimePartitions();
+  int getNumTimePartitions();
 }

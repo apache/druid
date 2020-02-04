@@ -882,29 +882,35 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     final SegmentAllocator segmentAllocator;
     final SequenceNameFunction sequenceNameFunction;
-    if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
-      segmentAllocator = SegmentAllocators.forLinearPartitioning(
-          toolbox,
-          null,
-          dataSchema,
-          getTaskLockHelper(),
-          ingestionSchema.getIOConfig().isAppendToExisting(),
-          partitionAnalysis.getPartitionsSpec()
-      );
-      sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(getId());
-    } else {
-      final CachingSegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
-          toolbox,
-          getDataSource(),
-          getId(),
-          null,
-          (CompletePartitionAnalysis) partitionAnalysis
-      );
-      sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-          getId(),
-          localSegmentAllocator.getShardSpecs()
-      );
-      segmentAllocator = localSegmentAllocator;
+    switch (partitionsSpec.getType()) {
+      case HASH:
+      case RANGE:
+        final CachingSegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
+            toolbox,
+            getDataSource(),
+            getId(),
+            null,
+            (CompletePartitionAnalysis) partitionAnalysis
+        );
+        sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
+            getId(),
+            localSegmentAllocator.getShardSpecs()
+        );
+        segmentAllocator = localSegmentAllocator;
+        break;
+      case LINEAR:
+        segmentAllocator = SegmentAllocators.forLinearPartitioning(
+            toolbox,
+            null,
+            dataSchema,
+            getTaskLockHelper(),
+            ingestionSchema.getIOConfig().isAppendToExisting(),
+            partitionAnalysis.getPartitionsSpec()
+        );
+        sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(getId());
+        break;
+      default:
+        throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->

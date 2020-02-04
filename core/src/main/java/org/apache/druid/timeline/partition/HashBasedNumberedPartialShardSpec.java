@@ -29,6 +29,8 @@ import java.util.Objects;
 
 public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
 {
+  public static final String TYPE = "hashed";
+
   @Nullable
   private final List<String> partitionDimensions;
   private final int numBuckets;

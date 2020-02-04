@@ -899,39 +899,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testSerde() throws Exception
-  {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    objectMapper.registerSubtypes(NumberedPartialShardSpec.class);
-
-    final SegmentAllocateAction action = new SegmentAllocateAction(
-        DATA_SOURCE,
-        PARTY_TIME,
-        Granularities.MINUTE,
-        Granularities.HOUR,
-        "s1",
-        "prev",
-        false,
-        NumberedPartialShardSpec.instance(),
-        lockGranularity
-    );
-
-    final SegmentAllocateAction action2 = (SegmentAllocateAction) objectMapper.readValue(
-        objectMapper.writeValueAsBytes(action),
-        TaskAction.class
-    );
-
-    Assert.assertEquals(action.getDataSource(), action2.getDataSource());
-    Assert.assertEquals(action.getTimestamp(), action2.getTimestamp());
-    Assert.assertEquals(action.getQueryGranularity(), action2.getQueryGranularity());
-    Assert.assertEquals(action.getPreferredSegmentGranularity(), action2.getPreferredSegmentGranularity());
-    Assert.assertEquals(action.getSequenceName(), action2.getSequenceName());
-    Assert.assertEquals(action.getPreviousSegmentId(), action2.getPreviousSegmentId());
-    Assert.assertEquals(action.isSkipSegmentLineageCheck(), action2.isSkipSegmentLineageCheck());
-  }
-
-  @Test
-  public void testWithShardSpecFactoryAndOvershadowingSegments() throws IOException
+  public void testWithPartialShardSpecAndOvershadowingSegments() throws IOException
   {
     final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
