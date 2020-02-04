@@ -36,7 +36,7 @@ public class MapJoinableFactory implements JoinableFactory
   private final Map<Class<? extends DataSource>, JoinableFactory> joinableFactories;
 
   @Inject
-  public MapJoinableFactory(Map<Class<? extends DataSource>, JoinableFactory> joinableFactories)
+  MapJoinableFactory(Map<Class<? extends DataSource>, JoinableFactory> joinableFactories)
   {
     // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
     // Class doesn't override Object.equals().

@@ -17,42 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-class AvaticaServerConfig
+import java.util.Set;
+
+public class SqlAggregationModuleTest
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  private SqlAggregationModule target;
+  private Injector injector;
 
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Before
+  public void setUp()
   {
-    return maxConnections;
+    target = new SqlAggregationModule();
+    injector = Guice.createInjector(target);
   }
 
-  public int getMaxStatementsPerConnection()
+  @Test
+  public void testEmptySqlAggregatorsAreBound()
   {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    Set<SqlAggregator> sqlAggregators = injector.getInstance(Key.get(new TypeLiteral<Set<SqlAggregator>>(){}));
+    Assert.assertNotNull(sqlAggregators);
+    Assert.assertTrue(sqlAggregators.isEmpty());
   }
 }

@@ -17,42 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.apache.calcite.schema.Schema;
 
-class AvaticaServerConfig
+/**
+ * This interface provides everything that is needed to register a {@link Schema} as a sub schema to the root schema
+ * of Druid SQL. The {@link #getSchemaName()} will be used to access the provided {@link Schema} via SQL.
+ */
+public interface NamedSchema
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  /**
+   * @return The name that this schema should be registered to.
+   */
+  String getSchemaName();
 
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
-  {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
-  }
+  /**
+   * @return The Schema that Calcite should use.
+   */
+  Schema getSchema();
 }

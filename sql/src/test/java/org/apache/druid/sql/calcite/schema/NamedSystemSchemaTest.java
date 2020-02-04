@@ -17,42 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-class AvaticaServerConfig
+public class NamedSystemSchemaTest
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  private static final String SCHEMA_NAME = "sys";
 
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
+  @Mock
+  private SystemSchema systemSchema;
 
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
+  private NamedSystemSchema target;
 
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Before
+  public void setUp()
   {
-    return maxConnections;
+    target = new NamedSystemSchema(systemSchema);
   }
 
-  public int getMaxStatementsPerConnection()
+  @Test
+  public void testGetSchemaNameShouldReturnName()
   {
-    return maxStatementsPerConnection;
+    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
   }
 
-  public Period getConnectionIdleTimeout()
+  @Test
+  public void testGetSchemaShouldReturnSchema()
   {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    Assert.assertEquals(systemSchema, target.getSchema());
   }
 }

@@ -1338,7 +1338,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // This test the on-heap version of the AnyAggregator (Double/Float/Long) against numeric columns
-  // that have null values (when run in sql compatible null mode)
+  // that have null values (when run in SQL compatible null mode)
   @Test
   public void testAnyAggregatorsOnHeapNumericNulls() throws Exception
   {
@@ -1369,7 +1369,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
-  // that have null values (when run in sql compatible null mode)
+  // that have null values (when run in SQL compatible null mode)
   @Test
   public void testAnyAggregatorsOffHeapNumericNulls() throws Exception
   {
@@ -1580,7 +1580,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             //[, 10.1]
             //[a, ]
             //[abc, def]
-            // sql compatible mode subquery results:
+            // SQL compatible mode subquery results:
             //[null, 10.1]
             //[, 2]
             //[a, ]

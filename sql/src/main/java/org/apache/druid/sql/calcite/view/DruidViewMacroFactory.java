@@ -17,42 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.view;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
 
-class AvaticaServerConfig
+/**
+ * A factory to create a {@link DruidViewMacro} that is used by Guice for Assisted injection.
+ */
+public interface DruidViewMacroFactory
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
-  {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
-  }
+  /**
+   * Creates an instance of {@link DruidViewMacro}
+   */
+  DruidViewMacro create(PlannerFactory plannerFactory, Escalator escalator, String viewSql);
 }

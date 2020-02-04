@@ -17,42 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.util;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.view.DruidViewMacro;
+import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 
-class AvaticaServerConfig
+public class TestDruidViewMacroFactory implements DruidViewMacroFactory
 {
-  @JsonProperty
-  public int maxConnections = 25;
-
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
-
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
-
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Override
+  public DruidViewMacro create(
+      PlannerFactory plannerFactory,
+      Escalator escalator,
+      String viewSql
+  )
   {
-    return maxConnections;
-  }
-
-  public int getMaxStatementsPerConnection()
-  {
-    return maxStatementsPerConnection;
-  }
-
-  public Period getConnectionIdleTimeout()
-  {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    return new DruidViewMacro(plannerFactory, escalator, viewSql, CalciteTests.DRUID_SCHEMA_NAME);
   }
 }

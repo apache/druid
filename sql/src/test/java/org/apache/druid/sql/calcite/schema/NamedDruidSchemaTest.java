@@ -17,42 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.sql.avatica;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.easymock.EasyMockRunner;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-class AvaticaServerConfig
+@RunWith(EasyMockRunner.class)
+public class NamedDruidSchemaTest
 {
-  @JsonProperty
-  public int maxConnections = 25;
+  private static final String SCHEMA_NAME = "SCHEMA_NAME";
 
-  @JsonProperty
-  public int maxStatementsPerConnection = 4;
+  @Mock
+  private DruidSchema druidSchema;
 
-  @JsonProperty
-  public Period connectionIdleTimeout = new Period("PT5M");
+  private NamedDruidSchema target;
 
-  @JsonProperty
-  public int maxRowsPerFrame = 5000;
-
-  public int getMaxConnections()
+  @Before
+  public void setUp()
   {
-    return maxConnections;
+    target = new NamedDruidSchema(druidSchema, SCHEMA_NAME);
   }
 
-  public int getMaxStatementsPerConnection()
+  @Test
+  public void testGetSchemaNameShouldReturnName()
   {
-    return maxStatementsPerConnection;
+    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
   }
 
-  public Period getConnectionIdleTimeout()
+  @Test
+  public void testGetSchemaShouldReturnSchema()
   {
-    return connectionIdleTimeout;
-  }
-
-  public int getMaxRowsPerFrame()
-  {
-    return maxRowsPerFrame;
+    Assert.assertEquals(druidSchema, target.getSchema());
   }
 }
