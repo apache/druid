@@ -37,14 +37,14 @@ import java.util.Set;
 public interface IndexerMetadataStorageCoordinator
 {
   /**
-   * Get all published segments which may include any data in the interval and are marked as used.
+   * Retrieve all published segments which may include any data in the interval and are marked as used from the
+   * metadata store.
    *
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
    *
-   * @param dataSource The datasource to query
-   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive,
-   *                   end is exclusive
+   * @param dataSource The data source to query
+   * @param interval   The interval for which all applicable and used segmented are requested.
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified interval: that is, a segment which is visible
    *                   outside of the specified interval, but overshadowed within the specified interval will not be
@@ -58,45 +58,80 @@ public interface IndexerMetadataStorageCoordinator
    * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
    * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
-  default Collection<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval, Segments visibility)
+  default Collection<DataSegment> retrieveUsedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      Segments visibility
+  )
   {
-    return getUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval), visibility);
+    return retrieveUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval), visibility);
   }
 
   /**
-   * Get all published segments which are marked as used and the created_date of these segments in a given datasource
-   * and interval.
+   * Retrieve all published used segments in the data source from the metadata store.
    *
-   * @param dataSource The datasource to query
-   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive,
-   *                   end is exclusive
+   * @param dataSource The data source to query
    *
-   * @return The DataSegments and the related created_date of segments which include data in the requested interval
+   * @return all segments belonging to the given data source
+   * @see #retrieveUsedSegmentsForInterval(String, Interval, Segments) similar to this method but also accepts data
+   * interval.
    */
-  Collection<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
+  Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
 
   /**
-   * Get all published segments which may include any data in the interval and are marked as used.
+   * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
+   * given data source from the metadata store.
+   *
+   * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
+   * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
+   * Segments#INCLUDING_OVERSHADOWED} was passed. It's the responsibility of the caller to filter out overshadowed ones
+   * if needed.
+   *
+   * @param dataSource The data source to query
+   *
+   * @return The DataSegments and the related created_date of segments
+   */
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
+
+  /**
+   * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
+   * metadata store.
    *
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
    *
-   * @param dataSource The datasource to query
-   * @param intervals  The intervals for which all applicable and used datasources are requested.
+   * @param dataSource The data source to query
+   * @param intervals  The intervals for which all applicable and used segments are requested.
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified intervals: that is, a segment which is visible
    *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
    *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
    *                   {@link Segments}.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   *         requested interval.
+   *         requested intervals.
    *
    * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
    * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
    * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
    * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
-  Collection<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals, Segments visibility);
+  Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  );
+
+  /**
+   * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
+   * metadata store.
+   *
+   * @param dataSource The data source the segments belong to
+   * @param interval   Filter the data segments to ones that include data in this interval exclusively.
+   *
+   * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
+   * returned here may include data in the interval
+   */
+  List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval);
 
   /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
@@ -119,12 +154,13 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource              dataSource for which to allocate a segment
    * @param sequenceName            name of the group of ingestion tasks producing a segment series
-   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first segment
+   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first
+   *                                segment
    * @param interval                interval for which to allocate a segment
    * @param shardSpecFactory        shardSpecFactory containing all necessary information to create a shardSpec for the
    *                                new segmentId
-   * @param maxVersion              use this version if we have no better version to use. The returned segment identifier may
-   *                                have a version lower than this one, but will not have one higher.
+   * @param maxVersion              use this version if we have no better version to use. The returned segment
+   *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
    *
@@ -141,15 +177,28 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Delete pending segments created in the given interval for the given dataSource from the pending segments table.
-   * The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
+   * Delete pending segments created in the given interval belonging to the given data source from the pending segments
+   * table. The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
+   *
+   * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interval
+   * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the
+   * interval is about the time column value in rows belonging to the segment).
    *
    * @param dataSource     dataSource
    * @param deleteInterval interval to check the {@code created_date} of pendingSegments
    *
    * @return number of deleted pending segments
    */
-  int deletePendingSegments(String dataSource, Interval deleteInterval);
+  int deletePendingSegmentsCreatedInInterval(String dataSource, Interval deleteInterval);
+
+  /**
+   * Delete all pending segments belonging to the given data source from the pending segments table.
+   *
+   * @return number of deleted pending segments
+   * @see #deletePendingSegmentsCreatedInInterval(String, Interval) similar to this method but also accepts interval for
+   * segments' `created_date`s
+   */
+  int deletePendingSegments(String dataSource);
 
   /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
@@ -180,36 +229,9 @@ public interface IndexerMetadataStorageCoordinator
   ) throws IOException;
 
   /**
-   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
-   * the case where the task ingested no records and created no segments, but still needs to update the metadata
-   * with the progress that the task made.
-   *
-   * The metadata should undergo the same validation checks as performed by announceHistoricalSegments.
-   *
-   *
-   * @param dataSource the datasource
-   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
-   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}.
-   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
-   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}.
-   *
-   * @return segment publish result indicating transaction success or failure.
-   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
-   * it must throw an exception instead.
-   *
-   * @throws IllegalArgumentException if either startMetadata and endMetadata are null
-   * @throws RuntimeException         if the state of metadata storage after this call is unknown
+   * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
    */
-  SegmentPublishResult commitMetadataOnly(
-      String dataSource,
-      DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
-  );
-
-  /**
-   * Read dataSource metadata. Returns null if there is no metadata.
-   */
-  DataSourceMetadata getDataSourceMetadata(String dataSource);
+  @Nullable DataSourceMetadata retrieveDataSourceMetadata(String dataSource);
 
   /**
    * Removes entry for 'dataSource' from the dataSource metadata table.
@@ -240,19 +262,34 @@ public interface IndexerMetadataStorageCoordinator
    */
   boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
 
+  /**
+   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * the case where the task ingested no records and created no segments, but still needs to update the metadata
+   * with the progress that the task made.
+   *
+   * The metadata should undergo the same validation checks as performed by {@link #announceHistoricalSegments}.
+   *
+   *
+   * @param dataSource the datasource
+   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
+   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}.
+   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
+   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}.
+   *
+   * @return segment publish result indicating transaction success or failure.
+   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
+   * it must throw an exception instead.
+   *
+   * @throws IllegalArgumentException if either startMetadata and endMetadata are null
+   * @throws RuntimeException         if the state of metadata storage after this call is unknown
+   */
+  SegmentPublishResult commitMetadataOnly(
+      String dataSource,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
+
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);
-
-  /**
-   * Get all published segments which include ONLY data within the given interval and are not marked as used.
-   *
-   * @param dataSource The datasource the segments belong to
-   * @param interval   Filter the data segments to ones that include data in this interval exclusively. Start is
-   *                   inclusive, end is exclusive
-   *
-   * @return DataSegments which include ONLY data within the requested interval and are not marked as used.
-   *         Data segments NOT returned here may include data in the interval
-   */
-  List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
 }

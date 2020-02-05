@@ -38,7 +38,7 @@ public class ParametrizedUriExtractor implements UriExtractor
   public ParametrizedUriExtractor(String uriPattern)
   {
     this.uriPattern = uriPattern;
-    Matcher keyMatcher = Pattern.compile("\\{([^\\}]+)\\}").matcher(uriPattern);
+    Matcher keyMatcher = Pattern.compile("\\{([^}]+)}").matcher(uriPattern);
     params = new HashSet<>();
     while (keyMatcher.find()) {
       params.add(keyMatcher.group(1));

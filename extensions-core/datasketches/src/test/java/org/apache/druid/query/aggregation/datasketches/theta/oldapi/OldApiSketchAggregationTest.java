@@ -253,7 +253,7 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  public static final String readFileFromClasspathAsString(String fileName) throws IOException
+  public static String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

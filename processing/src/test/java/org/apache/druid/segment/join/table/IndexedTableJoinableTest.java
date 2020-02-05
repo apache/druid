@@ -20,12 +20,15 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -38,12 +41,16 @@ public class IndexedTableJoinableTest
 {
   private static final String PREFIX = "j.";
 
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private final ColumnSelectorFactory dummyColumnSelectorFactory = new ColumnSelectorFactory()
   {
     @Override
     public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
     {
-      return null;
+      return new ConstantDimensionSelector("dummy");
     }
 
     @Override
@@ -72,7 +79,7 @@ public class IndexedTableJoinableTest
       inlineDataSource.getRowsAsList(),
       inlineDataSource.rowAdapter(),
       inlineDataSource.getRowSignature(),
-      ImmutableList.of("str")
+      ImmutableSet.of("str")
   );
 
   @Test

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -182,16 +181,16 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     runTestTask(inputInterval, Granularities.DAY);
 
     final Interval interval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
-    final Collection<DataSegment> oldSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+    final Collection<DataSegment> allSegments =
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
     runTestTask(inputInterval, secondSegmentGranularity);
 
     // Verify that the segment has been replaced.
     final Collection<DataSegment> newSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
-    Set<DataSegment> allSegments = ImmutableSet.<DataSegment>builder().addAll(oldSegments).addAll(newSegments).build();
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+    allSegments.addAll(newSegments);
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
@@ -302,11 +301,11 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final Interval interval = Intervals.of("2017/2018");
     runTestTask(interval, Granularities.DAY, true);
     final Collection<DataSegment> oldSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
 
     runTestTask(interval, Granularities.DAY, true);
     final Collection<DataSegment> newSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(newSegments.containsAll(oldSegments));
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);

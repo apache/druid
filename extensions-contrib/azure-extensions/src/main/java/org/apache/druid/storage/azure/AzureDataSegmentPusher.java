@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -40,8 +41,8 @@ import java.util.Map;
 
 public class AzureDataSegmentPusher implements DataSegmentPusher
 {
-
   private static final Logger log = new Logger(AzureDataSegmentPusher.class);
+  static final List<String> ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP = ImmutableList.of("druid.azure");
   private final AzureStorage azureStorage;
   private final AzureAccountConfig config;
 
@@ -103,37 +104,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public List<String> getAllowedPropertyPrefixesForHadoop()
   {
-    return ImmutableList.of("druid.azure");
-  }
-
-  public String getAzurePath(final DataSegment segment, final boolean useUniquePath)
-  {
-    final String storageDir = this.getStorageDir(segment, useUniquePath);
-
-    return StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME);
-
-  }
-
-  public DataSegment uploadDataSegment(
-      DataSegment segment,
-      final int binaryVersion,
-      final long size,
-      final File compressedSegmentData,
-      final String azurePath
-  )
-      throws StorageException, IOException, URISyntaxException
-  {
-    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePath);
-
-    final DataSegment outSegment = segment
-        .withSize(size)
-        .withLoadSpec(this.makeLoadSpec(new URI(azurePath)))
-        .withBinaryVersion(binaryVersion);
-
-    log.info("Deleting file [%s]", compressedSegmentData);
-    compressedSegmentData.delete();
-
-    return outSegment;
+    return ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP;
   }
 
   @Override
@@ -178,5 +149,37 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         "blobPath",
         uri.toString()
     );
+  }
+
+  @VisibleForTesting
+  String getAzurePath(final DataSegment segment, final boolean useUniquePath)
+  {
+    final String storageDir = this.getStorageDir(segment, useUniquePath);
+
+    return StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME);
+
+  }
+
+  @VisibleForTesting
+  DataSegment uploadDataSegment(
+      DataSegment segment,
+      final int binaryVersion,
+      final long size,
+      final File compressedSegmentData,
+      final String azurePath
+  )
+      throws StorageException, IOException, URISyntaxException
+  {
+    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePath);
+
+    final DataSegment outSegment = segment
+        .withSize(size)
+        .withLoadSpec(this.makeLoadSpec(new URI(azurePath)))
+        .withBinaryVersion(binaryVersion);
+
+    log.debug("Deleting file [%s]", compressedSegmentData);
+    compressedSegmentData.delete();
+
+    return outSegment;
   }
 }

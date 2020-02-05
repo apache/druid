@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
@@ -48,20 +49,11 @@ public class AzureStorage
     this.cloudBlobClient = cloudBlobClient;
   }
 
-  public CloudBlobContainer getCloudBlobContainer(final String containerName)
-      throws StorageException, URISyntaxException
-  {
-    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
-    cloudBlobContainer.createIfNotExists();
-
-    return cloudBlobContainer;
-  }
-
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
       throws StorageException, URISyntaxException
   {
     List<String> deletedFiles = new ArrayList<>();
-    CloudBlobContainer container = getCloudBlobContainer(containerName);
+    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
 
     for (ListBlobItem blobItem : container.listBlobs(virtualDirPath, true, null, null, null)) {
       CloudBlob cloudBlob = (CloudBlob) blobItem;
@@ -81,7 +73,7 @@ public class AzureStorage
   public void uploadBlob(final File file, final String containerName, final String blobPath)
       throws IOException, StorageException, URISyntaxException
   {
-    CloudBlobContainer container = getCloudBlobContainer(containerName);
+    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
     try (FileInputStream stream = new FileInputStream(file)) {
       container.getBlockBlobReference(blobPath).upload(stream, file.length());
     }
@@ -90,18 +82,39 @@ public class AzureStorage
   public long getBlobLength(final String containerName, final String blobPath)
       throws URISyntaxException, StorageException
   {
-    return getCloudBlobContainer(containerName).getBlockBlobReference(blobPath).getProperties().getLength();
+    return getOrCreateCloudBlobContainer(containerName).getBlockBlobReference(blobPath).getProperties().getLength();
   }
 
   public InputStream getBlobInputStream(final String containerName, final String blobPath)
       throws URISyntaxException, StorageException
   {
-    CloudBlobContainer container = getCloudBlobContainer(containerName);
-    return container.getBlockBlobReference(blobPath).openInputStream();
+    return getBlobInputStream(0L, containerName, blobPath);
+  }
+
+  public InputStream getBlobInputStream(long offset, final String containerName, final String blobPath)
+      throws URISyntaxException, StorageException
+  {
+    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
+    return container.getBlockBlobReference(blobPath).openInputStream(offset, null, null, null, null);
   }
 
   public boolean getBlobExists(String container, String blobPath) throws URISyntaxException, StorageException
   {
-    return getCloudBlobContainer(container).getBlockBlobReference(blobPath).exists();
+    return getOrCreateCloudBlobContainer(container).getBlockBlobReference(blobPath).exists();
+  }
+
+  @VisibleForTesting
+  CloudBlobClient getCloudBlobClient()
+  {
+    return this.cloudBlobClient;
+  }
+
+  private CloudBlobContainer getOrCreateCloudBlobContainer(final String containerName)
+      throws StorageException, URISyntaxException
+  {
+    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
+    cloudBlobContainer.createIfNotExists();
+
+    return cloudBlobContainer;
   }
 }
