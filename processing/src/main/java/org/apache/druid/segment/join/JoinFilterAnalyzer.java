@@ -46,6 +46,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -56,19 +57,27 @@ import java.util.Set;
 public class JoinFilterAnalyzer
 {
   private static final String PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE = "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-";
+  private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   public static JoinFilterSplit splitFilter(
-      Filter originalFilter,
-      HashJoinSegmentStorageAdapter baseAdapter,
-      List<JoinableClause> clauses
+      HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
+      @Nullable Filter originalFilter
   )
   {
+    if (originalFilter == null) {
+      return new JoinFilterAnalyzer.JoinFilterSplit(
+          null,
+          null,
+          ImmutableList.of()
+      );
+    }
+
     Filter normalizedFilter = Filters.convertToCNF(originalFilter);
 
     // build the prefix and equicondition maps
     Map<String, Expr> equiconditions = new HashMap<>();
     Map<String, JoinableClause> prefixes = new HashMap<>();
-    for (JoinableClause clause : clauses) {
+    for (JoinableClause clause : hashJoinSegmentStorageAdapter.getClauses()) {
       prefixes.put(clause.getPrefix(), clause);
       for (Equality equality : clause.getCondition().getEquiConditions()) {
         equiconditions.put(clause.getPrefix() + equality.getRightColumn(), equality.getLeftExpr());
@@ -83,8 +92,7 @@ public class JoinFilterAnalyzer
     if (normalizedFilter instanceof AndFilter) {
       normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
     } else {
-      normalizedOrClauses = new ArrayList<>();
-      normalizedOrClauses.add(normalizedFilter);
+      normalizedOrClauses = Collections.singletonList(normalizedFilter);
     }
 
     // Pushdown filters, rewriting if necessary
@@ -95,7 +103,7 @@ public class JoinFilterAnalyzer
 
     for (Filter orClause : normalizedOrClauses) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(
-          baseAdapter,
+          hashJoinSegmentStorageAdapter,
           orClause,
           prefixes,
           equiconditions,
@@ -589,7 +597,7 @@ public class JoinFilterAnalyzer
 
   private static boolean filterMatchesNull(Filter filter)
   {
-    ValueMatcher valueMatcher = filter.makeMatcher(new AllNullColumnSelectorFactory());
+    ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
     return valueMatcher.matches();
   }
 

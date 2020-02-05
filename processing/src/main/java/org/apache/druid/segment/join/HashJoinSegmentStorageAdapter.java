@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -53,11 +51,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
-
-  // A reference to the last JoinFilterSplit created during a makeCursors call,
-  // saved and exposed so that tests can verify the filter splitting behavior.
-  @VisibleForTesting
-  private JoinFilterAnalyzer.JoinFilterSplit previousJoinFilterSplitForTesting;
 
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
@@ -230,23 +223,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
     }
 
-    JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit;
-    if (filter == null) {
-      joinFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
-          null,
-          null,
-          ImmutableList.of()
-      );
-    } else {
-      joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-          filter,
-          this,
-          clauses
-      );
-
-      preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
-    }
-    previousJoinFilterSplitForTesting = joinFilterSplit;
+    JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+        this,
+        filter
+    );
+    preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
     // (by splitting out pushable pieces of 'filter') or it could be done at a higher level (i.e. in the SQL planner).
@@ -280,6 +261,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     );
   }
 
+  public List<JoinableClause> getClauses()
+  {
+    return clauses;
+  }
+
   /**
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
@@ -304,11 +290,5 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                 .stream()
                 .filter(clause -> clause.includesColumn(column))
                 .findFirst();
-  }
-
-  @VisibleForTesting
-  public JoinFilterAnalyzer.JoinFilterSplit getPreviousJoinFilterSplitForTesting()
-  {
-    return previousJoinFilterSplitForTesting;
   }
 }
