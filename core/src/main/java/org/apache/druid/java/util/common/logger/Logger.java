@@ -153,12 +153,12 @@ public class Logger
 
   public void wtf(String message, Object... formatArgs)
   {
-    log.error(message, formatArgs);
+    error(message, formatArgs);
   }
 
   public void wtf(Throwable t, String message, Object... formatArgs)
   {
-    logException(log::error, t, StringUtils.nonStrictFormat(message, formatArgs));
+    error(t, message, formatArgs);
   }
 
   public boolean isTraceEnabled()
