@@ -28,7 +28,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
 
@@ -41,6 +40,7 @@ import java.util.stream.StreamSupport;
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource<GoogleCloudStorageEntity>
 {
   static final String SCHEME = "gs";
+  private static final int MAX_LISTING_LENGTH = 1024;
 
   private final GoogleStorage storage;
 
@@ -84,7 +84,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   private Iterable<StorageObject> storageObjectIterable()
   {
     return () ->
-        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), RetryUtils.DEFAULT_MAX_TRIES);
+        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), MAX_LISTING_LENGTH);
   }
 
   @Override

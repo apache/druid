@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.collect.ImmutableMap;
 import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.StorageExtendedErrorInformation;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
@@ -52,6 +53,9 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       1
   );
 
+  private static final StorageExtendedErrorInformation NULL_STORAGE_EXTENDED_ERROR_INFORMATION = null;
+  private static final StorageExtendedErrorInformation STORAGE_EXTENDED_ERROR_INFORMATION = new StorageExtendedErrorInformation();
+
   private AzureStorage azureStorage;
 
   @Before
@@ -79,9 +83,54 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test(expected = SegmentLoadingException.class)
-  public void killWithErrorTest() throws SegmentLoadingException, URISyntaxException, StorageException
+  public void test_kill_StorageExceptionExtendedErrorInformationNull_throwsException()
+      throws SegmentLoadingException, URISyntaxException, StorageException
   {
 
+    common_test_kill_StorageExceptionExtendedError_throwsException(NULL_STORAGE_EXTENDED_ERROR_INFORMATION);
+  }
+
+  @Test(expected = SegmentLoadingException.class)
+  public void test_kill_StorageExceptionExtendedErrorInformationNotNull_throwsException()
+      throws SegmentLoadingException, URISyntaxException, StorageException
+  {
+
+    common_test_kill_StorageExceptionExtendedError_throwsException(STORAGE_EXTENDED_ERROR_INFORMATION);
+  }
+
+  @Test(expected = SegmentLoadingException.class)
+  public void test_kill_URISyntaxException_throwsException()
+      throws SegmentLoadingException, URISyntaxException, StorageException
+  {
+
+    String dirPath = Paths.get(BLOB_PATH).getParent().toString();
+
+    EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
+        new URISyntaxException(
+            "",
+            ""
+        )
+    );
+
+    replayAll();
+
+    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(azureStorage);
+
+    killer.kill(DATA_SEGMENT);
+
+    verifyAll();
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void test_killAll_throwsUnsupportedOperationException()
+  {
+    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(azureStorage);
+    killer.killAll();
+  }
+
+  private void common_test_kill_StorageExceptionExtendedError_throwsException(StorageExtendedErrorInformation storageExtendedErrorInformation)
+      throws SegmentLoadingException, URISyntaxException, StorageException
+  {
     String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 
     EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
@@ -89,7 +138,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
             "",
             "",
             400,
-            null,
+            storageExtendedErrorInformation,
             null
         )
     );

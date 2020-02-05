@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -158,8 +159,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(
             new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
@@ -171,17 +170,19 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
         ),
         ImmutableSet.of()
     );
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
         new PlannerFactory(
-            druidSchema,
-            systemSchema,
+            rootSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }

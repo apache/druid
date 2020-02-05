@@ -97,8 +97,7 @@ public class Queries
     Preconditions.checkNotNull(otherOutputNames, "otherOutputNames cannot be null");
     Preconditions.checkNotNull(aggFactories, "aggregations cannot be null");
 
-    final Set<String> combinedOutputNames = new HashSet<>();
-    combinedOutputNames.addAll(otherOutputNames);
+    final Set<String> combinedOutputNames = new HashSet<>(otherOutputNames);
 
     final Map<String, AggregatorFactory> aggsFactoryMap = new HashMap<>();
     for (AggregatorFactory aggFactory : aggFactories) {

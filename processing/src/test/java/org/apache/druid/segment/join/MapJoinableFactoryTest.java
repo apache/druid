@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -30,11 +31,20 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Map;
 import java.util.Optional;
 
 @RunWith(EasyMockRunner.class)
-public class MapDataSourceJoinableFactoryWarehouseTest
+public class MapJoinableFactoryTest
 {
+  /**
+   * A utility to create a {@link MapJoinableFactory} to be used by tests.
+   */
+  public static MapJoinableFactory fromMap(Map<Class<? extends DataSource>, JoinableFactory> map)
+  {
+    return new MapJoinableFactory(map);
+  }
+
   @Mock
   private InlineDataSource inlineDataSource;
   @Mock(MockType.NICE)
@@ -45,14 +55,14 @@ public class MapDataSourceJoinableFactoryWarehouseTest
   @Mock
   private Joinable mockJoinable;
 
-  private MapDataSourceJoinableFactoryWarehouse target;
+  private MapJoinableFactory target;
 
   @Before
   public void setUp()
   {
     noopDataSource = new NoopDataSource();
 
-    target = new MapDataSourceJoinableFactoryWarehouse(
+    target = new MapJoinableFactory(
         ImmutableMap.of(NoopDataSource.class, noopJoinableFactory));
   }
   @Test

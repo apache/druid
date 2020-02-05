@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * DruidRel that uses a "query" dataSource.
+ * DruidRel that uses a {@link QueryDataSource}.
  */
 public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {

@@ -56,7 +56,7 @@ public class Groupers
    * MurmurHash3 was written by Austin Appleby, and is placed in the public domain. The author
    * hereby disclaims copyright to this source code.
    */
-  private static int smear(int hashCode)
+  public static int smear(int hashCode)
   {
     return C2 * Integer.rotateLeft(hashCode * C1, 15);
   }

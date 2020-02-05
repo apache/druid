@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
@@ -60,6 +61,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
   }
 
   @Test
@@ -80,6 +82,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
   }
 
   @Test
@@ -100,6 +103,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("z"));
   }
 
   @Test
@@ -120,6 +124,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("(== (+ j.x j.y) z)"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -140,6 +145,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("(== (+ x j.y) j.z)"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -160,6 +166,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("2"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -180,6 +187,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("0"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -200,6 +208,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("(== x 1)"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -220,6 +229,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("x"));
   }
 
   @Test
@@ -240,6 +250,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y", "z", "zz"));
   }
 
   @Test
@@ -260,6 +271,7 @@ public class JoinConditionAnalysisTest
         ImmutableList.of("(|| (== (+ x y) j.z) (== z j.zz))"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
+    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
   }
 
   @Test
@@ -270,8 +282,8 @@ public class JoinConditionAnalysisTest
                   .withIgnoredFields(
                           // These fields are tightly coupled with originalExpression
                           "equiConditions", "nonEquiConditions",
-                          // These fields are calculated from nonEquiConditions
-                          "isAlwaysTrue", "isAlwaysFalse", "canHashJoin")
+                          // These fields are calculated from other other fields in the class
+                          "isAlwaysTrue", "isAlwaysFalse", "canHashJoin", "rightKeyColumns")
                   .verify();
   }
 

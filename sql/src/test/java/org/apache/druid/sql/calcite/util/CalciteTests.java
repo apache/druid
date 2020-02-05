@@ -27,6 +27,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.ServerInventoryView;
@@ -121,8 +123,11 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.InformationSchema;
+import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
@@ -153,6 +158,10 @@ public class CalciteTests
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String DRUID_SCHEMA_NAME = "druid";
+  public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+  public static final String SYSTEM_SCHEMA_NAME = "sys";
+  public static final String LOOKUP_SCHEMA_NAME = "lookup";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -225,15 +234,15 @@ public class CalciteTests
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
 
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+        final LookupExtractorFactoryContainerProvider lookupProvider =
+            LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
                     "a", "xa",
-                    "abc", "xabc"
+                    "abc", "xabc",
+                    "nosuchkey", "mysteryvalue"
                 )
-            )
-        );
-
+            );
+        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
       }
   );
 
@@ -532,6 +541,8 @@ public class CalciteTests
     // No instantiation.
   }
 
+  public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
+
   /**
    * Returns a new {@link QueryRunnerFactoryConglomerate} and a {@link Closer} which should be closed at the end of the
    * test.
@@ -723,7 +734,10 @@ public class CalciteTests
         .buildMMappedIndex();
 
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(
+        conglomerate,
+        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class)
+    ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
                    .interval(index1.getDataInterval())
@@ -802,42 +816,6 @@ public class CalciteTests
     }
   }
 
-  public static DruidSchema createMockSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
-  )
-  {
-    return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
-  }
-
-  public static DruidSchema createMockSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
-      final ViewManager viewManager
-  )
-  {
-    final DruidSchema schema = new DruidSchema(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
-        plannerConfig,
-        viewManager,
-        TEST_AUTHENTICATOR_ESCALATOR
-    );
-
-    try {
-      schema.start();
-      schema.awaitInitialization();
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    schema.stop();
-    return schema;
-  }
-
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return PARSER.parseBatch((Map<String, Object>) map).get(0);
@@ -860,11 +838,16 @@ public class CalciteTests
     ).get(0);
   }
 
+  public static LookupSchema createMockLookupSchema()
+  {
+    return new LookupSchema(INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class));
+  }
 
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
   )
   {
     DruidNodeDiscovery disco = EasyMock.createMock(DruidNodeDiscovery.class);
@@ -911,13 +894,57 @@ public class CalciteTests
         ),
         new TestServerInventoryView(walker.getSegments()),
         EasyMock.createMock(ServerInventoryView.class),
-        TEST_AUTHORIZER_MAPPER,
+        authorizerMapper,
         druidLeaderClient,
         druidLeaderClient,
         discoProvider,
         getJsonMapper()
     );
     return schema;
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    InformationSchema informationSchema =
+        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
+    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
+    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
+    return rootSchema;
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    InformationSchema informationSchema =
+        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
+    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
+    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
+    return rootSchema;
   }
 
   /**
@@ -933,5 +960,41 @@ public class CalciteTests
       curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
     }
     return curThrowable;
+  }
+
+  private static DruidSchema createMockSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig
+  )
+  {
+    return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
+  }
+
+  private static DruidSchema createMockSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager
+  )
+  {
+    final DruidSchema schema = new DruidSchema(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        new TestServerInventoryView(walker.getSegments()),
+        plannerConfig,
+        viewManager,
+        TEST_AUTHENTICATOR_ESCALATOR
+    );
+
+    try {
+      schema.start();
+      schema.awaitInitialization();
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    schema.stop();
+    return schema;
   }
 }

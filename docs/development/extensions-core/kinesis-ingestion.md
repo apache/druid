@@ -306,28 +306,34 @@ it will just ensure that no indexing tasks are running until the supervisor is r
 
 ### Resetting Supervisors
 
-To reset a running supervisor, you can use `POST /druid/indexer/v1/supervisor/<supervisorId>/reset`.
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/reset` operation clears stored 
+sequence numbers, causing the supervisor to start reading from either the earliest or 
+latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`). 
+After clearing stored sequence numbers, the supervisor kills and recreates active tasks, 
+so that tasks begin reading from valid sequence numbers. 
 
-The indexing service keeps track of the latest persisted Kinesis sequence number in order to provide exactly-once ingestion
-guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
-generated segments to be accepted. If the messages at the expected starting sequence numbers are no longer available in Kinesis
-(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
-refuse to start and in-flight tasks will fail.
+Use care when using this operation! Resetting the supervisor may cause Kinesis messages 
+to be skipped or read twice, resulting in missing or duplicate data. 
 
-This endpoint can be used to clear the stored sequence numbers which will cause the supervisor to start reading from
-either the earliest or latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`). The supervisor must be
-running for this endpoint to be available. After the stored sequence numbers are cleared, the supervisor will automatically kill
-and re-create any active tasks so that tasks begin reading from valid sequence numbers.
+The reason for using this operation is to recover from a state in which the supervisor 
+ceases operating due to missing sequence numbers. The indexing service keeps track of the latest 
+persisted sequence number in order to provide exactly-once ingestion guarantees across 
+tasks. 
 
-Note that since the stored sequence numbers are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
-may cause some Kinesis messages to be skipped or to be read twice.
+Subsequent tasks must start reading from where the previous task completed in 
+order for the generated segments to be accepted. If the messages at the expected starting sequence numbers are 
+no longer available in Kinesis (typically because the message retention period has elapsed or the topic was 
+removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation 
+enables you to recover from this condition. 
+
+Note that the supervisor must be running for this endpoint to be available.
 
 ### Terminating Supervisors
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes all associated indexing
-tasks managed by this supervisor to immediately stop and begin
-publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
-with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can it's configuration
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` operation terminates a supervisor and causes
+all associated indexing tasks managed by this supervisor to immediately stop and begin
+publishing their segments. This supervisor will still exist in the metadata store and its history may be retrieved
+with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can its configuration
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
 spec to the create API.
 

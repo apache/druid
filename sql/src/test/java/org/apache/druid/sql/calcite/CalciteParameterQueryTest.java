@@ -231,7 +231,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{NULL_VALUE}
+            new Object[]{NULL_STRING}
         ),
         ImmutableList.of(
             new SqlParameter(SqlType.INTEGER, 1),

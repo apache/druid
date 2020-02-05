@@ -356,7 +356,7 @@ public class SqlLifecycle
         );
       }
       catch (Exception ex) {
-        log.error(ex, "Unable to log sql [%s]!", sql);
+        log.error(ex, "Unable to log SQL [%s]!", sql);
       }
     }
   }
