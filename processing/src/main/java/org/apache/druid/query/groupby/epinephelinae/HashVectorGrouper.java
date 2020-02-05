@@ -421,9 +421,9 @@ public class HashVectorGrouper implements VectorGrouper
    */
   private static int computeMaxNumBucketsAfterGrowth(final int capacity, final int bucketSize)
   {
-    // Tables start at initialNumBucketsRoundedUp and grow by doubling. The penultimate table ends at the end of the
-    // buffer, and then the final table starts at the beginning of the buffer. This means the largest possible table
-    // size 2^x is the one where x is maximized subject to:
+    // Tables start at some size (see computeRoundedInitialNumBuckets) and grow by doubling. The penultimate table ends
+    // at the end of the buffer, and then the final table starts at the beginning of the buffer. This means the largest
+    // possible table size 2^x is the one where x is maximized subject to:
     //
     //   2^(x-1) < capacity / bucketSize / 3
     //
