@@ -173,6 +173,13 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   @Override
   public AggregateResult aggregateVector(Memory keySpace, int startRow, int endRow)
   {
+    final int numRows = endRow - startRow;
+
+    // Hoisted bounds check on keySpace.
+    if (keySpace.getCapacity() < numRows * Integer.BYTES) {
+      throw new IAE("Not enough keySpace capacity for the provided start/end rows");
+    }
+
     if (keySpace.getCapacity() == 0) {
       // Empty key space, assume keys are all zeroes.
       final int dimIndex = 1;
@@ -186,8 +193,6 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
           endRow
       );
     } else {
-      final int numRows = endRow - startRow;
-
       for (int i = 0; i < numRows; i++) {
         // +1 matches what hashFunction() would do.
         final int dimIndex = keySpace.getInt(i * Integer.BYTES) + 1;
