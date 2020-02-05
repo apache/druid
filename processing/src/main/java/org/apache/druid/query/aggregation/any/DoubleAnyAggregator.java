@@ -19,44 +19,35 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
-/**
- * This Aggregator is created by the {@link DoubleAnyAggregatorFactory} which extends from
- * {@link NullableNumericAggregatorFactory}. If null needs to be handle, then {@link NullableNumericAggregatorFactory}
- * will wrap this aggregator in {@link NullableNumericAggregator} and can handle all null in that class.
- * Hence, no null will ever be pass into this aggregator from the valueSelector.
- */
-public class DoubleAnyAggregator implements Aggregator
-{
-  private final BaseDoubleColumnValueSelector valueSelector;
+import javax.annotation.Nullable;
 
-  private double foundValue;
-  private boolean isFound;
+/**
+ * This Aggregator is created by the {@link DoubleAnyAggregatorFactory} which has no special null handling logic.
+ * Hence, null can be pass into this aggregator from the valueSelector and null can be return from this aggregator.
+ */
+public class DoubleAnyAggregator extends NumericAnyAggregator<BaseDoubleColumnValueSelector>
+{
+  private  double foundValue;
 
   public DoubleAnyAggregator(BaseDoubleColumnValueSelector valueSelector)
   {
-    this.valueSelector = valueSelector;
+    super(valueSelector);
     this.foundValue = 0;
-    this.isFound = false;
   }
 
   @Override
-  public void aggregate()
+  void setFoundValue()
   {
-    if (!isFound) {
-      foundValue = valueSelector.getDouble();
-      isFound = true;
-    }
+    foundValue = valueSelector.getDouble();
   }
 
   @Override
+  @Nullable
   public Object get()
   {
-    return foundValue;
+    return isNull ? null : foundValue;
   }
 
   @Override
@@ -75,11 +66,5 @@ public class DoubleAnyAggregator implements Aggregator
   public double getDouble()
   {
     return foundValue;
-  }
-
-  @Override
-  public void close()
-  {
-    // no-op
   }
 }

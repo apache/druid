@@ -22,76 +22,165 @@ package org.apache.druid.query.aggregation.any;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.FloatSumAggregator;
 import org.apache.druid.query.aggregation.SimpleFloatAggregatorFactory;
+import org.apache.druid.query.aggregation.first.FloatFirstAggregator;
+import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.FloatFirstBufferAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
-public class FloatAnyAggregatorFactory extends SimpleFloatAggregatorFactory
+public class FloatAnyAggregatorFactory extends AggregatorFactory
 {
+  private static final Aggregator NIL_AGGREGATOR = new FloatAnyAggregator(
+      NilColumnValueSelector.instance()
+  )
+  {
+    @Override
+    public void aggregate()
+    {
+      // no-op
+    }
+  };
+
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new FloatAnyBufferAggregator(
+      NilColumnValueSelector.instance()
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
+
+  private final String fieldName;
+  private final String name;
+
   @JsonCreator
   public FloatAnyAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") @Nullable String expression,
-      @JacksonInject ExprMacroTable macroTable
+      @JsonProperty("fieldName") final String fieldName
   )
   {
-    super(macroTable, name, fieldName, expression);
-  }
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
-  public FloatAnyAggregatorFactory(String name, String fieldName)
-  {
-    this(name, fieldName, null, ExprMacroTable.nil());
-  }
-
-  @Override
-  protected float nullValue()
-  {
-    return Float.NaN;
+    this.name = name;
+    this.fieldName = fieldName;
   }
 
   @Override
-  protected Aggregator buildAggregator(BaseFloatColumnValueSelector selector)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatAnyAggregator(selector);
+    final BaseFloatColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_AGGREGATOR;
+    } else {
+      return new FloatAnyAggregator(
+          valueSelector
+      );
+    }
   }
 
   @Override
-  protected BufferAggregator buildBufferAggregator(BaseFloatColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatAnyBufferAggregator(selector);
+    final BaseFloatColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_BUFFER_AGGREGATOR;
+    } else {
+      return new FloatAnyBufferAggregator(
+          valueSelector
+      );
+    }
+  }
+
+  @Override
+  public Comparator getComparator()
+  {
+    return FloatSumAggregator.COMPARATOR;
   }
 
   @Override
   @Nullable
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
-    if (lhs != null) {
-      return lhs;
-    } else {
-      return rhs;
-    }
+    return lhs;
   }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("FloatAnyAggregatorFactory is not supported during ingestion for rollup");
+  }
+
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new FloatAnyAggregatorFactory(name, name, null, macroTable);
+    return new FloatAnyAggregatorFactory(name, name);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new FloatAnyAggregatorFactory(fieldName, fieldName, expression, macroTable));
+    return Collections.singletonList(new FloatAnyAggregatorFactory(fieldName, fieldName));
+  }
+
+  @Override
+  public Object deserialize(Object object)
+  {
+    // handle "NaN" / "Infinity" values serialized as strings in JSON
+    if (object instanceof String) {
+      return Float.parseFloat((String) object);
+    }
+    return object;
+  }
+
+  @Override
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
+  {
+    return object;
+  }
+
+  @Override
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getFieldName()
+  {
+    return fieldName;
+  }
+
+  @Override
+  public List<String> requiredFields()
+  {
+    return Collections.singletonList(fieldName);
   }
 
   @Override
@@ -99,23 +188,49 @@ public class FloatAnyAggregatorFactory extends SimpleFloatAggregatorFactory
   {
     return new CacheKeyBuilder(AggregatorUtil.FLOAT_ANY_CACHE_TYPE_ID)
         .appendString(fieldName)
-        .appendString(expression)
         .build();
+  }
+
+  @Override
+  public String getTypeName()
+  {
+    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
+    return "float";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Float.BYTES + Byte.BYTES;
+    return Float.BYTES + Byte.BYTES + Byte.BYTES;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    FloatAnyAggregatorFactory that = (FloatAnyAggregatorFactory) o;
+
+    return fieldName.equals(that.fieldName) && name.equals(that.name);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(fieldName, name);
   }
 
   @Override
   public String toString()
   {
     return "FloatAnyAggregatorFactory{" +
-           "fieldName='" + fieldName + '\'' +
-           ", expression='" + expression + '\'' +
-           ", name='" + name + '\'' +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
            '}';
   }
 }
