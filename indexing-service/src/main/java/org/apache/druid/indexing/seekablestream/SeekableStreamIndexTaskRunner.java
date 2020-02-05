@@ -1018,11 +1018,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
           {
             log.info(
-                "Published segments %s for sequence [%s] with metadata [%s].",
-                SegmentUtils.commaSeparatedIdentifiers(publishedSegmentsAndCommitMetadata.getSegments()),
+                "Published %s segments for sequence [%s] with metadata [%s].",
+                publishedSegmentsAndCommitMetadata.getSegments().size(),
                 sequenceMetadata.getSequenceName(),
                 Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
+            SegmentUtils.logSegments(log::info, publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
