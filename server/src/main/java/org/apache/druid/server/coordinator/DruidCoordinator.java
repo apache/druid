@@ -680,8 +680,11 @@ public class DruidCoordinator
                 .build();
 
         boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
-        if (coordinationPaused && coordLeaderSelector.isLeader()) {
-          log.info(
+        if (coordinationPaused
+            && coordLeaderSelector.isLeader()
+            && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+
+          log.debug(
               "Coordination is paused via dynamic configs! I will not be running Coordination Duties at this time"
           );
         }
