@@ -24,7 +24,6 @@ import com.google.common.collect.Maps;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -34,8 +33,6 @@ import java.util.stream.Collectors;
 
 public class WorkerSelectUtils
 {
-  private static final EmittingLogger log = new EmittingLogger(WorkerSelectUtils.class);
-
   private WorkerSelectUtils()
   {
     // No instantiation.
@@ -132,7 +129,7 @@ public class WorkerSelectUtils
             runnableWorkers
         );
         final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
-        log.debug("Selected worker %s for category %s. Spec strong assignment is %b", selected, preferredCategory, workerCategorySpec.isStrong());
+
         if (selected != null) {
           return selected;
         } else if (workerCategorySpec.isStrong()) {
