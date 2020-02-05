@@ -44,9 +44,8 @@ import org.junit.Test;
 
 public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTest
 {
-  // Filter push down tests
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnChannel()
+  public void test_filterPushDown_factToRegionToCountryLeftFilterOnChannel()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -101,7 +100,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionExprToCountryLeftFilterOnCountryName()
+  public void test_filterPushDown_factToRegionExprToCountryLeftFilterOnCountryName()
   {
     JoinableClause regionExprToCountry = new JoinableClause(
         REGION_TO_COUNTRY_PREFIX,
@@ -158,7 +157,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnChannelAndCountryName()
+  public void test_filterPushDown_factToRegionToCountryLeftFilterOnChannelAndCountryName()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -215,7 +214,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnNullColumns()
+  public void test_filterPushDown_factToRegionToCountryLeftFilterOnNullColumns()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -278,7 +277,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnInvalidColumns()
+  public void test_filterPushDown_factToRegionToCountryLeftFilterOnInvalidColumns()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -330,7 +329,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterOnChannelVirtualColumn()
+  public void test_filterPushDown_factToRegionToCountryLeftFilterOnChannelVirtualColumn()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -398,7 +397,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftFilterNormalizedAlreadyPushDownVariety()
+  public void test_filterPushDown_factToRegionToCountryLeftFilterNormalizedAlreadyPushDownVariety()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -555,7 +554,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName()
+  public void test_filterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName()
   {
     JoinableClause factExprToRegon = new JoinableClause(
         FACT_TO_REGION_PREFIX,
@@ -638,7 +637,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryNotEquiJoinLeftFilterOnChannelAndCountryName()
+  public void test_filterPushDown_factToRegionToCountryNotEquiJoinLeftFilterOnChannelAndCountryName()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
@@ -690,7 +689,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToRegionToCountryLeftUnnormalizedFilter()
+  public void test_filterPushDown_factToRegionToCountryLeftUnnormalizedFilter()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -779,7 +778,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factConcatExpressionToCountryLeftFilterOnChannelAndCountryName()
+  public void test_filterPushDown_factConcatExpressionToCountryLeftFilterOnChannelAndCountryName()
   {
     JoinableClause factExprToCountry = new JoinableClause(
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
@@ -863,7 +862,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToCountryRightWithFilterOnChannelAndJoinable()
+  public void test_filterPushDown_factToCountryRightWithFilterOnChannelAndJoinable()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -916,7 +915,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToCountryRightWithFilterOnNullColumns()
+  public void test_filterPushDown_factToCountryRightWithFilterOnNullColumns()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -967,7 +966,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToCountryInnerUsingCountryNumberFilterOnChannelAndCountryName()
+  public void test_filterPushDown_factToCountryInnerUsingCountryNumberFilterOnChannelAndCountryName()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1026,7 +1025,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToCountryInnerUsingCountryNumberFilterOnNulls()
+  public void test_filterPushDown_factToCountryInnerUsingCountryNumberFilterOnNulls()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1076,7 +1075,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToCountryFullWithFilterOnChannelAndCountryName()
+  public void test_filterPushDown_factToCountryFullWithFilterOnChannelAndCountryName()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1129,7 +1128,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
-  public void test_makeCursorsFilterPushDown_factToCountryFullWithFilterOnNulls()
+  public void test_filterPushDown_factToCountryFullWithFilterOnNulls()
   {
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),

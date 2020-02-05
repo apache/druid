@@ -226,7 +226,7 @@ public class JoinFilterAnalyzer
     if (filterClause instanceof SelectorFilter) {
       return rewriteSelectorFilter(
           adapter,
-          filterClause,
+          (SelectorFilter) filterClause,
           prefixes,
           equiconditions,
           correlationCache
@@ -269,7 +269,6 @@ public class JoinFilterAnalyzer
    *
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
    */
-  @Nullable
   private static JoinFilterAnalysis rewriteOrFilter(
       HashJoinSegmentStorageAdapter adapter,
       OrFilter orFilter,
@@ -294,7 +293,7 @@ public class JoinFilterAnalyzer
         if (filter instanceof SelectorFilter) {
           JoinFilterAnalysis rewritten = rewriteSelectorFilter(
               adapter,
-              filter,
+              (SelectorFilter) filter,
               prefixes,
               equiconditions,
               correlationCache
@@ -325,7 +324,7 @@ public class JoinFilterAnalyzer
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
    * @param baseAdapter      The adapter for the join
-   * @param filter           Filter to be rewritten
+   * @param selectorFilter   SelectorFilter to be rewritten
    * @param prefixes         Map of join table prefixes to clauses
    * @param equiconditions   Map of equiconditions
    * @param correlationCache Cache of column correlation analyses
@@ -334,15 +333,12 @@ public class JoinFilterAnalyzer
    */
   private static JoinFilterAnalysis rewriteSelectorFilter(
       HashJoinSegmentStorageAdapter baseAdapter,
-      Filter filter,
+      SelectorFilter selectorFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Expr> equiconditions,
       Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationCache
   )
   {
-    assert (filter instanceof SelectorFilter);
-    SelectorFilter selectorFilter = (SelectorFilter) filter;
-
     String filteringColumn = selectorFilter.getDimension();
     for (Map.Entry<String, JoinableClause> prefixAndClause : prefixes.entrySet()) {
       if (filteringColumn.startsWith(prefixAndClause.getKey())) {
@@ -357,7 +353,7 @@ public class JoinFilterAnalyzer
         );
 
         if (correlations == null) {
-          return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filter);
+          return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
         }
 
         List<Filter> newFilters = new ArrayList<>();
@@ -409,13 +405,13 @@ public class JoinFilterAnalyzer
         }
 
         if (newFilters.isEmpty()) {
-          return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filter);
+          return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
         }
 
         return new JoinFilterAnalysis(
             true,
             true,
-            filter,
+            selectorFilter,
             newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters),
             pushdownVirtualColumns
         );
@@ -424,8 +420,8 @@ public class JoinFilterAnalyzer
     return new JoinFilterAnalysis(
         true,
         false,
-        filter,
-        filter,
+        selectorFilter,
+        selectorFilter,
         null
     );
   }
