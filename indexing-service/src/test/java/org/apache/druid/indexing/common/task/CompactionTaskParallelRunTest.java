@@ -103,17 +103,19 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
 
       @Override
-      public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+      public DataSegment fetchUsedSegment(String dataSource, String segmentId)
       {
-        ImmutableDruidDataSource druidDataSource = getMetadataSegmentManager().getImmutableDataSourceWithUsedSegments(
-            dataSource
-        );
+        ImmutableDruidDataSource druidDataSource =
+            getSegmentsMetadataManager().getImmutableDataSourceWithUsedSegments(dataSource);
         if (druidDataSource == null) {
           throw new ISE("Unknown datasource[%s]", dataSource);
         }
@@ -189,7 +191,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     );
 
     List<DataSegment> segments = new ArrayList<>(
-        coordinatorClient.getDatabaseSegmentDataSourceSegments(
+        coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
             DATA_SOURCE,
             ImmutableList.of(interval)
         )

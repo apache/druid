@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -49,9 +48,11 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -75,23 +76,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
       };
 
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
+  public TimeseriesQueryQueryToolChest()
   {
-    this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());
+    this(DefaultTimeseriesQueryMetricsFactory.instance());
   }
 
   @Inject
-  public TimeseriesQueryQueryToolChest(
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      TimeseriesQueryMetricsFactory queryMetricsFactory
-  )
+  public TimeseriesQueryQueryToolChest(TimeseriesQueryMetricsFactory queryMetricsFactory)
   {
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -373,15 +368,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(
-        (queryPlus, responseContext) -> {
-          TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
-          if (timeseriesQuery.getDimensionsFilter() != null) {
-            timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-            queryPlus = queryPlus.withQuery(timeseriesQuery);
-          }
-          return runner.run(queryPlus, responseContext);
-        }, this);
+    return (queryPlus, responseContext) -> {
+      TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
+      if (timeseriesQuery.getDimensionsFilter() != null) {
+        timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+        queryPlus = queryPlus.withQuery(timeseriesQuery);
+      }
+      return runner.run(queryPlus, responseContext);
+    };
   }
 
   @Override
@@ -400,6 +394,47 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     return makeComputeManipulatorFn(query, fn, true);
+  }
+
+  @Override
+  public List<String> resultArrayFields(TimeseriesQuery query)
+  {
+    final List<String> fields = new ArrayList<>(
+        1 + query.getAggregatorSpecs().size() + query.getPostAggregatorSpecs().size()
+    );
+
+    fields.add(ColumnHolder.TIME_COLUMN_NAME);
+    query.getAggregatorSpecs().stream().map(AggregatorFactory::getName).forEach(fields::add);
+    query.getPostAggregatorSpecs().stream().map(PostAggregator::getName).forEach(fields::add);
+
+    return fields;
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(
+      final TimeseriesQuery query,
+      final Sequence<Result<TimeseriesResultValue>> resultSequence
+  )
+  {
+    final List<String> fields = resultArrayFields(query);
+
+    return Sequences.map(
+        resultSequence,
+        result -> {
+          final Object[] retVal = new Object[fields.size()];
+
+          // Position 0 is always __time.
+          retVal[0] = result.getTimestamp().getMillis();
+
+          // Add other fields.
+          final Map<String, Object> resultMap = result.getValue().getBaseObject();
+          for (int i = 1; i < fields.size(); i++) {
+            retVal[i] = resultMap.get(fields.get(i));
+          }
+
+          return retVal;
+        }
+    );
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(

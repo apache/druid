@@ -22,9 +22,11 @@ package org.apache.druid.query.aggregation.post;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,9 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- */
-public class ArithmeticPostAggregatorTest
+public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testCompute()
@@ -53,10 +53,12 @@ public class ArithmeticPostAggregatorTest
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6D
+                "roku",
+                6D
             ),
             new FieldAccessPostAggregator(
-                "rows", "rows"
+                "rows",
+                "rows"
             )
         );
 
@@ -91,16 +93,18 @@ public class ArithmeticPostAggregatorTest
     final String aggName = "rows";
     ArithmeticPostAggregator arithmeticPostAggregator;
     CountAggregator agg = new CountAggregator();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6D
+                "roku",
+                6D
             ),
             new FieldAccessPostAggregator(
-                "rows", "rows"
+                "rows",
+                "rows"
             )
         );
 
@@ -111,6 +115,39 @@ public class ArithmeticPostAggregatorTest
     agg.aggregate();
     agg.aggregate();
     metricValues.put(aggName, agg.get());
+    Object after = arithmeticPostAggregator.compute(metricValues);
+
+    Assert.assertEquals(-1, comp.compare(before, after));
+    Assert.assertEquals(0, comp.compare(before, before));
+    Assert.assertEquals(0, comp.compare(after, after));
+    Assert.assertEquals(1, comp.compare(after, before));
+  }
+
+  @Test
+  public void testComparatorNulls()
+  {
+    final String aggName = "doubleWithNulls";
+    ArithmeticPostAggregator arithmeticPostAggregator;
+    Map<String, Object> metricValues = new HashMap<>();
+
+    List<PostAggregator> postAggregatorList =
+        Lists.newArrayList(
+            new ConstantPostAggregator(
+                "roku",
+                6D
+            ),
+            new FieldAccessPostAggregator(
+                aggName,
+                aggName
+            )
+        );
+
+    arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggregatorList);
+    Comparator comp = arithmeticPostAggregator.getComparator();
+    metricValues.put(aggName, NullHandling.replaceWithDefault() ? NullHandling.defaultDoubleValue() : null);
+    Object before = arithmeticPostAggregator.compute(metricValues);
+
+    metricValues.put(aggName, 1.0);
     Object after = arithmeticPostAggregator.compute(metricValues);
 
     Assert.assertEquals(-1, comp.compare(before, after));

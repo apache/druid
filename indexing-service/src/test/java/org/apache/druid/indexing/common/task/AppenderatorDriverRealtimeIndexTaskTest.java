@@ -95,12 +95,8 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -117,6 +113,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -1530,23 +1527,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         taskActionToolbox,
         new TaskAuditLogConfig(false)
     );
-    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
-        null,
-        null,
-        null
-    )
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return delegate;
-      }
-    };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 (query, future) -> {
                   // do nothing
@@ -1607,6 +1592,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         handoffNotifierFactory,
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),

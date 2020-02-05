@@ -19,19 +19,14 @@
 
 package org.apache.druid.benchmark.query;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -53,29 +48,5 @@ public class QueryBenchmarkUtil
     );
   }
 
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
-  {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
-      @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return new QueryRunner<T>() {
-          @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-          {
-            return delegate.run(queryPlus, responseContext);
-          }
-        };
-      }
-    };
-  }
-
-  public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
-  {
-    @Override
-    public void registerQuery(Query query, ListenableFuture future)
-    {
-
-    }
-  };
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
 }

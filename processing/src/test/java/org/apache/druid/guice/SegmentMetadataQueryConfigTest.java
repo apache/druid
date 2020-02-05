@@ -70,21 +70,19 @@ public class SegmentMetadataQueryConfigTest
     String actualDefaultAnalysis = props.getProperty("druid.query.segmentMetadata.defaultAnalysisTypes");
 
     Iterator<SegmentMetadataQuery.AnalysisType> it = expectedDefaultAnalysis.iterator();
-    StringBuilder sb = new StringBuilder();
-    sb.append('[');
+    StringBuilder expectedDefaultAnalysisAsStringBuilder = new StringBuilder();
+    expectedDefaultAnalysisAsStringBuilder.append('[');
     while (it.hasNext()) {
       SegmentMetadataQuery.AnalysisType e = it.next();
-      sb.append("\"" + e + "\"");
+      expectedDefaultAnalysisAsStringBuilder.append("\"").append(e).append("\"");
       if (it.hasNext()) {
-        sb.append(',').append(' ');
+        expectedDefaultAnalysisAsStringBuilder.append(',').append(' ');
       }
     }
-    sb.append(']');
-
-    String expectedDefaultAnalysisAsString = sb.toString();
+    expectedDefaultAnalysisAsStringBuilder.append(']');
 
     Assert.assertEquals(
-        expectedDefaultAnalysisAsString,
+        expectedDefaultAnalysisAsStringBuilder.toString(),
         actualDefaultAnalysis
     );
     Assert.assertEquals(

@@ -19,8 +19,11 @@
 
 package org.apache.druid.indexing.common.task;
 
+import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -34,6 +37,11 @@ public class Tasks
   public static final int DEFAULT_REALTIME_TASK_PRIORITY = 75;
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
+
+  static {
+    Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
+  }
+
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
@@ -42,14 +50,21 @@ public class Tasks
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
-  // This context is used in auto compaction. When it is set in the context, the segments created by the task
-  // will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
-  // See DataSegment and NewestSegmentFirstIterator for more details.
+  /**
+   *This context is used in auto compaction. When it is set in the context, the segments created by the task
+   * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
+   * See {@link org.apache.druid.timeline.DataSegment} and {@link
+   * org.apache.druid.server.coordinator.duty.NewestSegmentFirstIterator} for more details.
+   */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
-  public static SortedSet<Interval> computeCompactIntervals(SortedSet<Interval> intervals)
+  static {
+    Verify.verify(STORE_COMPACTION_STATE_KEY.equals(CompactSegments.STORE_COMPACTION_STATE_KEY));
+  }
+
+  public static SortedSet<Interval> computeCondensedIntervals(SortedSet<Interval> intervals)
   {
-    final SortedSet<Interval> compactIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+    final SortedSet<Interval> condensedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     List<Interval> toBeAccumulated = new ArrayList<>();
     for (Interval interval : intervals) {
       if (toBeAccumulated.size() == 0) {
@@ -58,15 +73,15 @@ public class Tasks
         if (toBeAccumulated.get(toBeAccumulated.size() - 1).abuts(interval)) {
           toBeAccumulated.add(interval);
         } else {
-          compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
+          condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
           toBeAccumulated.clear();
           toBeAccumulated.add(interval);
         }
       }
     }
     if (toBeAccumulated.size() > 0) {
-      compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
+      condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
     }
-    return compactIntervals;
+    return condensedIntervals;
   }
 }

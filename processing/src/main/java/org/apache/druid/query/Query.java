@@ -116,10 +116,17 @@ public interface Query<T>
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
+  /**
+   * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.
+   *
+   * This often changes the behavior of {@link #getRunner(QuerySegmentWalker)}, since most queries inherit that method
+   * from {@link BaseQuery}, which implements it by calling {@link QuerySegmentSpec#lookup}.
+   */
   Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
 
   Query<T> withId(String id);
 
+  @Nullable
   String getId();
 
   default Query<T> withSqlQueryId(String sqlQueryId)
@@ -138,15 +145,5 @@ public interface Query<T>
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
     return this;
-  }
-
-  default List<Interval> getIntervalsOfInnerMostQuery()
-  {
-    if (getDataSource() instanceof QueryDataSource) {
-      //noinspection unchecked
-      return ((QueryDataSource) getDataSource()).getQuery().getIntervalsOfInnerMostQuery();
-    } else {
-      return getIntervals();
-    }
   }
 }

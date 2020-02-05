@@ -103,7 +103,7 @@ public class PartialDruidQuery
   {
     final Supplier<RelBuilder> builderSupplier = () -> RelFactories.LOGICAL_BUILDER.create(
         scanRel.getCluster(),
-        scanRel.getTable().getRelOptSchema()
+        scanRel.getTable() != null ? scanRel.getTable().getRelOptSchema() : null
     );
     return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null);
   }
@@ -303,7 +303,14 @@ public class PartialDruidQuery
       final boolean finalizeAggregations
   )
   {
-    return new DruidQuery(this, dataSource, sourceRowSignature, plannerContext, rexBuilder, finalizeAggregations);
+    return DruidQuery.fromPartialQuery(
+        this,
+        dataSource,
+        sourceRowSignature,
+        plannerContext,
+        rexBuilder,
+        finalizeAggregations
+    );
   }
 
   public boolean canAccept(final Stage stage)

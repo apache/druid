@@ -23,13 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -45,34 +38,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class JavaScriptFilterTest extends BaseFilterTest
 {
-  private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
-              null,
-              null
-          )
-      )
-  );
-
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
-  );
-
   public JavaScriptFilterTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -81,7 +51,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
+    super(testName, DEFAULT_ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -90,11 +60,17 @@ public class JavaScriptFilterTest extends BaseFilterTest
     BaseFilterTest.tearDown(JavaScriptFilterTest.class.getName());
   }
 
-  private final String jsNullFilter = "function(x) { return(x === null) }";
+  private final String jsNullFilter = "function(x) { return x === null }";
 
   private String jsValueFilter(String value)
   {
-    String jsFn = "function(x) { return(x === '" + value + "') }";
+    String jsFn = "function(x) { return x === '" + value + "' }";
+    return jsFn;
+  }
+
+  private String jsNumericValueFilter(String value)
+  {
+    String jsFn = "function(x) { return x === " + value + " }";
     return jsFn;
   }
 
@@ -119,7 +95,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("10"), null), ImmutableList.of("1"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("2"), null), ImmutableList.of("2"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("1"), null), ImmutableList.of("3"));
-    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("def"), null), ImmutableList.of("4"));
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("abdef"), null), ImmutableList.of("4"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("abc"), null), ImmutableList.of("5"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("ab"), null), ImmutableList.of());
   }
@@ -176,7 +152,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
     final Map<String, String> stringMap = ImmutableMap.of(
         "1", "HELLO",
         "a", "HELLO",
-        "def", "HELLO",
+        "abdef", "HELLO",
         "abc", "UNKNOWN"
     );
     LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
@@ -226,6 +202,23 @@ public class JavaScriptFilterTest extends BaseFilterTest
         newJavaScriptDimFilter("dim4", jsValueFilter("UNKNOWN"), lookupFn),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
+  }
+
+  @Test
+  public void testNumericNull()
+  {
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of());
+      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of());
+      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of());
+    } else {
+      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of("4"));
+      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of("2"));
+      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of("3"));
+    }
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNumericValueFilter("5.5"), null), ImmutableList.of("2"));
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNumericValueFilter("120.0245"), null), ImmutableList.of("3"));
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNumericValueFilter("9001"), null), ImmutableList.of("4"));
   }
 
   private JavaScriptDimFilter newJavaScriptDimFilter(

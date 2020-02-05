@@ -91,6 +91,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -99,6 +100,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -112,7 +114,7 @@ import java.util.stream.Collectors;
 /**
  */
 @RunWith(Parameterized.class)
-public class TopNQueryRunnerTest
+public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
 
@@ -159,10 +161,7 @@ public class TopNQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
                 defaultPool,
-                new TopNQueryQueryToolChest(
-                    new TopNQueryConfig(),
-                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-                ),
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
@@ -171,10 +170,7 @@ public class TopNQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
                 customPool,
-                new TopNQueryQueryToolChest(
-                    new TopNQueryConfig(),
-                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-                ),
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
@@ -257,10 +253,7 @@ public class TopNQueryRunnerTest
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
         chest.mergeResults(runner),
         chest
@@ -917,118 +910,6 @@ public class TopNQueryRunnerTest
         )
     );
     assertExpectedResults(expectedResults, query);
-  }
-
-  @Test
-  public void testTopNOverFirstLastAggregatorChunkPeriod()
-  {
-    TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .granularity(QueryRunnerTestHelper.MONTH_GRAN)
-        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
-        .metric("last")
-        .threshold(3)
-        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-        .aggregators(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
-        )
-        .context(ImmutableMap.of("chunkPeriod", "P1D"))
-        .build();
-
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<>(
-            DateTimes.of("2011-01-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1000L)
-                        .put("last", 1127L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 800L)
-                        .put("last", 943L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 100L)
-                        .put("last", 155L)
-                        .build()
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-02-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1203L)
-                        .put("last", 1292L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 1667L)
-                        .put("last", 1101L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 132L)
-                        .put("last", 114L)
-                        .build()
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-03-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1124L)
-                        .put("last", 1366L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 1166L)
-                        .put("last", 1063L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 153L)
-                        .put("last", 125L)
-                        .build()
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("first", 1314L)
-                        .put("last", 1029L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("first", 1447L)
-                        .put("last", 780L)
-                        .build(),
-                    ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("first", 135L)
-                        .put("last", 120L)
-                        .build()
-                )
-            )
-        )
-    );
-
-    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(query);
-    TestHelper.assertExpectedResults(expectedResults, retval);
   }
 
   @Test
@@ -5771,5 +5652,319 @@ public class TopNQueryRunnerTest
 
     // Don't check results, just the fact that the query could complete
     Assert.assertNotNull(runWithMerge(query).toList());
+  }
+
+  @Test
+  public void test_topN_orderByLongNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("longNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongSumAggregatorFactory("longNumericNull", "longNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("longNumericNull", 80L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("longNumericNull", 70L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("longNumericNull", 50L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("longNumericNull", 40L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("longNumericNull", 20L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("longNumericNull", 10L)
+                        .build(),
+                    makeRowWithNulls("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeRowWithNulls("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
+                    makeRowWithNulls("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void test_topN_orderByFloatNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("floatNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongSumAggregatorFactory("floatNumericNull", "floatNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("floatNumericNull", 80f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("floatNumericNull", 70f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("floatNumericNull", 70f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("floatNumericNull", 70f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("floatNumericNull", 50f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("floatNumericNull", 50f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("floatNumericNull", 50f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("floatNumericNull", 40f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("floatNumericNull", 20f)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("floatNumericNull", 10f)
+                        .build(),
+                    makeRowWithNulls("index_alias", 114L, "floatNumericNull", NullHandling.defaultFloatValue()),
+                    makeRowWithNulls("index_alias", 126L, "floatNumericNull", NullHandling.defaultFloatValue()),
+                    makeRowWithNulls("index_alias", 166L, "floatNumericNull", NullHandling.defaultFloatValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void test_topN_orderByDoubleNumericColumnWithNulls_returnsDescendingResults()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new NumericTopNMetricSpec("doubleNumericNull"))
+        .threshold(10000)
+        .aggregators(new LongSumAggregatorFactory("doubleNumericNull", "doubleNumericNull"))
+        .intervals(QueryRunnerTestHelper.SECOND_ONLY)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 97L)
+                        .put("doubleNumericNull", 80d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 135L)
+                        .put("doubleNumericNull", 70d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1049L)
+                        .put("doubleNumericNull", 70d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1321L)
+                        .put("doubleNumericNull", 70d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 110L)
+                        .put("doubleNumericNull", 50d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1144L)
+                        .put("doubleNumericNull", 50d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 1193L)
+                        .put("doubleNumericNull", 50d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 113L)
+                        .put("doubleNumericNull", 40d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 112L)
+                        .put("doubleNumericNull", 20d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 147L)
+                        .put("doubleNumericNull", 10d)
+                        .build(),
+                    makeRowWithNulls("index_alias", 114L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
+                    makeRowWithNulls("index_alias", 126L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
+                    makeRowWithNulls("index_alias", 166L, "doubleNumericNull", NullHandling.defaultDoubleValue())
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+
+  @Test
+  public void testAggregateOnLongNumericNull()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("longNumericNull", "dim", ValueType.LONG))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(10000)
+        .aggregators(new CountAggregatorFactory("count"))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    makeRowWithNulls("dim", NullHandling.defaultLongValue(), "count", 279L),
+                    makeRowWithNulls("dim", 10L, "count", 93L),
+                    makeRowWithNulls("dim", 20L, "count", 93L),
+                    makeRowWithNulls("dim", 40L, "count", 93L),
+                    makeRowWithNulls("dim", 50L, "count", 279L),
+                    makeRowWithNulls("dim", 70L, "count", 279L),
+                    makeRowWithNulls("dim", 80L, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testAggregateOnDoubleNumericNull()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("doubleNumericNull", "dim", ValueType.DOUBLE))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(10000)
+        .aggregators(new CountAggregatorFactory("count"))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    makeRowWithNulls("dim", NullHandling.defaultDoubleValue(), "count", 279L),
+                    makeRowWithNulls("dim", 10.0, "count", 93L),
+                    makeRowWithNulls("dim", 20.0, "count", 93L),
+                    makeRowWithNulls("dim", 40.0, "count", 93L),
+                    makeRowWithNulls("dim", 50.0, "count", 279L),
+                    makeRowWithNulls("dim", 70.0, "count", 279L),
+                    makeRowWithNulls("dim", 80.0, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testAggregateOnFloatNumericNull()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(new DefaultDimensionSpec("floatNumericNull", "dim", ValueType.FLOAT))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(10000)
+        .aggregators(new CountAggregatorFactory("count"))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    makeRowWithNulls("dim", NullHandling.defaultFloatValue(), "count", 279L),
+                    makeRowWithNulls("dim", 10.0f, "count", 93L),
+                    makeRowWithNulls("dim", 20.0f, "count", 93L),
+                    makeRowWithNulls("dim", 40.0f, "count", 93L),
+                    makeRowWithNulls("dim", 50.0f, "count", 279L),
+                    makeRowWithNulls("dim", 70.0f, "count", 279L),
+                    makeRowWithNulls("dim", 80.0f, "count", 93L)
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  private static Map<String, Object> makeRowWithNulls(
+      String dimName,
+      @Nullable Object dimValue,
+      String metric,
+      @Nullable Object metricVal
+  )
+  {
+    Map<String, Object> nullRow = new HashMap<>();
+    nullRow.put(dimName, dimValue);
+    nullRow.put(metric, metricVal);
+    return nullRow;
   }
 }

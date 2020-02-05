@@ -38,9 +38,10 @@ import java.util.Map;
  * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
  * a result, this task can't be used for perfect rollup.
  */
-class SinglePhaseParallelIndexTaskRunner
-    extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
+class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
 {
+  private static final String PHASE_NAME = "segment generation";
+
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 
@@ -70,7 +71,7 @@ class SinglePhaseParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return SinglePhaseSubTask.TYPE;
+    return PHASE_NAME;
   }
 
   @VisibleForTesting

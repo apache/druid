@@ -20,10 +20,8 @@
 package org.apache.druid.guice;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import org.apache.druid.js.JavaScriptConfig;
 import org.junit.Assert;
 import org.junit.Test;
@@ -55,15 +53,10 @@ public class JavaScriptModuleTest
     return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-                binder.bind(JsonConfigurator.class).in(LazySingleton.class);
-                binder.bind(Properties.class).toInstance(props);
-              }
+            binder -> {
+              binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+              binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+              binder.bind(Properties.class).toInstance(props);
             },
             new JavaScriptModule()
         )

@@ -20,45 +20,32 @@
 package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
-public class FloatFirstAggregator implements Aggregator
+public class FloatFirstAggregator extends NumericFirstAggregator<BaseFloatColumnValueSelector>
 {
-
-  private final BaseFloatColumnValueSelector valueSelector;
-  private final BaseLongColumnValueSelector timeSelector;
-
-  protected long firstTime;
-  protected float firstValue;
+  float firstValue;
 
   public FloatFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseFloatColumnValueSelector valueSelector
   )
   {
-    this.valueSelector = valueSelector;
-    this.timeSelector = timeSelector;
-
-    firstTime = Long.MAX_VALUE;
+    super(timeSelector, valueSelector);
     firstValue = 0;
   }
 
   @Override
-  public void aggregate()
+  void setCurrentValue()
   {
-    long time = timeSelector.getLong();
-    if (time < firstTime) {
-      firstTime = time;
-      firstValue = valueSelector.getFloat();
-    }
+    firstValue = valueSelector.getFloat();
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(firstTime, firstValue);
+    return new SerializablePair<>(firstTime, rhsNull ? null : firstValue);
   }
 
   @Override
@@ -70,19 +57,13 @@ public class FloatFirstAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return (double) firstValue;
+    return firstValue;
   }
 
   @Override
   public long getLong()
   {
     return (long) firstValue;
-  }
-
-  @Override
-  public void close()
-  {
-
   }
 }
 

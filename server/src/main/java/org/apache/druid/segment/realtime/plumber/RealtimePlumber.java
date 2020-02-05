@@ -62,6 +62,7 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfigs;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -138,6 +139,7 @@ public class RealtimePlumber implements Plumber
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
       SegmentHandoffNotifier handoffNotifier,
@@ -167,6 +169,7 @@ public class RealtimePlumber implements Plumber
         emitter,
         conglomerate,
         queryExecutorService,
+        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats

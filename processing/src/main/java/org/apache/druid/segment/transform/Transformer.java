@@ -25,7 +25,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 

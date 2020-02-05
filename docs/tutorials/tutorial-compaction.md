@@ -81,7 +81,7 @@ We have included a compaction task spec for this tutorial datasource at `quickst
   "dataSource": "compaction-tutorial",
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
-    "type" : "index",
+    "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000
   }
@@ -143,7 +143,7 @@ We have included a compaction task spec that will create DAY granularity segment
   "interval": "2015-09-12/2015-09-13",
   "segmentGranularity": "DAY",
   "tuningConfig" : {
-    "type" : "index",
+    "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true

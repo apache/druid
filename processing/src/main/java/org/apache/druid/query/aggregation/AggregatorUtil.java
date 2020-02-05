@@ -121,6 +121,12 @@ public class AggregatorUtil
 
   public static final byte MEAN_CACHE_TYPE_ID = 0x41;
 
+  // ANY aggregator
+  public static final byte LONG_ANY_CACHE_TYPE_ID = 0x42;
+  public static final byte DOUBLE_ANY_CACHE_TYPE_ID = 0x43;
+  public static final byte FLOAT_ANY_CACHE_TYPE_ID = 0x44;
+  public static final byte STRING_ANY_CACHE_TYPE_ID = 0x45;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *

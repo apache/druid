@@ -136,10 +136,7 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
       TopNQuery query
   )
   {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
     final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(QueryPlus.wrap(query));
     TestHelper.assertExpectedResults(expectedResults, retval);
