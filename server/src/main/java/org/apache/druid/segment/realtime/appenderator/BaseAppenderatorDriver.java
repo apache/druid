@@ -644,13 +644,14 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
                 if (publishResult.getErrorMsg() != null) {
+                  SegmentUtils.logSegments(log::error, ourSegments, "Failed to publish segments");
                   throw new ISE(
-                      "Failed to publish segments because of [%s]: %s",
-                      publishResult.getErrorMsg(),
-                      SegmentUtils.commaSeparatedIdentifiers(ourSegments)
+                      "Failed to publish segments because of [%s]",
+                      publishResult.getErrorMsg()
                   );
                 } else {
-                  throw new ISE("Failed to publish segments: %s", SegmentUtils.commaSeparatedIdentifiers(ourSegments));
+                  SegmentUtils.logSegments(log::error, ourSegments, "Failed to publish segments");
+                  throw new ISE("Failed to publish segments");
                 }
               }
             }
