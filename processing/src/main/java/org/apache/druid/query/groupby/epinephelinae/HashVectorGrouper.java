@@ -403,8 +403,8 @@ public class HashVectorGrouper implements VectorGrouper
     if (initialNumBucketsRoundedUp < computeMaxNumBucketsAfterGrowth(capacity, bucketSize)) {
       return initialNumBucketsRoundedUp;
     } else {
-      // Special case: initialNumBuckets is equal to or higher than max capacity of a growable table; start out at
-      // max size the buffer will hold. Note that this allows the table to be larger than it could ever be as a
+      // Special case: initialNumBucketsRoundedUp is equal to or higher than max capacity of a growable table; start out
+      // at max size the buffer will hold. Note that this allows the table to be larger than it could ever be as a
       // result of growing, proving that biting off as much as you can chew is not always a bad strategy. (Why don't
       // we always do this? Because clearing a big table is expensive.)
       return HashTableUtils.previousPowerOfTwo(Math.min(capacity / bucketSize, 1 << 30));
