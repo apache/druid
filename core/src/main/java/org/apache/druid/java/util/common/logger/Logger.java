@@ -153,12 +153,12 @@ public class Logger
 
   public void wtf(String message, Object... formatArgs)
   {
-    log.error(StringUtils.nonStrictFormat("WTF?!: " + message, formatArgs), new Exception());
+    log.error(message, formatArgs);
   }
 
   public void wtf(Throwable t, String message, Object... formatArgs)
   {
-    log.error(StringUtils.nonStrictFormat("WTF?!: " + message, formatArgs), t);
+    logException(log::error, t, StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   public boolean isTraceEnabled()
@@ -187,5 +187,11 @@ public class Logger
         fn.accept(StringUtils.nonStrictFormat("%s (%s)", message, t.toString()), null);
       }
     }
+  }
+
+  @FunctionalInterface
+  public interface LogFunction
+  {
+    void log(String msg, Object... format);
   }
 }

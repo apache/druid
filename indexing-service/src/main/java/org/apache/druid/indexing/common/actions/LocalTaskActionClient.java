@@ -57,7 +57,7 @@ public class LocalTaskActionClient implements TaskActionClient
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
-    log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
+    log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
 
     if (auditLogConfig.isEnabled() && taskAction.isAudited()) {
       // Add audit log

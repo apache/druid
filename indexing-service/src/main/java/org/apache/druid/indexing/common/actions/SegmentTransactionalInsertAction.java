@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -304,8 +305,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +
-           "segmentsToBeOverwritten=" + segmentsToBeOverwritten +
-           ", segments=" + segments +
+           "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
            ", dataSource=" + dataSource +

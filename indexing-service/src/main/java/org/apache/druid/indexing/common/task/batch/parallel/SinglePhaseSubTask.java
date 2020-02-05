@@ -56,6 +56,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -486,7 +487,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
               // which makes the size of segments smaller.
               final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
               pushedSegments.addAll(pushed.getSegments());
-              LOG.info("Pushed segments[%s]", pushed.getSegments());
+              LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+              SegmentUtils.logSegments(LOG::info, pushed.getSegments(), "Pushed segments");
             }
           } else {
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -505,7 +507,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      LOG.info("Pushed segments[%s]", pushed.getSegments());
+      LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+      SegmentUtils.logSegments(LOG::info, pushed.getSegments(), "Pushed segments");
       appenderator.close();
 
       return pushedSegments;

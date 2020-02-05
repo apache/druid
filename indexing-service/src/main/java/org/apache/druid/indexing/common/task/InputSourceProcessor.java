@@ -191,7 +191,7 @@ public class InputSourceProcessor
     }
 
     if (logParseExceptions) {
-      LOG.error(e, "Encountered parse exception:");
+      LOG.error(e, "Encountered parse exception");
     }
 
     if (buildSegmentsSavedParseExceptions != null) {

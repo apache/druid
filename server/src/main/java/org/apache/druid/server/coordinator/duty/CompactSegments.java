@@ -208,10 +208,11 @@ public class CompactSegments implements CoordinatorDuty
             newAutoCompactionContext(config.getTaskContext())
         );
         LOG.info(
-            "Submitted a compactionTask[%s] for segments %s",
+            "Submitted a compactionTask[%s] for %s segments",
             taskId,
-            SegmentUtils.commaSeparatedIdentifiers(segmentsToCompact)
+            segmentsToCompact.size()
         );
+        SegmentUtils.logSegments(LOG::info, segmentsToCompact, "Compacting segments");
         // Count the compaction task itself + its sub tasks
         numSubmittedTasks += findNumMaxConcurrentSubTasks(config.getTuningConfig()) + 1;
       } else {

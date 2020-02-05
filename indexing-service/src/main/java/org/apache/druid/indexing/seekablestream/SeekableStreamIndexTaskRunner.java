@@ -1046,8 +1046,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   {
                     if (handoffSegmentsAndCommitMetadata == null) {
                       log.warn(
-                          "Failed to hand off segments: %s",
-                          SegmentUtils.commaSeparatedIdentifiers(publishedSegmentsAndCommitMetadata.getSegments())
+                          "Failed to hand off %s segments",
+                          publishedSegmentsAndCommitMetadata.getSegments().size()
+                      );
+                      SegmentUtils.logSegments(
+                          log::warn,
+                          publishedSegmentsAndCommitMetadata.getSegments(),
+                          "Failed to hand off segments"
                       );
                     }
                     handoffFuture.set(handoffSegmentsAndCommitMetadata);

@@ -569,7 +569,7 @@ public abstract class WorkerTaskManager
             }
           }
           catch (Throwable th) {
-            log.error(th, "WTF! Got unknown exception while running the scheduled cleanup.");
+            log.error(th, "Got unknown exception while running the scheduled cleanup.");
           }
         },
         1,

@@ -112,8 +112,8 @@ public class BasicAuthUtils
       return key.getEncoded();
     }
     catch (InvalidKeySpecException ikse) {
-      log.error("WTF? invalid keyspec");
-      throw new RuntimeException("WTF? invalid keyspec", ikse);
+      log.error("Invalid keyspec");
+      throw new RuntimeException("Invalid keyspec", ikse);
     }
     catch (NoSuchAlgorithmException nsae) {
       log.error("%s not supported on this system.", ALGORITHM);
