@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
+ *
  */
 public class DefaultDimensionSpec implements DimensionSpec
 {
@@ -134,6 +135,12 @@ public class DefaultDimensionSpec implements DimensionSpec
   public boolean preservesOrdering()
   {
     return true;
+  }
+
+  @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new DefaultDimensionSpec(newDimension, this.outputName, this.outputType);
   }
 
   @Override

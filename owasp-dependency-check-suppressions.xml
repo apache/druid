@@ -147,6 +147,8 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.netty/netty@.*$</packageUrl>
     <cve>CVE-2019-16869</cve>
+    <cve>CVE-2019-20444</cve>
+    <cve>CVE-2019-20445</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -194,5 +196,6 @@
     <cve>CVE-2019-16943</cve>
     <cve>CVE-2019-17267</cve>
     <cve>CVE-2019-17531</cve>
+    <cve>CVE-2019-20330</cve>
   </suppress>
 </suppressions>

@@ -24,11 +24,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
@@ -61,6 +67,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -70,6 +77,11 @@ import java.util.List;
 
 public class GroupByQueryQueryToolChestTest
 {
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void testResultLevelCacheKeyWithPostAggregate()
@@ -103,13 +115,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -167,13 +177,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -233,13 +241,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -321,13 +327,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -416,13 +420,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -483,13 +485,11 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query1);
 
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+        null
     ).getCacheStrategy(query2);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
@@ -574,10 +574,7 @@ public class GroupByQueryQueryToolChestTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        null,
-        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null);
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
@@ -664,6 +661,158 @@ public class GroupByQueryQueryToolChestTest
         mapsObjectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
+        )
+    );
+  }
+
+  @Test
+  public void testResultArrayFieldsAllGran()
+  {
+    final GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("col", "dim"))
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setAggregatorSpecs(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
+        .build();
+
+    Assert.assertEquals(
+        ImmutableList.of("dim", "rows", "index", "uniques", "const"),
+        new GroupByQueryQueryToolChest(null, null).resultArrayFields(query)
+    );
+  }
+
+  @Test
+  public void testResultArrayFieldsDayGran()
+  {
+    final GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.DAY)
+        .setDimensions(new DefaultDimensionSpec("col", "dim"))
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setAggregatorSpecs(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
+        .build();
+
+    Assert.assertEquals(
+        ImmutableList.of("__time", "dim", "rows", "index", "uniques", "const"),
+        new GroupByQueryQueryToolChest(null, null).resultArrayFields(query)
+    );
+  }
+
+  @Test
+  public void testResultsAsArraysAllGran()
+  {
+    final GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("col", "dim"))
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setAggregatorSpecs(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
+        .build();
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{"foo", 1L, 2L, 3L, 1L},
+            new Object[]{"bar", 4L, 5L, 6L, 1L}
+        ),
+        new GroupByQueryQueryToolChest(null, null).resultsAsArrays(
+            query,
+            Sequences.simple(
+                ImmutableList.of(
+                    makeRow(query, "2000", "dim", "foo", "rows", 1L, "index", 2L, "uniques", 3L, "const", 1L),
+                    makeRow(query, "2000", "dim", "bar", "rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
+                )
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testResultsAsArraysDayGran()
+  {
+    final GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.DAY)
+        .setDimensions(new DefaultDimensionSpec("col", "dim"))
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setAggregatorSpecs(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
+        .build();
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{DateTimes.of("2000-01-01").getMillis(), "foo", 1L, 2L, 3L, 1L},
+            new Object[]{DateTimes.of("2000-01-02").getMillis(), "bar", 4L, 5L, 6L, 1L}
+        ),
+        new GroupByQueryQueryToolChest(null, null).resultsAsArrays(
+            query,
+            Sequences.simple(
+                ImmutableList.of(
+                    makeRow(query, "2000-01-01", "dim", "foo", "rows", 1L, "index", 2L, "uniques", 3L, "const", 1L),
+                    makeRow(query, "2000-01-02", "dim", "bar", "rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
+                )
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnGroupBys()
+  {
+    Assert.assertTrue(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        new GroupByQuery.Builder()
+                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                            .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                            .setGranularity(Granularities.ALL)
+                            .build()
+                    )
+                )
+                .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                .setGranularity(Granularities.ALL)
+                .build()
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnTimeseries()
+  {
+    Assert.assertFalse(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                  .granularity(Granularities.ALL)
+                  .build()
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnGroupByOfTimeseries()
+  {
+    Assert.assertFalse(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        Druids.newTimeseriesQueryBuilder()
+                              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                              .granularity(Granularities.ALL)
+                              .build()
+                    )
+                )
+                .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                .setGranularity(Granularities.ALL)
+                .build()
         )
     );
   }
@@ -764,5 +913,10 @@ public class GroupByQueryQueryToolChestTest
 
     ResultRow fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
     Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
+  }
+
+  private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)
+  {
+    return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);
   }
 }

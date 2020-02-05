@@ -36,6 +36,8 @@ import java.util.Map;
 class PartialHashSegmentGenerateParallelIndexTaskRunner
     extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport>
 {
+  private static final String PHASE_NAME = "partial segment generation";
+
   // For tests
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
   private final AppenderatorsManager appenderatorsManager;
@@ -72,7 +74,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return PartialHashSegmentGenerateTask.TYPE;
+    return PHASE_NAME;
   }
 
   @Override

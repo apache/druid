@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -38,6 +39,7 @@ import java.io.IOException;
 import java.util.Collections;
 
 /**
+ *
  */
 public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 {
@@ -56,7 +58,13 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
-    final QueryPlus<T> queryPlus = input.withQuerySegmentSpec(specificSpec);
+    final QueryPlus<T> queryPlus = input.withQuery(
+        Queries.withSpecificSegments(
+            input.getQuery(),
+            Collections.singletonList(specificSpec.getDescriptor())
+        )
+    );
+
     final Query<T> query = queryPlus.getQuery();
 
     final Thread currThread = Thread.currentThread();

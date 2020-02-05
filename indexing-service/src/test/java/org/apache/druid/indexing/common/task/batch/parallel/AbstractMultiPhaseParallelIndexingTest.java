@@ -107,7 +107,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Interval interval,
       File inputDir,
       String filter,
-      DimensionBasedPartitionsSpec partitionsSpec
+      DimensionBasedPartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks
   ) throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
@@ -115,7 +116,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         interval,
         inputDir,
         filter,
-        partitionsSpec
+        partitionsSpec,
+        maxNumConcurrentSubTasks
     );
 
     actionClient = createActionClient(task);
@@ -137,7 +139,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Interval interval,
       File inputDir,
       String filter,
-      DimensionBasedPartitionsSpec partitionsSpec
+      DimensionBasedPartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks
   )
   {
     GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -163,7 +166,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         null,
         null,
         null,
-        2,
+        maxNumConcurrentSubTasks,
         null,
         null,
         null,
