@@ -23,17 +23,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -56,6 +56,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -132,20 +134,24 @@ import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
  * Utility functions for Calcite tests.
@@ -850,40 +856,25 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidNodeDiscovery disco = EasyMock.createMock(DruidNodeDiscovery.class);
-    DruidNodeDiscovery coordinatorDisco = EasyMock.createMock(DruidNodeDiscovery.class);
-    DruidNodeDiscoveryProvider discoProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
 
-    final DiscoveryDruidNode mockCoordinatorNode = new DiscoveryDruidNode(
-        new DruidNode("test", "dummy", false, 8080, null, true, false),
-        NodeRole.COORDINATOR,
-        ImmutableMap.of()
+    final DruidNode coordinatorNode = new DruidNode("test", "dummy", false, 8080, null, true, false);
+    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
     );
 
-    // no servers in disco expect a lonely coordinator
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.PEON)).andReturn(disco).anyTimes();
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.MIDDLE_MANAGER)).andReturn(disco).anyTimes();
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.INDEXER)).andReturn(disco).anyTimes();
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.OVERLORD)).andReturn(disco).anyTimes();
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.BROKER)).andReturn(disco).anyTimes();
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.HISTORICAL)).andReturn(disco).anyTimes();
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.ROUTER)).andReturn(disco).anyTimes();
-    EasyMock.expect(disco.getAllNodes()).andReturn(ImmutableList.of()).anyTimes();
-
-    EasyMock.expect(discoProvider.getForNodeRole(NodeRole.COORDINATOR)).andReturn(coordinatorDisco).anyTimes();
-    EasyMock.expect(coordinatorDisco.getAllNodes()).andReturn(ImmutableList.of(mockCoordinatorNode)).anyTimes();
-    EasyMock.replay(disco, coordinatorDisco, discoProvider);
-
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        EasyMock.createMock(HttpClient.class),
-        discoProvider,
+        new FakeHttpClient(),
+        provider,
         NodeRole.COORDINATOR,
         "/simple/leader",
-        new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
-    )
-    {
-    };
-    final SystemSchema schema = new SystemSchema(
+        () -> {
+          throw new UnsupportedOperationException();
+        }
+    );
+
+    return new SystemSchema(
         druidSchema,
         new MetadataSegmentView(
             druidLeaderClient,
@@ -893,14 +884,13 @@ public class CalciteTests
             plannerConfig
         ),
         new TestServerInventoryView(walker.getSegments()),
-        EasyMock.createMock(ServerInventoryView.class),
+        new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
         druidLeaderClient,
-        discoProvider,
+        provider,
         getJsonMapper()
     );
-    return schema;
   }
 
   public static SchemaPlus createMockRootSchema(
@@ -996,5 +986,139 @@ public class CalciteTests
 
     schema.stop();
     return schema;
+  }
+
+  /**
+   * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeHttpClient implements HttpClient
+  {
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler
+    )
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration readTimeout
+    )
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  /**
+   * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  {
+    private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
+
+    public FakeDruidNodeDiscoveryProvider(Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries)
+    {
+      this.nodeDiscoveries = nodeDiscoveries;
+    }
+
+    @Override
+    public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
+    {
+      boolean get = nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery())
+                                   .getAllNodes()
+                                   .stream()
+                                   .anyMatch(x -> x.getDruidNode().equals(node));
+      return () -> get;
+    }
+
+    @Override
+    public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
+    {
+      return nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery());
+    }
+  }
+
+  private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+  {
+    private final Set<DiscoveryDruidNode> nodes;
+
+    FakeDruidNodeDiscovery()
+    {
+      this.nodes = new HashSet<>();
+    }
+
+    FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+    {
+      this.nodes = new HashSet<>(nodes.size());
+      nodes.forEach((k, v) -> {
+        addNode(v, k);
+      });
+    }
+
+    @Override
+    public Collection<DiscoveryDruidNode> getAllNodes()
+    {
+      return nodes;
+    }
+
+    void addNode(DruidNode node, NodeRole role)
+    {
+      final DiscoveryDruidNode discoveryNode = new DiscoveryDruidNode(node, role, ImmutableMap.of());
+      this.nodes.add(discoveryNode);
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+
+    }
+  }
+
+
+  /**
+   * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeServerInventoryView implements ServerInventoryView
+  {
+    @Nullable
+    @Override
+    public DruidServer getInventoryValue(String serverKey)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<DruidServer> getInventory()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isStarted()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
