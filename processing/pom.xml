@@ -160,6 +160,10 @@
             <groupId>org.apache.datasketches</groupId>
             <artifactId>datasketches-memory</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-common</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
