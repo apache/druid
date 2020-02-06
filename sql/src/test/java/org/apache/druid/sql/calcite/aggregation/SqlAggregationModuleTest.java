@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import java.util.Set;
 
-public class SqlAggregationModuleTest extends CalciteTestBase
+public class SqlAggregationModuleTest
 {
   private SqlAggregationModule target;
   private Injector injector;

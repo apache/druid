@@ -28,7 +28,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(EasyMockRunner.class)
-public class NamedLookupSchemaTest extends CalciteTestBase
+public class NamedLookupSchemaTest
 {
   private static final String SCHEMA_NAME = "lookup";
 

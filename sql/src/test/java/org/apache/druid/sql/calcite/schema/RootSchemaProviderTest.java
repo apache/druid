@@ -35,7 +35,7 @@ import org.junit.runner.RunWith;
 import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
-public class RootSchemaProviderTest extends CalciteTestBase
+public class RootSchemaProviderTest
 {
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";

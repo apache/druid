@@ -56,7 +56,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @RunWith(EasyMockRunner.class)
-public class DruidCalciteSchemaModuleTest extends CalciteTestBase
+public class DruidCalciteSchemaModuleTest
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
 

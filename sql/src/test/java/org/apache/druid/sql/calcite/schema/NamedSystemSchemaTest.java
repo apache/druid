@@ -25,7 +25,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class NamedSystemSchemaTest extends CalciteTestBase
+public class NamedSystemSchemaTest
 {
   private static final String SCHEMA_NAME = "sys";
 

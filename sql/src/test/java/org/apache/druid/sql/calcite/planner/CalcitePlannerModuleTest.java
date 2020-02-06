@@ -50,7 +50,7 @@ import javax.validation.Validator;
 import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
-public class CalcitePlannerModuleTest extends CalciteTestBase
+public class CalcitePlannerModuleTest
 {
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";

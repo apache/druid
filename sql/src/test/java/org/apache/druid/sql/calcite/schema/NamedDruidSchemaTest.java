@@ -28,7 +28,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(EasyMockRunner.class)
-public class NamedDruidSchemaTest extends CalciteTestBase
+public class NamedDruidSchemaTest
 {
   private static final String SCHEMA_NAME = "SCHEMA_NAME";
 
