@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
