@@ -85,7 +85,7 @@ protoc -o /tmp/metrics.desc ./quickstart/protobuf/metrics.proto
 Below is the complete Supervisor spec JSON to be submitted to the Overlord.
 Make sure these keys are properly configured for successful ingestion.
 
-Important superivisor properties
+Important supervisor properties
 - `descriptor` for the descriptor file URL
 - `protoMessageType` from the proto definition
 - `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`
@@ -164,9 +164,9 @@ Important superivisor properties
 }
 ```
 
-## Adding protobuf messages to Kafka
+## Adding Protobuf messages to Kafka
 
-If necessary, from your Kafka installation directory run the following command to create the kafka topic
+If necessary, from your Kafka installation directory run the following command to create the Kafka topic
 
 ```
 ./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic metrics_pb
@@ -212,7 +212,7 @@ protoc -o metrics.desc metrics.proto
 ```
 
 ### `pb_publisher.py`
-After `metrics_pb2.py` is generated, another script can be constructed to parse JSON data, convert it to protobuf, and produce to a Kafka topic
+After `metrics_pb2.py` is generated, another script can be constructed to parse JSON data, convert it to Protobuf, and produce to a Kafka topic
 
 ```python
 import sys
