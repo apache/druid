@@ -21,6 +21,7 @@ package org.apache.druid.segment.join.table;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import io.netty.util.SuppressForbidden;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
@@ -382,6 +383,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     private final int maxSize;
     private final Function<K, V> loader;
 
+    // Allowing use of LinkedHashMap constructor because implementation uses capacity() to properly size HashMap.
+    @SuppressForbidden(reason = "java.util.LinkedHashMap#<init>(int)")
     LruLoadingHashMap(int maxSize, Function<K, V> loader)
     {
       super(capacity(maxSize));

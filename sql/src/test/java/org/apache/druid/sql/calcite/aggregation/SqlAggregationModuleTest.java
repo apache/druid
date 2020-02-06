@@ -23,13 +23,14 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Set;
 
-public class SqlAggregationModuleTest
+public class SqlAggregationModuleTest extends CalciteTestBase
 {
   private SqlAggregationModule target;
   private Injector injector;
