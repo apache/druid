@@ -22,9 +22,9 @@ package org.apache.druid.storage.azure;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 
 /**
- * Factory for creating {@link ListBlobItemDruid} objects
+ * Factory for creating {@link ListBlobItemHolder} objects
  */
-public interface ListBlobItemDruidFactory
+public interface ListBlobItemHolderFactory
 {
-  ListBlobItemDruid create(ListBlobItem blobItem);
+  ListBlobItemHolder create(ListBlobItem blobItem);
 }

@@ -19,20 +19,26 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.ListBlobItem;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
- * is a final class and so is difficult to mock in unit tests.
+ * Wrapper class for {@link ListBlobItem} interface, which was missing some useful
+ * functionality for telling whether the blob was a cloudBlob or not. This class was
+ * added mainly to make testing easier.
  */
-public class CloudBlobDruid
+public class ListBlobItemHolder
 {
-  private final CloudBlob delegate;
+  private final ListBlobItem delegate;
 
-  public CloudBlobDruid(CloudBlob delegate)
+  @AssistedInject
+  public ListBlobItemHolder(@Assisted ListBlobItem delegate)
   {
     this.delegate = delegate;
   }
@@ -42,8 +48,24 @@ public class CloudBlobDruid
     return delegate.getContainer().getName();
   }
 
-  public String getName()
+  public URI getUri()
   {
-    return delegate.getName();
+    return delegate.getUri();
+  }
+
+  public CloudBlobHolder getCloudBlob()
+  {
+    return new CloudBlobHolder((CloudBlob) delegate);
+  }
+
+  public boolean isCloudBlob()
+  {
+    return delegate instanceof CloudBlob;
+  }
+
+  @Override
+  public String toString()
+  {
+    return delegate.toString();
   }
 }

@@ -23,11 +23,11 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.storage.azure.AzureCloudBlobDruidToCloudObjectLocationConverter;
+import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
-import org.apache.druid.storage.azure.CloudBlobDruid;
+import org.apache.druid.storage.azure.CloudBlobHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.After;
@@ -57,11 +57,11 @@ public class AzureInputSourceTest extends EasyMockSupport
   private AzureStorage storage;
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
-  private AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
+  private AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
 
   private InputSplit<CloudObjectLocation> inputSplit;
   private AzureEntity azureEntity1;
-  private CloudBlobDruid cloudBlobDruid1;
+  private CloudBlobHolder cloudBlobDruid1;
   private AzureCloudBlobIterable azureCloudBlobIterable;
 
   private AzureInputSource azureInputSource;
@@ -83,8 +83,8 @@ public class AzureInputSourceTest extends EasyMockSupport
     inputSplit = createMock(InputSplit.class);
     azureEntity1 = createMock(AzureEntity.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
-    azureCloudBlobToLocationConverter = createMock(AzureCloudBlobDruidToCloudObjectLocationConverter.class);
-    cloudBlobDruid1 = createMock(CloudBlobDruid.class);
+    azureCloudBlobToLocationConverter = createMock(AzureCloudBlobHolderToCloudObjectLocationConverter.class);
+    cloudBlobDruid1 = createMock(CloudBlobHolder.class);
     azureCloudBlobIterable = createMock(AzureCloudBlobIterable.class);
   }
 
@@ -131,8 +131,8 @@ public class AzureInputSourceTest extends EasyMockSupport
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<CloudObjectLocation> expectedCloudLocations = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
-    List<CloudBlobDruid> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
-    Iterator<CloudBlobDruid> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
+    List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
+    Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
     EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, AzureInputSource.MAX_LISTING_LENGTH)).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.spliterator())

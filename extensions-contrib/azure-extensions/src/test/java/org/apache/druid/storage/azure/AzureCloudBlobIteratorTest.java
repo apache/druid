@@ -52,7 +52,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   private static final int MAX_LISTING_LENGTH = 10;
 
   private AzureStorage storage;
-  private ListBlobItemDruidFactory blobItemDruidFactory;
+  private ListBlobItemHolderFactory blobItemDruidFactory;
   private ResultSegment<ListBlobItem> resultSegmentPrefixOnlyCloudBlobs1;
   private ResultSegment<ListBlobItem> resultSegmentPrefixOnlyCloudBlobs2;
   private ResultSegment<ListBlobItem> resultSegmentPrefixWithNoBlobs;
@@ -62,22 +62,22 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   private ResultContinuation nullResultContinuationToken = null;
 
   private ListBlobItem blobItemPrefixWithOnlyCloudBlobs1;
-  private ListBlobItemDruid cloudBlobItemPrefixWithOnlyCloudBlobs1;
-  private CloudBlobDruid cloudBlobDruidPrefixWithOnlyCloudBlobs1;
+  private ListBlobItemHolder cloudBlobItemPrefixWithOnlyCloudBlobs1;
+  private CloudBlobHolder cloudBlobDruidPrefixWithOnlyCloudBlobs1;
 
   private ListBlobItem blobItemPrefixWithOnlyCloudBlobs2;
-  private ListBlobItemDruid cloudBlobItemPrefixWithOnlyCloudBlobs2;
-  private CloudBlobDruid cloudBlobDruidPrefixWithOnlyCloudBlobs2;
+  private ListBlobItemHolder cloudBlobItemPrefixWithOnlyCloudBlobs2;
+  private CloudBlobHolder cloudBlobDruidPrefixWithOnlyCloudBlobs2;
 
   private ListBlobItem blobItemPrefixWithCloudBlobsAndDirectories1;
-  private ListBlobItemDruid directoryItemPrefixWithCloudBlobsAndDirectories;
+  private ListBlobItemHolder directoryItemPrefixWithCloudBlobsAndDirectories;
 
   private ListBlobItem blobItemPrefixWithCloudBlobsAndDirectories2;
-  private ListBlobItemDruid cloudBlobItemPrefixWithCloudBlobsAndDirectories;
-  private CloudBlobDruid cloudBlobDruidPrefixWithCloudBlobsAndDirectories;
+  private ListBlobItemHolder cloudBlobItemPrefixWithCloudBlobsAndDirectories;
+  private CloudBlobHolder cloudBlobDruidPrefixWithCloudBlobsAndDirectories;
 
   private ListBlobItem blobItemPrefixWithCloudBlobsAndDirectories3;
-  private ListBlobItemDruid directoryItemPrefixWithCloudBlobsAndDirectories3;
+  private ListBlobItemHolder directoryItemPrefixWithCloudBlobsAndDirectories3;
 
 
   private AzureCloudBlobIterator azureCloudBlobIterator;
@@ -110,28 +110,28 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     resultSegmentPrefixOnlyCloudBlobs2 = createMock(ResultSegment.class);
     resultSegmentPrefixWithNoBlobs = createMock(ResultSegment.class);
     resultSegmentPrefixWithCloudBlobsAndDirectories = createMock(ResultSegment.class);
-    cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemDruid.class);
+    cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemHolder.class);
 
     blobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItem.class);
-    cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemDruid.class);
-    cloudBlobDruidPrefixWithOnlyCloudBlobs1 = createMock(CloudBlobDruid.class);
+    cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemHolder.class);
+    cloudBlobDruidPrefixWithOnlyCloudBlobs1 = createMock(CloudBlobHolder.class);
 
     blobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItem.class);
-    cloudBlobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItemDruid.class);
-    cloudBlobDruidPrefixWithOnlyCloudBlobs2 = createMock(CloudBlobDruid.class);
+    cloudBlobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItemHolder.class);
+    cloudBlobDruidPrefixWithOnlyCloudBlobs2 = createMock(CloudBlobHolder.class);
 
     blobItemPrefixWithCloudBlobsAndDirectories1 = createMock(ListBlobItem.class);
-    directoryItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemDruid.class);
+    directoryItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemHolder.class);
 
     blobItemPrefixWithCloudBlobsAndDirectories2 = createMock(ListBlobItem.class);
-    cloudBlobItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemDruid.class);
-    cloudBlobDruidPrefixWithCloudBlobsAndDirectories = createMock(CloudBlobDruid.class);
+    cloudBlobItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemHolder.class);
+    cloudBlobDruidPrefixWithCloudBlobsAndDirectories = createMock(CloudBlobHolder.class);
 
     blobItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItem.class);
-    directoryItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItemDruid.class);
+    directoryItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItemHolder.class);
 
 
-    blobItemDruidFactory = createMock(ListBlobItemDruidFactory.class);
+    blobItemDruidFactory = createMock(ListBlobItemHolderFactory.class);
   }
 
   @Test
@@ -240,12 +240,12 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
         MAX_LISTING_LENGTH
     );
 
-    List<CloudBlobDruid> expectedBlobItems = ImmutableList.of(
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
         cloudBlobDruidPrefixWithOnlyCloudBlobs1,
         cloudBlobDruidPrefixWithOnlyCloudBlobs2,
         cloudBlobDruidPrefixWithCloudBlobsAndDirectories
     );
-    List<CloudBlobDruid> actualBlobItems = new ArrayList<>();
+    List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
     while (azureCloudBlobIterator.hasNext()) {
       actualBlobItems.add(azureCloudBlobIterator.next());
     }

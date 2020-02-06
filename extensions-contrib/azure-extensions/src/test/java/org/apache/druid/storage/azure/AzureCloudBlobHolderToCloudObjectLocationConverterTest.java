@@ -26,19 +26,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class AzureCloudBlobDruidToCloudObjectLocationConverterTest extends EasyMockSupport
+public class AzureCloudBlobHolderToCloudObjectLocationConverterTest extends EasyMockSupport
 {
   private static final String CONTAINER1 = "container1";
   private static final String BLOB1 = "blob1";
 
-  private CloudBlobDruid cloudBlob;
+  private CloudBlobHolder cloudBlob;
 
-  private AzureCloudBlobDruidToCloudObjectLocationConverter converter;
+  private AzureCloudBlobHolderToCloudObjectLocationConverter converter;
 
   @Before
   public void setup()
   {
-    cloudBlob = createMock(CloudBlobDruid.class);
+    cloudBlob = createMock(CloudBlobHolder.class);
   }
 
   @Test
@@ -49,7 +49,7 @@ public class AzureCloudBlobDruidToCloudObjectLocationConverterTest extends EasyM
     replayAll();
 
     CloudObjectLocation expectedLocation = new CloudObjectLocation(CONTAINER1, BLOB1);
-    converter = new AzureCloudBlobDruidToCloudObjectLocationConverter();
+    converter = new AzureCloudBlobHolderToCloudObjectLocationConverter();
     CloudObjectLocation actualLocation = converter.createCloudObjectLocation(cloudBlob);
 
     Assert.assertEquals(expectedLocation, actualLocation);

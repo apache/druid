@@ -134,10 +134,10 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
     props.put("druid.azure.container", AZURE_CONTAINER);
     injector = makeInjectorWithProperties(props);
-    AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobLocationConverter1 = injector.getInstance(
-        AzureCloudBlobDruidToCloudObjectLocationConverter.class);
-    AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
-        AzureCloudBlobDruidToCloudObjectLocationConverter.class);
+    AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter1 = injector.getInstance(
+        AzureCloudBlobHolderToCloudObjectLocationConverter.class);
+    AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
+        AzureCloudBlobHolderToCloudObjectLocationConverter.class);
     Assert.assertSame(azureCloudBlobLocationConverter1, azureCloudBlobLocationConverter2);
   }
 
@@ -220,9 +220,9 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
     props.put("druid.azure.container", AZURE_CONTAINER);
     injector = makeInjectorWithProperties(props);
-    ListBlobItemDruidFactory factory = injector.getInstance(ListBlobItemDruidFactory.class);
-    ListBlobItemDruid object1 = factory.create(blobItem1);
-    ListBlobItemDruid object2 = factory.create(blobItem2);
+    ListBlobItemHolderFactory factory = injector.getInstance(ListBlobItemHolderFactory.class);
+    ListBlobItemHolder object1 = factory.create(blobItem1);
+    ListBlobItemHolder object2 = factory.create(blobItem2);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);

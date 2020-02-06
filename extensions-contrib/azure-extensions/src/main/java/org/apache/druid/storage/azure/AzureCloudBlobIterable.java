@@ -26,9 +26,9 @@ import java.net.URI;
 import java.util.Iterator;
 
 /**
- * {@link Iterable} for {@link CloudBlobDruid} objects.
+ * {@link Iterable} for {@link CloudBlobHolder} objects.
  */
-public class AzureCloudBlobIterable implements Iterable<CloudBlobDruid>
+public class AzureCloudBlobIterable implements Iterable<CloudBlobHolder>
 {
   private final Iterable<URI> prefixes;
   private final int maxListingLength;
@@ -47,7 +47,7 @@ public class AzureCloudBlobIterable implements Iterable<CloudBlobDruid>
   }
 
   @Override
-  public Iterator<CloudBlobDruid> iterator()
+  public Iterator<CloudBlobHolder> iterator()
   {
     return azureCloudBlobIteratorFactory.create(prefixes, maxListingLength);
   }

@@ -35,11 +35,11 @@ import java.util.NoSuchElementException;
  * This iterator is computed incrementally in batches of {@link #maxListingLength}.
  * The first call is made at the same time the iterator is constructed.
  */
-public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
+public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 {
   private static final Logger log = new Logger(AzureCloudBlobIterator.class);
   private final AzureStorage storage;
-  private final ListBlobItemDruidFactory blobItemDruidFactory;
+  private final ListBlobItemHolderFactory blobItemDruidFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
 
@@ -47,13 +47,13 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
   private String currentContainer;
   private String currentPrefix;
   private ResultContinuation continuationToken;
-  private CloudBlobDruid currentBlobItem;
+  private CloudBlobHolder currentBlobItem;
   private Iterator<ListBlobItem> blobItemIterator;
 
   @AssistedInject
   AzureCloudBlobIterator(
       AzureStorage storage,
-      ListBlobItemDruidFactory blobItemDruidFactory,
+      ListBlobItemHolderFactory blobItemDruidFactory,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength
   )
@@ -83,13 +83,13 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
   }
 
   @Override
-  public CloudBlobDruid next()
+  public CloudBlobHolder next()
   {
     if (currentBlobItem == null) {
       throw new NoSuchElementException();
     }
 
-    final CloudBlobDruid retVal = currentBlobItem;
+    final CloudBlobHolder retVal = currentBlobItem;
     advanceBlobItem();
     return retVal;
   }
@@ -136,7 +136,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
   {
     while (blobItemIterator.hasNext() || continuationToken != null || prefixesIterator.hasNext()) {
       while (blobItemIterator.hasNext()) {
-        ListBlobItemDruid blobItem = blobItemDruidFactory.create(blobItemIterator.next());
+        ListBlobItemHolder blobItem = blobItemDruidFactory.create(blobItemIterator.next());
         /* skip directory objects */
         if (blobItem.isCloudBlob()) {
           currentBlobItem = blobItem.getCloudBlob();

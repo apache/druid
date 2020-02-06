@@ -28,10 +28,10 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.storage.azure.AzureCloudBlobDruidToCloudObjectLocationConverter;
+import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
-import org.apache.druid.storage.azure.CloudBlobDruid;
+import org.apache.druid.storage.azure.CloudBlobHolder;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -51,14 +51,14 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
   private final AzureStorage storage;
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
-  private final AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
+  private final AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
 
   @JsonCreator
   public AzureInputSource(
       @JacksonInject AzureStorage storage,
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
-      @JacksonInject AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
+      @JacksonInject AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
@@ -112,7 +112,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
                         .map(InputSplit::new);
   }
 
-  private Iterable<CloudBlobDruid> getIterableObjectsFromPrefixes()
+  private Iterable<CloudBlobHolder> getIterableObjectsFromPrefixes()
   {
     return azureCloudBlobIterableFactory.create(getPrefixes(), MAX_LISTING_LENGTH);
   }

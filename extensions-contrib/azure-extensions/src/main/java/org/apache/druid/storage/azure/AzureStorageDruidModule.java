@@ -99,7 +99,7 @@ public class AzureStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
     binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
-    binder.bind(AzureCloudBlobDruidToCloudObjectLocationConverter.class).in(LazySingleton.class);
+    binder.bind(AzureCloudBlobHolderToCloudObjectLocationConverter.class).in(LazySingleton.class);
     binder.install(new FactoryModuleBuilder()
                        .build(AzureByteSourceFactory.class));
     binder.install(new FactoryModuleBuilder()
@@ -109,7 +109,7 @@ public class AzureStorageDruidModule implements DruidModule
     binder.install(new FactoryModuleBuilder()
                        .build(AzureCloudBlobIterableFactory.class));
     binder.install(new FactoryModuleBuilder()
-                       .build(ListBlobItemDruidFactory.class));
+                       .build(ListBlobItemHolderFactory.class));
   }
 
   @Provides
