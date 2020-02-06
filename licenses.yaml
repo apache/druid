@@ -296,6 +296,7 @@ libraries:
   - com.google.inject: guice
   - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
+  - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
@@ -305,6 +306,9 @@ notices:
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
+      Copyright 2006-2016 Google, Inc.
+  - guice-assistedinject: |
+      Google Guice - Extensions - AssistedInject
       Copyright 2006-2016 Google, Inc.
 
 ---

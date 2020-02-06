@@ -121,7 +121,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
     catch (Exception e) {
       throw new RE(
           e,
-          "Failed to get blob item  from Azure container[%s], prefix[%s]",
+          "Failed to get blob item  from Azure container[%s], prefix[%s]. Error: %s",
           currentContainer,
           currentPrefix,
           e.getMessage()

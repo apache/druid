@@ -30,7 +30,9 @@ import java.util.Iterator;
  */
 public class AzureCloudBlobIterable implements Iterable<CloudBlobDruid>
 {
-  private final Iterator<CloudBlobDruid> iterator;
+  private final Iterable<URI> prefixes;
+  private final int maxListingLength;
+  private final AzureCloudBlobIteratorFactory azureCloudBlobIteratorFactory;
 
   @AssistedInject
   public AzureCloudBlobIterable(
@@ -39,12 +41,14 @@ public class AzureCloudBlobIterable implements Iterable<CloudBlobDruid>
       @Assisted final int maxListingLength
   )
   {
-    this.iterator = azureCloudBlobIteratorFactory.create(prefixes, maxListingLength);
+    this.azureCloudBlobIteratorFactory = azureCloudBlobIteratorFactory;
+    this.prefixes = prefixes;
+    this.maxListingLength = maxListingLength;
   }
 
   @Override
   public Iterator<CloudBlobDruid> iterator()
   {
-    return iterator;
+    return azureCloudBlobIteratorFactory.create(prefixes, maxListingLength);
   }
 }

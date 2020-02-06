@@ -28,7 +28,6 @@ import com.google.inject.Module;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.ListBlobItem;
-import org.apache.commons.collections4.IterableUtils;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -53,7 +52,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_ACCOUNT_KEY;
   private static final String AZURE_CONTAINER;
   private static final String PATH = "path";
-  private static final Iterable<URI> EMPTY_PREFIXES = IterableUtils.emptyIterable();
+  private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
 
   private CloudObjectLocation cloudObjectLocation1;
   private CloudObjectLocation cloudObjectLocation2;
@@ -190,8 +189,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     props.put("druid.azure.container", AZURE_CONTAINER);
     injector = makeInjectorWithProperties(props);
     AzureCloudBlobIteratorFactory factory = injector.getInstance(AzureCloudBlobIteratorFactory.class);
-    Object object1 = factory.create(EMPTY_PREFIXES, 10);
-    Object object2 = factory.create(EMPTY_PREFIXES, 10);
+    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -206,8 +205,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     props.put("druid.azure.container", AZURE_CONTAINER);
     injector = makeInjectorWithProperties(props);
     AzureCloudBlobIterableFactory factory = injector.getInstance(AzureCloudBlobIterableFactory.class);
-    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES, 10);
-    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES, 10);
+    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
