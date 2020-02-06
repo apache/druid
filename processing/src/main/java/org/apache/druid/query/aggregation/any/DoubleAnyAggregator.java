@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
  */
 public class DoubleAnyAggregator extends NumericAnyAggregator<BaseDoubleColumnValueSelector>
 {
-  private  double foundValue;
+  private double foundValue;
 
   public DoubleAnyAggregator(BaseDoubleColumnValueSelector valueSelector)
   {

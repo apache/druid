@@ -44,6 +44,8 @@ import java.util.Objects;
 
 public class DoubleAnyAggregatorFactory extends AggregatorFactory
 {
+  private static final Comparator<Double> VALUE_COMPARATOR = Comparator.nullsFirst(Double::compare);
+
   private static final Aggregator NIL_AGGREGATOR = new DoubleAnyAggregator(
       NilColumnValueSelector.instance()
   )
@@ -113,8 +115,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    //TODO check handle null
-    return DoubleSumAggregator.COMPARATOR;
+    return VALUE_COMPARATOR;
   }
 
   @Override

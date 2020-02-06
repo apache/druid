@@ -51,6 +51,8 @@ import java.util.Objects;
 
 public class FloatAnyAggregatorFactory extends AggregatorFactory
 {
+  private static final Comparator<Float> VALUE_COMPARATOR = Comparator.nullsFirst(Float::compare);
+
   private static final Aggregator NIL_AGGREGATOR = new FloatAnyAggregator(
       NilColumnValueSelector.instance()
   )
@@ -118,7 +120,7 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return FloatSumAggregator.COMPARATOR;
+    return VALUE_COMPARATOR;
   }
 
   @Override

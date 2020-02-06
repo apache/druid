@@ -50,6 +50,8 @@ import java.util.List;
 
 public class LongAnyAggregatorFactory extends AggregatorFactory
 {
+  private static final Comparator<Long> VALUE_COMPARATOR = Comparator.nullsFirst(Long::compare);
+
   private static final Aggregator NIL_AGGREGATOR = new LongAnyAggregator(
       NilColumnValueSelector.instance()
   )
@@ -117,7 +119,7 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return LongSumAggregator.COMPARATOR;
+    return VALUE_COMPARATOR;
   }
 
   @Override

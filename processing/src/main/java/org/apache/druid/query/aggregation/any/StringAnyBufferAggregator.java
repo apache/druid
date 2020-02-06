@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -28,7 +29,13 @@ import java.nio.ByteBuffer;
 
 public class StringAnyBufferAggregator implements BufferAggregator
 {
+  private static final byte BYTE_FLAG_IS_NOT_SET = 0;
+  private static final byte BYTE_FLAG_IS_SET = 1;
   private static final int NULL_STRING_LENGTH = -1;
+  private static final int IS_FOUND_FLAG_OFFSET_POSITION = 0;
+  private static final int STRING_LENGTH_OFFSET_POSITION = IS_FOUND_FLAG_OFFSET_POSITION + Byte.BYTES;
+  private static final int FOUND_VALUE_OFFSET_POSITION = STRING_LENGTH_OFFSET_POSITION + Integer.BYTES;
+
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
 
@@ -41,23 +48,26 @@ public class StringAnyBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putInt(position, NULL_STRING_LENGTH);
+    buf.put(position + IS_FOUND_FLAG_OFFSET_POSITION, BYTE_FLAG_IS_NOT_SET);
+    buf.putInt(position + STRING_LENGTH_OFFSET_POSITION, NULL_STRING_LENGTH);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    int stringSizeBytes = buf.getInt(position);
-    if (stringSizeBytes < 0) {
+    if (buf.get(position + IS_FOUND_FLAG_OFFSET_POSITION) == BYTE_FLAG_IS_NOT_SET) {
       final Object object = valueSelector.getObject();
       String foundValue = DimensionHandlerUtils.convertObjectToString(object);
       if (foundValue != null) {
         ByteBuffer mutationBuffer = buf.duplicate();
-        mutationBuffer.position(position + Integer.BYTES);
-        mutationBuffer.limit(position + Integer.BYTES + maxStringBytes);
+        mutationBuffer.position(position + FOUND_VALUE_OFFSET_POSITION);
+        mutationBuffer.limit(position + FOUND_VALUE_OFFSET_POSITION + maxStringBytes);
         final int len = StringUtils.toUtf8WithLimit(foundValue, mutationBuffer);
-        mutationBuffer.putInt(position, len);
+        mutationBuffer.putInt(position + STRING_LENGTH_OFFSET_POSITION, len);
+      } else {
+        buf.putInt(position + STRING_LENGTH_OFFSET_POSITION, NULL_STRING_LENGTH);
       }
+      buf.put(position + IS_FOUND_FLAG_OFFSET_POSITION, BYTE_FLAG_IS_SET);
     }
   }
 
@@ -65,7 +75,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   public Object get(ByteBuffer buf, int position)
   {
     ByteBuffer copyBuffer = buf.duplicate();
-    copyBuffer.position(position);
+    copyBuffer.position(position + STRING_LENGTH_OFFSET_POSITION);
     int stringSizeBytes = copyBuffer.getInt();
     if (stringSizeBytes >= 0) {
       byte[] valueBytes = new byte[stringSizeBytes];

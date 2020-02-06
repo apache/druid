@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
  */
 public class LongAnyAggregator extends NumericAnyAggregator<BaseLongColumnValueSelector>
 {
-  private  long foundValue;
+  private long foundValue;
 
   public LongAnyAggregator(BaseLongColumnValueSelector valueSelector)
   {
