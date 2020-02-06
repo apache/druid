@@ -109,6 +109,10 @@
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
+
+        <dependency-check-maven.version>5.3.0</dependency-check-maven.version>
+        <dependency-check-maven.failBuildOnCVSS>7</dependency-check-maven.failBuildOnCVSS>
+
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -1507,10 +1511,10 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>5.2.4</version>
+                <version>${dependency-check-maven.version}</version>
                 <configuration>
                     <cveValidForHours>24</cveValidForHours>
-                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <failBuildOnCVSS>${dependency-check-maven.failBuildOnCVSS}</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
                     <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
@@ -1906,6 +1910,26 @@
                                 <phase>none</phase>
                             </execution>
                         </executions>
+                    </plugin>
+                    <plugin>
+                      <groupId>org.owasp</groupId>
+                      <artifactId>dependency-check-maven</artifactId>
+                      <version>${dependency-check-maven.version}</version>
+                      <configuration>
+                          <cveValidForHours>24</cveValidForHours>
+                          <failBuildOnCVSS>${dependency-check-maven.failBuildOnCVSS}</failBuildOnCVSS>
+                          <skipProvidedScope>true</skipProvidedScope>
+                          <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
+                          <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
+                      </configuration>
+                      <executions>
+                          <execution>
+                              <phase>compile</phase>
+                              <goals>
+                                  <goal>check</goal>
+                              </goals>
+                          </execution>
+                      </executions>
                     </plugin>
                 </plugins>
             </build>
