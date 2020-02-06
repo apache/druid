@@ -122,8 +122,13 @@ public class HashVectorGrouper implements VectorGrouper
     final int numRows = endRow - startRow;
 
     // Hoisted bounds check on keySpace.
-    if (keySpace.getCapacity() < numRows * keySize) {
+    if (keySpace.getCapacity() < (long) numRows * keySize) {
       throw new IAE("Not enough keySpace capacity for the provided start/end rows");
+    }
+
+    // We use integer indexes into the keySpace.
+    if (keySpace.getCapacity() > Integer.MAX_VALUE) {
+      throw new ISE("keySpace too large to handle");
     }
 
     // Initialize vKeyHashCodes: one int per key.

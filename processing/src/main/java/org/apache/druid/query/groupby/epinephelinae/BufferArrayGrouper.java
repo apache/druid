@@ -176,8 +176,13 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     final int numRows = endRow - startRow;
 
     // Hoisted bounds check on keySpace.
-    if (keySpace.getCapacity() < numRows * Integer.BYTES) {
+    if (keySpace.getCapacity() < (long) numRows * Integer.BYTES) {
       throw new IAE("Not enough keySpace capacity for the provided start/end rows");
+    }
+
+    // We use integer indexes into the keySpace.
+    if (keySpace.getCapacity() > Integer.MAX_VALUE) {
+      throw new ISE("keySpace too large to handle");
     }
 
     if (keySpace.getCapacity() == 0) {
