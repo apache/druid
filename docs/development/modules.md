@@ -46,6 +46,7 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
 1. Add new Jersey resources by calling `Jerseys.addResource(binder, clazz)`.
 1. Add new Jetty filters by extending `org.apache.druid.server.initialization.jetty.ServletFilterHolder`.
 1. Add new secret providers by extending `org.apache.druid.metadata.PasswordProvider`.
+1. Add new ingest transform by implementing the `org.apache.druid.segment.transform.Transform` interface from the `druid-processing` package.
 1. Bundle your extension with all the other Druid extensions
 
 Extensions are added to the system via an implementation of `org.apache.druid.initialization.DruidModule`.
