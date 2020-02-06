@@ -74,10 +74,10 @@ message Metrics {
 
 ### Descriptor file
 
-Next, we use the `protoc` Protobuf compiler to generate the descriptor file and save it as `metrics.desc`. The descriptor file must be either in the classpath or reachable by URL.  In this example the descriptor file was saved at `/tmp/metrics.desc`, however this file is also available in the example files.
+Next, we use the `protoc` Protobuf compiler to generate the descriptor file and save it as `metrics.desc`. The descriptor file must be either in the classpath or reachable by URL.  In this example the descriptor file was saved at `/tmp/metrics.desc`, however this file is also available in the example files. From your Druid install directory:
 
 ```
-protoc -o /tmp/metrics.desc metrics.proto
+protoc -o /tmp/metrics.desc ./quickstart/protobuf/metrics.proto
 ```
 
 ## Create Kafka Supervisor
@@ -172,10 +172,10 @@ If necessary, from your Kafka installation directory run the following command t
 ./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic metrics_pb
 ```
 
-This example script requires `protobuf` and `kafka-python` modules. With the topic in place, messages can be inserted
+This example script requires `protobuf` and `kafka-python` modules. With the topic in place, messages can be inserted running the following command from your Druid installation directory
 
 ```
-../bin/generate-example-metrics | ./pb_publisher.py
+./bin/generate-example-metrics | ./quickstart/protobuf/pb_publisher.py
 ```
 
 You can confirm that data has been inserted to your Kafka topic using the following command from your Kafka installation directory
