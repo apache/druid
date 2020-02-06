@@ -215,6 +215,8 @@ protoc -o metrics.desc metrics.proto
 After `metrics_pb2.py` is generated, another script can be constructed to parse JSON data, convert it to Protobuf, and produce to a Kafka topic
 
 ```python
+#!/usr/bin/env python
+
 import sys
 import json
 
