@@ -741,7 +741,8 @@ public class CalciteTests
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
-        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class)
+        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
+        null
     ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)

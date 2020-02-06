@@ -71,6 +71,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -102,19 +103,23 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   /**
    * Create an instance using the provided query runner factory conglomerate and lookup provider.
+   * If a JoinableFactory is provided, it will be used instead of the default.
    */
   public SpecificSegmentsQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
-      final LookupExtractorFactoryContainerProvider lookupProvider
+      final LookupExtractorFactoryContainerProvider lookupProvider,
+      @Nullable final JoinableFactory joinableFactory
   )
   {
     this.conglomerate = conglomerate;
-    this.joinableFactory = MapJoinableFactoryTest.fromMap(
-        ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
-            .put(InlineDataSource.class, new InlineJoinableFactory())
-            .put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider))
-            .build()
-    );
+    this.joinableFactory = joinableFactory == null ?
+                           MapJoinableFactoryTest.fromMap(
+                               ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
+                                   .put(InlineDataSource.class, new InlineJoinableFactory())
+                                   .put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider))
+                                   .build()
+                           ) : joinableFactory;
+
     this.walker = new ClientQuerySegmentWalker(
         new NoopServiceEmitter(),
         new DataServerLikeWalker(),
@@ -160,9 +165,20 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   }
 
   /**
-   * Create an instance without any lookups.
+   * Create an instance without any lookups, using the default JoinableFactory
    */
   public SpecificSegmentsQuerySegmentWalker(final QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this(conglomerate, null);
+  }
+
+  /**
+   * Create an instance without any lookups, optionally allowing the default JoinableFactory to be overridden
+   */
+  public SpecificSegmentsQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      @Nullable JoinableFactory joinableFactory
+  )
   {
     this(
         conglomerate,
@@ -179,7 +195,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           {
             return Optional.empty();
           }
-        }
+        },
+        joinableFactory
     );
   }
 
