@@ -88,30 +88,25 @@ public class LookupJoinable implements Joinable
 
   @Override
   public Set<String> getCorrelatedColumnValues(
-      String mainColumnName,
-      String mainColumnValue,
-      String correlationColumnName
+      String searchColumnName,
+      String searchColumnValue,
+      String retrievalColumnName
   )
   {
     Set<String> correlatedValues;
-    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(mainColumnName)) {
-      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(correlationColumnName)) {
-        correlatedValues = ImmutableSet.of(mainColumnValue);
+    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
+      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
+        correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
-        correlatedValues = ImmutableSet.of(extractor.apply(mainColumnName));
+        correlatedValues = ImmutableSet.of(extractor.apply(searchColumnName));
       }
     } else {
-      if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(correlationColumnName)) {
-        correlatedValues = ImmutableSet.of(mainColumnValue);
+      if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
+        correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
-        correlatedValues = ImmutableSet.copyOf(extractor.unapply(mainColumnValue));
+        correlatedValues = ImmutableSet.copyOf(extractor.unapply(searchColumnValue));
       }
     }
     return correlatedValues;
-  }
-
-  public LookupExtractor getExtractor()
-  {
-    return extractor;
   }
 }

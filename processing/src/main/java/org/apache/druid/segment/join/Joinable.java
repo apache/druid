@@ -78,19 +78,17 @@ public interface Joinable
   );
 
   /**
-   * Given a main column name and value, return all the values of the column denoted by correlationColumnName
-   * that appear in rows where the main column has the provided main column value.
+   * Searches a column from this Joinable for a particular value, finds rows that match,
+   * and returns values of a second column for those rows.
    *
-   * This is used for rewriting filter clauses when pushing filters down to the base table during join query processing.
-   *
-   * @param mainColumnName Name of the main column
-   * @param mainColumnValue Target value of the main column
-   * @param correlationColumnName The column to get correlated values from
+   * @param searchColumnName Name of the search column
+   * @param searchColumnValue Target value of the search column
+   * @param retrievalColumnName The column to retrieve values from
    * @return The set of correlated column values. If we cannot determine correlated values, return an empty set.
    */
   Set<String> getCorrelatedColumnValues(
-      String mainColumnName,
-      String mainColumnValue,
-      String correlationColumnName
+      String searchColumnName,
+      String searchColumnValue,
+      String retrievalColumnName
   );
 }

@@ -82,23 +82,23 @@ public class IndexedTableJoinable implements Joinable
 
   @Override
   public Set<String> getCorrelatedColumnValues(
-      String mainColumnName,
-      String mainColumnValue,
-      String correlationColumnName
+      String searchColumnName,
+      String searchColumnValue,
+      String retrievalColumnName
   )
   {
-    int filterColumnPosition = table.allColumns().indexOf(mainColumnName);
-    int correlatedColumnPosition = table.allColumns().indexOf(correlationColumnName);
+    int filterColumnPosition = table.allColumns().indexOf(searchColumnName);
+    int correlatedColumnPosition = table.allColumns().indexOf(retrievalColumnName);
 
     if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
       return ImmutableSet.of();
     }
 
     Set<String> correlatedValues = new HashSet<>();
-    if (table.keyColumns().contains(mainColumnName)) {
+    if (table.keyColumns().contains(searchColumnName)) {
       IndexedTable.Index index = table.columnIndex(filterColumnPosition);
       IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
-      IntList rowIndex = index.find(mainColumnValue);
+      IntList rowIndex = index.find(searchColumnValue);
       for (int i = 0; i < rowIndex.size(); i++) {
         int rowNum = rowIndex.getInt(i);
         correlatedValues.add(reader.read(rowNum).toString());
@@ -108,17 +108,12 @@ public class IndexedTableJoinable implements Joinable
       IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
       IndexedTable.Reader correlatedColumnReader = table.columnReader(correlatedColumnPosition);
       for (int i = 0; i < table.numRows(); i++) {
-        if (mainColumnValue.equals(dimNameReader.read(i).toString())) {
+        if (searchColumnValue.equals(dimNameReader.read(i).toString())) {
           correlatedValues.add(correlatedColumnReader.read(i).toString());
         }
       }
 
       return correlatedValues;
     }
-  }
-
-  public IndexedTable getTable()
-  {
-    return table;
   }
 }

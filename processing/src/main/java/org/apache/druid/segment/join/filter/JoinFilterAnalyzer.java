@@ -87,6 +87,10 @@ public class JoinFilterAnalyzer
     Filter normalizedFilter = Filters.convertToCNF(originalFilter);
 
     // build the prefix and equicondition maps
+    // We should check that the prefixes do not duplicate or shadow each other. This is not currently implemented,
+    // but this is tracked at https://github.com/apache/druid/issues/9329
+    // We should also consider the case where one RHS column is joined to multiple columns:
+    // https://github.com/apache/druid/issues/9328
     Map<String, Expr> equiconditions = new HashMap<>();
     Map<String, JoinableClause> prefixes = new HashMap<>();
     for (JoinableClause clause : hashJoinSegmentStorageAdapter.getClauses()) {
@@ -334,6 +338,7 @@ public class JoinFilterAnalyzer
               // will return false if there any correlated expressions on the base table.
               // Pushdown of such filters is disabled until the expressions system supports converting an expression
               // into a String representation that can be reparsed into the same expression.
+              // https://github.com/apache/druid/issues/9326 tracks this expressions issue.
               String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
 
               VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
@@ -410,7 +415,28 @@ public class JoinFilterAnalyzer
   }
 
   /**
-   * For all RHS columns that appear in the join's equiconditions, correlate them with base table columns if possible.
+   * For each rhs column that appears in the equiconditions for a table's JoinableClause,
+   * we try to determine what base table columns are related to the rhs column through the total set of equiconditions.
+   * We do this by searching backwards through the chain of join equiconditions using the provided equicondition map.
+   *
+   * For example, suppose we have 3 tables, A,B,C, joined with the following conditions, where A is the base table:
+   *   A.joinColumn == B.joinColumn
+   *   B.joinColum == C.joinColumn
+   *
+   * We would determine that C.joinColumn is correlated with A.joinColumn: we first see that
+   * C.joinColumn is linked to B.joinColumn which in turn is linked to A.joinColumn
+   *
+   * Suppose we had the following join conditions instead:
+   *   f(A.joinColumn) == B.joinColumn
+   *   B.joinColum == C.joinColumn
+   * In this case, the JoinFilterColumnCorrelationAnalysis for C.joinColumn would be linked to f(A.joinColumn).
+   *
+   * Suppose we had the following join conditions instead:
+   *   A.joinColumn == B.joinColumn
+   *   f(B.joinColum) == C.joinColumn
+   *
+   * Because we cannot reverse the function f() applied to the second table B in all cases,
+   * we cannot relate C.joinColumn to A.joinColumn, and we would not generate a correlation for C.joinColumn
    *
    * @param adapter              The adapter for the join. Used to determine if a column is a base table column.
    * @param tablePrefix          Prefix for a join table
@@ -436,17 +462,18 @@ public class JoinFilterAnalyzer
 
     List<JoinFilterColumnCorrelationAnalysis> correlations = new ArrayList<>();
 
+
     for (String rhsColumn : rhsColumns) {
       List<String> correlatedBaseColumns = new ArrayList<>();
       List<Expr> correlatedBaseExpressions = new ArrayList<>();
       boolean terminate = false;
-
       String findMappingFor = rhsColumn;
       while (!terminate) {
         Expr lhs = equiConditions.get(findMappingFor);
         if (lhs == null) {
           break;
         }
+
         String identifier = lhs.getBindingIfIdentifier();
         if (identifier == null) {
           // We push down if the function only requires base table columns
@@ -472,6 +499,8 @@ public class JoinFilterAnalyzer
         return Optional.empty();
       }
 
+      // We should merge correlation analyses if they're for the same rhsColumn
+      // See https://github.com/apache/druid/issues/9328
       correlations.add(
           new JoinFilterColumnCorrelationAnalysis(
               rhsColumn,
