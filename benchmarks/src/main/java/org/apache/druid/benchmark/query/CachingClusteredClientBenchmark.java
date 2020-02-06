@@ -565,7 +565,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private class SimpleQueryRunner implements QueryRunner<Object>
+  private static class SimpleQueryRunner implements QueryRunner<Object>
   {
     private final QueryRunnerFactoryConglomerate conglomerate;
     private final QueryableIndexSegment segment;
@@ -598,7 +598,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
+  private static class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
   {
     SingleSegmentDruidServer(DruidServer server, SimpleQueryRunner runner)
     {

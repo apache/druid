@@ -212,8 +212,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
    */
   public List<String> mergeAndGetDictionary()
   {
-    final Set<String> mergedDictionary = new HashSet<>();
-    mergedDictionary.addAll(keySerde.getDictionary());
+    final Set<String> mergedDictionary = new HashSet<>(keySerde.getDictionary());
 
     for (File dictFile : dictionaryFiles) {
       try (
