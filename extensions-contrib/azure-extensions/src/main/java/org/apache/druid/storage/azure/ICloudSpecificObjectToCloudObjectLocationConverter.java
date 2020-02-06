@@ -21,6 +21,10 @@ package org.apache.druid.storage.azure;
 
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 
+/**
+ * Interface for converting between from some object, T,  and a {@link CloudObjectLocation} object
+ * @param <T> The object to convert to a {@link CloudObjectLocation} object
+ */
 public interface ICloudSpecificObjectToCloudObjectLocationConverter<T>
 {
   CloudObjectLocation createCloudObjectLocation(T cloudSpecificImpl);

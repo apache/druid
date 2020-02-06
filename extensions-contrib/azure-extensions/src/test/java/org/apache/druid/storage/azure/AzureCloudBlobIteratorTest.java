@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.ResultContinuation;
+import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
 import org.easymock.EasyMock;
@@ -52,10 +53,10 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
 
   private AzureStorage storage;
   private ListBlobItemDruidFactory blobItemDruidFactory;
-  private ResultSegmentDruid<ListBlobItem> resultSegmentPrefixOnlyCloudBlobs1;
-  private ResultSegmentDruid<ListBlobItem> resultSegmentPrefixOnlyCloudBlobs2;
-  private ResultSegmentDruid<ListBlobItem> resultSegmentPrefixWithNoBlobs;
-  private ResultSegmentDruid<ListBlobItem> resultSegmentPrefixWithCloudBlobsAndDirectories;
+  private ResultSegment<ListBlobItem> resultSegmentPrefixOnlyCloudBlobs1;
+  private ResultSegment<ListBlobItem> resultSegmentPrefixOnlyCloudBlobs2;
+  private ResultSegment<ListBlobItem> resultSegmentPrefixWithNoBlobs;
+  private ResultSegment<ListBlobItem> resultSegmentPrefixWithCloudBlobsAndDirectories;
 
   private ResultContinuation resultContinuationPrefixOnlyCloudBlobs = new ResultContinuation();
   private ResultContinuation nullResultContinuationToken = null;
@@ -105,10 +106,10 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   public void setup()
   {
     storage = createMock(AzureStorage.class);
-    resultSegmentPrefixOnlyCloudBlobs1 = createMock(ResultSegmentDruid.class);
-    resultSegmentPrefixOnlyCloudBlobs2 = createMock(ResultSegmentDruid.class);
-    resultSegmentPrefixWithNoBlobs = createMock(ResultSegmentDruid.class);
-    resultSegmentPrefixWithCloudBlobsAndDirectories = createMock(ResultSegmentDruid.class);
+    resultSegmentPrefixOnlyCloudBlobs1 = createMock(ResultSegment.class);
+    resultSegmentPrefixOnlyCloudBlobs2 = createMock(ResultSegment.class);
+    resultSegmentPrefixWithNoBlobs = createMock(ResultSegment.class);
+    resultSegmentPrefixWithCloudBlobsAndDirectories = createMock(ResultSegment.class);
     cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemDruid.class);
 
     blobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItem.class);

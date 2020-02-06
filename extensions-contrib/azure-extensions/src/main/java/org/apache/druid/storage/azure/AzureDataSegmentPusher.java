@@ -39,6 +39,9 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Used for writing segment files to Azure based deep storage
+ */
 public class AzureDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(AzureDataSegmentPusher.class);

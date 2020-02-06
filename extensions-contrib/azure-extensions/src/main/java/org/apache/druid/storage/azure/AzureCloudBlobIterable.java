@@ -25,6 +25,9 @@ import com.google.inject.assistedinject.AssistedInject;
 import java.net.URI;
 import java.util.Iterator;
 
+/**
+ * {@link Iterable} for {@link CloudBlobDruid} objects.
+ */
 public class AzureCloudBlobIterable implements Iterable<CloudBlobDruid>
 {
   private final Iterator<CloudBlobDruid> iterator;

@@ -22,6 +22,7 @@ package org.apache.druid.storage.azure;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.ResultContinuation;
+import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -31,18 +32,18 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * This iterator is computed incrementally in batches of
- * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
+ * This iterator is computed incrementally in batches of {@link #maxListingLength}.
+ * The first call is made at the same time the iterator is constructed.
  */
 public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
 {
-  private final Logger log = new Logger(AzureCloudBlobIterator.class);
+  private static final Logger log = new Logger(AzureCloudBlobIterator.class);
   private final AzureStorage storage;
   private final ListBlobItemDruidFactory blobItemDruidFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
 
-  private ResultSegmentDruid<ListBlobItem> result;
+  private ResultSegment<ListBlobItem> result;
   private String currentContainer;
   private String currentPrefix;
   private ResultContinuation continuationToken;
@@ -99,7 +100,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
     currentContainer = currentUri.getAuthority();
     currentPrefix = AzureUtils.extractAzureKey(currentUri);
     log.debug("prepareNextRequest:\ncurrentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
-             currentUri, currentContainer, currentPrefix
+              currentUri, currentContainer, currentPrefix
     );
     result = null;
     continuationToken = null;
@@ -118,7 +119,6 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobDruid>
       blobItemIterator = result.getResults().iterator();
     }
     catch (Exception e) {
-      log.warn("fetchNextBatch threw exception: %s", e.getMessage());
       throw new RE(
           e,
           "Failed to get blob item  from Azure container[%s], prefix[%s]",

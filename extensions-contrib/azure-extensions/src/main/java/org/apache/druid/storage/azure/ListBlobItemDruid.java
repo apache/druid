@@ -28,6 +28,11 @@ import com.microsoft.azure.storage.blob.ListBlobItem;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+/**
+ * Wrapper class for {@link ListBlobItem} interface, which was missing some useful
+ * functionality for telling whether the blob was a cloudBlob or not. This class was
+ * added mainly to make testing easier.
+ */
 public class ListBlobItemDruid
 {
   private final ListBlobItem delegate;

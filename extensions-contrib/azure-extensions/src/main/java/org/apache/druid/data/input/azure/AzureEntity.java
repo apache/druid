@@ -24,39 +24,43 @@ import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.AzureByteSource;
 import org.apache.druid.storage.azure.AzureByteSourceFactory;
-import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
+/**
+ * Represents an azure based input resource and knows how to read bytes from the given resource.
+ */
 public class AzureEntity extends RetryingInputEntity
 {
-  private final Logger log = new Logger(AzureEntity.class);
   private final CloudObjectLocation location;
   private final AzureByteSource byteSource;
 
   @AssistedInject
   AzureEntity(
-      AzureStorage storage,
-      @Assisted CloudObjectLocation location,
-      AzureByteSourceFactory byteSourceFactory
+      @Nonnull @Assisted CloudObjectLocation location,
+      @Nonnull AzureByteSourceFactory byteSourceFactory
   )
   {
     this.location = location;
     this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath());
   }
 
-  @Nullable
   @Override
   public URI getUri()
   {
     return location.toUri(AzureInputSource.SCHEME);
+  }
+
+  @Override
+  public Predicate<Throwable> getRetryCondition()
+  {
+    return AzureUtils.AZURE_RETRY;
   }
 
   @Override
@@ -70,11 +74,5 @@ public class AzureEntity extends RetryingInputEntity
   protected String getPath()
   {
     return location.getPath();
-  }
-
-  @Override
-  public Predicate<Throwable> getRetryCondition()
-  {
-    return AzureUtils.AZURE_RETRY;
   }
 }

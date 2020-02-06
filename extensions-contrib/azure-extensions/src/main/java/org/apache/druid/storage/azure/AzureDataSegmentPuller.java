@@ -29,6 +29,9 @@ import org.apache.druid.utils.CompressionUtils;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Used for Reading segment files stored in Azure based deep storage
+ */
 public class AzureDataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
@@ -40,16 +43,12 @@ public class AzureDataSegmentPuller
   
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
-  private final AzureStorage azureStorage;
   private final AzureByteSourceFactory byteSourceFactory;
 
   @Inject
   public AzureDataSegmentPuller(
-      AzureStorage azureStorage,
-      AzureByteSourceFactory byteSourceFactory
-  )
+      AzureByteSourceFactory byteSourceFactory)
   {
-    this.azureStorage = azureStorage;
     this.byteSourceFactory = byteSourceFactory;
   }
 
@@ -67,15 +66,7 @@ public class AzureDataSegmentPuller
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
       );
 
-      boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
-      final String actualBlobPath;
-      if (blobPathIsHadoop) {
-        // Remove azure's hadoop prefix to match realtime ingestion path
-        actualBlobPath = blobPath.substring(
-            blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
-      } else {
-        actualBlobPath = blobPath;
-      }
+      final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(blobPath);
 
       final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(

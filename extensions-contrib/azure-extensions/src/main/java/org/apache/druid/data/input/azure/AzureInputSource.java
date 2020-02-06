@@ -28,7 +28,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.AzureCloudBlobDruidToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -40,12 +39,15 @@ import java.util.List;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+/**
+ * Abstracts the Azure storage system where input data is stored. Allows users to retrieve entities in
+ * the storage system that match either a particular uri, prefix, or object.
+ */
 public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
 {
   static final int MAX_LISTING_LENGTH = 1024;
-  static final String SCHEME = "azure";
+  public static final String SCHEME = "azure";
 
-  private final Logger log = new Logger(AzureInputSource.class);
   private final AzureStorage storage;
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
@@ -73,20 +75,6 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
   }
 
   @Override
-  protected AzureEntity createEntity(InputSplit<CloudObjectLocation> split)
-  {
-    return entityFactory.create(split.get());
-  }
-
-  @Override
-  protected Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream()
-  {
-    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
-                        .map(o -> azureCloudBlobToLocationConverter.createCloudObjectLocation(o))
-                        .map(InputSplit::new);
-  }
-
-  @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
     return new AzureInputSource(
@@ -108,6 +96,20 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
            '}';
+  }
+
+  @Override
+  protected AzureEntity createEntity(InputSplit<CloudObjectLocation> split)
+  {
+    return entityFactory.create(split.get());
+  }
+
+  @Override
+  protected Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream()
+  {
+    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
+                        .map(o -> azureCloudBlobToLocationConverter.createCloudObjectLocation(o))
+                        .map(InputSplit::new);
   }
 
   private Iterable<CloudBlobDruid> getIterableObjectsFromPrefixes()

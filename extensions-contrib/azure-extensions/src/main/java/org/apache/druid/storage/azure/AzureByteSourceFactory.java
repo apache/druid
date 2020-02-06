@@ -21,6 +21,9 @@ package org.apache.druid.storage.azure;
 
 import com.google.inject.assistedinject.Assisted;
 
+/**
+ * Factory used to create {@link AzureByteSource}
+ */
 public interface AzureByteSourceFactory
 {
   AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);

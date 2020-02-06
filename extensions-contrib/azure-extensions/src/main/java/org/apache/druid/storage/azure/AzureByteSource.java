@@ -29,9 +29,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 
+/**
+ * Used for getting an {@link InputStream} to an azure resource.
+ */
 public class AzureByteSource extends ByteSource
 {
-  private final Logger log = new Logger(AzureByteSource.class);
+  private static final Logger log = new Logger(AzureByteSource.class);
   private final AzureStorage azureStorage;
   private final String containerName;
   private final String blobPath;
@@ -60,6 +63,9 @@ public class AzureByteSource extends ByteSource
       return azureStorage.getBlobInputStream(offset, containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {
+      log.warn("Exception when opening stream to azure resource, containerName: %s, blobPath: %s, Error: %s",
+               containerName, blobPath, e.getMessage()
+      );
       if (AzureUtils.AZURE_RETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }

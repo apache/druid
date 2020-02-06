@@ -20,11 +20,10 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.ResultContinuation;
+import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
-import com.microsoft.azure.storage.blob.BlobRequestOptions;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -40,6 +39,9 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+/**
+ * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
+ */
 public class AzureStorage
 {
   private static final boolean USE_FLAT_BLOB_LISTING = true;
@@ -55,7 +57,7 @@ public class AzureStorage
     this.cloudBlobClient = cloudBlobClient;
   }
 
-  public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
+  public List<String> emptyCloudBlobDirectory(String containerName, final String virtualDirPath)
       throws StorageException, URISyntaxException
   {
     List<String> deletedFiles = new ArrayList<>();
@@ -124,7 +126,7 @@ public class AzureStorage
     return cloudBlobContainer;
   }
 
-  public ResultSegmentDruid<ListBlobItem> listBlobsWithPrefixInContainerSegmented(
+  public ResultSegment<ListBlobItem> listBlobsWithPrefixInContainerSegmented(
       final String containerName,
       final String prefix,
       ResultContinuation continuationToken,
@@ -132,17 +134,17 @@ public class AzureStorage
   ) throws StorageException, URISyntaxException
   {
     CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
-    return new ResultSegmentDruid<ListBlobItem>(cloudBlobContainer
-                                                    .listBlobsSegmented(
-                                                        prefix,
-                                                        /* Use flat blob listing here so that we get only blob types and not directories.*/
-                                                        USE_FLAT_BLOB_LISTING,
-                                                        EnumSet
-                                                            .noneOf(BlobListingDetails.class),
-                                                        maxResults,
-                                                        (ResultContinuation) null,
-                                                        (BlobRequestOptions) null,
-                                                        (OperationContext) null
-                                                    ));
+    return cloudBlobContainer
+        .listBlobsSegmented(
+            prefix,
+            /* Use flat blob listing here so that we get only blob types and not directories.*/
+            USE_FLAT_BLOB_LISTING,
+            EnumSet
+                .noneOf(BlobListingDetails.class),
+            maxResults,
+            continuationToken,
+            null,
+            null
+        );
   }
 }

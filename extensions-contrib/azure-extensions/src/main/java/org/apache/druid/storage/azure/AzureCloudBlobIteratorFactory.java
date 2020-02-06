@@ -21,6 +21,9 @@ package org.apache.druid.storage.azure;
 
 import java.net.URI;
 
+/**
+ * Factory for creating {@link AzureCloudBlobIterator} objects
+ */
 public interface AzureCloudBlobIteratorFactory
 {
   AzureCloudBlobIterator create(Iterable<URI> prefixes, int maxListingLength);

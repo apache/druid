@@ -25,7 +25,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
-
+/**
+ * Represents an Azure based blob. Used with {@link StaticAzureBlobStoreFirehoseFactory}.
+ *
+ * @deprecated as of version 0.18.0 because support for firehose has been discontinued. Please use
+ * {@link org.apache.druid.data.input.azure.AzureEntity} with {@link org.apache.druid.data.input.azure.AzureInputSource}
+ * instead.
+ */
 @Deprecated
 public class AzureBlob
 {
@@ -58,9 +64,9 @@ public class AzureBlob
   public String toString()
   {
     return "AzureBlob{"
-        + "container=" + container
-        + ",path=" + path
-        + "}";
+           + "container=" + container
+           + ",path=" + path
+           + "}";
   }
 
   @Override

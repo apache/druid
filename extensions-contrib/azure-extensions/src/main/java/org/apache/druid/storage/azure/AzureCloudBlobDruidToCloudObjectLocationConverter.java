@@ -21,6 +21,9 @@ package org.apache.druid.storage.azure;
 
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 
+/**
+ * Converts a {@link CloudBlobDruid} object to a {@link CloudObjectLocation} object
+ */
 public class AzureCloudBlobDruidToCloudObjectLocationConverter
     implements ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobDruid>
 {

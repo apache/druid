@@ -27,23 +27,40 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
+import com.microsoft.azure.storage.blob.ListBlobItem;
+import org.apache.commons.collections4.IterableUtils;
+import org.apache.druid.data.input.azure.AzureEntityFactory;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockSupport;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Properties;
 
-public class AzureStorageDruidModuleTest
+public class AzureStorageDruidModuleTest extends EasyMockSupport
 {
   private static final String AZURE_ACCOUNT_NAME;
   private static final String AZURE_ACCOUNT_KEY;
   private static final String AZURE_CONTAINER;
+  private static final String PATH = "path";
+  private static final Iterable<URI> EMPTY_PREFIXES = IterableUtils.emptyIterable();
+
+  private CloudObjectLocation cloudObjectLocation1;
+  private CloudObjectLocation cloudObjectLocation2;
+  private ListBlobItem blobItem1;
+  private ListBlobItem blobItem2;
+
+
   private Injector injector;
 
   static {
@@ -56,6 +73,15 @@ public class AzureStorageDruidModuleTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Before
+  public void setup()
+  {
+    cloudObjectLocation1 = createMock(CloudObjectLocation.class);
+    cloudObjectLocation2 = createMock(CloudObjectLocation.class);
+    blobItem1 = createMock(ListBlobItem.class);
+    blobItem2 = createMock(ListBlobItem.class);
   }
 
   @Test
@@ -114,6 +140,93 @@ public class AzureStorageDruidModuleTest
     AzureCloudBlobDruidToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
         AzureCloudBlobDruidToCloudObjectLocationConverter.class);
     Assert.assertSame(azureCloudBlobLocationConverter1, azureCloudBlobLocationConverter2);
+  }
+
+  @Test
+  public void test_getAzureByteSourceFactory_canCreateAzureByteSource()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+    injector = makeInjectorWithProperties(props);
+    AzureByteSourceFactory factory = injector.getInstance(AzureByteSourceFactory.class);
+    Object object1 = factory.create("container1", "blob1");
+    Object object2 = factory.create("container2", "blob2");
+    Assert.assertNotNull(object1);
+    Assert.assertNotNull(object2);
+    Assert.assertNotSame(object1, object2);
+  }
+
+  @Test
+  public void test_getAzureEntityFactory_canCreateAzureEntity()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+
+    EasyMock.expect(cloudObjectLocation1.getBucket()).andReturn(AZURE_CONTAINER);
+    EasyMock.expect(cloudObjectLocation2.getBucket()).andReturn(AZURE_CONTAINER);
+    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH);
+    EasyMock.expect(cloudObjectLocation2.getPath()).andReturn(PATH);
+    replayAll();
+
+    injector = makeInjectorWithProperties(props);
+    AzureEntityFactory factory = injector.getInstance(AzureEntityFactory.class);
+    Object object1 = factory.create(cloudObjectLocation1);
+    Object object2 = factory.create(cloudObjectLocation2);
+    Assert.assertNotNull(object1);
+    Assert.assertNotNull(object2);
+    Assert.assertNotSame(object1, object2);
+  }
+
+  @Test
+  public void test_getAzureCloudBlobIteratorFactory_canCreateAzureCloudBlobIterator()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+    injector = makeInjectorWithProperties(props);
+    AzureCloudBlobIteratorFactory factory = injector.getInstance(AzureCloudBlobIteratorFactory.class);
+    Object object1 = factory.create(EMPTY_PREFIXES, 10);
+    Object object2 = factory.create(EMPTY_PREFIXES, 10);
+    Assert.assertNotNull(object1);
+    Assert.assertNotNull(object2);
+    Assert.assertNotSame(object1, object2);
+  }
+
+  @Test
+  public void test_getAzureCloudBlobIterableFactory_canCreateAzureCloudBlobIterable()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+    injector = makeInjectorWithProperties(props);
+    AzureCloudBlobIterableFactory factory = injector.getInstance(AzureCloudBlobIterableFactory.class);
+    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES, 10);
+    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES, 10);
+    Assert.assertNotNull(object1);
+    Assert.assertNotNull(object2);
+    Assert.assertNotSame(object1, object2);
+  }
+
+  @Test
+  public void test_getListBlobItemDruidFactory_canCreateListBlobItemDruid()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+    injector = makeInjectorWithProperties(props);
+    ListBlobItemDruidFactory factory = injector.getInstance(ListBlobItemDruidFactory.class);
+    ListBlobItemDruid object1 = factory.create(blobItem1);
+    ListBlobItemDruid object2 = factory.create(blobItem2);
+    Assert.assertNotNull(object1);
+    Assert.assertNotNull(object2);
+    Assert.assertNotSame(object1, object2);
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

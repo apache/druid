@@ -21,6 +21,9 @@ package org.apache.druid.storage.azure;
 
 import com.microsoft.azure.storage.blob.ListBlobItem;
 
+/**
+ * Factory for creating {@link ListBlobItemDruid} objects
+ */
 public interface ListBlobItemDruidFactory
 {
   ListBlobItemDruid create(ListBlobItem blobItem);

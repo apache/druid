@@ -24,6 +24,10 @@ import com.microsoft.azure.storage.blob.CloudBlob;
 
 import java.net.URISyntaxException;
 
+/**
+ * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
+ * is a final class and so is difficult to mock in unit tests.
+ */
 public class CloudBlobDruid
 {
   private final CloudBlob delegate;

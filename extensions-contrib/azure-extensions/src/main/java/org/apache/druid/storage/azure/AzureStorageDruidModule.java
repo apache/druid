@@ -42,6 +42,9 @@ import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.util.List;
 
+/**
+ * Binds objects related to dealing with the Azure file system.
+ */
 public class AzureStorageDruidModule implements DruidModule
 {
 
@@ -96,6 +99,7 @@ public class AzureStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
     binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
+    binder.bind(AzureCloudBlobDruidToCloudObjectLocationConverter.class).in(LazySingleton.class);
     binder.install(new FactoryModuleBuilder()
                        .build(AzureByteSourceFactory.class));
     binder.install(new FactoryModuleBuilder()
@@ -132,12 +136,5 @@ public class AzureStorageDruidModule implements DruidModule
   )
   {
     return new AzureStorage(cloudBlobClient);
-  }
-
-  @Provides
-  @LazySingleton
-  public AzureCloudBlobDruidToCloudObjectLocationConverter getAzureCloudBlobToLocationConverter()
-  {
-    return new AzureCloudBlobDruidToCloudObjectLocationConverter();
   }
 }
