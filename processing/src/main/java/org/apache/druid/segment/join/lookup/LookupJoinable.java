@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -31,6 +32,7 @@ import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 public class LookupJoinable implements Joinable
 {
@@ -82,6 +84,30 @@ public class LookupJoinable implements Joinable
   )
   {
     return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded);
+  }
+
+  @Override
+  public Set<String> getCorrelatedColumnValues(
+      String mainColumnName,
+      String mainColumnValue,
+      String correlationColumnName
+  )
+  {
+    Set<String> correlatedValues;
+    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(mainColumnName)) {
+      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(correlationColumnName)) {
+        correlatedValues = ImmutableSet.of(mainColumnValue);
+      } else {
+        correlatedValues = ImmutableSet.of(extractor.apply(mainColumnName));
+      }
+    } else {
+      if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(correlationColumnName)) {
+        correlatedValues = ImmutableSet.of(mainColumnValue);
+      } else {
+        correlatedValues = ImmutableSet.copyOf(extractor.unapply(mainColumnValue));
+      }
+    }
+    return correlatedValues;
   }
 
   public LookupExtractor getExtractor()

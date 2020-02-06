@@ -17,43 +17,55 @@
  * under the License.
  */
 
-package org.apache.druid.segment.join;
+package org.apache.druid.segment.join.filter;
 
 import com.google.common.collect.ImmutableList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.filter.InFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
-import org.apache.druid.segment.join.lookup.LookupJoinable;
-import org.apache.druid.segment.join.table.IndexedTable;
-import org.apache.druid.segment.join.table.IndexedTableJoinable;
+import org.apache.druid.segment.join.Equality;
+import org.apache.druid.segment.join.HashJoinSegmentStorageAdapter;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
+/**
+ * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
+ * when we first read from the base table instead of after the join.
+ *
+ * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Filter)} method that
+ * takes a filter and splits it into a portion that should be applied to the base table prior to the join, and a
+ * portion that should be applied after the join.
+ *
+ * The first step of the filter splitting is to convert the fllter into
+ * https://en.wikipedia.org/wiki/Conjunctive_normal_form (an AND of ORs). This allows us to consider each
+ * OR clause independently as a candidate for filter push down to the base table.
+ *
+ * A filter clause can be pushed down if it meets one of the following conditions:
+ * - The filter only applies to columns from the base table
+ * - The filter applies to columns from the join table, and we determine that the filter can be rewritten
+ *   into a filter on columns from the base table
+ *
+ * For the second case, where we rewrite filter clauses, the rewritten clause can be less selective than the original,
+ * so we preserve the original clause in the post-join filtering phase.
+ */
 public class JoinFilterAnalyzer
 {
   private static final String PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE = "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-";
@@ -65,7 +77,7 @@ public class JoinFilterAnalyzer
   )
   {
     if (originalFilter == null) {
-      return new JoinFilterAnalyzer.JoinFilterSplit(
+      return new JoinFilterSplit(
           null,
           null,
           ImmutableList.of()
@@ -99,7 +111,7 @@ public class JoinFilterAnalyzer
     List<Filter> leftFilters = new ArrayList<>();
     List<Filter> rightFilters = new ArrayList<>();
     List<VirtualColumn> pushDownVirtualColumns = new ArrayList<>();
-    Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationCache = new HashMap<>();
+    Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache = new HashMap<>();
 
     for (Filter orClause : normalizedOrClauses) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(
@@ -110,9 +122,9 @@ public class JoinFilterAnalyzer
           correlationCache
       );
       if (joinFilterAnalysis.isCanPushDown()) {
-        leftFilters.add(joinFilterAnalysis.getPushdownFilter());
-        if (joinFilterAnalysis.getPushdownVirtualColumns() != null) {
-          pushDownVirtualColumns.addAll(joinFilterAnalysis.getPushdownVirtualColumns());
+        leftFilters.add(joinFilterAnalysis.getPushDownFilter().get());
+        if (!joinFilterAnalysis.getPushDownVirtualColumns().isEmpty()) {
+          pushDownVirtualColumns.addAll(joinFilterAnalysis.getPushDownVirtualColumns());
         }
       }
       if (joinFilterAnalysis.isRetainAfterJoin()) {
@@ -121,91 +133,23 @@ public class JoinFilterAnalyzer
     }
 
     return new JoinFilterSplit(
-        leftFilters.isEmpty() ? null : leftFilters.size() == 1 ? leftFilters.get(0) : new AndFilter(leftFilters),
-        rightFilters.isEmpty() ? null : rightFilters.size() == 1 ? rightFilters.get(0) : new AndFilter(rightFilters),
+        Filters.and(leftFilters),
+        Filters.and(rightFilters),
         pushDownVirtualColumns
     );
   }
 
-  /**
-   * Holds the result of splitting a filter into:
-   * - a portion that can be pushed down to the base table
-   * - a portion that will be applied post-join
-   * - additional virtual columns that need to be created on the base table to support the pushed down filters.
-   */
-  public static class JoinFilterSplit
-  {
-    final Filter baseTableFilter;
-    final Filter joinTableFilter;
-    final List<VirtualColumn> pushDownVirtualColumns;
 
-    public JoinFilterSplit(
-        Filter baseTableFilter,
-        @Nullable Filter joinTableFilter,
-        List<VirtualColumn> pushDownVirtualColumns
-    )
-    {
-      this.baseTableFilter = baseTableFilter;
-      this.joinTableFilter = joinTableFilter;
-      this.pushDownVirtualColumns = pushDownVirtualColumns;
-    }
-
-    public Filter getBaseTableFilter()
-    {
-      return baseTableFilter;
-    }
-
-    public Filter getJoinTableFilter()
-    {
-      return joinTableFilter;
-    }
-
-    public List<VirtualColumn> getPushDownVirtualColumns()
-    {
-      return pushDownVirtualColumns;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "JoinFilterSplit{" +
-             "baseTableFilter=" + baseTableFilter +
-             ", joinTableFilter=" + joinTableFilter +
-             ", pushDownVirtualColumns=" + pushDownVirtualColumns +
-             '}';
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      JoinFilterSplit that = (JoinFilterSplit) o;
-      return Objects.equals(getBaseTableFilter(), that.getBaseTableFilter()) &&
-             Objects.equals(getJoinTableFilter(), that.getJoinTableFilter()) &&
-             Objects.equals(getPushDownVirtualColumns(), that.getPushDownVirtualColumns());
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(getBaseTableFilter(), getJoinTableFilter(), getPushDownVirtualColumns());
-    }
-  }
 
   /**
-   * Analyze a single filter clause from a filter that is in conjunctive normal form (AND of ORs),
-   * returning a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
+   * Analyze a filter clause from a filter that is in conjunctive normal form (AND of ORs).
+   * The clause is expected to be an OR filter or a leaf filter.
    *
    * @param adapter          Adapter for the join
-   * @param filterClause     Individual filter clause from a filter that is in CNF
+   * @param filterClause     Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
    * @param prefixes         Map of table prefixes
    * @param equiconditions   Equicondition map
-   * @param correlationCache Cache of column correlation analyses
+   * @param correlationCache Cache of column correlation analyses.
    *
    * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
    */
@@ -214,10 +158,12 @@ public class JoinFilterAnalyzer
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
       Map<String, Expr> equiconditions,
-      Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationCache
+      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
   )
   {
-    // NULL matching conditions are not currently pushed down
+    // NULL matching conditions are not currently pushed down.
+    // They require special consideration based on the join type, and for simplicity of the initial implementation
+    // this is not currently handled.
     if (filterMatchesNull(filterClause)) {
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
     }
@@ -249,11 +195,10 @@ public class JoinFilterAnalyzer
       }
     }
     return new JoinFilterAnalysis(
-        true,
         false,
         filterClause,
         filterClause,
-        null
+        ImmutableList.of()
     );
   }
 
@@ -265,7 +210,8 @@ public class JoinFilterAnalyzer
    * @param orFilter         OrFilter to be rewritten
    * @param prefixes         Map of table prefixes to clauses
    * @param equiconditions   Map of equiconditions
-   * @param correlationCache Column correlation analysis cache
+   * @param correlationCache Column correlation analysis cache. This will be potentially modified by adding
+   *                         any new column correlation analyses to the cache.
    *
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
    */
@@ -274,7 +220,7 @@ public class JoinFilterAnalyzer
       OrFilter orFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Expr> equiconditions,
-      Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationCache
+      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
   )
   {
     boolean retainRhs = false;
@@ -301,7 +247,7 @@ public class JoinFilterAnalyzer
           if (!rewritten.isCanPushDown()) {
             return JoinFilterAnalysis.createNoPushdownFilterAnalysis(orFilter);
           } else {
-            newFilters.add(rewritten.getPushdownFilter());
+            newFilters.add(rewritten.getPushDownFilter().get());
           }
         } else {
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(orFilter);
@@ -312,11 +258,10 @@ public class JoinFilterAnalyzer
     }
 
     return new JoinFilterAnalysis(
-        true,
         retainRhs,
         orFilter,
         new OrFilter(newFilters),
-        null
+        ImmutableList.of()
     );
   }
 
@@ -327,7 +272,8 @@ public class JoinFilterAnalyzer
    * @param selectorFilter   SelectorFilter to be rewritten
    * @param prefixes         Map of join table prefixes to clauses
    * @param equiconditions   Map of equiconditions
-   * @param correlationCache Cache of column correlation analyses
+   * @param correlationCache Cache of column correlation analyses. This will be potentially modified by adding
+   *                         any new column correlation analyses to the cache.
    *
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
    */
@@ -336,13 +282,13 @@ public class JoinFilterAnalyzer
       SelectorFilter selectorFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Expr> equiconditions,
-      Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationCache
+      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
   )
   {
     String filteringColumn = selectorFilter.getDimension();
     for (Map.Entry<String, JoinableClause> prefixAndClause : prefixes.entrySet()) {
-      if (filteringColumn.startsWith(prefixAndClause.getKey())) {
-        List<JoinFilterColumnCorrelationAnalysis> correlations = correlationCache.computeIfAbsent(
+      if (prefixAndClause.getValue().includesColumn(filteringColumn)) {
+        Optional<List<JoinFilterColumnCorrelationAnalysis>> correlations = correlationCache.computeIfAbsent(
             prefixAndClause.getKey(),
             p -> findCorrelatedBaseTableColumns(
                 baseAdapter,
@@ -352,28 +298,28 @@ public class JoinFilterAnalyzer
             )
         );
 
-        if (correlations == null) {
+        if (!correlations.isPresent()) {
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
         }
 
         List<Filter> newFilters = new ArrayList<>();
         List<VirtualColumn> pushdownVirtualColumns = new ArrayList<>();
 
-        for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations) {
+        for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlations.get()) {
           if (correlationAnalysis.supportsPushDown()) {
-            List<String> correlatedValues = getCorrelatedValuesForPushDown(
+            Set<String> correlatedValues = getCorrelatedValuesForPushDown(
                 selectorFilter.getDimension(),
                 selectorFilter.getValue(),
                 correlationAnalysis.getJoinColumn(),
                 prefixAndClause.getValue()
             );
 
-            if (correlatedValues == null) {
+            if (correlatedValues.isEmpty()) {
               return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
             }
 
             for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
-              InFilter rewrittenFilter = (InFilter) new InDimFilter(
+              Filter rewrittenFilter = new InDimFilter(
                   correlatedBaseColumn,
                   correlatedValues,
                   null,
@@ -383,7 +329,11 @@ public class JoinFilterAnalyzer
             }
 
             for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
-              // need to create a virtual column for the expressions when pushing down
+              // We need to create a virtual column for the expressions when pushing down.
+              // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
+              // will return false if there any correlated expressions on the base table.
+              // Pushdown of such filters is disabled until the expressions system supports converting an expression
+              // into a String representation that can be reparsed into the same expression.
               String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
 
               VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
@@ -393,7 +343,7 @@ public class JoinFilterAnalyzer
               );
               pushdownVirtualColumns.add(correlatedBaseExprVirtualColumn);
 
-              InFilter rewrittenFilter = (InFilter) new InDimFilter(
+              Filter rewrittenFilter = new InDimFilter(
                   vcName,
                   correlatedValues,
                   null,
@@ -410,19 +360,17 @@ public class JoinFilterAnalyzer
 
         return new JoinFilterAnalysis(
             true,
-            true,
             selectorFilter,
-            newFilters.size() == 1 ? newFilters.get(0) : new AndFilter(newFilters),
+            Filters.and(newFilters),
             pushdownVirtualColumns
         );
       }
     }
     return new JoinFilterAnalysis(
-        true,
         false,
         selectorFilter,
         selectorFilter,
-        null
+        ImmutableList.of()
     );
   }
 
@@ -442,10 +390,9 @@ public class JoinFilterAnalyzer
    * @param clauseForFilteredTable The joinable clause that corresponds to the join table being filtered on
    *
    * @return A list of values of the correlatedJoinColumn that appear in rows where filterColumn = filterValue
-   * Returns null if we cannot determine the correlated values.
+   * Returns an empty set if we cannot determine the correlated values.
    */
-  @Nullable
-  private static List<String> getCorrelatedValuesForPushDown(
+  private static Set<String> getCorrelatedValuesForPushDown(
       String filterColumn,
       String filterValue,
       String correlatedJoinColumn,
@@ -455,62 +402,11 @@ public class JoinFilterAnalyzer
     String filterColumnNoPrefix = filterColumn.substring(clauseForFilteredTable.getPrefix().length());
     String correlatedColumnNoPrefix = correlatedJoinColumn.substring(clauseForFilteredTable.getPrefix().length());
 
-    // would be good to allow non-key column indices on the Joinables for better perf
-    if (clauseForFilteredTable.getJoinable() instanceof LookupJoinable) {
-      LookupJoinable lookupJoinable = (LookupJoinable) clauseForFilteredTable.getJoinable();
-      List<String> correlatedValues;
-      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(filterColumnNoPrefix)) {
-        if (LookupColumnSelectorFactory.KEY_COLUMN.equals(correlatedColumnNoPrefix)) {
-          correlatedValues = ImmutableList.of(filterValue);
-        } else {
-          correlatedValues = ImmutableList.of(lookupJoinable.getExtractor().apply(filterColumnNoPrefix));
-        }
-      } else {
-        if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(correlatedColumnNoPrefix)) {
-          correlatedValues = ImmutableList.of(filterValue);
-        } else {
-          correlatedValues = lookupJoinable.getExtractor().unapply(filterValue);
-        }
-      }
-      return correlatedValues;
-    }
-
-    if (clauseForFilteredTable.getJoinable() instanceof IndexedTableJoinable) {
-      IndexedTableJoinable indexedTableJoinable = (IndexedTableJoinable) clauseForFilteredTable.getJoinable();
-      IndexedTable indexedTable = indexedTableJoinable.getTable();
-
-      int filterColumnPosition = indexedTable.allColumns().indexOf(filterColumnNoPrefix);
-      int correlatedColumnPosition = indexedTable.allColumns().indexOf(correlatedColumnNoPrefix);
-
-      if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
-        return null;
-      }
-
-      if (indexedTable.keyColumns().contains(filterColumnNoPrefix)) {
-        IndexedTable.Index index = indexedTable.columnIndex(filterColumnPosition);
-        IndexedTable.Reader reader = indexedTable.columnReader(correlatedColumnPosition);
-        IntList rowIndex = index.find(filterValue);
-        List<String> correlatedValues = new ArrayList<>();
-        for (int i = 0; i < rowIndex.size(); i++) {
-          int rowNum = rowIndex.getInt(i);
-          correlatedValues.add(reader.read(rowNum).toString());
-        }
-        return correlatedValues;
-      } else {
-        IndexedTable.Reader dimNameReader = indexedTable.columnReader(filterColumnPosition);
-        IndexedTable.Reader correlatedColumnReader = indexedTable.columnReader(correlatedColumnPosition);
-        Set<String> correlatedValueSet = new HashSet<>();
-        for (int i = 0; i < indexedTable.numRows(); i++) {
-          if (filterValue.equals(dimNameReader.read(i).toString())) {
-            correlatedValueSet.add(correlatedColumnReader.read(i).toString());
-          }
-        }
-
-        return new ArrayList<>(correlatedValueSet);
-      }
-    }
-
-    return null;
+    return clauseForFilteredTable.getJoinable().getCorrelatedColumnValues(
+        filterColumnNoPrefix,
+        filterValue,
+        correlatedColumnNoPrefix
+    );
   }
 
   /**
@@ -519,17 +415,16 @@ public class JoinFilterAnalyzer
    * @param adapter              The adapter for the join. Used to determine if a column is a base table column.
    * @param tablePrefix          Prefix for a join table
    * @param clauseForTablePrefix Joinable clause for the prefix
-   * @param equiconditions       Map of equiconditions, keyed by the right hand columns
+   * @param equiConditions       Map of equiconditions, keyed by the right hand columns
    *
    * @return A list of correlatation analyses for the equicondition RHS columns that reside in the table associated with
    * the tablePrefix
    */
-  @Nullable
-  private static List<JoinFilterColumnCorrelationAnalysis> findCorrelatedBaseTableColumns(
+  private static Optional<List<JoinFilterColumnCorrelationAnalysis>> findCorrelatedBaseTableColumns(
       HashJoinSegmentStorageAdapter adapter,
       String tablePrefix,
       JoinableClause clauseForTablePrefix,
-      Map<String, Expr> equiconditions
+      Map<String, Expr> equiConditions
   )
   {
     JoinConditionAnalysis jca = clauseForTablePrefix.getCondition();
@@ -548,7 +443,7 @@ public class JoinFilterAnalyzer
 
       String findMappingFor = rhsColumn;
       while (!terminate) {
-        Expr lhs = equiconditions.get(findMappingFor);
+        Expr lhs = equiConditions.get(findMappingFor);
         if (lhs == null) {
           break;
         }
@@ -557,10 +452,8 @@ public class JoinFilterAnalyzer
           // We push down if the function only requires base table columns
           Expr.BindingDetails bindingDetails = lhs.analyzeInputs();
           Set<String> requiredBindings = bindingDetails.getRequiredBindings();
-          for (String requiredBinding : requiredBindings) {
-            if (!adapter.isBaseColumn(requiredBinding)) {
-              return null;
-            }
+          if (!requiredBindings.stream().allMatch(requiredBinding -> adapter.isBaseColumn(requiredBinding))) {
+            return Optional.empty();
           }
 
           terminate = true;
@@ -576,7 +469,7 @@ public class JoinFilterAnalyzer
       }
 
       if (correlatedBaseColumns.isEmpty() && correlatedBaseExpressions.isEmpty()) {
-        return null;
+        return Optional.empty();
       }
 
       correlations.add(
@@ -588,7 +481,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    return correlations;
+    return Optional.of(correlations);
   }
 
   private static boolean filterMatchesNull(Filter filter)
@@ -596,148 +489,4 @@ public class JoinFilterAnalyzer
     ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
     return valueMatcher.matches();
   }
-
-  private static class AllNullColumnSelectorFactory implements ColumnSelectorFactory
-  {
-    @Override
-    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
-    {
-      return DimensionSelector.constant(null);
-    }
-
-    @Override
-    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
-    {
-      return NilColumnValueSelector.instance();
-    }
-
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      return null;
-    }
-  }
-
-  /**
-   * Holds information about:
-   * - whether a filter can be pushed down
-   * - if it needs to be retained after the join,
-   * - a reference to the original filter
-   * - a potentially rewritten filter to be pushed down to the base table
-   * - a list of virtual columns that need to be created on the base table to support the pushed down filter
-   */
-  private static class JoinFilterAnalysis
-  {
-    private final boolean canPushDown;
-    private final boolean retainAfterJoin;
-    private final Filter originalFilter;
-    private final Filter pushdownFilter;
-    private final List<VirtualColumn> pushdownVirtualColumns;
-
-    public JoinFilterAnalysis(
-        boolean canPushDown,
-        boolean retainAfterJoin,
-        Filter originalFilter,
-        @Nullable Filter pushdownFilter,
-        @Nullable List<VirtualColumn> pushdownVirtualColumns
-    )
-    {
-      this.canPushDown = canPushDown;
-      this.retainAfterJoin = retainAfterJoin;
-      this.originalFilter = originalFilter;
-      this.pushdownFilter = pushdownFilter;
-      this.pushdownVirtualColumns = pushdownVirtualColumns;
-    }
-
-    public boolean isCanPushDown()
-    {
-      return canPushDown;
-    }
-
-    public boolean isRetainAfterJoin()
-    {
-      return retainAfterJoin;
-    }
-
-    public Filter getOriginalFilter()
-    {
-      return originalFilter;
-    }
-
-    @Nullable
-    public Filter getPushdownFilter()
-    {
-      return pushdownFilter;
-    }
-
-    @Nullable
-    public List<VirtualColumn> getPushdownVirtualColumns()
-    {
-      return pushdownVirtualColumns;
-    }
-
-    /**
-     * Utility method for generating an analysis that represents: "Filter cannot be pushed down"
-     *
-     * @param originalFilter The original filter which cannot be pushed down
-     *
-     * @return analysis that represents: "Filter cannot be pushed down"
-     */
-    public static JoinFilterAnalysis createNoPushdownFilterAnalysis(Filter originalFilter)
-    {
-      return new JoinFilterAnalysis(
-          false,
-          true,
-          originalFilter,
-          null,
-          null
-      );
-    }
-  }
-
-  /**
-   * Represents an analysis of what base table columns, if any, can be correlated with a column that will
-   * be filtered on.
-   * <p>
-   * For example, if we're joining on a base table via the equiconditions (id = j.id AND f(id2) = j.id2),
-   * then we can correlate j.id with id (base table column) and j.id2 with f(id2) (a base table expression).
-   */
-  private static class JoinFilterColumnCorrelationAnalysis
-  {
-    private final String joinColumn;
-    private final List<String> baseColumns;
-    private final List<Expr> baseExpressions;
-
-    public JoinFilterColumnCorrelationAnalysis(
-        String joinColumn,
-        List<String> baseColumns,
-        List<Expr> baseExpressions
-    )
-    {
-      this.joinColumn = joinColumn;
-      this.baseColumns = baseColumns;
-      this.baseExpressions = baseExpressions;
-    }
-
-    public String getJoinColumn()
-    {
-      return joinColumn;
-    }
-
-    public List<String> getBaseColumns()
-    {
-      return baseColumns;
-    }
-
-    public List<Expr> getBaseExpressions()
-    {
-      return baseExpressions;
-    }
-
-    public boolean supportsPushDown()
-    {
-      return !baseColumns.isEmpty() || !baseExpressions.isEmpty();
-    }
-  }
-
 }

@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Represents something that can be the right-hand side of a join.
@@ -74,5 +75,22 @@ public interface Joinable
       ColumnSelectorFactory leftColumnSelectorFactory,
       JoinConditionAnalysis condition,
       boolean remainderNeeded
+  );
+
+  /**
+   * Given a main column name and value, return all the values of the column denoted by correlationColumnName
+   * that appear in rows where the main column has the provided main column value.
+   *
+   * This is used for rewriting filter clauses when pushing filters down to the base table during join query processing.
+   *
+   * @param mainColumnName Name of the main column
+   * @param mainColumnValue Target value of the main column
+   * @param correlationColumnName The column to get correlated values from
+   * @return The set of correlated column values. If we cannot determine correlated values, return an empty set.
+   */
+  Set<String> getCorrelatedColumnValues(
+      String mainColumnName,
+      String mainColumnValue,
+      String correlationColumnName
   );
 }

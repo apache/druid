@@ -35,6 +35,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -223,7 +225,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
     }
 
-    JoinFilterAnalyzer.JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
         this,
         filter
     );
@@ -235,7 +237,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     // If it's done in the SQL planner, that will likely mean adding a 'baseFilter' parameter to this class that would
     // be passed in to the below baseAdapter.makeCursors call (instead of the null filter).
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        joinFilterSplit.getBaseTableFilter(),
+        joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
         interval,
         VirtualColumns.create(preJoinVirtualColumns),
         gran,
@@ -255,7 +257,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           return PostJoinCursor.wrap(
               retVal,
               VirtualColumns.create(postJoinVirtualColumns),
-              joinFilterSplit.getJoinTableFilter()
+              joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
           );
         }
     );
@@ -270,7 +272,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
    */
-  protected boolean isBaseColumn(final String column)
+  public boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
   }

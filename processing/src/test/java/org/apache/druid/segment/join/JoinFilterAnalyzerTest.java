@@ -37,9 +37,12 @@ import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTest
@@ -56,12 +59,12 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     Filter originalFilter = new SelectorFilter("channel", "#en.wikipedia");
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new SelectorFilter("channel", "#en.wikipedia"),
         null,
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -125,12 +128,12 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     Filter originalFilter = new SelectorFilter("rtc.countryName", "United States");
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
         new SelectorFilter("rtc.countryName", "United States"),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -173,7 +176,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
@@ -183,7 +186,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter("rtc.countryName", "United States"),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -232,7 +235,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
         new AndFilter(
             ImmutableList.of(
@@ -244,7 +247,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -294,7 +297,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new SelectorFilter("baseTableInvalidColumn", "abcd"),
         new AndFilter(
             ImmutableList.of(
@@ -304,7 +307,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -344,12 +347,12 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new SelectorFilter("v1", "virtual-column-#en.wikipedia"),
         null,
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -463,7 +466,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#fr.wikipedia"),
@@ -527,7 +530,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -553,6 +556,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
+  // Rewriting filters on rhs columns is currently disabled when the lhs of the equicondition is an expression
+  @Ignore
   @Test
   public void test_filterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName()
   {
@@ -584,7 +589,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
@@ -594,7 +599,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter("rtc.countryName", "States United"),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -710,7 +715,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new OrFilter(
@@ -750,7 +755,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -777,6 +782,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
+  // Rewriting filters on rhs columns is currently disabled when the lhs of the equicondition is an expression
+  @Ignore
   @Test
   public void test_filterPushDown_factConcatExpressionToCountryLeftFilterOnChannelAndCountryName()
   {
@@ -812,7 +819,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ValueType.STRING,
         ExprMacroTable.nil()
     );
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
@@ -824,7 +831,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             expectedVirtualColumn
         )
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         filter
     );
@@ -875,7 +882,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#de.wikipedia"),
@@ -885,7 +892,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany"),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -928,7 +935,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
         new AndFilter(
             ImmutableList.of(
@@ -938,7 +945,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -979,7 +986,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
@@ -989,7 +996,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia"),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -1038,7 +1045,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
         new AndFilter(
             ImmutableList.of(
@@ -1048,7 +1055,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -1088,7 +1095,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#es.wikipedia"),
@@ -1098,7 +1105,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador"),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         filter
     );
@@ -1141,7 +1148,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterAnalyzer.JoinFilterSplit expectedFilterSplit = new JoinFilterAnalyzer.JoinFilterSplit(
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         null,
         new AndFilter(
             ImmutableList.of(
@@ -1151,7 +1158,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of()
     );
-    JoinFilterAnalyzer.JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
         originalFilter
     );
@@ -1181,7 +1188,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_JoinFilterSplit_equals()
   {
-    EqualsVerifier.forClass(JoinFilterAnalyzer.JoinFilterSplit.class)
+    EqualsVerifier.forClass(JoinFilterSplit.class)
                   .usingGetClass()
                   .withNonnullFields("baseTableFilter", "pushDownVirtualColumns")
                   .verify();
