@@ -95,8 +95,6 @@ public class DruidSchema extends AbstractSchema
       .reversed()
       .thenComparing(Function.identity());
 
-  public static final String NAME = "druid";
-
   private static final EmittingLogger log = new EmittingLogger(DruidSchema.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
