@@ -43,6 +43,8 @@ public class StringAnyAggregationTest
   private TestObjectColumnSelector objectSelector;
 
   private String[] strings = {"1111", "2222", "3333", null, "4444"};
+  private String[] stringsWithNullFirst = {null, "1111", "2222", "3333", null, "4444"};
+
 
   @Before
   public void setup()
@@ -76,6 +78,27 @@ public class StringAnyAggregationTest
   }
 
   @Test
+  public void testStringAnyAggregatorWithNullFirst()
+  {
+    valueSelector = new TestObjectColumnSelector<>(stringsWithNullFirst);
+    colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
+    EasyMock.replay(colSelectorFactory);
+
+    Aggregator agg = stringAnyAggFactory.factorize(colSelectorFactory);
+
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+
+    String result = (String) agg.get();
+    Assert.assertNull(result);
+  }
+
+  @Test
   public void testStringAnyBufferAggregator()
   {
     BufferAggregator agg = stringAnyAggFactory.factorizeBuffered(
@@ -92,6 +115,31 @@ public class StringAnyAggregationTest
     String result = (String) agg.get(buffer, 0);
 
     Assert.assertEquals(strings[0], result);
+  }
+
+  @Test
+  public void testStringAnyBufferAggregatorWithNullFirst()
+  {
+    valueSelector = new TestObjectColumnSelector<>(stringsWithNullFirst);
+    colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
+    EasyMock.replay(colSelectorFactory);
+
+    BufferAggregator agg = stringAnyAggFactory.factorizeBuffered(
+        colSelectorFactory);
+
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[stringAnyAggFactory.getMaxIntermediateSize()]);
+    agg.init(buffer, 0);
+
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+
+    String result = (String) agg.get(buffer, 0);
+    Assert.assertNull(result);
   }
 
   @Test
