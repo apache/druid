@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
@@ -30,9 +28,7 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -42,9 +38,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
@@ -52,9 +46,6 @@ import java.util.stream.Stream;
 @PublicApi
 public class SegmentUtils
 {
-  @VisibleForTesting
-  static final int SEGMENTS_PER_LOG_MESSAGE = 64;
-
   private static final HashFunction HASH_FUNCTION = Hashing.sha256();
 
   /**
@@ -102,71 +93,8 @@ public class SegmentUtils
     return Collections2.transform(segments, DataSegment::getId);
   }
 
-  /**
-   * Logs all the segment ids you could ever want, {@link #SEGMENTS_PER_LOG_MESSAGE} at a time, as a comma separated
-   * list.
-   */
-  public static void logSegments(
-      Logger.LogFunction logger,
-      @Nullable final Collection<DataSegment> segments,
-      @Nullable String preamble
-  )
-  {
-    if (segments == null || segments.isEmpty()) {
-      return;
-    }
-    logSegmentIds(logger, segments.stream().map(DataSegment::getId), preamble);
-  }
-
-  /**
-   * Logs all the segment ids you could ever want, {@link #SEGMENTS_PER_LOG_MESSAGE} at a time, as a comma separated
-   * list.
-   */
-  public static void logSegmentIds(
-      Logger.LogFunction logger,
-      @Nullable final Stream<SegmentId> stream,
-      @Nullable String preamble
-  )
-  {
-    Preconditions.checkNotNull(preamble);
-    if (stream == null) {
-      return;
-    }
-    final Iterator<SegmentId> iterator = stream.iterator();
-    if (!iterator.hasNext()) {
-      return;
-    }
-    final String logFormat = preamble + ": %s";
-
-    int counter = 0;
-    StringBuilder sb = null;
-    while (iterator.hasNext()) {
-      SegmentId nextId = iterator.next();
-      if (counter == 0) {
-        // use segmentId string length of first as estimate for total size of builder for this batch
-        sb = new StringBuilder(SEGMENTS_PER_LOG_MESSAGE * (2 + nextId.safeUpperLimitOfStringSize())).append("[");
-      }
-      sb.append(nextId);
-      if (++counter < SEGMENTS_PER_LOG_MESSAGE && iterator.hasNext()) {
-        sb.append(", ");
-      }
-      counter = counter % SEGMENTS_PER_LOG_MESSAGE;
-      if (counter == 0) {
-        // flush
-        sb.append("]");
-        logger.log(logFormat, sb.toString());
-      }
-    }
-
-    // check for stragglers
-    if (counter > 0) {
-      sb.append("]");
-      logger.log(logFormat, sb.toString());
-    }
-  }
-
   private SegmentUtils()
   {
-
+    // no instantiation
   }
 }

@@ -19,13 +19,24 @@
 
 package org.apache.druid.java.util.common.logger;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 public class Logger
 {
+  @VisibleForTesting
+  static final int SEGMENTS_PER_LOG_MESSAGE = 64;
+
   private final org.slf4j.Logger log;
   private final boolean stackTraces;
   private final Logger noStackTraceLogger;
@@ -161,6 +172,39 @@ public class Logger
     error(t, message, formatArgs);
   }
 
+  public void debugSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
+  {
+    if (log.isDebugEnabled()) {
+      logSegments(this::debug, segments, preamble);
+    }
+  }
+
+  public void infoSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
+  {
+    if (log.isInfoEnabled()) {
+      logSegments(this::info, segments, preamble);
+    }
+  }
+
+  public void infoSegmentIds(@Nullable final Stream<SegmentId> segments, @Nullable String preamble)
+  {
+    if (log.isInfoEnabled()) {
+      logSegmentIds(this::info, segments, preamble);
+    }
+  }
+
+  public void warnSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
+  {
+    if (log.isWarnEnabled()) {
+      logSegments(this::warn, segments, preamble);
+    }
+  }
+
+  public void errorSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
+  {
+    logSegments(this::error, segments, preamble);
+  }
+
   public boolean isTraceEnabled()
   {
     return log.isTraceEnabled();
@@ -186,6 +230,71 @@ public class Logger
       } else {
         fn.accept(StringUtils.nonStrictFormat("%s (%s)", message, t.toString()), null);
       }
+    }
+  }
+
+  /**
+   * Logs all the segment ids you could ever want, {@link #SEGMENTS_PER_LOG_MESSAGE} at a time, as a comma separated
+   * list.
+   */
+  @VisibleForTesting
+  static void logSegments(
+      Logger.LogFunction logger,
+      @Nullable final Collection<DataSegment> segments,
+      @Nullable String preamble
+  )
+  {
+    if (segments == null || segments.isEmpty()) {
+      return;
+    }
+    logSegmentIds(logger, segments.stream().map(DataSegment::getId), preamble);
+  }
+
+  /**
+   * Logs all the segment ids you could ever want, {@link #SEGMENTS_PER_LOG_MESSAGE} at a time, as a comma separated
+   * list.
+   */
+  @VisibleForTesting
+  static void logSegmentIds(
+      Logger.LogFunction logger,
+      @Nullable final Stream<SegmentId> stream,
+      @Nullable String preamble
+  )
+  {
+    Preconditions.checkNotNull(preamble);
+    if (stream == null) {
+      return;
+    }
+    final Iterator<SegmentId> iterator = stream.iterator();
+    if (!iterator.hasNext()) {
+      return;
+    }
+    final String logFormat = preamble + ": %s";
+
+    int counter = 0;
+    StringBuilder sb = null;
+    while (iterator.hasNext()) {
+      SegmentId nextId = iterator.next();
+      if (counter == 0) {
+        // use segmentId string length of first as estimate for total size of builder for this batch
+        sb = new StringBuilder(SEGMENTS_PER_LOG_MESSAGE * (2 + nextId.safeUpperLimitOfStringSize())).append("[");
+      }
+      sb.append(nextId);
+      if (++counter < SEGMENTS_PER_LOG_MESSAGE && iterator.hasNext()) {
+        sb.append(", ");
+      }
+      counter = counter % SEGMENTS_PER_LOG_MESSAGE;
+      if (counter == 0) {
+        // flush
+        sb.append("]");
+        logger.log(logFormat, sb.toString());
+      }
+    }
+
+    // check for stragglers
+    if (counter > 0) {
+      sb.append("]");
+      logger.log(logFormat, sb.toString());
     }
   }
 

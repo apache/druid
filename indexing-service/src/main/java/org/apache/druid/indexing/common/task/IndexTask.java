@@ -79,7 +79,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -951,7 +950,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getThrownAway()
         );
         log.info("Published [%s] segments", published.getSegments().size());
-        SegmentUtils.logSegments(log::info, published.getSegments(), "Published segments");
+        log.infoSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());

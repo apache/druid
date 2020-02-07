@@ -272,8 +272,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           "[%s] Candidate segments were compacted with different partitions spec. Needs compaction.",
           candidates.segments.size()
       );
-      SegmentUtils.logSegments(
-          log::debug,
+      log.debugSegments(
           candidates.segments,
           "Candidate segments compacted with different partiton spec"
       );

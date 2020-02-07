@@ -534,7 +534,7 @@ public abstract class WorkerTaskManager
               }
             }
             catch (Exception ex) {
-              log.info(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
+              log.warn(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
 
               if (ex instanceof InterruptedException) {
                 Thread.currentThread().interrupt();

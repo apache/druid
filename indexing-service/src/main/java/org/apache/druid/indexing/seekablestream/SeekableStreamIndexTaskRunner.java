@@ -1023,7 +1023,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 sequenceMetadata.getSequenceName(),
                 Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
-            SegmentUtils.logSegments(log::info, publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
+            log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
@@ -1050,8 +1050,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                           "Failed to hand off %s segments",
                           publishedSegmentsAndCommitMetadata.getSegments().size()
                       );
-                      SegmentUtils.logSegments(
-                          log::warn,
+                      log.warnSegments(
                           publishedSegmentsAndCommitMetadata.getSegments(),
                           "Failed to hand off segments"
                       );
