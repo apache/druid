@@ -32,6 +32,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.lookup.LookupsState;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
@@ -72,7 +73,7 @@ public class CoordinatorResourceTestClient
     );
   }
 
-  private String getMetadataSegmentsURL(String dataSource)
+  private String getSegmentsMetadataURL(String dataSource)
   {
     return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
@@ -92,12 +93,12 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
   }
 
-  // return a list of the segment dates for the specified datasource
-  public List<String> getMetadataSegments(final String dataSource)
+  /** return a list of the segment dates for the specified data source */
+  public List<String> getSegments(final String dataSource)
   {
     List<String> segments;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getMetadataSegmentsURL(dataSource));
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getSegmentsMetadataURL(dataSource));
 
       segments = jsonMapper.readValue(
           response.getContent(), new TypeReference<List<String>>()
@@ -293,6 +294,41 @@ public class CoordinatorResourceTestClient
     }
 
     return isLoaded;
+  }
+
+  public void postDynamicConfig(CoordinatorDynamicConfig coordinatorDynamicConfig) throws Exception
+  {
+    String url = StringUtils.format("%sconfig", getCoordinatorURL());
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(coordinatorDynamicConfig)
+        ), responseHandler
+    ).get();
+
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error while setting dynamic config[%s] status[%s] content[%s]",
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+  }
+
+  public CoordinatorDynamicConfig getDynamicConfig()
+  {
+    String url = StringUtils.format("%sconfig", getCoordinatorURL());
+    CoordinatorDynamicConfig config;
+
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+      config = jsonMapper.readValue(response.getContent(), CoordinatorDynamicConfig.class);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return config;
   }
 
   private StatusResponseHolder makeRequest(HttpMethod method, String url)

@@ -20,6 +20,7 @@
 package org.apache.druid.timeline;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -42,7 +43,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -86,9 +86,9 @@ public class VersionedIntervalTimelineBenchmark
 
     intervals = Lists.newArrayList(segmentGranularity.getDefaultGranularity().getIterable(TOTAL_INTERVAL));
     segments = new ArrayList<>(intervals.size() * numInitialRootGenSegmentsPerInterval);
-    Map<Interval, Integer> nextRootGenPartitionIds = new HashMap<>(intervals.size());
-    Map<Interval, Integer> nextNonRootGenPartitionIds = new HashMap<>(intervals.size());
-    Map<Interval, Short> nextMinorVersions = new HashMap<>(intervals.size());
+    Map<Interval, Integer> nextRootGenPartitionIds = Maps.newHashMapWithExpectedSize(intervals.size());
+    Map<Interval, Integer> nextNonRootGenPartitionIds = Maps.newHashMapWithExpectedSize(intervals.size());
+    Map<Interval, Short> nextMinorVersions = Maps.newHashMapWithExpectedSize(intervals.size());
 
     DateTime majorVersion = DateTimes.nowUtc();
 

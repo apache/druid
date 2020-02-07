@@ -25,22 +25,23 @@ import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
  * A {@link JoinableFactory} for {@link InlineDataSource}. It works by building an {@link IndexedTable}.
+ *
+ * It is not valid to pass any other DataSource type to the "build" method.
  */
 public class InlineJoinableFactory implements JoinableFactory
 {
   @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
-    if (condition.canHashJoin() && dataSource instanceof InlineDataSource) {
-      final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
-      final List<String> rightKeyColumns =
-          condition.getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toList());
+    final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+
+    if (condition.canHashJoin()) {
+      final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();
 
       return Optional.of(
           new IndexedTableJoinable(

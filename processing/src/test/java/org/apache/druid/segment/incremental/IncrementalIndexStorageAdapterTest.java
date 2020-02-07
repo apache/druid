@@ -653,7 +653,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     Assert.assertEquals(1, assertCursorsNotEmpty.get());
   }
 
-  private class DictionaryRaceTestFilter implements Filter
+  private static class DictionaryRaceTestFilter implements Filter
   {
     private final IncrementalIndex index;
     private final long timestamp;

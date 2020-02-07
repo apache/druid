@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
@@ -204,7 +205,7 @@ public class CachingClusteredClientBenchmark
 
     BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
 
-    Map<DataSegment, QueryableIndex> queryableIndexes = new HashMap<>(numServers);
+    Map<DataSegment, QueryableIndex> queryableIndexes = Maps.newHashMapWithExpectedSize(numServers);
 
     for (int i = 0; i < numServers; i++) {
 
@@ -564,7 +565,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private class SimpleQueryRunner implements QueryRunner<Object>
+  private static class SimpleQueryRunner implements QueryRunner<Object>
   {
     private final QueryRunnerFactoryConglomerate conglomerate;
     private final QueryableIndexSegment segment;
@@ -597,7 +598,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
+  private static class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
   {
     SingleSegmentDruidServer(DruidServer server, SimpleQueryRunner runner)
     {

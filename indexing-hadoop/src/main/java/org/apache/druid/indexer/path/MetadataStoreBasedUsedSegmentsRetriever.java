@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class MetadataStoreBasedUsedSegmentsRetriever implements UsedSegmentsRetriever
 {
-  private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
+  private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
 
   @Inject
   public MetadataStoreBasedUsedSegmentsRetriever(IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator)
@@ -45,12 +45,12 @@ public class MetadataStoreBasedUsedSegmentsRetriever implements UsedSegmentsRetr
   }
 
   @Override
-  public Collection<DataSegment> getUsedSegmentsForIntervals(
+  public Collection<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
       Segments visibility
   )
   {
-    return indexerMetadataStorageCoordinator.getUsedSegmentsForIntervals(dataSource, intervals, visibility);
+    return indexerMetadataStorageCoordinator.retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
   }
 }

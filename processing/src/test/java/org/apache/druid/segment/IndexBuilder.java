@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -109,13 +110,22 @@ public class IndexBuilder
 
   public QueryableIndex buildMMappedIndex()
   {
+    ColumnConfig noCacheColumnConfig = () -> 0;
+    return buildMMappedIndex(noCacheColumnConfig);
+  }
+
+  public QueryableIndex buildMMappedIndex(ColumnConfig columnConfig)
+  {
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
-      return TestHelper.getTestIndexIO().loadIndex(
+      return TestHelper.getTestIndexIO(columnConfig).loadIndex(
           indexMerger.persist(
               incrementalIndex,
-              new File(tmpDir, StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))),
+              new File(
+                  tmpDir,
+                  StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
+              ),
               indexSpec,
               null
           )

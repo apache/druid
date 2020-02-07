@@ -39,6 +39,7 @@ import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
@@ -59,8 +60,6 @@ import org.apache.druid.indexing.worker.http.ShuffleResource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
-import org.apache.druid.segment.join.DefaultJoinableFactory;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.realtime.CliIndexerDataSegmentServerAnnouncerLifecycleHandler;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
@@ -101,6 +100,7 @@ public class CliIndexer extends ServerRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new JoinableFactoryModule(),
         new Module()
         {
           @Override
@@ -121,7 +121,6 @@ public class CliIndexer extends ServerRunnable
 
             binder.bind(TaskRunner.class).to(ThreadingTaskRunner.class);
             binder.bind(QuerySegmentWalker.class).to(ThreadingTaskRunner.class);
-            binder.bind(JoinableFactory.class).to(DefaultJoinableFactory.class).in(LazySingleton.class);
             binder.bind(ThreadingTaskRunner.class).in(LazySingleton.class);
 
             CliPeon.bindRowIngestionMeters(binder);
