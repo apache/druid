@@ -22,6 +22,7 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
@@ -76,7 +77,8 @@ public class HashJoinSegmentTest
                 JoinType.LEFT,
                 JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
             )
-        )
+        ),
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
   }
 
@@ -86,7 +88,11 @@ public class HashJoinSegmentTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
 
-    final HashJoinSegment ignored = new HashJoinSegment(baseSegment, ImmutableList.of());
+    final HashJoinSegment ignored = new HashJoinSegment(
+        baseSegment,
+        ImmutableList.of(),
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+    );
   }
 
   @Test
