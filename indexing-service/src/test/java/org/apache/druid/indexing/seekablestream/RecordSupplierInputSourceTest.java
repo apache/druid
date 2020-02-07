@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -45,7 +46,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -106,7 +106,7 @@ public class RecordSupplierInputSourceTest
 
     private RandomCsvSupplier()
     {
-      partitionToOffset = new HashMap<>(3);
+      partitionToOffset = Maps.newHashMapWithExpectedSize(3);
       for (int i = 0; i < 3; i++) {
         partitionToOffset.put(i, 0);
       }

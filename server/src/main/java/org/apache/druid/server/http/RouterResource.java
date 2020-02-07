@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.selector.Server;
@@ -29,7 +30,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,7 +55,7 @@ public class RouterResource
   {
     Map<String, List<Server>> brokerSelectorMap = tieredBrokerHostSelector.getAllBrokers();
 
-    Map<String, List<String>> brokersMap = new HashMap<>(brokerSelectorMap.size());
+    Map<String, List<String>> brokersMap = Maps.newHashMapWithExpectedSize(brokerSelectorMap.size());
 
     for (Map.Entry<String, List<Server>> e : brokerSelectorMap.entrySet()) {
       brokersMap.put(e.getKey(), e.getValue().stream().map(s -> s.getHost()).collect(Collectors.toList()));
