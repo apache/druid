@@ -950,7 +950,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getThrownAway()
         );
         log.info("Published [%s] segments", published.getSegments().size());
-        log.infoSegments(published.getSegments(), "Published segments");
+        log.debugSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
