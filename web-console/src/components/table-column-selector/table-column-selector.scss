@@ -20,6 +20,10 @@
   position: absolute;
   right: 0;
   margin: 0;
+
+  .counter {
+    opacity: 0.5;
+  }
 }
 
 // This will be mounted in a portal
