@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
@@ -156,7 +157,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       @Nullable Long l0)
   {
     // for row selector to work correctly as part of the test matrix, default value coercion needs to happen to columns
-    Map<String, Object> mapRow = new HashMap<>(6);
+    Map<String, Object> mapRow = Maps.newHashMapWithExpectedSize(6);
     mapRow.put("dim0", NullHandling.nullToEmptyIfNeeded(dim0));
     mapRow.put("dim1", NullHandling.nullToEmptyIfNeeded(dim1));
     mapRow.put("dim2", dim2 != null ? dim2 : NullHandling.defaultStringValue());

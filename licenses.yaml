@@ -296,6 +296,7 @@ libraries:
   - com.google.inject: guice
   - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
+  - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
@@ -305,6 +306,9 @@ notices:
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
+      Copyright 2006-2016 Google, Inc.
+  - guice-assistedinject: |
+      Google Guice - Extensions - AssistedInect
       Copyright 2006-2016 Google, Inc.
 
 ---
@@ -3053,7 +3057,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0-incubating
+version: 1.2.0-incubating
 libraries:
   - org.apache.datasketches: datasketches-java
 

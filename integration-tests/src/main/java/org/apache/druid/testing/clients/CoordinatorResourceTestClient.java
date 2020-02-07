@@ -32,6 +32,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.lookup.LookupsState;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
@@ -293,6 +294,41 @@ public class CoordinatorResourceTestClient
     }
 
     return isLoaded;
+  }
+
+  public void postDynamicConfig(CoordinatorDynamicConfig coordinatorDynamicConfig) throws Exception
+  {
+    String url = StringUtils.format("%sconfig", getCoordinatorURL());
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(coordinatorDynamicConfig)
+        ), responseHandler
+    ).get();
+
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error while setting dynamic config[%s] status[%s] content[%s]",
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+  }
+
+  public CoordinatorDynamicConfig getDynamicConfig()
+  {
+    String url = StringUtils.format("%sconfig", getCoordinatorURL());
+    CoordinatorDynamicConfig config;
+
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+      config = jsonMapper.readValue(response.getContent(), CoordinatorDynamicConfig.class);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return config;
   }
 
   private StatusResponseHolder makeRequest(HttpMethod method, String url)
