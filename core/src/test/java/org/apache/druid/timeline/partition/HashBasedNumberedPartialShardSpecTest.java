@@ -21,6 +21,7 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,6 +31,15 @@ import java.util.Map;
 public class HashBasedNumberedPartialShardSpecTest
 {
   private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(HashBasedNumberedPartialShardSpec.class)
+                  .usingGetClass()
+                  .withNonnullFields("partitionDimensions", "numBuckets")
+                  .verify();
+  }
 
   @Test
   public void testSerde() throws IOException

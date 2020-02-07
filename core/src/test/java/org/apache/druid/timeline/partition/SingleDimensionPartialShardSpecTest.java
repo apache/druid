@@ -20,6 +20,7 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,6 +28,15 @@ import java.io.IOException;
 
 public class SingleDimensionPartialShardSpecTest
 {
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(SingleDimensionPartialShardSpec.class)
+                  .usingGetClass()
+                  .withNonnullFields("partitionDimension", "bucketId", "numBuckets")
+                  .verify();
+  }
+
   @Test
   public void testSerde() throws IOException
   {
