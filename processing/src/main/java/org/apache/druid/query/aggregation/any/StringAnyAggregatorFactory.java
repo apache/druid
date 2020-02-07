@@ -155,7 +155,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Integer.BYTES + maxStringBytes;
+    return Byte.BYTES + Integer.BYTES + maxStringBytes;
   }
 
   @Override

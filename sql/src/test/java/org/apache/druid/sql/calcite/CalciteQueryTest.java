@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
@@ -1339,7 +1340,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "10.1", 2L, 2.0f, "1"})
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"})
     );
   }
 
@@ -1677,7 +1678,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 11.1}
+            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 10.1}
         )
     );
   }
@@ -2143,147 +2144,154 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         expected
     );
   }
-//
-//  @Test
-//  public void testOrderByAnyFloat() throws Exception
-//  {
-//    // Cannot vectorize ANY aggregator.
-//    skipVectorize();
-//    List<Object[]> expected;
-//    if (NullHandling.replaceWithDefault()) {
-//      expected = ImmutableList.of(
-//          new Object[]{"1", 0.0f},
-//          new Object[]{"2", 0.0f},
-//          new Object[]{"abc", 0.0f},
-//          new Object[]{"def", 0.0f},
-//          new Object[]{"10.1", 0.1f},
-//          new Object[]{"", 1.0f}
-//      );
-//    } else {
-//      expected = ImmutableList.of(
-//          new Object[]{"1", null},
-//          new Object[]{"abc", null},
-//          new Object[]{"def", null},
-//          new Object[]{"2", 0.0f},
-//          new Object[]{"10.1", 0.1f},
-//          new Object[]{"", 1.0f}
-//      );
-//    }
-//    testQuery(
-//        "SELECT dim1, ANY_VALUE(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
-//        ImmutableList.of(
-//            new TopNQueryBuilder()
-//                .dataSource(CalciteTests.DATASOURCE3)
-//                .intervals(querySegmentSpec(Filtration.eternity()))
-//                .granularity(Granularities.ALL)
-//                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
-//                .aggregators(
-//                    aggregators(
-//                        new FloatAnyAggregatorFactory("a0", "f1")
-//                    )
-//                )
-//                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
-//                .threshold(10)
-//                .context(QUERY_CONTEXT_DEFAULT)
-//                .build()
-//        ),
-//        expected
-//    );
-//  }
-//
-//  @Test
-//  public void testOrderByAnyDouble() throws Exception
-//  {
-//    // Cannot vectorize ANY aggregator.
-//    skipVectorize();
-//    List<Object[]> expected;
-//    if (NullHandling.replaceWithDefault()) {
-//      expected = ImmutableList.of(
-//          new Object[]{"1", 0.0},
-//          new Object[]{"2", 0.0},
-//          new Object[]{"abc", 0.0},
-//          new Object[]{"def", 0.0},
-//          new Object[]{"", 1.0},
-//          new Object[]{"10.1", 1.7}
-//      );
-//    } else {
-//      expected = ImmutableList.of(
-//          new Object[]{"1", null},
-//          new Object[]{"abc", null},
-//          new Object[]{"def", null},
-//          new Object[]{"2", 0.0},
-//          new Object[]{"", 1.0},
-//          new Object[]{"10.1", 1.7}
-//      );
-//    }
-//    testQuery(
-//        "SELECT dim1, ANY_VALUE(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
-//        ImmutableList.of(
-//            new TopNQueryBuilder()
-//                .dataSource(CalciteTests.DATASOURCE3)
-//                .intervals(querySegmentSpec(Filtration.eternity()))
-//                .granularity(Granularities.ALL)
-//                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
-//                .aggregators(
-//                    aggregators(
-//                        new DoubleAnyAggregatorFactory("a0", "d1")
-//                    )
-//                )
-//                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
-//                .threshold(10)
-//                .context(QUERY_CONTEXT_DEFAULT)
-//                .build()
-//        ),
-//        expected
-//    );
-//  }
-//
-//  @Test
-//  public void testOrderByAnyLong() throws Exception
-//  {
-//    // Cannot vectorize ANY aggregator.
-//    skipVectorize();
-//    List<Object[]> expected;
-//    if (NullHandling.replaceWithDefault()) {
-//      expected = ImmutableList.of(
-//          new Object[]{"1", 0L},
-//          new Object[]{"2", 0L},
-//          new Object[]{"abc", 0L},
-//          new Object[]{"def", 0L},
-//          new Object[]{"", 7L},
-//          new Object[]{"10.1", 325323L}
-//      );
-//    } else {
-//      expected = ImmutableList.of(
-//          new Object[]{"1", null},
-//          new Object[]{"abc", null},
-//          new Object[]{"def", null},
-//          new Object[]{"2", 0L},
-//          new Object[]{"", 7L},
-//          new Object[]{"10.1", 325323L}
-//      );
-//    }
-//    testQuery(
-//        "SELECT dim1, ANY_VALUE(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
-//        ImmutableList.of(
-//            new TopNQueryBuilder()
-//                .dataSource(CalciteTests.DATASOURCE3)
-//                .intervals(querySegmentSpec(Filtration.eternity()))
-//                .granularity(Granularities.ALL)
-//                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
-//                .aggregators(
-//                    aggregators(
-//                        new LongAnyAggregatorFactory("a0", "l1")
-//                    )
-//                )
-//                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
-//                .threshold(10)
-//                .context(QUERY_CONTEXT_DEFAULT)
-//                .build()
-//        ),
-//        expected
-//    );
-//  }
+
+  @Test
+  public void testOrderByAnyFloat() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0f},
+          new Object[]{"2", 0.0f},
+          new Object[]{"abc", 0.0f},
+          new Object[]{"def", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"2", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f},
+          // Nulls are last because of the null first wrapped Comparator in InvertedTopNMetricSpec which is then
+          // reversed by TopNNumericResultBuilder.build()
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null}
+      );
+    }
+
+    testQuery(
+        "SELECT dim1, ANY_VALUE(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new FloatAnyAggregatorFactory("a0", "f1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByAnyDouble() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0},
+          new Object[]{"2", 0.0},
+          new Object[]{"abc", 0.0},
+          new Object[]{"def", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"2", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7},
+          // Nulls are last because of the null first wrapped Comparator in InvertedTopNMetricSpec which is then
+          // reversed by TopNNumericResultBuilder.build()
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null}
+      );
+    }
+    testQuery(
+        "SELECT dim1, ANY_VALUE(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new DoubleAnyAggregatorFactory("a0", "d1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByAnyLong() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0L},
+          new Object[]{"2", 0L},
+          new Object[]{"abc", 0L},
+          new Object[]{"def", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"2", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L},
+          // Nulls are last because of the null first wrapped Comparator in InvertedTopNMetricSpec which is then
+          // reversed by TopNNumericResultBuilder.build()
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null}
+      );
+    }
+    testQuery(
+        "SELECT dim1, ANY_VALUE(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new LongAnyAggregatorFactory("a0", "l1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
 
   @Test
   public void testGroupByLong() throws Exception
