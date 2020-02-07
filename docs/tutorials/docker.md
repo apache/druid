@@ -22,11 +22,9 @@ title: "Docker"
   ~ under the License.
   -->
   
-In this quickstart, we will download the Druid docker image from [Apache Druid on Docker Hub](https://hub.docker.com/r/apache/druid) and set it up on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/). The cluster will be ready to load data
-after completing this initial setup.
+In this quickstart, we will download the Apache Druid image from [Docker Hub](https://hub.docker.com/r/apache/druid) and set it up on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/). The cluster will be ready to load data after completing this initial setup.
 
-Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.md) and the
-[ingestion overview](../ingestion/index.md), as the tutorials will refer to concepts discussed on those pages. Additionally, familiarity with Docker is recommended.
+Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.md) and the [ingestion overview](../ingestion/index.md), as the tutorials will refer to concepts discussed on those pages. Additionally, familiarity with Docker is recommended.
 
 ## Prerequisites
 
@@ -67,11 +65,12 @@ would be translated into
  
 for the Druid process in the container.
 
-The Druid `docker-compose.yml` example utilizes a single environment file to specify the complete Druid configuration, however in production use cases we suggest using either `DRUID_COMMON_CONFIG` and `DRUID_CONFIG_${service}` or specially tailored service specific environment files.
-
+The Druid `docker-compose.yml` example utilizes a single environment file to specify the complete Druid configuration; however, in production use cases we suggest using either `DRUID_COMMON_CONFIG` and `DRUID_CONFIG_${service}` or specially tailored, service-specific environment files.
 ## Launching the cluster
 
-Run `docker-compose up` to launch the cluster will a shell attached, or `docker-compose up -d` to run the cluster in the background. Once the cluster has started, you can navigate to [http://localhost:8888](http://localhost:8888).
+Run `docker-compose up` to launch the cluster with a shell attached, or `docker-compose up -d` to run the cluster in the background. If using the example files directly, this command should be run from `distribution/docker/` in your Druid installation directory.
+
+Once the cluster has started, you can navigate to [http://localhost:8888](http://localhost:8888).
 The [Druid router process](../design/router.md), which serves the [Druid console](../operations/druid-console.md), resides at this address.
 
 ![Druid console](../assets/tutorial-quickstart-01.png "Druid console")
