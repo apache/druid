@@ -634,7 +634,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     if (spec.getTuningConfig().isLogParseExceptions()) {
-      log.error(pe, "Encountered parse exception: ");
+      log.error(pe, "Encountered parse exception");
     }
 
     if (savedParseExceptions != null) {

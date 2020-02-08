@@ -30,7 +30,6 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -210,10 +209,11 @@ public class CompactSegments implements CoordinatorDuty
             newAutoCompactionContext(config.getTaskContext())
         );
         LOG.info(
-            "Submitted a compactionTask[%s] for segments %s",
+            "Submitted a compactionTask[%s] for %s segments",
             taskId,
-            SegmentUtils.commaSeparatedIdentifiers(segmentsToCompact)
+            segmentsToCompact.size()
         );
+        LOG.infoSegments(segmentsToCompact, "Compacting segments");
         // Count the compaction task itself + its sub tasks
         numSubmittedTasks += findNumMaxConcurrentSubTasks(config.getTuningConfig()) + 1;
       } else {

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -79,7 +80,7 @@ public class SegmentsAndCommitMetadata
   {
     return getClass().getSimpleName() + "{" +
            "commitMetadata=" + commitMetadata +
-           ", segments=" + segments +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            '}';
   }
 

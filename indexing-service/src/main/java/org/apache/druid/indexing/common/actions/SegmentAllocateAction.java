@@ -268,7 +268,11 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
     if (!usedSegment.getInterval().contains(rowInterval)) {
-      log.error("The interval of existing segment[%s] doesn't contain rowInterval[%s]", usedSegment, rowInterval);
+      log.error(
+          "The interval of existing segment[%s] doesn't contain rowInterval[%s]",
+          usedSegment.getId(),
+          rowInterval
+      );
       return null;
     } else {
       // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier

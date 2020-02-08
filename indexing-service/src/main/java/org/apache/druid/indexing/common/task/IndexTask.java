@@ -84,7 +84,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -811,7 +810,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         }
         catch (ParseException e) {
           if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
-            log.error(e, "Encountered parse exception: ");
+            log.error(e, "Encountered parse exception");
           }
 
           if (determinePartitionsSavedParseExceptions != null) {
@@ -979,7 +978,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info("Published segments: %s", SegmentUtils.commaSeparatedIdentifiers(published.getSegments()));
+        log.info("Published [%s] segments", published.getSegments().size());
+        log.debugSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -257,7 +258,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
-      log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0));
+      log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
       return true;
     }
 
@@ -267,7 +268,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         .allMatch(segment -> lastCompactionState.equals(segment.getLastCompactionState()));
 
     if (!allCandidatesHaveSameLastCompactionState) {
-      log.info("Candidates[%s] were compacted with different partitions spec. Needs compaction.", candidates.segments);
+      log.info(
+          "[%s] Candidate segments were compacted with different partitions spec. Needs compaction.",
+          candidates.segments.size()
+      );
+      log.debugSegments(
+          candidates.segments,
+          "Candidate segments compacted with different partiton spec"
+      );
+
       return true;
     }
 
@@ -275,7 +284,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     if (!(segmentPartitionsSpec instanceof DynamicPartitionsSpec)) {
       log.info(
           "Candidate segment[%s] was compacted with a non dynamic partitions spec. Needs compaction.",
-          candidates.segments.get(0)
+          candidates.segments.get(0).getId()
       );
       return true;
     }
@@ -535,11 +544,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return segments.isEmpty();
     }
 
-    private int getNumSegments()
-    {
-      return segments.size();
-    }
-
     private long getTotalSize()
     {
       return totalSize;
@@ -549,7 +553,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     public String toString()
     {
       return "SegmentsToCompact{" +
-             "segments=" + segments +
+             "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
              ", totalSize=" + totalSize +
              '}';
     }
