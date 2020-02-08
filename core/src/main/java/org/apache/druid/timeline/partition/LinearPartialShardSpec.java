@@ -23,21 +23,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
-public class LinearShardSpecFactory implements ShardSpecFactory
+public class LinearPartialShardSpec implements PartialShardSpec
 {
-  private static final LinearShardSpecFactory INSTANCE = new LinearShardSpecFactory();
+  private static final LinearPartialShardSpec INSTANCE = new LinearPartialShardSpec();
 
-  public static LinearShardSpecFactory instance()
+  public static LinearPartialShardSpec instance()
   {
     return INSTANCE;
   }
 
-  private LinearShardSpecFactory()
+  private LinearPartialShardSpec()
   {
   }
 
   @Override
-  public ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
     return new LinearShardSpec(
         specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getPartitionNum() + 1
@@ -45,7 +45,7 @@ public class LinearShardSpecFactory implements ShardSpecFactory
   }
 
   @Override
-  public ShardSpec create(ObjectMapper objectMapper, int partitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
     return new LinearShardSpec(partitionId);
   }

@@ -31,7 +31,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -144,7 +144,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String sequenceName,
       String previousSegmentId,
       Interval interval,
-      ShardSpecFactory shardSpecFactory,
+      PartialShardSpec partialShardSpec,
       String maxVersion,
       boolean skipSegmentLineageCheck
   )
@@ -153,7 +153,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         dataSource,
         interval,
         maxVersion,
-        shardSpecFactory.create(objectMapper, 0)
+        partialShardSpec.complete(objectMapper, 0)
     );
   }
 

@@ -96,7 +96,7 @@ public class InputSourceProcessor
       InputSource inputSource,
       @Nullable InputFormat inputFormat,
       File tmpDir,
-      IndexTaskSegmentAllocator segmentAllocator
+      SequenceNameFunction sequenceNameFunction
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     @Nullable
@@ -140,7 +140,7 @@ public class InputSourceProcessor
           @SuppressWarnings("OptionalGetWithoutIsPresent")
           final Interval interval = optInterval.get();
 
-          final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
+          final String sequenceName = sequenceNameFunction.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {

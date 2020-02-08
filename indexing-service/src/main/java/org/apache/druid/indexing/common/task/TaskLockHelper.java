@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.SegmentLockReleaseAction;
@@ -46,12 +47,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * This class provides some methods to use the segment lock easier and caches the information of locked segments.
+ * This class provides 3 functionalities.
+ * - {@link #verifyAndLockExistingSegments} is to verify the granularity of existing segments and lock them.
+ *   This method must be called before the task starts indexing.
+ * - Tells the task what {@link LockGranularity} it should use. Note that the LockGranularity is determined in
+ *   {@link AbstractBatchIndexTask#determineLockGranularityandTryLock}.
+ * - Provides some util methods for {@link LockGranularity#SEGMENT}. Also caches the information of locked segments when
+ *   - the SEGMENt lock granularity is used.
  */
-public class SegmentLockHelper
+public class TaskLockHelper
 {
   private final Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions = new HashMap<>();
   private final Set<DataSegment> lockedExistingSegments = new HashSet<>();
+  private final boolean useSegmentLock;
+
   @Nullable
   private Granularity knownSegmentGranularity;
 
@@ -82,6 +91,21 @@ public class SegmentLockHelper
     {
       return (short) (maxMinorVersion + 1);
     }
+  }
+
+  public TaskLockHelper(boolean useSegmentLock)
+  {
+    this.useSegmentLock = useSegmentLock;
+  }
+
+  public boolean isUseSegmentLock()
+  {
+    return useSegmentLock;
+  }
+
+  public LockGranularity getLockGranularityToUse()
+  {
+    return useSegmentLock ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK;
   }
 
   public boolean hasLockedExistingSegments()

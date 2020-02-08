@@ -40,7 +40,7 @@ import org.apache.druid.indexing.common.task.Task;
     @JsonSubTypes.Type(name = "segmentListUnused", value = RetrieveUnusedSegmentsAction.class),
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
-    @JsonSubTypes.Type(name = "segmentAllocate", value = SegmentAllocateAction.class),
+    @JsonSubTypes.Type(name = SegmentAllocateAction.TYPE, value = SegmentAllocateAction.class),
     @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "checkPointDataSourceMetadata", value = CheckPointDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "surrogateAction", value = SurrogateAction.class)

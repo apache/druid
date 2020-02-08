@@ -17,9 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel.distribution;
+package org.apache.druid.timeline.partition;
 
-import org.apache.druid.segment.TestHelper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,8 +76,23 @@ public class PartitionBoundariesTest
   }
 
   @Test
-  public void serializesDeserializes()
+  public void serializesDeserializes() throws JsonProcessingException
   {
-    TestHelper.testSerializesDeserializes(TestHelper.JSON_MAPPER, target);
+    final ObjectMapper objectMapper = new ObjectMapper();
+    String serialized = objectMapper.writeValueAsString(target);
+    Object deserialized = objectMapper.readValue(serialized, target.getClass());
+    Assert.assertEquals(serialized, objectMapper.writeValueAsString(deserialized));
+  }
+
+  @Test
+  public void testGetNumBucketsOfNonEmptyPartitionBoundariesReturningCorrectSize()
+  {
+    Assert.assertEquals(2, target.getNumBuckets());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(PartitionBoundaries.class).withNonnullFields("delegate").usingGetClass().verify();
   }
 }
