@@ -30,81 +30,24 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.lookup.LookupExtractor;
-import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
-import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.util.Collections;
 
-public class HashJoinSegmentStorageAdapterTest
+public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorageAdapterTest
 {
-  private static final String FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX = "c1.";
-  private static final String FACT_TO_COUNTRY_ON_NUMBER_PREFIX = "c2.";
-  private static final String FACT_TO_REGION_PREFIX = "r1.";
-  private static final String REGION_TO_COUNTRY_PREFIX = "rtc.";
-  private static Long NULL_COUNTRY;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  public QueryableIndexSegment factSegment;
-  public LookupExtractor countryIsoCodeToNameLookup;
-  public LookupExtractor countryNumberToNameLookup;
-  public IndexedTable countriesTable;
-  public IndexedTable regionsTable;
-
-  @BeforeClass
-  public static void setUpStatic()
-  {
-    NullHandling.initializeForTests();
-    NULL_COUNTRY = NullHandling.sqlCompatible() ? null : 0L;
-  }
-
-  @Before
-  public void setUp() throws IOException
-  {
-    factSegment = new QueryableIndexSegment(
-        JoinTestHelper.createFactIndexBuilder(temporaryFolder.newFolder()).buildMMappedIndex(),
-        SegmentId.dummy("facts")
-    );
-    countryIsoCodeToNameLookup = JoinTestHelper.createCountryIsoCodeToNameLookup();
-    countryNumberToNameLookup = JoinTestHelper.createCountryNumberToNameLookup();
-    countriesTable = JoinTestHelper.createCountriesIndexedTable();
-    regionsTable = JoinTestHelper.createRegionsIndexedTable();
-  }
-
-  @After
-  public void tearDown()
-  {
-    if (factSegment != null) {
-      factSegment.close();
-    }
-  }
-
   @Test
   public void test_getInterval_factToCountry()
   {
     Assert.assertEquals(
-        Intervals.of("2015-09-12/2015-09-12T02:33:40.060Z"),
+        Intervals.of("2015-09-12/2015-09-12T04:43:40.060Z"),
         makeFactToCountrySegment().getInterval()
     );
   }
@@ -145,7 +88,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getDimensionCardinality_factToCountryFactColumn()
   {
     Assert.assertEquals(
-        15,
+        17,
         makeFactToCountrySegment().getDimensionCardinality("countryIsoCode")
     );
   }
@@ -154,7 +97,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getDimensionCardinality_factToCountryJoinColumn()
   {
     Assert.assertEquals(
-        15,
+        17,
         makeFactToCountrySegment().getDimensionCardinality(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
     );
   }
@@ -190,7 +133,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getMaxTime_factToCountry()
   {
     Assert.assertEquals(
-        DateTimes.of("2015-09-12T02:33:40.059Z"),
+        DateTimes.of("2015-09-12T04:43:40.059Z"),
         makeFactToCountrySegment().getMaxTime()
     );
   }
@@ -325,7 +268,7 @@ public class HashJoinSegmentStorageAdapterTest
   public void test_getMaxIngestedEventTime_factToCountry()
   {
     Assert.assertEquals(
-        DateTimes.of("2015-09-12T02:33:40.059Z"),
+        DateTimes.of("2015-09-12T04:43:40.059Z"),
         makeFactToCountrySegment().getMaxIngestedEventTime()
     );
   }
@@ -396,7 +339,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador", 12L},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NULL_COUNTRY}
         )
     );
   }
@@ -444,7 +389,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador", 12L},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         )
     );
   }
@@ -491,7 +437,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador"},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway"},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador"},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States"}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States"},
+            new Object[]{"Cream Soda", "SU", "SU", "States United"}
         )
     );
   }
@@ -532,7 +479,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "US", "United States", 13L},
             new Object[]{"Giusy Ferreri discography", "IT", "IT", "Italy", 7L},
             new Object[]{"Roma-Bangkok", "IT", "IT", "Italy", 7L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         ) :
         ImmutableList.of(
             new Object[]{"Talk:Oswald Tilghman", null, "AU", "Australia", 0L},
@@ -545,7 +493,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "US", "United States", 13L},
             new Object[]{"Giusy Ferreri discography", "IT", "IT", "Italy", 7L},
             new Object[]{"Roma-Bangkok", "IT", "IT", "Italy", 7L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         )
     );
   }
@@ -584,7 +533,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "United States"},
             new Object[]{"Giusy Ferreri discography", "IT", "Italy"},
             new Object[]{"Roma-Bangkok", "IT", "Italy"},
-            new Object[]{"Old Anatolian Turkish", "US", "United States"}
+            new Object[]{"Old Anatolian Turkish", "US", "United States"},
+            new Object[]{"Cream Soda", "SU", "States United"}
         ) :
         ImmutableList.of(
             new Object[]{"Talk:Oswald Tilghman", null, "Australia"},
@@ -597,7 +547,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Carlo Curti", "US", "United States"},
             new Object[]{"Giusy Ferreri discography", "IT", "Italy"},
             new Object[]{"Roma-Bangkok", "IT", "Italy"},
-            new Object[]{"Old Anatolian Turkish", "US", "United States"}
+            new Object[]{"Old Anatolian Turkish", "US", "United States"},
+            new Object[]{"Cream Soda", "SU", "States United"}
         )
     );
   }
@@ -654,7 +605,8 @@ public class HashJoinSegmentStorageAdapterTest
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
         ),
         ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L}
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
         )
     );
   }
@@ -683,7 +635,8 @@ public class HashJoinSegmentStorageAdapterTest
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
         ),
         ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L}
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
+            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
         )
     );
   }
@@ -846,7 +799,8 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "SV", "SV", "El Salvador", 12L},
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
-            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L}
+            new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
         )
     );
   }
@@ -900,7 +854,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Wendigo", "Departamento de San Salvador", "El Salvador"},
             new Object[]{"Алиса в Зазеркалье", "Finnmark Fylke", "Norway"},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "Provincia del Guayas", "Ecuador"},
-            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
+            new Object[]{"Cream Soda", "Ainigriv", "States United"},
+            new Object[]{"Orange Soda", null, null}
         )
     );
   }
@@ -950,7 +906,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Diskussion:Sebastian Schulz", "Norway"},
             new Object[]{"Diskussion:Sebastian Schulz", "El Salvador"},
             new Object[]{"Diskussion:Sebastian Schulz", "United States"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"}
+            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
+            new Object[]{"Diskussion:Sebastian Schulz", "States United"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Usca"}
         )
     );
   }
@@ -1036,7 +994,9 @@ public class HashJoinSegmentStorageAdapterTest
             new Object[]{"Diskussion:Sebastian Schulz", "Norway"},
             new Object[]{"Diskussion:Sebastian Schulz", "El Salvador"},
             new Object[]{"Diskussion:Sebastian Schulz", "United States"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"}
+            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
+            new Object[]{"Diskussion:Sebastian Schulz", "States United"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Usca"}
         )
     );
   }
@@ -1285,106 +1245,6 @@ public class HashJoinSegmentStorageAdapterTest
             null
         ),
         ImmutableList.of()
-    );
-  }
-
-  private JoinableClause factToCountryNameUsingIsoCodeLookup(final JoinType joinType)
-  {
-    return new JoinableClause(
-        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-        LookupJoinable.wrap(countryIsoCodeToNameLookup),
-        joinType,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("\"%sk\" == countryIsoCode", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
-            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
-  }
-
-  private JoinableClause factToCountryNameUsingNumberLookup(final JoinType joinType)
-  {
-    return new JoinableClause(
-        FACT_TO_COUNTRY_ON_NUMBER_PREFIX,
-        LookupJoinable.wrap(countryNumberToNameLookup),
-        joinType,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("\"%sk\" == countryNumber", FACT_TO_COUNTRY_ON_NUMBER_PREFIX),
-            FACT_TO_COUNTRY_ON_NUMBER_PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
-  }
-
-  private JoinableClause factToCountryOnIsoCode(final JoinType joinType)
-  {
-    return new JoinableClause(
-        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-        new IndexedTableJoinable(countriesTable),
-        joinType,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("\"%scountryIsoCode\" == countryIsoCode", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
-            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
-  }
-
-  private JoinableClause factToCountryOnNumber(final JoinType joinType)
-  {
-    return new JoinableClause(
-        FACT_TO_COUNTRY_ON_NUMBER_PREFIX,
-        new IndexedTableJoinable(countriesTable),
-        joinType,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format("\"%scountryNumber\" == countryNumber", FACT_TO_COUNTRY_ON_NUMBER_PREFIX),
-            FACT_TO_COUNTRY_ON_NUMBER_PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
-  }
-
-  private JoinableClause factToRegion(final JoinType joinType)
-  {
-    return new JoinableClause(
-        FACT_TO_REGION_PREFIX,
-        new IndexedTableJoinable(regionsTable),
-        joinType,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format(
-                "\"%sregionIsoCode\" == regionIsoCode && \"%scountryIsoCode\" == countryIsoCode",
-                FACT_TO_REGION_PREFIX,
-                FACT_TO_REGION_PREFIX
-            ),
-            FACT_TO_REGION_PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
-  }
-
-  private JoinableClause regionToCountry(final JoinType joinType)
-  {
-    return new JoinableClause(
-        REGION_TO_COUNTRY_PREFIX,
-        new IndexedTableJoinable(countriesTable),
-        joinType,
-        JoinConditionAnalysis.forExpression(
-            StringUtils.format(
-                "\"%scountryIsoCode\" == \"%scountryIsoCode\"",
-                FACT_TO_REGION_PREFIX,
-                REGION_TO_COUNTRY_PREFIX
-            ),
-            REGION_TO_COUNTRY_PREFIX,
-            ExprMacroTable.nil()
-        )
-    );
-  }
-
-  private HashJoinSegmentStorageAdapter makeFactToCountrySegment()
-  {
-    return new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
     );
   }
 }
