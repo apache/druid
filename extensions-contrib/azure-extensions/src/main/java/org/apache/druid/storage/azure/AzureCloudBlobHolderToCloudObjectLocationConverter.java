@@ -20,6 +20,7 @@
 package org.apache.druid.storage.azure;
 
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.RE;
 
 /**
  * Converts a {@link CloudBlobHolder} object to a {@link CloudObjectLocation} object
@@ -34,7 +35,7 @@ public class AzureCloudBlobHolderToCloudObjectLocationConverter
       return new CloudObjectLocation(cloudBlob.getContainerName(), cloudBlob.getName());
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new RE(e);
     }
   }
 }

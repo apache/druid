@@ -20,9 +20,11 @@
 package org.apache.druid.data.input.azure;
 
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
@@ -89,7 +91,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void test_Constructor_emptyUrisEmptyPrefixesEmptyObjects_throwsIllegalArgumentException()
+  public void test_constructor_emptyUrisEmptyPrefixesEmptyObjects_throwsIllegalArgumentException()
   {
     replayAll();
     azureInputSource = new AzureInputSource(
@@ -197,6 +199,19 @@ public class AzureInputSourceTest extends EasyMockSupport
 
     String actualToString = azureInputSource.toString();
     Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[]}", actualToString);
+  }
+
+  @Test
+  public void abidesEqualsContract()
+  {
+    EqualsVerifier.forClass(AzureInputSource.class)
+                  .usingGetClass()
+                  .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+                  .withNonnullFields("storage")
+                  .withNonnullFields("entityFactory")
+                  .withNonnullFields("azureCloudBlobIterableFactory")
+                  .withNonnullFields("azureCloudBlobToLocationConverter")
+                  .verify();
   }
 
   @After

@@ -22,6 +22,7 @@ package org.apache.druid.data.input.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
@@ -36,6 +37,7 @@ import org.apache.druid.storage.azure.CloudBlobHolder;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -45,6 +47,7 @@ import java.util.stream.StreamSupport;
  */
 public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
 {
+  @VisibleForTesting
   static final int MAX_LISTING_LENGTH = 1024;
   public static final String SCHEME = "azure";
 
@@ -115,5 +118,36 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
   private Iterable<CloudBlobHolder> getIterableObjectsFromPrefixes()
   {
     return azureCloudBlobIterableFactory.create(getPrefixes(), MAX_LISTING_LENGTH);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        azureCloudBlobToLocationConverter
+    );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    AzureInputSource that = (AzureInputSource) o;
+    return storage.equals(that.storage) &&
+           entityFactory.equals(that.entityFactory) &&
+           azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
+           azureCloudBlobToLocationConverter.equals(that.azureCloudBlobToLocationConverter);
   }
 }

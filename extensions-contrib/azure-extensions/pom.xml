@@ -150,6 +150,11 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -170,32 +175,32 @@
                                 <limit>
                                     <counter>INSTRUCTION</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.80</minimum>
+                                    <minimum>0.84</minimum>
                                 </limit>
                                 <limit>
                                     <counter>LINE</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.81</minimum>
+                                    <minimum>0.84</minimum>
                                 </limit>
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.82</minimum>
+                                    <minimum>0.86</minimum>
                                 </limit>
                                 <limit>
                                     <counter>COMPLEXITY</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.75</minimum>
+                                    <minimum>0.80</minimum>
                                 </limit>
                                 <limit>
                                     <counter>METHOD</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.74</minimum>
+                                    <minimum>0.79</minimum>
                                 </limit>
                                 <limit>
                                     <counter>CLASS</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.85</minimum>
+                                    <minimum>0.90</minimum>
                                 </limit>
                             </limits>
                         </rule>

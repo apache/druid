@@ -86,6 +86,21 @@ public class AzureEntityTest extends EasyMockSupport
   }
 
   @Test
+  public void test_readFromStart_returnsExpectedStream() throws Exception
+  {
+    EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
+    EasyMock.expect(location.getPath()).andReturn(BLOB_NAME);
+    EasyMock.expect(byteSource.openStream(0)).andReturn(INPUT_STREAM);
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+    replayAll();
+
+    azureEntity = new AzureEntity(location, byteSourceFactory);
+
+    InputStream actualInputStream = azureEntity.readFrom(0);
+    Assert.assertSame(INPUT_STREAM, actualInputStream);
+  }
+
+  @Test
   public void test_readFrom_returnsExpectedStream() throws Exception
   {
     EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
