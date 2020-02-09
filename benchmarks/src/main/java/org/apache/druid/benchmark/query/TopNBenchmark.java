@@ -350,7 +350,7 @@ public class TopNBenchmark
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
+      SegmentId segmentId = SegmentId.dummy("qIndex " + i);
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           segmentId,

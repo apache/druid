@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -280,7 +281,7 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
         LOGGER.info("using default whiteList map located at [%s]", actualPath);
         fileContent = Resources.toString(resource, Charset.defaultCharset());
       } else {
-        fileContent = Files.asCharSource(new File(mapPath), Charset.forName("UTF-8")).read();
+        fileContent = Files.asCharSource(new File(mapPath), StandardCharsets.UTF_8).read();
       }
       return mapper.readerFor(new TypeReference<ImmutableSortedMap<String, ImmutableSet<String>>>()
       {

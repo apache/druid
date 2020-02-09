@@ -2069,9 +2069,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       try {
         boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
-        if (success) {
-
-        } else {
+        if (!success) {
           log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
         }
       }

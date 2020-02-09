@@ -315,7 +315,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           // create a dummy worker and try to simulate assigning task to it.
           workerRunningTask = createDummyWorker(
               SCHEME,
-              "dummy" + need,
+              "dummy " + need,
               capacity,
               workerTaskRunnerConfig.getMinWorkerVersion()
           );

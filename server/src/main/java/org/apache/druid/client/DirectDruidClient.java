@@ -521,7 +521,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     return retVal;
   }
 
-  private <T> void cancelQuery(Query<T> query, String cancelUrl)
+  private void cancelQuery(Query<T> query, String cancelUrl)
   {
     Runnable cancelRunnable = () -> {
       try {

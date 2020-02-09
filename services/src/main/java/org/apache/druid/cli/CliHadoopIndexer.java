@@ -84,8 +84,8 @@ public class CliHadoopIndexer implements Runnable
         extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
       }
 
-      final List<URL> nonHadoopURLs = new ArrayList<>();
-      nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
+      final List<URL> nonHadoopURLs = new ArrayList<>(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader())
+                                                                        .getURLs()));
 
       final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
