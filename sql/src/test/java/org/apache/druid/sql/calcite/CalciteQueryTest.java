@@ -7730,7 +7730,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           + "AND EXTRACT(ISODOW FROM __time) = 6\n"
           + "AND EXTRACT(ISOYEAR FROM __time) = 2000\n"
           + "AND EXTRACT(DECADE FROM __time) = 200\n"
-          + "AND EXTRACT(CENTURY FROM __time) = 21\n"
+          + "AND EXTRACT(CENTURY FROM __time) = 20\n"
           + "AND EXTRACT(MILLENNIUM FROM __time) = 2\n",
 
         TIMESERIES_CONTEXT_DEFAULT,
@@ -7758,7 +7758,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               selector("v3", "6", null),
               selector("v4", "2000", null),
               selector("v5", "200", null),
-              selector("v6", "21", null),
+              selector("v6", "20", null),
               selector("v7", "2", null)
             )
           )
