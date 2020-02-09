@@ -108,8 +108,8 @@ public class TiersResource
             Map<IntervalProperties, Object> properties = tierToStatsPerInterval
                 .computeIfAbsent(dataSegment.getDataSource(), dsName -> new HashMap<>())
                 .computeIfAbsent(dataSegment.getInterval(), interval -> new EnumMap<>(IntervalProperties.class));
-            properties.merge(IntervalProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
-            properties.merge(IntervalProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
+            properties.merge(IntervalProperties.size, dataSegment.getSize(), (a, b) -> a + b);
+            properties.merge(IntervalProperties.count, 1, (a, b) -> a + b);
           }
         }
       }

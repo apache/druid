@@ -67,7 +67,7 @@ public class FloatMaxAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return (double) max;
+    return max;
   }
 
   @Override

@@ -50,7 +50,7 @@ public interface Aggregator extends Closeable
    */
   default double getDouble()
   {
-    return (double) getFloat();
+    return getFloat();
   }
 
   /**

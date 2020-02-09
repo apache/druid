@@ -357,7 +357,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
-                                          new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
+                                          new LookupNodeService(getContextValue(CTX_KEY_LOOKUP_TIER));
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
         NodeRole.PEON,

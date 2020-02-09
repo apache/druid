@@ -80,7 +80,7 @@ public class FloatSumAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return (double) sum;
+    return sum;
   }
 
   @Override

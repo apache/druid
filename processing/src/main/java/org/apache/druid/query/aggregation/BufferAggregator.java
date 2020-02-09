@@ -148,7 +148,7 @@ public interface BufferAggregator extends HotLoopCallee
    */
   default double getDouble(ByteBuffer buf, int position)
   {
-    return (double) getFloat(buf, position);
+    return getFloat(buf, position);
   }
 
   /**

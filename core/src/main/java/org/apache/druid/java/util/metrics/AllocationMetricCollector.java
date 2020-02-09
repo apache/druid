@@ -61,7 +61,7 @@ class AllocationMetricCollector
     try {
       long[] allThreadIds = threadMXBean.getAllThreadIds();
       // the call time depends on number of threads, for 500 threads the estimated time is 4 ms
-      long[] bytes = (long[]) getThreadAllocatedBytes.invoke(threadMXBean, (Object) allThreadIds);
+      long[] bytes = (long[]) getThreadAllocatedBytes.invoke(threadMXBean, allThreadIds);
       long sum = 0;
       Long2LongMap newResults = new Long2LongOpenHashMap();
       newResults.defaultReturnValue(NO_DATA);

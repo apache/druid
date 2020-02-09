@@ -236,7 +236,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     {
       boolean nodeViewInitialized;
       try {
-        nodeViewInitialized = cacheInitialized.await((long) 30, TimeUnit.SECONDS);
+        nodeViewInitialized = cacheInitialized.await(30, TimeUnit.SECONDS);
       }
       catch (InterruptedException ex) {
         Thread.currentThread().interrupt();

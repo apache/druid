@@ -439,8 +439,8 @@ public class DataSourcesResource
         if (intervalFilter.test(dataSegment.getInterval())) {
           Map<SimpleProperties, Object> properties =
               statsPerInterval.computeIfAbsent(dataSegment.getInterval(), i -> new EnumMap<>(SimpleProperties.class));
-          properties.merge(SimpleProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
-          properties.merge(SimpleProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
+          properties.merge(SimpleProperties.size, dataSegment.getSize(), (a, b) -> a + b);
+          properties.merge(SimpleProperties.count, 1, (a, b) -> a + b);
         }
       }
 

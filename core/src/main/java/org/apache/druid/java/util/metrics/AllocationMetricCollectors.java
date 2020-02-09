@@ -39,7 +39,7 @@ class AllocationMetricCollectors
       threadMXBean = ManagementFactory.getThreadMXBean();
       getThreadAllocatedBytes = threadMXBean.getClass().getMethod("getThreadAllocatedBytes", long[].class);
       getThreadAllocatedBytes.setAccessible(true);
-      getThreadAllocatedBytes.invoke(threadMXBean, (Object) threadMXBean.getAllThreadIds());
+      getThreadAllocatedBytes.invoke(threadMXBean, threadMXBean.getAllThreadIds());
       initialized = true;
     }
     catch (Exception e) {

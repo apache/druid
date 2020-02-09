@@ -74,7 +74,7 @@ public class FloatAnyAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return (double) foundValue;
+    return foundValue;
   }
 
   @Override

@@ -198,7 +198,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
+            SerializablePair<Long, Double> pair = selector.getObject();
             long firstTime = buf.getLong(position);
             if (pair.lhs < firstTime) {
               if (pair.rhs != null) {

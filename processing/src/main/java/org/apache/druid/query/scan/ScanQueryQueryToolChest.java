@@ -185,7 +185,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         result -> {
           // Generics? Where we're going, we don't need generics.
           final List rows = (List) result.getEvents();
-          final Iterable arrays = Iterables.transform(rows, (Function) mapper);
+          final Iterable arrays = Iterables.transform(rows, mapper);
           return Sequences.simple(arrays);
         }
     );

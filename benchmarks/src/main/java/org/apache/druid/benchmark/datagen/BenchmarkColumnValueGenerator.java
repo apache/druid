@@ -184,7 +184,7 @@ public class BenchmarkColumnValueGenerator
           cardinality = schema.getEndInt() - startInt;
           ZipfDistribution zipf = new ZipfDistribution(cardinality, schema.getZipfExponent());
           for (int i = 0; i < cardinality; i++) {
-            probabilities.add(new Pair<>((Object) (i + startInt), zipf.probability(i)));
+            probabilities.add(new Pair<>(i + startInt, zipf.probability(i)));
           }
         } else {
           cardinality = enumeratedValues.size();

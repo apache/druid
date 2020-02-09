@@ -47,7 +47,7 @@ public class HadoopyStringInputRowParser implements InputRowParser<Object>
   public List<InputRow> parseBatch(Object input)
   {
     if (input instanceof Text) {
-      return ImmutableList.of(parser.parse(((Text) input).toString()));
+      return ImmutableList.of(parser.parse(input.toString()));
     } else if (input instanceof BytesWritable) {
       BytesWritable valueBytes = (BytesWritable) input;
       return parser.parseBatch(ByteBuffer.wrap(valueBytes.getBytes(), 0, valueBytes.getLength()));

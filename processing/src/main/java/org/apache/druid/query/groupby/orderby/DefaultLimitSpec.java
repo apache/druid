@@ -297,7 +297,7 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     //noinspection unchecked
-    return ordering != null ? ordering : (Ordering) Ordering.allEqual();
+    return ordering != null ? ordering : Ordering.allEqual();
   }
 
   private <T> Ordering<ResultRow> metricOrdering(final int column, final Comparator<T> comparator)

@@ -70,12 +70,12 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return (long) mutableBitmap.size();
+    return mutableBitmap.size();
   }
 
   @Override
   public double getDouble()
   {
-    return (double) mutableBitmap.size();
+    return mutableBitmap.size();
   }
 }

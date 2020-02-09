@@ -532,9 +532,10 @@ public class BoundDimFilter implements DimFilter
             hasUpperFloatBound,
             lowerStrict,
             upperStrict,
-            (double) lowerFloatBound,
-            (double) upperFloatBound);
-        return druidDoublePredicate.applyDouble((double) input);
+            lowerFloatBound,
+            upperFloatBound
+        );
+        return druidDoublePredicate.applyDouble(input);
       };
     }
   }

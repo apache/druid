@@ -151,6 +151,7 @@
     <inspection_tool class="OverwrittenKey" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PointlessIndexOfComparison" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PrimitiveArrayArgumentToVariableArgMethod" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="RedundantCast" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantStringOperation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantThrows" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantTypeArguments" enabled="true" level="ERROR" enabled_by_default="true" />

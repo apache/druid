@@ -105,7 +105,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       theComparator = aggregators.get(fieldName).getComparator();
     } else {
       //noinspection unchecked
-      theComparator = (Comparator) Comparators.naturalNullsFirst();
+      theComparator = Comparators.naturalNullsFirst();
     }
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {

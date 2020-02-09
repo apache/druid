@@ -136,7 +136,7 @@ public class FloatCompressionBenchmarkFileGenerator
       dataFile.delete();
       try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
         for (int i = 0; i < ROW_NUM; i++) {
-          writer.write((Float) entry.getValue().generateRowValue() + "\n");
+          writer.write(entry.getValue().generateRowValue() + "\n");
         }
       }
     }

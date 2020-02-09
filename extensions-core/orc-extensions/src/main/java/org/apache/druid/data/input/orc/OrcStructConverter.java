@@ -33,7 +33,6 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.mapred.OrcList;
@@ -115,7 +114,7 @@ class OrcStructConverter
       case STRING:
       case CHAR:
       case VARCHAR:
-        return ((Text) field).toString();
+        return field.toString();
       case BOOLEAN:
         return ((BooleanWritable) field).get();
       case BYTE:

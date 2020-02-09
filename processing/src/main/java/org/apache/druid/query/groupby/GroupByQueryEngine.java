@@ -257,7 +257,7 @@ public class GroupByQueryEngine
         int max
     )
     {
-      this.nextVal = (long) start;
+      this.nextVal = start;
       this.increments = increments;
 
       int theIncrement = 0;

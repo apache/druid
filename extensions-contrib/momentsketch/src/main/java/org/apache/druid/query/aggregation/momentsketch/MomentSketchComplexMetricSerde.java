@@ -57,7 +57,7 @@ public class MomentSketchComplexMetricSerde extends ComplexMetricSerde
       @Override
       public Object extractValue(final InputRow inputRow, final String metricName)
       {
-        return (MomentSketchWrapper) inputRow.getRaw(metricName);
+        return inputRow.getRaw(metricName);
       }
     };
   }

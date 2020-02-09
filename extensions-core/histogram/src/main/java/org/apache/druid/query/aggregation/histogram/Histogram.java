@@ -32,7 +32,7 @@ public class Histogram
   {
     double[] retVal = new double[breaks.length];
     for (int i = 0; i < breaks.length; ++i) {
-      retVal[i] = (double) breaks[i];
+      retVal[i] = breaks[i];
     }
 
     this.breaks = retVal;

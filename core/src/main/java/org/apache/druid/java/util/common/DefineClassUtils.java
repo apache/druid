@@ -145,7 +145,7 @@ public class DefineClassUtils
     // set offset argument to 0, modifying the methodHandle as follows:
     // defineClass = (String className, byte[] byteCode, int length, Class targetClass) ->
     //   defineClass(className, byteCode, 0, length, targetClass)
-    defineClass = MethodHandles.insertArguments(defineClass, 2, (int) 0);
+    defineClass = MethodHandles.insertArguments(defineClass, 2, 0);
 
     // JDK8 does not implement MethodHandles.arrayLength so we have to roll our own
     MethodHandle arrayLength = lookup.findStatic(

@@ -79,7 +79,7 @@ public abstract class BaseFloatVectorValueSelector implements VectorValueSelecto
 
     final float[] floatVector = getFloatVector();
     for (int i = 0; i < getCurrentVectorSize(); i++) {
-      doubleVector[i] = (double) floatVector[i];
+      doubleVector[i] = floatVector[i];
     }
 
     doubleId = offset.getId();

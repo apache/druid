@@ -82,7 +82,7 @@ public class FloatAnyBufferAggregator implements BufferAggregator
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getFloat(position + Byte.BYTES);
+    return buf.getFloat(position + Byte.BYTES);
   }
 
   @Override

@@ -67,7 +67,7 @@ public class FloatMinAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return (double) min;
+    return min;
   }
 
   @Override

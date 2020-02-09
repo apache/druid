@@ -66,7 +66,7 @@ public final class NoopDistinctCountBufferAggregator implements BufferAggregator
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) 0;
+    return 0;
   }
 
   @Override

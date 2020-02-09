@@ -64,7 +64,7 @@ public abstract class SimpleFloatBufferAggregator implements BufferAggregator
   @Override
   public double getDouble(ByteBuffer buffer, int position)
   {
-    return (double) buffer.getFloat(position);
+    return buffer.getFloat(position);
   }
 
   @Override
