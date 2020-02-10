@@ -80,6 +80,7 @@ public class JankyServersTest
                   InputStream in = clientSocket.getInputStream()
               ) {
                 while (in.read() != -1) {
+                  /* Do nothing. Read bytes till the end of the stream. */
                 }
               }
               catch (Exception e) {

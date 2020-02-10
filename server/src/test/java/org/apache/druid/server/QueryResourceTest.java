@@ -69,6 +69,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -178,7 +179,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -210,7 +211,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -245,7 +246,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -284,7 +285,7 @@ public class QueryResourceTest
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         smileRequest
     );
@@ -300,7 +301,7 @@ public class QueryResourceTest
   {
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes("UTF-8")),
+        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -370,7 +371,7 @@ public class QueryResourceTest
 
     try {
       queryResource.doPost(
-          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
           null /*pretty*/,
           testServletRequest
       );
@@ -380,7 +381,7 @@ public class QueryResourceTest
     }
 
     Response response = queryResource.doPost(
-        new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes("UTF-8")),
+        new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -496,7 +497,7 @@ public class QueryResourceTest
           {
             try {
               Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes("UTF-8")),
+                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
                   null,
                   testServletRequest
               );
@@ -619,7 +620,7 @@ public class QueryResourceTest
             try {
               startAwaitLatch.countDown();
               Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes("UTF-8")),
+                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
                   null,
                   testServletRequest
               );
