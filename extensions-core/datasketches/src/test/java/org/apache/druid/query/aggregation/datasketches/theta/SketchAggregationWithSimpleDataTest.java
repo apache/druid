@@ -48,7 +48,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -317,7 +317,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   {
     return Files.asCharSource(
         new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),
-        Charset.forName("UTF-8")
+        StandardCharsets.UTF_8
     ).read();
   }
 }

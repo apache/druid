@@ -40,6 +40,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.zip.GZIPOutputStream;
 
@@ -87,7 +88,7 @@ public class S3DataSegmentPullerTest
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
     final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
-    final byte[] value = bucket.getBytes("utf8");
+    final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
 
@@ -144,7 +145,7 @@ public class S3DataSegmentPullerTest
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
     final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
-    final byte[] value = bucket.getBytes("utf8");
+    final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
 
