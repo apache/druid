@@ -17,42 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.segment.join.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 
-import javax.annotation.Nullable;
-
-public class LinearShardSpecFactory implements ShardSpecFactory
+public class AllNullColumnSelectorFactory implements ColumnSelectorFactory
 {
-  private static final LinearShardSpecFactory INSTANCE = new LinearShardSpecFactory();
-
-  public static LinearShardSpecFactory instance()
+  @Override
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
-    return INSTANCE;
-  }
-
-  private LinearShardSpecFactory()
-  {
+    return DimensionSelector.constant(null);
   }
 
   @Override
-  public ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
-    return new LinearShardSpec(
-        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getPartitionNum() + 1
-    );
+    return NilColumnValueSelector.instance();
   }
 
   @Override
-  public ShardSpec create(ObjectMapper objectMapper, int partitionId)
+  public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    return new LinearShardSpec(partitionId);
-  }
-
-  @Override
-  public Class<? extends ShardSpec> getShardSpecClass()
-  {
-    return LinearShardSpec.class;
+    return null;
   }
 }

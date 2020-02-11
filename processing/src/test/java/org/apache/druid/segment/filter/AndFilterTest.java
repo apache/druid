@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -174,5 +175,11 @@ public class AndFilterTest extends BaseFilterTest
         ))),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(AndFilter.class).usingGetClass().withNonnullFields("filters").verify();
   }
 }

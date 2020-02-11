@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class NullValueHandlingConfig
 {
-  private static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
+  public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
   @JsonProperty("useDefaultValueForNull")
   private final boolean useDefaultValuesForNull;

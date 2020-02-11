@@ -22,6 +22,7 @@
 64-bit
 ACL
 APIs
+AvroStorage
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -234,6 +235,7 @@ filesystem
 firefox
 firehose
 firehoses
+fromPigAvroStorage
 frontends
 granularities
 gzip

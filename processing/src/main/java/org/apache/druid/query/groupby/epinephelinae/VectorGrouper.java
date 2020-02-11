@@ -19,13 +19,14 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.Closeable;
-import java.nio.ByteBuffer;
 
 /**
- * Like a {@link Grouper}, but vectorized. Keys are always int arrays, so there is no generic type parameter KeyType.
+ * Like a {@link Grouper}, but vectorized. Keys are always memory regions, so there is no generic type parameter
+ * KeyType.
  * <p>
  * This interface is designed such that an implementation can implement both Grouper and VectorGrouper. Of course,
  * it would generally only make sense for a particular instance to be called with one set of functionality or the
@@ -39,16 +40,15 @@ public interface VectorGrouper extends Closeable
   void initVectorized(int maxVectorSize);
 
   /**
-   * Aggregate the current vector of rows from "startVectorOffset" to "endVectorOffset" using the provided keys.
+   * Aggregate the current vector of rows from "startRow" to "endRow" using the provided keys.
    *
-   * @param keySpace array holding keys, chunked into ints. First (endVectorOffset - startVectorOffset) keys
-   *                 must be valid.
+   * @param keySpace array holding keys, chunked into ints. First (endRow - startRow) keys must be valid.
    * @param startRow row to start at (inclusive).
    * @param endRow   row to end at (exclusive).
    *
    * @return result that indicates how many keys were aggregated (may be partial due to resource limits)
    */
-  AggregateResult aggregateVector(int[] keySpace, int startRow, int endRow);
+  AggregateResult aggregateVector(Memory keySpace, int startRow, int endRow);
 
   /**
    * Reset the grouper to its initial state.
@@ -62,16 +62,14 @@ public interface VectorGrouper extends Closeable
   void close();
 
   /**
-   * Iterate through entries.
+   * Iterate through entry buckets. Each bucket's key is a {@link Memory} object in native byte order.
    * <p>
-   * Some implementations allow writes even after this method is called.  After you are done with the iterator
-   * returned by this method, you should either call {@link #close()} (if you are done with the VectorGrouper) or
-   * {@link #reset()} (if you want to reuse it).
+   * After you are done with the iterator returned by this method, you should either call {@link #close()} (if you are
+   * done with the VectorGrouper) or {@link #reset()} (if you want to reuse it).
    * <p>
-   * Callers must process and discard the returned {@link Grouper.Entry}s immediately, because the keys may
-   * be reused.
+   * Callers must process and discard the returned {@link Grouper.Entry}s immediately, because objects may be reused.
    *
    * @return entry iterator
    */
-  CloseableIterator<Grouper.Entry<ByteBuffer>> iterator();
+  CloseableIterator<Grouper.Entry<Memory>> iterator();
 }

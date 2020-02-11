@@ -603,7 +603,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
         if (serverRunner == null) {
-          log.error("Server[%s] doesn't have a query runner", server);
+          log.error("Server[%s] doesn't have a query runner", server.getName());
           return;
         }
 

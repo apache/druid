@@ -19,38 +19,43 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.annotation.Nullable;
 
 /**
- * Factory to be used to allocate segments remotely in the overlord.
+ * Class to contain all information of a {@link ShardSpec} except for the partition ID.
+ * This class is mainly used by the indexing tasks to allocate new segments using the Overlord.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpecFactory.class),
-    @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpecFactory.class),
-    @JsonSubTypes.Type(name = "numbered_overwrite", value = NumberedOverwritingShardSpecFactory.class),
+    @Type(name = "numbered", value = NumberedPartialShardSpec.class),
+    @Type(name = HashBasedNumberedPartialShardSpec.TYPE, value = HashBasedNumberedPartialShardSpec.class),
+    @Type(name = "single_dim", value = SingleDimensionPartialShardSpec.class),
+    @Type(name = "numbered_overwrite", value = NumberedOverwritePartialShardSpec.class),
 })
-public interface ShardSpecFactory
+public interface PartialShardSpec
 {
   /**
-   * Create a new shardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
-   * first call for the timeChunk where the new segment is created.
+   * Creates a new ShardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
+   * first call for the time chunk where the new segment is created.
    * Note that {@code specOfPreviousMaxPartitionId} can also be null for {@link OverwriteShardSpec} if all segments
    * in the timeChunk are first-generation segments.
    */
-  ShardSpec create(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
+  ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 
   /**
-   * Create a new shardSpec having the given partitionId.
+   * Creates a new shardSpec having the given partitionId.
    */
-  ShardSpec create(ObjectMapper objectMapper, int partitionId);
+  ShardSpec complete(ObjectMapper objectMapper, int partitionId);
 
   /**
-   * Return the class of the shardSpec created by this factory.
+   * Returns the class of the shardSpec created by this factory.
    */
+  @JsonIgnore
   Class<? extends ShardSpec> getShardSpecClass();
 }

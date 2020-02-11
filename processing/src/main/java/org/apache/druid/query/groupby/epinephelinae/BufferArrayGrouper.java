@@ -21,6 +21,8 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -29,9 +31,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
@@ -57,7 +59,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   private final int recordSize; // size of all aggregated values
 
   private boolean initialized = false;
-  private ByteBuffer usedFlagBuffer;
+  private WritableMemory usedFlagMemory;
   private ByteBuffer valBuffer;
 
   // Scratch objects used by aggregateVector(). Only set if initVectorized() is called.
@@ -127,7 +129,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       // Slice up the buffer.
       buffer.position(0);
       buffer.limit(usedFlagBufferEnd);
-      usedFlagBuffer = buffer.slice();
+      usedFlagMemory = WritableMemory.wrap(buffer.slice(), ByteOrder.nativeOrder());
 
       buffer.position(usedFlagBufferEnd);
       buffer.limit(buffer.capacity());
@@ -169,9 +171,21 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   }
 
   @Override
-  public AggregateResult aggregateVector(int[] keySpace, int startRow, int endRow)
+  public AggregateResult aggregateVector(Memory keySpace, int startRow, int endRow)
   {
-    if (keySpace.length == 0) {
+    final int numRows = endRow - startRow;
+
+    // Hoisted bounds check on keySpace.
+    if (keySpace.getCapacity() < (long) numRows * Integer.BYTES) {
+      throw new IAE("Not enough keySpace capacity for the provided start/end rows");
+    }
+
+    // We use integer indexes into the keySpace.
+    if (keySpace.getCapacity() > Integer.MAX_VALUE) {
+      throw new ISE("keySpace too large to handle");
+    }
+
+    if (keySpace.getCapacity() == 0) {
       // Empty key space, assume keys are all zeroes.
       final int dimIndex = 1;
 
@@ -184,11 +198,9 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
           endRow
       );
     } else {
-      final int numRows = endRow - startRow;
-
       for (int i = 0; i < numRows; i++) {
         // +1 matches what hashFunction() would do.
-        final int dimIndex = keySpace[i] + 1;
+        final int dimIndex = keySpace.getInt(i * Integer.BYTES) + 1;
 
         if (dimIndex < 0 || dimIndex >= cardinalityWithMissingValue) {
           throw new IAE("Invalid dimIndex[%s]", dimIndex);
@@ -214,10 +226,12 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   {
     final int index = dimIndex / Byte.SIZE;
     final int extraIndex = dimIndex % Byte.SIZE;
-    final int usedFlagByte = 1 << extraIndex;
+    final int usedFlagMask = 1 << extraIndex;
 
-    if ((usedFlagBuffer.get(index) & usedFlagByte) == 0) {
-      usedFlagBuffer.put(index, (byte) (usedFlagBuffer.get(index) | (1 << extraIndex)));
+    final byte currentByte = usedFlagMemory.getByte(index);
+
+    if ((currentByte & usedFlagMask) == 0) {
+      usedFlagMemory.putByte(index, (byte) (currentByte | usedFlagMask));
       aggregators.init(valBuffer, dimIndex * recordSize);
     }
   }
@@ -226,26 +240,16 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   {
     final int index = dimIndex / Byte.SIZE;
     final int extraIndex = dimIndex % Byte.SIZE;
-    final int usedFlagByte = 1 << extraIndex;
+    final int usedFlagMask = 1 << extraIndex;
 
-    return (usedFlagBuffer.get(index) & usedFlagByte) != 0;
+    return (usedFlagMemory.getByte(index) & usedFlagMask) != 0;
   }
 
   @Override
   public void reset()
   {
     // Clear the entire usedFlagBuffer
-    final int usedFlagBufferCapacity = usedFlagBuffer.capacity();
-
-    // putLong() instead of put() can boost the performance of clearing the buffer
-    final int n = (usedFlagBufferCapacity / Long.BYTES) * Long.BYTES;
-    for (int i = 0; i < n; i += Long.BYTES) {
-      usedFlagBuffer.putLong(i, 0L);
-    }
-
-    for (int i = n; i < usedFlagBufferCapacity; i++) {
-      usedFlagBuffer.put(i, (byte) 0);
-    }
+    usedFlagMemory.clear();
   }
 
   @Override
@@ -261,11 +265,11 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   }
 
   @Override
-  public CloseableIterator<Entry<ByteBuffer>> iterator()
+  public CloseableIterator<Entry<Memory>> iterator()
   {
     final CloseableIterator<Entry<Integer>> iterator = iterator(false);
-    final ByteBuffer keyBuffer = ByteBuffer.allocate(Integer.BYTES);
-    return new CloseableIterator<Entry<ByteBuffer>>()
+    final WritableMemory keyMemory = WritableMemory.allocate(Integer.BYTES);
+    return new CloseableIterator<Entry<Memory>>()
     {
       @Override
       public boolean hasNext()
@@ -274,11 +278,11 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       }
 
       @Override
-      public Entry<ByteBuffer> next()
+      public Entry<Memory> next()
       {
         final Entry<Integer> integerEntry = iterator.next();
-        keyBuffer.putInt(0, integerEntry.getKey());
-        return new Entry<>(keyBuffer, integerEntry.getValues());
+        keyMemory.putInt(0, integerEntry.getKey());
+        return new Entry<>(keyMemory, integerEntry.getValues());
       }
 
       @Override

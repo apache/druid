@@ -35,6 +35,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -223,13 +225,19 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       }
     }
 
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+        this,
+        filter
+    );
+    preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
+
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
     // (by splitting out pushable pieces of 'filter') or it could be done at a higher level (i.e. in the SQL planner).
     //
     // If it's done in the SQL planner, that will likely mean adding a 'baseFilter' parameter to this class that would
     // be passed in to the below baseAdapter.makeCursors call (instead of the null filter).
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        null,
+        joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
         interval,
         VirtualColumns.create(preJoinVirtualColumns),
         gran,
@@ -246,16 +254,25 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
             retVal = HashJoinEngine.makeJoinCursor(retVal, clause);
           }
 
-          return PostJoinCursor.wrap(retVal, VirtualColumns.create(postJoinVirtualColumns), filter);
+          return PostJoinCursor.wrap(
+              retVal,
+              VirtualColumns.create(postJoinVirtualColumns),
+              joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
+          );
         }
     );
+  }
+
+  public List<JoinableClause> getClauses()
+  {
+    return clauses;
   }
 
   /**
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
    */
-  private boolean isBaseColumn(final String column)
+  public boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
   }

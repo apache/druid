@@ -375,7 +375,9 @@ public abstract class IndexTaskClient implements AutoCloseable
           if (headerId != null && !headerId.equals(taskId)) {
             log.warn(
                 "Expected worker to have taskId [%s] but has taskId [%s], will retry in [%d]s",
-                taskId, headerId, TASK_MISMATCH_RETRY_DELAY_SECONDS
+                taskId,
+                headerId,
+                TASK_MISMATCH_RETRY_DELAY_SECONDS
             );
             delay = Duration.standardSeconds(TASK_MISMATCH_RETRY_DELAY_SECONDS);
           } else {
@@ -413,8 +415,11 @@ public abstract class IndexTaskClient implements AutoCloseable
         }
       }
       catch (NoTaskLocationException e) {
-        log.info("No TaskLocation available for task [%s], this task may not have been assigned to a worker yet or "
-                 + "may have already completed", taskId);
+        log.info(
+            "No TaskLocation available for task [%s], this task may not have been assigned to a worker yet "
+            + "or may have already completed",
+            taskId
+        );
         throw e;
       }
       catch (Exception e) {

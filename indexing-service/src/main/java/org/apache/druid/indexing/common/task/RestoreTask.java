@@ -92,7 +92,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
       if (restored != null) {
         restoredSegments.add(restored);
       } else {
-        log.info("Segment [%s] did not move, not updating metadata", segment);
+        log.info("Segment [%s] did not move, not updating metadata", segment.getId());
       }
     }
 

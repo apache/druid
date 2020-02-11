@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -45,7 +47,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +86,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.objectMapper = objectMapper;
     this.compactionConfigs = compactionConfigs;
     this.dataSources = dataSources;
-    this.timelineIterators = new HashMap<>(dataSources.size());
+    this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
@@ -257,7 +258,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
-      log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0));
+      log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
       return true;
     }
 
@@ -267,7 +268,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         .allMatch(segment -> lastCompactionState.equals(segment.getLastCompactionState()));
 
     if (!allCandidatesHaveSameLastCompactionState) {
-      log.info("Candidates[%s] were compacted with different partitions spec. Needs compaction.", candidates.segments);
+      log.info(
+          "[%s] Candidate segments were compacted with different partitions spec. Needs compaction.",
+          candidates.segments.size()
+      );
+      log.debugSegments(
+          candidates.segments,
+          "Candidate segments compacted with different partiton spec"
+      );
+
       return true;
     }
 
@@ -275,7 +284,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     if (!(segmentPartitionsSpec instanceof DynamicPartitionsSpec)) {
       log.info(
           "Candidate segment[%s] was compacted with a non dynamic partitions spec. Needs compaction.",
-          candidates.segments.get(0)
+          candidates.segments.get(0).getId()
       );
       return true;
     }
@@ -535,11 +544,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return segments.isEmpty();
     }
 
-    private int getNumSegments()
-    {
-      return segments.size();
-    }
-
     private long getTotalSize()
     {
       return totalSize;
@@ -549,7 +553,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     public String toString()
     {
       return "SegmentsToCompact{" +
-             "segments=" + segments +
+             "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
              ", totalSize=" + totalSize +
              '}';
     }

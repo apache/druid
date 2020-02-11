@@ -314,7 +314,7 @@ public class BrokerServerView implements TimelineServerView
     synchronized (lock) {
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        log.error("WTF?! No QueryableDruidServer found for %s", server.getName());
+        log.error("No QueryableDruidServer found for %s", server.getName());
         return null;
       }
       return queryableDruidServer.getQueryRunner();

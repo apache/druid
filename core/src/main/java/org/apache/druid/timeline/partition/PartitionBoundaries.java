@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel.distribution;
+package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.ForwardingList;
 
@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -73,5 +74,32 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
   protected List<String> delegate()
   {
     return delegate;
+  }
+
+  public int getNumBuckets()
+  {
+    return delegate.size() - 1;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    PartitionBoundaries strings = (PartitionBoundaries) o;
+    return Objects.equals(delegate, strings.delegate);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), delegate);
   }
 }
