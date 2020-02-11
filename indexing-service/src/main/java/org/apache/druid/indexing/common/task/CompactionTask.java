@@ -287,6 +287,12 @@ public class CompactionTask extends AbstractBatchIndexTask
     }
   }
 
+  @VisibleForTesting
+  public CurrentSubTaskHolder getCurrentSubTaskHolder()
+  {
+    return currentSubTaskHolder;
+  }
+
   @JsonProperty
   public CompactionIOConfig getIoConfig()
   {

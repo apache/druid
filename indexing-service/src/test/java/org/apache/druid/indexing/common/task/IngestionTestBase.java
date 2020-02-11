@@ -95,7 +95,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TaskLockbox lockbox;
 
   @Before
-  public void setUp() throws IOException
+  public void setUpIngestionTestBase() throws IOException
   {
     temporaryFolder.create();
 
@@ -119,7 +119,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   }
 
   @After
-  public void tearDown()
+  public void tearDownIngestionTestBase()
   {
     temporaryFolder.delete();
   }

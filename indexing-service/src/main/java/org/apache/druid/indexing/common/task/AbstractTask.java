@@ -76,7 +76,7 @@ public abstract class AbstractTask implements Task
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.context = context == null ? new HashMap<>() : context;
+    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
   }
 
   public static String getOrMakeId(String id, final String typeName, String dataSource)
