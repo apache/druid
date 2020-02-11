@@ -147,7 +147,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           case MILLENNIUM:
             // Years in the 1900s are in the second millennium. The third millennium started January 1, 2001.
             // See https://www.postgresql.org/docs/10/functions-datetime.html
-            return ExprEval.of(Math.round(Math.ceil((double) dateTime.year().get() / 1000)));
+            return ExprEval.of(Math.ceil((double) dateTime.year().get() / 1000));
           default:
             throw new ISE("Unhandled unit[%s]", unit);
         }
