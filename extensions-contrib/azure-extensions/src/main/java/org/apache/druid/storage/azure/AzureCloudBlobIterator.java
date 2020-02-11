@@ -49,17 +49,20 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   private ResultContinuation continuationToken;
   private CloudBlobHolder currentBlobItem;
   private Iterator<ListBlobItem> blobItemIterator;
+  private final AzureAccountConfig config;
 
   @AssistedInject
   AzureCloudBlobIterator(
       AzureStorage storage,
       ListBlobItemHolderFactory blobItemDruidFactory,
+      AzureAccountConfig config,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength
   )
   {
     this.storage = storage;
     this.blobItemDruidFactory = blobItemDruidFactory;
+    this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
     this.result = null;
@@ -109,12 +112,12 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   private void fetchNextBatch()
   {
     try {
-      result = storage.listBlobsWithPrefixInContainerSegmented(
+      result = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,
           continuationToken,
           maxListingLength
-      );
+      ), config.getMaxTries());
       continuationToken = result.getContinuationToken();
       blobItemIterator = result.getResults().iterator();
     }

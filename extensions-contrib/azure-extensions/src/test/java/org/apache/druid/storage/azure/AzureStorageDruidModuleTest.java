@@ -53,6 +53,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_CONTAINER;
   private static final String PATH = "path";
   private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
+  private static final Properties PROPERTIES;
 
   private CloudObjectLocation cloudObjectLocation1;
   private CloudObjectLocation cloudObjectLocation2;
@@ -68,6 +69,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
                                 .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8.toString()));
       AZURE_CONTAINER = "azureContainer1";
+      PROPERTIES = initializePropertes();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -86,11 +88,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getBlobClient_expectedClient()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureAccountConfig azureAccountConfig = injector.getInstance(Key.get(AzureAccountConfig.class));
 
     Assert.assertEquals(AZURE_ACCOUNT_NAME, azureAccountConfig.getAccount());
@@ -106,11 +104,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getAzureStorageContainer_expectedClient()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureAccountConfig azureAccountConfig = injector.getInstance(Key.get(AzureAccountConfig.class));
 
     Assert.assertEquals(AZURE_ACCOUNT_NAME, azureAccountConfig.getAccount());
@@ -129,11 +123,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getAzureCloudBlobToLocationConverter_expectedConverted()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter1 = injector.getInstance(
         AzureCloudBlobHolderToCloudObjectLocationConverter.class);
     AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
@@ -144,11 +134,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getAzureByteSourceFactory_canCreateAzureByteSource()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureByteSourceFactory factory = injector.getInstance(AzureByteSourceFactory.class);
     Object object1 = factory.create("container1", "blob1");
     Object object2 = factory.create("container2", "blob2");
@@ -160,18 +146,13 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getAzureEntityFactory_canCreateAzureEntity()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-
     EasyMock.expect(cloudObjectLocation1.getBucket()).andReturn(AZURE_CONTAINER);
     EasyMock.expect(cloudObjectLocation2.getBucket()).andReturn(AZURE_CONTAINER);
     EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH);
     EasyMock.expect(cloudObjectLocation2.getPath()).andReturn(PATH);
     replayAll();
 
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureEntityFactory factory = injector.getInstance(AzureEntityFactory.class);
     Object object1 = factory.create(cloudObjectLocation1);
     Object object2 = factory.create(cloudObjectLocation2);
@@ -183,11 +164,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getAzureCloudBlobIteratorFactory_canCreateAzureCloudBlobIterator()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIteratorFactory factory = injector.getInstance(AzureCloudBlobIteratorFactory.class);
     Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
     Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
@@ -199,11 +176,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getAzureCloudBlobIterableFactory_canCreateAzureCloudBlobIterable()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIterableFactory factory = injector.getInstance(AzureCloudBlobIterableFactory.class);
     AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
     AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
@@ -215,11 +188,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   @Test
   public void test_getListBlobItemDruidFactory_canCreateListBlobItemDruid()
   {
-    final Properties props = new Properties();
-    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
-    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
-    props.put("druid.azure.container", AZURE_CONTAINER);
-    injector = makeInjectorWithProperties(props);
+    injector = makeInjectorWithProperties(PROPERTIES);
     ListBlobItemHolderFactory factory = injector.getInstance(ListBlobItemHolderFactory.class);
     ListBlobItemHolder object1 = factory.create(blobItem1);
     ListBlobItemHolder object2 = factory.create(blobItem2);
@@ -245,5 +214,14 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
             },
             new AzureStorageDruidModule()
         ));
+  }
+
+  private static Properties initializePropertes()
+  {
+    final Properties props = new Properties();
+    props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
+    props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
+    props.put("druid.azure.container", AZURE_CONTAINER);
+    return props;
   }
 }
