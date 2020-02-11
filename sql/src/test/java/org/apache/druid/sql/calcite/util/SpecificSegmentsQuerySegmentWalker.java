@@ -36,6 +36,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -372,7 +373,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
           analysis.getPreJoinableClauses(),
           joinableFactory,
-          new AtomicLong()
+          new AtomicLong(),
+          QueryContexts.getEnableJoinFilterPushDown(query)
       );
 
       final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(

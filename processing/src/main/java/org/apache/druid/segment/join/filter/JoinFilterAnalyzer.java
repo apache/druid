@@ -50,11 +50,11 @@ import java.util.Set;
  * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
  * when we first read from the base table instead of after the join.
  *
- * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Filter)} method that
+ * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Filter, boolean)} method that
  * takes a filter and splits it into a portion that should be applied to the base table prior to the join, and a
  * portion that should be applied after the join.
  *
- * The first step of the filter splitting is to convert the fllter into
+ * The first step of the filter splitting is to convert the filter into
  * https://en.wikipedia.org/wiki/Conjunctive_normal_form (an AND of ORs). This allows us to consider each
  * OR clause independently as a candidate for filter push down to the base table.
  *
@@ -73,13 +73,22 @@ public class JoinFilterAnalyzer
 
   public static JoinFilterSplit splitFilter(
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
-      @Nullable Filter originalFilter
+      @Nullable Filter originalFilter,
+      boolean enableFilterPushDown
   )
   {
     if (originalFilter == null) {
       return new JoinFilterSplit(
           null,
           null,
+          ImmutableList.of()
+      );
+    }
+
+    if (!enableFilterPushDown) {
+      return new JoinFilterSplit(
+          null,
+          originalFilter,
           ImmutableList.of()
       );
     }
