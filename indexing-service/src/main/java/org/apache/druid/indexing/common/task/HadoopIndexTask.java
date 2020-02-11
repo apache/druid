@@ -489,7 +489,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
 
         Thread.currentThread().setContextClassLoader(loader);
-        final String killStatusString[] = (String[]) innerProcessingRunTask.invoke(
+        final String[] killStatusString = (String[]) innerProcessingRunTask.invoke(
             killMRJobInnerProcessingRunner,
             new Object[]{buildKillJobInput}
         );
