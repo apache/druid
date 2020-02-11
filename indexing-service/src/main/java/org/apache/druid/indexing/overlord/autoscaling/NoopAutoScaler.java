@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -30,6 +32,15 @@ import java.util.List;
 public class NoopAutoScaler<Void> implements AutoScaler<Void>
 {
   private static final EmittingLogger log = new EmittingLogger(NoopAutoScaler.class);
+  private final String category;
+
+  @JsonCreator
+  public NoopAutoScaler(
+      @JsonProperty("category") String category
+  )
+  {
+    this.category = category;
+  }
 
   @Override
   public int getMinNumWorkers()
@@ -44,6 +55,13 @@ public class NoopAutoScaler<Void> implements AutoScaler<Void>
   }
 
   @Override
+  @JsonProperty
+  public String getCategory()
+  {
+    return category;
+  }
+
+  @Override
   public Void getEnvConfig()
   {
     throw new UOE("No config for Noop!");
@@ -52,35 +70,43 @@ public class NoopAutoScaler<Void> implements AutoScaler<Void>
   @Override
   public AutoScalingData provision()
   {
-    log.info("If I were a real strategy I'd create something now");
+    log.info("If I were a real strategy I'd create something now [category: %s]", category);
     return null;
   }
 
   @Override
   public AutoScalingData terminate(List<String> ips)
   {
-    log.info("If I were a real strategy I'd terminate %s now", ips);
+    log.info("If I were a real strategy I'd terminate %s now [category: %s]", ips, category);
     return null;
   }
 
   @Override
   public AutoScalingData terminateWithIds(List<String> ids)
   {
-    log.info("If I were a real strategy I'd terminate %s now", ids);
+    log.info("If I were a real strategy I'd terminate %s now [category: %s]", ids, category);
     return null;
   }
 
   @Override
   public List<String> ipToIdLookup(List<String> ips)
   {
-    log.info("I'm not a real strategy so I'm returning what I got %s", ips);
+    log.info("I'm not a real strategy so I'm returning what I got %s [category: %s]", ips, category);
     return ips;
   }
 
   @Override
   public List<String> idToIpLookup(List<String> nodeIds)
   {
-    log.info("I'm not a real strategy so I'm returning what I got %s", nodeIds);
+    log.info("I'm not a real strategy so I'm returning what I got %s [category: %s]", nodeIds, category);
     return nodeIds;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NoopAutoScaler{" +
+           "category='" + category + '\'' +
+           '}';
   }
 }

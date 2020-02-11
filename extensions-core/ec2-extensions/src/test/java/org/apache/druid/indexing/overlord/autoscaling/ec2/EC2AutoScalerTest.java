@@ -35,6 +35,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -101,7 +102,8 @@ public class EC2AutoScalerTest
         1,
         ENV_CONFIG,
         amazonEC2Client,
-        managementConfig
+        managementConfig,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
     );
 
     EasyMock.expect(amazonEC2Client.runInstances(EasyMock.anyObject(RunInstancesRequest.class))).andReturn(
@@ -145,7 +147,8 @@ public class EC2AutoScalerTest
         1,
         ENV_CONFIG,
         amazonEC2Client,
-        managementConfig
+        managementConfig,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
     );
 
     final int n = 150;
@@ -198,7 +201,8 @@ public class EC2AutoScalerTest
         1,
         ENV_CONFIG,
         amazonEC2Client,
-        managementConfig
+        managementConfig,
+        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
     );
 
     final int n = 150;

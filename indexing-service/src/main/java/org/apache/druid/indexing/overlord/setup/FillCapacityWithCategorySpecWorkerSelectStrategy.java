@@ -29,7 +29,7 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class FillCapacityWithCategorySpecWorkerSelectStrategy implements WorkerSelectStrategy
+public class FillCapacityWithCategorySpecWorkerSelectStrategy implements CategoriedWorkerSelectStrategy
 {
   private final WorkerCategorySpec workerCategorySpec;
 
@@ -42,6 +42,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategy implements WorkerS
   }
 
   @JsonProperty
+  @Override
   public WorkerCategorySpec getWorkerCategorySpec()
   {
     return workerCategorySpec;

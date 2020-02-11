@@ -57,7 +57,11 @@ public class WorkerSelectUtils
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(
+        task,
+        allWorkers,
+        workerTaskRunnerConfig
+    );
 
     if (affinityConfig == null) {
       // All runnable workers are valid.
@@ -92,10 +96,10 @@ public class WorkerSelectUtils
   /**
    * Helper for {@link WorkerSelectStrategy} implementations.
    *
-   * @param allWorkers     map of all workers, in the style provided to {@link WorkerSelectStrategy}
+   * @param allWorkers         map of all workers, in the style provided to {@link WorkerSelectStrategy}
    * @param workerCategorySpec worker category spec, or null
-   * @param workerSelector function that receives a list of eligible workers: version is high enough, worker can run
-   *                       the task, and worker satisfies the worker category spec. may return null.
+   * @param workerSelector     function that receives a list of eligible workers: version is high enough, worker can run
+   *                           the task, and worker satisfies the worker category spec. may return null.
    *
    * @return selected worker from "allWorkers", or null.
    */
@@ -108,8 +112,39 @@ public class WorkerSelectUtils
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(
+        task,
+        allWorkers,
+        workerTaskRunnerConfig
+    );
 
+    // select worker according to worker category spec
+    if (workerCategorySpec != null) {
+      String preferredCategory = getTaskCategory(task, workerCategorySpec, null);
+
+      if (preferredCategory != null) {
+        // select worker from preferred category
+        final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(
+            preferredCategory,
+            runnableWorkers
+        );
+        final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
+
+        if (selected != null) {
+          return selected;
+        } else if (workerCategorySpec.isStrong()) {
+          return null;
+        }
+      }
+    }
+
+    // select worker from all runnable workers by default
+    return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
+  }
+
+  @Nullable
+  public static String getTaskCategory(Task task, WorkerCategorySpec workerCategorySpec, String defaultValue)
+  {
     // select worker according to worker category spec
     if (workerCategorySpec != null) {
       final WorkerCategorySpec.CategoryConfig categoryConfig = workerCategorySpec.getCategoryMap().get(task.getType());
@@ -119,26 +154,12 @@ public class WorkerSelectUtils
         final Map<String, String> categoryAffinity = categoryConfig.getCategoryAffinity();
 
         String preferredCategory = categoryAffinity.get(task.getDataSource());
-        // If there is no preferred category for the datasource, then using the defaultCategory. However, the defaultCategory
-        // may be null too, so we need to do one more null check (see below).
-        preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;
-
-        if (preferredCategory != null) {
-          // select worker from preferred category
-          final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(preferredCategory, runnableWorkers);
-          final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
-
-          if (selected != null) {
-            return selected;
-          } else if (workerCategorySpec.isStrong()) {
-            return null;
-          }
-        }
+        // If there is no preferred category for the datasource, then using the defaultCategory.
+        return preferredCategory == null ? defaultCategory : preferredCategory;
       }
     }
 
-    // select worker from all runnable workers by default
-    return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
+    return defaultValue;
   }
 
   // Get workers that could potentially run this task, ignoring affinityConfig/workerCategorySpec.
@@ -158,8 +179,8 @@ public class WorkerSelectUtils
   /**
    * Return workers belong to this category.
    *
-   * @param category worker category name
-   * @param workerMap  map of worker hostname to worker info
+   * @param category  worker category name
+   * @param workerMap map of worker hostname to worker info
    *
    * @return map of worker hostname to worker info
    */
@@ -169,7 +190,7 @@ public class WorkerSelectUtils
   )
   {
     return ImmutableMap.copyOf(
-        Maps.filterValues(workerMap, workerInfo -> workerInfo.getWorker().getCategory().equals(category))
+        Maps.filterValues(workerMap, workerInfo -> category.equals(workerInfo.getWorker().getCategory()))
     );
   }
 

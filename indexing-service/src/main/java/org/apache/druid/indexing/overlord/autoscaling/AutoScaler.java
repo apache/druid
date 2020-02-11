@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,6 +36,11 @@ public interface AutoScaler<T>
   int getMinNumWorkers();
 
   int getMaxNumWorkers();
+
+  default String getCategory()
+  {
+    return CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+  }
 
   /**
    * This method is unused, but AutoScaler is an {@link ExtensionPoint}, so we cannot remove it.

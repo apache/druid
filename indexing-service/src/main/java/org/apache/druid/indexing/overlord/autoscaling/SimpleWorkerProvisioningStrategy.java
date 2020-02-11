@@ -29,11 +29,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
-import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
+import org.apache.druid.indexing.overlord.setup.WorkerSelectUtils;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -42,16 +45,21 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
-
 public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioningStrategy
 {
+  public static final Integer TARGET_WORKER_DEFAULT = -1;
   private static final EmittingLogger log = new EmittingLogger(SimpleWorkerProvisioningStrategy.class);
 
   private final SimpleWorkerProvisioningConfig config;
@@ -68,14 +76,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         config,
         workerConfigRef,
         provisioningSchedulerConfig,
-        new Supplier<ScheduledExecutorService>()
-        {
-          @Override
-          public ScheduledExecutorService get()
-          {
-            return ScheduledExecutors.fixed(1, "SimpleResourceManagement-manager--%d");
-          }
-        }
+        () -> ScheduledExecutors.fixed(1, "SimpleResourceManagement-manager--%d")
     );
   }
 
@@ -102,62 +103,162 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     private final WorkerTaskRunner runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
-    private final Set<String> currentlyProvisioning = new HashSet<>();
-    private final Set<String> currentlyTerminating = new HashSet<>();
+    private final Map<String, Set<String>> currentlyProvisioningMap = new HashMap<>();
+    private final Map<String, Set<String>> currentlyTerminatingMap = new HashMap<>();
 
-    private int targetWorkerCount = -1;
-    private DateTime lastProvisionTime = DateTimes.nowUtc();
-    private DateTime lastTerminateTime = lastProvisionTime;
+    private final Map<String, Integer> targetWorkerCountMap = new HashMap<>();
+    private final Map<String, DateTime> lastProvisionTimeMap = new HashMap<>();
+    private final Map<String, DateTime> lastTerminateTimeMap = new HashMap<>();
 
     SimpleProvisioner(WorkerTaskRunner runner)
     {
       this.runner = runner;
     }
 
+    private Map<String, List<TaskRunnerWorkItem>> groupTasksByCategories(
+        Collection<? extends TaskRunnerWorkItem> pendingTasks,
+        WorkerTaskRunner runner,
+        WorkerCategorySpec workerCategorySpec
+    )
+    {
+      Collection<Task> pendingTasksPayload = runner.getPendingTaskPayloads();
+      Map<String, List<Task>> taskPayloadsById = pendingTasksPayload.stream()
+                                                                    .collect(Collectors.groupingBy(Task::getId));
+
+      return pendingTasks.stream().collect(Collectors.groupingBy(task -> {
+        List<Task> taskPayloads = taskPayloadsById.get(task.getTaskId());
+        if (taskPayloads == null || taskPayloads.isEmpty()) {
+          return CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+        }
+        return WorkerSelectUtils.getTaskCategory(
+            taskPayloads.get(0),
+            workerCategorySpec,
+            CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+        );
+      }));
+    }
+
     @Override
     public synchronized boolean doProvision()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
+      log.debug("Pending tasks: %d %s", pendingTasks.size(), pendingTasks);
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
+      log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final DefaultWorkerBehaviorConfig workerConfig =
-          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "provision", log);
+      final CategoriedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategoriedWorkerBehaviorConfig(
+          workerConfigRef,
+          "provision"
+      );
       if (workerConfig == null) {
+        log.info("No worker config found. Skip provisioning.");
         return false;
       }
+
+      WorkerCategorySpec workerCategorySpec = ProvisioningUtil.getWorkerCategorySpec(workerConfig);
+
+      // Group tasks by categories
+      Map<String, List<TaskRunnerWorkItem>> tasksByCategories = groupTasksByCategories(
+          pendingTasks,
+          runner,
+          workerCategorySpec
+      );
+
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = ProvisioningUtil.getWorkersByCategories(workers);
+
+      // Merge categories of tasks and workers
+      Set<String> allCategories = new HashSet<>(tasksByCategories.keySet());
+      allCategories.addAll(workersByCategories.keySet());
+
+      log.debug(
+          "Pending Tasks of %d categories (%s), Workers of %d categories (%s). %d common categories: %s",
+          tasksByCategories.size(),
+          tasksByCategories.keySet(),
+          workersByCategories.size(),
+          workersByCategories.keySet(),
+          allCategories.size(),
+          allCategories
+      );
+
+      if (allCategories.isEmpty()) {
+        // Likely empty categories means initialization.
+        // Just try to spinup required amount of workers of each non empty autoscalers
+        return initAutoscalers(workerConfig);
+      }
+
+      Map<String, AutoScaler> autoscalersByCategory = ProvisioningUtil.mapAutoscalerByCategory(workerConfig.getAutoScalers());
+
+      for (String category : allCategories) {
+        List<? extends TaskRunnerWorkItem> categoryTasks = tasksByCategories.getOrDefault(
+            category,
+            Collections.emptyList()
+        );
+        AutoScaler categoryAutoscaler = ProvisioningUtil.getAutoscalerByCategory(category, autoscalersByCategory);
+
+        if (categoryAutoscaler == null) {
+          log.error("No autoScaler available, cannot execute doProvision for workers of category %s", category);
+          continue;
+        }
+        // Correct category name by selected autoscaler
+        category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
+
+        List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
+        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
+
+        didProvision = doProvision(
+            category,
+            categoryWorkers,
+            categoryTasks,
+            currentlyProvisioning,
+            currentlyTerminating,
+            categoryAutoscaler
+        ) || didProvision;
+      }
+
+      return didProvision;
+    }
+
+    private boolean doProvision(
+        String category,
+        Collection<ImmutableWorkerInfo> workers,
+        Collection<? extends TaskRunnerWorkItem> pendingTasks,
+        Set<String> currentlyProvisioning,
+        Set<String> currentlyTerminating,
+        AutoScaler<?> autoScaler
+    )
+    {
+      boolean didProvision = false;
 
       final Predicate<ImmutableWorkerInfo> isValidWorker = ProvisioningUtil.createValidWorkerPredicate(config);
       final int currValidWorkers = Collections2.filter(workers, isValidWorker).size();
 
-      final List<String> workerNodeIds = workerConfig.getAutoScaler().ipToIdLookup(
+      final List<String> workerNodeIds = autoScaler.ipToIdLookup(
           Lists.newArrayList(
               Iterables.transform(
                   workers,
-                  new Function<ImmutableWorkerInfo, String>()
-                  {
-                    @Override
-                    public String apply(ImmutableWorkerInfo input)
-                    {
-                      return input.getWorker().getIp();
-                    }
-                  }
+                  input -> input.getWorker().getIp()
               )
           )
       );
       currentlyProvisioning.removeAll(workerNodeIds);
 
-      updateTargetWorkerCount(workerConfig, pendingTasks, workers);
+      updateTargetWorkerCount(autoScaler, pendingTasks, workers, category, currentlyProvisioning, currentlyTerminating);
+      int targetWorkerCount = targetWorkerCountMap.getOrDefault(category, TARGET_WORKER_DEFAULT);
 
       int want = targetWorkerCount - (currValidWorkers + currentlyProvisioning.size());
+      log.info("Want workers: %d", want);
       while (want > 0) {
-        final AutoScalingData provisioned = workerConfig.getAutoScaler().provision();
+        final AutoScalingData provisioned = autoScaler.provision();
         final List<String> newNodes;
         if (provisioned == null || (newNodes = provisioned.getNodeIds()).isEmpty()) {
           log.warn("NewNodes is empty, returning from provision loop");
           break;
         } else {
           currentlyProvisioning.addAll(newNodes);
-          lastProvisionTime = DateTimes.nowUtc();
+          lastProvisionTimeMap.put(category, DateTimes.nowUtc());
           scalingStats.addProvisionEvent(provisioned);
           want -= provisioned.getNodeIds().size();
           didProvision = true;
@@ -165,6 +266,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       }
 
       if (!currentlyProvisioning.isEmpty()) {
+        DateTime lastProvisionTime = lastProvisionTimeMap.getOrDefault(category, DateTimes.nowUtc());
         Duration durSinceLastProvision = new Duration(lastProvisionTime, DateTimes.nowUtc());
         log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
         if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
@@ -173,7 +275,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
              .addData("provisioningCount", currentlyProvisioning.size())
              .emit();
 
-          workerConfig.getAutoScaler().terminateWithIds(Lists.newArrayList(currentlyProvisioning));
+          autoScaler.terminateWithIds(Lists.newArrayList(currentlyProvisioning));
           currentlyProvisioning.clear();
         }
       }
@@ -184,27 +286,90 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     @Override
     public synchronized boolean doTerminate()
     {
+      Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final DefaultWorkerBehaviorConfig workerConfig =
-          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "terminate", log);
+      final CategoriedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategoriedWorkerBehaviorConfig(
+          workerConfigRef,
+          "terminate"
+      );
       if (workerConfig == null) {
+        log.info("No worker config found. Skip terminating.");
         return false;
       }
 
       boolean didTerminate = false;
+
+      WorkerCategorySpec workerCategorySpec = ProvisioningUtil.getWorkerCategorySpec(workerConfig);
+
+      // Group tasks by categories
+      Map<String, List<TaskRunnerWorkItem>> pendingTasksByCategories = groupTasksByCategories(
+          pendingTasks,
+          runner,
+          workerCategorySpec
+      );
+
+      Map<String, List<ImmutableWorkerInfo>> workersByCategories = ProvisioningUtil.getWorkersByCategories(workers);
+
+      Set<String> allCategories = workersByCategories.keySet();
+      log.debug(
+          "Workers of %d categories: %s",
+          workersByCategories.size(),
+          allCategories
+      );
+
+      Map<String, AutoScaler> autoscalersByCategory = ProvisioningUtil.mapAutoscalerByCategory(workerConfig.getAutoScalers());
+
+      for (String category : allCategories) {
+        AutoScaler categoryAutoscaler = ProvisioningUtil.getAutoscalerByCategory(category, autoscalersByCategory);
+
+        if (categoryAutoscaler == null) {
+          log.error("No autoScaler available, cannot execute doTerminate for workers of category %s", category);
+          continue;
+        }
+
+        // Correct category name by selected autoscaler
+        category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
+        List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
+        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
+        List<? extends TaskRunnerWorkItem> categoryPendingTasks = pendingTasksByCategories.getOrDefault(
+            category,
+            Collections.emptyList()
+        );
+
+        didTerminate = doTerminate(
+            category,
+            categoryWorkers,
+            currentlyProvisioning,
+            currentlyTerminating,
+            categoryAutoscaler,
+            categoryPendingTasks
+        ) || didTerminate;
+      }
+
+      return didTerminate;
+    }
+
+    private boolean doTerminate(
+        String category,
+        Collection<ImmutableWorkerInfo> workers,
+        Set<String> currentlyProvisioning,
+        Set<String> currentlyTerminating,
+        AutoScaler<?> autoScaler,
+        List<? extends TaskRunnerWorkItem> pendingTasks
+    )
+    {
+      boolean didTerminate = false;
+
+      Collection<Worker> lazyWorkers = ProvisioningUtil.getWorkersOfCategory(runner.getLazyWorkers(), category);
       final Set<String> workerNodeIds = Sets.newHashSet(
-          workerConfig.getAutoScaler().ipToIdLookup(
+          autoScaler.ipToIdLookup(
               Lists.newArrayList(
                   Iterables.transform(
-                      runner.getLazyWorkers(),
-                      new Function<Worker, String>()
-                      {
-                        @Override
-                        public String apply(Worker input)
-                        {
-                          return input.getIp();
-                        }
-                      }
+                      lazyWorkers,
+                      Worker::getIp
                   )
               )
           )
@@ -212,8 +377,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
       currentlyTerminating.retainAll(workerNodeIds);
 
-      Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
-      updateTargetWorkerCount(workerConfig, pendingTasks, workers);
+      updateTargetWorkerCount(autoScaler, pendingTasks, workers, category, currentlyProvisioning, currentlyTerminating);
+      int targetWorkerCount = targetWorkerCountMap.getOrDefault(category, TARGET_WORKER_DEFAULT);
 
       if (currentlyTerminating.isEmpty()) {
 
@@ -242,17 +407,17 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
                 Joiner.on(", ").join(laziestWorkerIps)
             );
 
-            final AutoScalingData terminated = workerConfig.getAutoScaler()
-                                                           .terminate(ImmutableList.copyOf(laziestWorkerIps));
+            final AutoScalingData terminated = autoScaler.terminate(ImmutableList.copyOf(laziestWorkerIps));
             if (terminated != null) {
               currentlyTerminating.addAll(terminated.getNodeIds());
-              lastTerminateTime = DateTimes.nowUtc();
+              lastTerminateTimeMap.put(category, DateTimes.nowUtc());
               scalingStats.addTerminateEvent(terminated);
               didTerminate = true;
             }
           }
         }
       } else {
+        DateTime lastTerminateTime = lastTerminateTimeMap.getOrDefault(category, DateTimes.nowUtc());
         Duration durSinceLastTerminate = new Duration(lastTerminateTime, DateTimes.nowUtc());
 
         log.info("%s terminating. Current wait time: %s", currentlyTerminating, durSinceLastTerminate);
@@ -272,9 +437,12 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
 
     private void updateTargetWorkerCount(
-        final DefaultWorkerBehaviorConfig workerConfig,
+        final AutoScaler autoScaler,
         final Collection<? extends TaskRunnerWorkItem> pendingTasks,
-        final Collection<ImmutableWorkerInfo> zkWorkers
+        final Collection<ImmutableWorkerInfo> zkWorkers,
+        String category,
+        Set<String> currentlyProvisioning,
+        Set<String> currentlyTerminating
     )
     {
       final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
@@ -282,13 +450,15 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           ProvisioningUtil.createValidWorkerPredicate(config)
       );
       final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
-      final int minWorkerCount = workerConfig.getAutoScaler().getMinNumWorkers();
-      final int maxWorkerCount = workerConfig.getAutoScaler().getMaxNumWorkers();
+      final int minWorkerCount = autoScaler.getMinNumWorkers();
+      final int maxWorkerCount = autoScaler.getMaxNumWorkers();
 
       if (minWorkerCount > maxWorkerCount) {
         log.error("Huh? minWorkerCount[%d] > maxWorkerCount[%d]. I give up!", minWorkerCount, maxWorkerCount);
         return;
       }
+
+      int targetWorkerCount = targetWorkerCountMap.getOrDefault(category, TARGET_WORKER_DEFAULT);
 
       if (targetWorkerCount < 0) {
         // Initialize to size of current worker pool, subject to pool size limits
@@ -346,6 +516,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
             maxWorkerCount
         );
       }
+
+      targetWorkerCountMap.put(category, targetWorkerCount);
     }
 
     private boolean hasTaskPendingBeyondThreshold(Collection<? extends TaskRunnerWorkItem> pendingTasks)
@@ -366,6 +538,31 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     {
       return scalingStats;
     }
-  }
 
+    private boolean initAutoscalers(CategoriedWorkerBehaviorConfig workerConfig)
+    {
+      boolean didProvision = false;
+      for (AutoScaler autoScaler : workerConfig.getAutoScalers()) {
+        String category = ProvisioningUtil.getAutoscalerCategory(autoScaler);
+        didProvision = initAutoscaler(autoScaler, category) || didProvision;
+      }
+      return didProvision;
+    }
+
+    private boolean initAutoscaler(AutoScaler autoScaler, String category)
+    {
+      currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
+      Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+      currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
+      Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
+      return doProvision(
+          category,
+          Collections.emptyList(),
+          Collections.emptyList(),
+          currentlyProvisioning,
+          currentlyTerminating,
+          autoScaler
+      );
+    }
+  }
 }
