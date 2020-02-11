@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Capabilities;
@@ -53,6 +54,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
+  private final boolean enableFilterPushDown;
 
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
@@ -61,6 +63,18 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
+    this.enableFilterPushDown = QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN;
+  }
+
+  HashJoinSegmentStorageAdapter(
+      StorageAdapter baseAdapter,
+      List<JoinableClause> clauses,
+      final boolean enableFilterPushDown
+  )
+  {
+    this.baseAdapter = baseAdapter;
+    this.clauses = clauses;
+    this.enableFilterPushDown = enableFilterPushDown;
   }
 
   @Override
@@ -227,7 +241,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
         this,
-        filter
+        filter,
+        enableFilterPushDown
     );
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
@@ -275,6 +290,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   public boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
+  }
+
+  public boolean isEnableFilterPushDown()
+  {
+    return enableFilterPushDown;
   }
 
   /**
