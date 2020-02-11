@@ -43,17 +43,20 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+  private final CloudConfigProperties cloudConfigProperties;
 
   public CloudObjectInputSource(
       String scheme,
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
-      @Nullable List<CloudObjectLocation> objects
+      @Nullable List<CloudObjectLocation> objects,
+      @Nullable CloudConfigProperties cloudConfigProperties
   )
   {
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
+    this.cloudConfigProperties = cloudConfigProperties;
 
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
@@ -84,6 +87,13 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   public List<CloudObjectLocation> getObjects()
   {
     return objects;
+  }
+
+  @Nullable
+  @JsonProperty
+  public CloudConfigProperties getCloudConfigProperties()
+  {
+    return cloudConfigProperties;
   }
 
   /**

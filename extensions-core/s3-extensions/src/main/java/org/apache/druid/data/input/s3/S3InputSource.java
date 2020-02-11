@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -50,10 +51,11 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
+      @JsonProperty("properties") @Nullable CloudConfigProperties cloudConfigProperties
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, cloudConfigProperties);
     this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
   }
 
@@ -74,7 +76,9 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new S3InputSource(s3Client, null, null, ImmutableList.of(split.get()));
+    return new S3InputSource(
+        s3Client, null, null, ImmutableList.of(split.get()), getCloudConfigProperties()
+    );
   }
 
   @Override

@@ -166,6 +166,8 @@ public class S3StorageDruidModule implements DruidModule
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
+
+
   @Provides
   @LazySingleton
   public ServerSideEncryptingAmazonS3 getAmazonS3Client(
