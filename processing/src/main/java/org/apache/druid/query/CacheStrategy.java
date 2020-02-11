@@ -62,7 +62,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 
   /**
    * Computes the result-level cache key for the given query. The result-level cache will tack on datasource and
-   * interval details, so this key does not need to incluce datasource and interval. But it should include anything
+   * interval details, so this key does not need to include datasource and interval. But it should include anything
    * else that might affect the results of the query.
    *
    * Some implementations will need to include query parameters that are not used in {@link #computeCacheKey} for the
