@@ -22,8 +22,21 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * An interface for intermediate data shuffle during the parallel indexing.
+ * The only available implementation for production code is {@link HttpShuffleClient} and
+ * this interface is more for easier testing.
+ *
+ * @see org.apache.druid.indexing.worker.IntermediaryDataManager
+ * @see PartialSegmentMergeTask
+ */
 public interface ShuffleClient
 {
+  /**
+   * Fetch the segment file into the local storage for the given supervisorTaskId and the location.
+   * If the segment file should be fetched from a remote site, the returned file will be created under the given
+   * partitionDir. Otherwise, the returned file can be located in any path.
+   */
   <T, P extends PartitionLocation<T>> File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
       throws IOException;
 }

@@ -76,6 +76,7 @@ public abstract class AbstractTask implements Task
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
     this.context = context == null ? new HashMap<>() : new HashMap<>(context);
   }
 
