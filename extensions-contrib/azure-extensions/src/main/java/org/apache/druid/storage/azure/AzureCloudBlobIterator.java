@@ -26,6 +26,9 @@ import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
+import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
+import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URI;
 import java.util.Iterator;

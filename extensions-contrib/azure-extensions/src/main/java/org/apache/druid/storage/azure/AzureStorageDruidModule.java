@@ -37,6 +37,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;

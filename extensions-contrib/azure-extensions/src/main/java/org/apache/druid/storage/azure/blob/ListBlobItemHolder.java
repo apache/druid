@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.storage.azure.blob;
 
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;

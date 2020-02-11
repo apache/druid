@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 /**
  * Converts a {@link CloudBlobHolder} object to a {@link CloudObjectLocation} object

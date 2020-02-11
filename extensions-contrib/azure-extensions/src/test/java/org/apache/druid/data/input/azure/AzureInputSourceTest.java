@@ -29,7 +29,7 @@ import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationC
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
-import org.apache.druid.storage.azure.CloudBlobHolder;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.After;

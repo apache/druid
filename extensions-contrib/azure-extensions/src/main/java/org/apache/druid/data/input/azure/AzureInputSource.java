@@ -32,7 +32,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
-import org.apache.druid.storage.azure.CloudBlobHolder;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import javax.annotation.Nullable;
 import java.net.URI;

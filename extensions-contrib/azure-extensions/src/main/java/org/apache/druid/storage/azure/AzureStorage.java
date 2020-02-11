@@ -57,7 +57,7 @@ public class AzureStorage
     this.cloudBlobClient = cloudBlobClient;
   }
 
-  public List<String> emptyCloudBlobDirectory(String containerName, final String virtualDirPath)
+  public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
       throws StorageException, URISyntaxException
   {
     List<String> deletedFiles = new ArrayList<>();
@@ -117,16 +117,8 @@ public class AzureStorage
     return this.cloudBlobClient;
   }
 
-  private CloudBlobContainer getOrCreateCloudBlobContainer(final String containerName)
-      throws StorageException, URISyntaxException
-  {
-    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
-    cloudBlobContainer.createIfNotExists();
-
-    return cloudBlobContainer;
-  }
-
-  public ResultSegment<ListBlobItem> listBlobsWithPrefixInContainerSegmented(
+  @VisibleForTesting
+  ResultSegment<ListBlobItem> listBlobsWithPrefixInContainerSegmented(
       final String containerName,
       final String prefix,
       ResultContinuation continuationToken,
@@ -146,5 +138,14 @@ public class AzureStorage
             null,
             null
         );
+  }
+
+  private CloudBlobContainer getOrCreateCloudBlobContainer(final String containerName)
+      throws StorageException, URISyntaxException
+  {
+    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
+    cloudBlobContainer.createIfNotExists();
+
+    return cloudBlobContainer;
   }
 }

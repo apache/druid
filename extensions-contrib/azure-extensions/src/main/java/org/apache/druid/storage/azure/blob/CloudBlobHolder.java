@@ -17,14 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.storage.azure.blob;
 
-import com.microsoft.azure.storage.blob.ListBlobItem;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
+
+import java.net.URISyntaxException;
 
 /**
- * Factory for creating {@link ListBlobItemHolder} objects
+ * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
+ * is a final class and so is difficult to mock in unit tests.
  */
-public interface ListBlobItemHolderFactory
+public class CloudBlobHolder
 {
-  ListBlobItemHolder create(ListBlobItem blobItem);
+  private final CloudBlob delegate;
+
+  public CloudBlobHolder(CloudBlob delegate)
+  {
+    this.delegate = delegate;
+  }
+
+  public String getContainerName() throws URISyntaxException, StorageException
+  {
+    return delegate.getContainer().getName();
+  }
+
+  public String getName()
+  {
+    return delegate.getName();
+  }
 }

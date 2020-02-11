@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import java.net.URI;
 import java.util.Iterator;
