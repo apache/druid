@@ -39,6 +39,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -52,6 +53,7 @@ import java.util.Objects;
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
+  private static final String VARIANCE_TYPE_NAME = "variance";
   protected final String fieldName;
   protected final String name;
   @Nullable
@@ -87,7 +89,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "variance";
+    return VARIANCE_TYPE_NAME;
   }
 
   @Override
@@ -106,17 +108,19 @@ public class VarianceAggregatorFactory extends AggregatorFactory
 
     final String type = getTypeString(metricFactory);
 
-    if ("float".equalsIgnoreCase(type)) {
+    if (ValueType.FLOAT.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.FloatVarianceAggregator(selector);
-    } else if ("double".equalsIgnoreCase(type)) {
+    } else if (ValueType.DOUBLE.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.DoubleVarianceAggregator(selector);
-    } else if ("long".equalsIgnoreCase(type)) {
+    } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.LongVarianceAggregator(selector);
-    } else if ("variance".equalsIgnoreCase(type)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
       return new VarianceAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
-        "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
+        "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
+        fieldName,
+        inputType
     );
   }
 
@@ -129,17 +133,19 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     }
     final String type = getTypeString(metricFactory);
 
-    if ("float".equalsIgnoreCase(type)) {
+    if (ValueType.FLOAT.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.FloatVarianceAggregator(selector);
-    } else if ("double".equalsIgnoreCase(type)) {
+    } else if (ValueType.DOUBLE.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.DoubleVarianceAggregator(selector);
-    } else if ("long".equalsIgnoreCase(type)) {
+    } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.LongVarianceAggregator(selector);
-    } else if ("variance".equalsIgnoreCase(type)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
-        "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
+        "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
+        fieldName,
+        inputType
     );
   }
 
@@ -259,7 +265,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @JsonProperty
   public String getInputType()
   {
-    return inputType == null ? "float" : inputType;
+    return inputType == null ? StringUtils.toLowerCase(ValueType.FLOAT.name()) : inputType;
   }
 
   @Override
@@ -323,7 +329,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       if (capabilities != null) {
         type = StringUtils.toLowerCase(capabilities.getType().name());
       } else {
-        type = "float";
+        type = StringUtils.toLowerCase(ValueType.FLOAT.name());
       }
     }
     return type;
