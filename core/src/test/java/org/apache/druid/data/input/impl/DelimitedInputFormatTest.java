@@ -41,7 +41,7 @@ public class DelimitedInputFormatTest
     final DelimitedInputFormat format = new DelimitedInputFormat(
         Collections.singletonList("a"),
         "|",
-        null,
+        "delim",
         null,
         true,
         10
@@ -55,16 +55,8 @@ public class DelimitedInputFormatTest
   public void testTab()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Column[a\t] has a tab, it cannot");
+    expectedException.expectMessage("Column[a\t] cannot have the delimiter[\t] in its name");
     new DelimitedInputFormat(Collections.singletonList("a\t"), ",", null, null, false, 0);
-  }
-
-  @Test
-  public void testDelimiterLength()
-  {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("The delimiter should be a single character");
-    new DelimitedInputFormat(Collections.singletonList("a\t"), ",", "null", null, false, 0);
   }
 
   @Test
@@ -79,7 +71,72 @@ public class DelimitedInputFormatTest
   public void testCustomizeSeparator()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Column[a|] has a customize separator: |, it cannot");
+    expectedException.expectMessage("Column[a|] cannot have the delimiter[|] in its name");
     new DelimitedInputFormat(Collections.singletonList("a|"), ",", "|", null, false, 0);
+  }
+
+  @Test
+  public void testFindColumnsFromHeaderWithColumnsReturningItsValue()
+  {
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        Collections.singletonList("a"),
+        null,
+        "delim",
+        null,
+        true,
+        0
+    );
+    Assert.assertTrue(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testFindColumnsFromHeaderWithMissingColumnsReturningItsValue()
+  {
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        null,
+        null,
+        "delim",
+        null,
+        true,
+        0
+    );
+    Assert.assertTrue(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testMissingFindColumnsFromHeaderWithMissingColumnsThrowingError()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("At least one of [Property{name='hasHeaderRow', value=null}");
+    new DelimitedInputFormat(null, null, "delim", null, null, 0);
+  }
+
+  @Test
+  public void testMissingFindColumnsFromHeaderWithColumnsReturningFalse()
+  {
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        Collections.singletonList("a"),
+        null,
+        "delim",
+        null,
+        null,
+        0
+    );
+    Assert.assertFalse(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void testHasHeaderRowWithMissingFindColumnsThrowingError()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("At most one of [Property{name='hasHeaderRow', value=true}");
+    new DelimitedInputFormat(null, null, "delim", true, false, 0);
+  }
+
+  @Test
+  public void testHasHeaderRowWithMissingColumnsReturningItsValue()
+  {
+    final DelimitedInputFormat format = new DelimitedInputFormat(null, null, "delim", true, null, 0);
+    Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 }

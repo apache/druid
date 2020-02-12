@@ -41,6 +41,7 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -55,6 +56,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
+ *
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
@@ -71,12 +73,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public QueryableIndexStorageAdapter(QueryableIndex index)
   {
     this.index = index;
-  }
-
-  @Override
-  public String getSegmentIdentifier()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -103,7 +99,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder == null) {
-      return 0;
+      // NullDimensionSelector has cardinality = 1 (one null, nothing else).
+      return 1;
     }
     try (BaseColumn col = columnHolder.getColumn()) {
       if (!(col instanceof DictionaryEncodedColumn)) {
@@ -182,9 +179,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  @Nullable
   public String getColumnTypeName(String columnName)
   {
     final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+
+    if (columnHolder == null) {
+      return null;
+    }
+
     try (final BaseColumn col = columnHolder.getColumn()) {
       if (col instanceof ComplexColumn) {
         return ((ComplexColumn) col).getTypeName();
@@ -428,15 +431,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       }
     }
 
-    final Filter postFilter;
-    if (postFilters.size() == 0) {
-      postFilter = null;
-    } else if (postFilters.size() == 1) {
-      postFilter = postFilters.get(0);
-    } else {
-      postFilter = new AndFilter(postFilters);
-    }
-
     if (queryMetrics != null) {
       queryMetrics.preFilters(preFilters);
       queryMetrics.postFilters(postFilters);
@@ -444,7 +438,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       queryMetrics.reportPreFilteredRows(preFilteredRows);
     }
 
-    return new FilterAnalysis(preFilterBitmap, postFilter);
+    return new FilterAnalysis(preFilterBitmap, Filters.and(postFilters));
   }
 
   @VisibleForTesting

@@ -34,6 +34,7 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 public class RegisteredLookupExtractionFnTest
 {
@@ -96,7 +97,7 @@ public class RegisteredLookupExtractionFnTest
   public void testMissingDelegation()
   {
     final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
-    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(null).once();
+    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
     EasyMock.replay(manager);
 
     expectedException.expectMessage("Lookup [some lookup] not found");
@@ -147,7 +148,10 @@ public class RegisteredLookupExtractionFnTest
     );
     EasyMock.verify(manager);
 
-    final Map<String, Object> result = mapper.readValue(mapper.writeValueAsString(fn), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+    final Map<String, Object> result = mapper.readValue(
+        mapper.writeValueAsString(fn),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
     Assert.assertEquals(mapper.convertValue(fn, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT), result);
     Assert.assertEquals(LOOKUP_NAME, result.get("lookup"));
     Assert.assertEquals(true, result.get("retainMissingValue"));
@@ -248,41 +252,43 @@ public class RegisteredLookupExtractionFnTest
   private void managerReturnsMap(LookupExtractorFactoryContainerProvider manager)
   {
     EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(
-        new LookupExtractorFactoryContainer(
-            "v0",
-            new LookupExtractorFactory()
-            {
-              @Override
-              public boolean start()
-              {
-                return false;
-              }
+        Optional.of(
+            new LookupExtractorFactoryContainer(
+                "v0",
+                new LookupExtractorFactory()
+                {
+                  @Override
+                  public boolean start()
+                  {
+                    return false;
+                  }
 
-              @Override
-              public boolean replaces(@Nullable LookupExtractorFactory other)
-              {
-                return false;
-              }
+                  @Override
+                  public boolean replaces(@Nullable LookupExtractorFactory other)
+                  {
+                    return false;
+                  }
 
-              @Override
-              public boolean close()
-              {
-                return false;
-              }
+                  @Override
+                  public boolean close()
+                  {
+                    return false;
+                  }
 
-              @Nullable
-              @Override
-              public LookupIntrospectHandler getIntrospectHandler()
-              {
-                return null;
-              }
+                  @Nullable
+                  @Override
+                  public LookupIntrospectHandler getIntrospectHandler()
+                  {
+                    return null;
+                  }
 
-              @Override
-              public LookupExtractor get()
-              {
-                return LOOKUP_EXTRACTOR;
-              }
-            }
+                  @Override
+                  public LookupExtractor get()
+                  {
+                    return LOOKUP_EXTRACTOR;
+                  }
+                }
+            )
         )
     ).anyTimes();
   }

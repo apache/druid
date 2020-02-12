@@ -230,10 +230,7 @@ public class TimeCompareBenchmark
               0,
               Integer.MAX_VALUE
           ),
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
     }
@@ -274,7 +271,7 @@ public class TimeCompareBenchmark
 
       timeseriesQuery = timeseriesQueryBuilder.build();
       timeseriesFactory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );

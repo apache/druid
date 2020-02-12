@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 public class FloatVectorValueMatcher implements VectorValueMatcherFactory
 {
   private final VectorValueSelector selector;
+  private final boolean canHaveNulls = !NullHandling.replaceWithDefault();
 
   public FloatVectorValueMatcher(final VectorValueSelector selector)
   {
@@ -38,6 +40,10 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
+    if (value == null && canHaveNulls) {
+      return makeNullValueMatcher(selector);
+    }
+
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
 
     if (matchVal == null) {
@@ -55,11 +61,16 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
       {
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
+        final boolean[] nulls = selector.getNullVector();
+        final boolean hasNulls = canHaveNulls && nulls != null;
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
+          if (hasNulls && nulls[rowNum]) {
+            continue;
+          }
           if (vector[rowNum] == matchValFloat) {
             selection[numRows++] = rowNum;
           }
@@ -86,12 +97,18 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
       {
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
+        final boolean[] nulls = selector.getNullVector();
+        final boolean hasNulls = canHaveNulls && nulls != null;
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (predicate.applyFloat(vector[rowNum])) {
+          if (hasNulls && nulls[rowNum]) {
+            if (predicate.applyNull()) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (predicate.applyFloat(vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }

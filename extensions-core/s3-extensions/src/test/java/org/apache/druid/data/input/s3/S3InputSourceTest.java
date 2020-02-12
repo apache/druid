@@ -21,13 +21,10 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.core.JsonParser;
@@ -62,10 +59,13 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
+import org.easymock.IArgumentMatcher;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
@@ -81,7 +81,7 @@ import java.util.stream.Stream;
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
-  private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
+  private static final AmazonS3Client S3_CLIENT = EasyMock.createMock(AmazonS3Client.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
       new NoopServerSideEncryption()
@@ -165,7 +165,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSerdeWithInvalidArgs() throws Exception
+  public void testSerdeWithInvalidArgs()
   {
     expectedException.expect(IllegalArgumentException.class);
     // constructor will explode
@@ -220,8 +220,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public void testWithPrefixesSplit()
   {
     EasyMock.reset(S3_CLIENT);
-    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
-    addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
+    expectListObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES, null);
@@ -232,14 +232,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
   }
 
   @Test
-  public void testWithPrefixesWhereOneIsUrisAndNoListPermissionSplit()
+  public void testAccessDeniedWhileListingPrefix()
   {
     EasyMock.reset(S3_CLIENT);
-    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
-    addExpectedNonPrefixObjectsWithNoListPermission();
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
+    expectListObjectsAndThrowAccessDenied(EXPECTED_URIS.get(1));
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(
@@ -249,22 +250,25 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null
     );
 
-    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
-        null
+    expectedException.expectMessage("Failed to get object summaries from S3 bucket[bar], prefix[foo/file2.csv]");
+    expectedException.expectCause(
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("can't list that bucket"))
     );
 
-    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        null
+    ).collect(Collectors.toList());
   }
 
   @Test
   public void testReader() throws IOException
   {
     EasyMock.reset(S3_CLIENT);
-    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
-    addExpectedNonPrefixObjectsWithNoListPermission();
-    addExpectedGetObjectMock(EXPECTED_URIS.get(0));
-    addExpectedGetObjectMock(EXPECTED_URIS.get(1));
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
+    expectListObjects(EXPECTED_URIS.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
+    expectGetObject(EXPECTED_URIS.get(0));
+    expectGetObject(EXPECTED_URIS.get(1));
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(
@@ -294,16 +298,18 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
+
+    EasyMock.verify(S3_CLIENT);
   }
 
   @Test
   public void testCompressedReader() throws IOException
   {
     EasyMock.reset(S3_CLIENT);
-    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(0)));
-    addExpectedNonPrefixObjectsWithNoListPermission();
-    addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(0));
-    addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(1));
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(0)));
+    expectListObjects(EXPECTED_COMPRESSED_URIS.get(1), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(1)));
+    expectGetObjectCompressed(EXPECTED_COMPRESSED_URIS.get(0));
+    expectGetObjectCompressed(EXPECTED_COMPRESSED_URIS.get(1));
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(
@@ -333,40 +339,39 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
+
+    EasyMock.verify(S3_CLIENT);
   }
 
-  private static void addExpectedPrefixObjects(URI prefix, List<URI> uris)
+  private static void expectListObjects(URI prefix, List<URI> uris)
   {
-    final String s3Bucket = prefix.getAuthority();
     final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setBucketName(s3Bucket);
-    result.setKeyCount(1);
+    result.setBucketName(prefix.getAuthority());
+    result.setKeyCount(uris.size());
     for (URI uri : uris) {
+      final String bucket = uri.getAuthority();
       final String key = S3Utils.extractS3Key(uri);
       final S3ObjectSummary objectSummary = new S3ObjectSummary();
-      objectSummary.setBucketName(s3Bucket);
+      objectSummary.setBucketName(bucket);
       objectSummary.setKey(key);
       result.getObjectSummaries().add(objectSummary);
     }
-    EasyMock.expect(S3_CLIENT.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class))).andReturn(result).once();
+
+    EasyMock.expect(
+        S3_CLIENT.listObjectsV2(matchListObjectsRequest(prefix))
+    ).andReturn(result).once();
   }
 
-  private static void addExpectedNonPrefixObjectsWithNoListPermission()
+  private static void expectListObjectsAndThrowAccessDenied(final URI prefix)
   {
     AmazonS3Exception boom = new AmazonS3Exception("oh dang, you can't list that bucket friend");
     boom.setStatusCode(403);
-    EasyMock.expect(S3_CLIENT.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class))).andThrow(boom).once();
-
-    ObjectMetadata metadata = new ObjectMetadata();
-    metadata.setContentLength(CONTENT.length);
-    metadata.setContentEncoding("text/csv");
-    metadata.setHeader(Headers.ETAG, "some-totally-real-etag-base64-hash-i-guess");
-    EasyMock.expect(S3_CLIENT.getObjectMetadata(EasyMock.anyObject(GetObjectMetadataRequest.class)))
-            .andReturn(metadata)
-            .once();
+    EasyMock.expect(
+        S3_CLIENT.listObjectsV2(matchListObjectsRequest(prefix))
+    ).andThrow(boom).once();
   }
 
-  private static void addExpectedGetObjectMock(URI uri)
+  private static void expectGetObject(URI uri)
   {
     final String s3Bucket = uri.getAuthority();
     final String key = S3Utils.extractS3Key(uri);
@@ -378,7 +383,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
   }
 
-  private static void addExpectedGetCompressedObjectMock(URI uri) throws IOException
+  private static void expectGetObjectCompressed(URI uri) throws IOException
   {
     final String s3Bucket = uri.getAuthority();
     final String key = S3Utils.extractS3Key(uri);
@@ -390,6 +395,35 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     CompressionUtils.gzip(new ByteArrayInputStream(CONTENT), gzipped);
     someObject.setObjectContent(new ByteArrayInputStream(gzipped.toByteArray()));
     EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
+  }
+
+  private static ListObjectsV2Request matchListObjectsRequest(final URI prefixUri)
+  {
+    // Use an IArgumentMatcher to verify that the request has the correct bucket and prefix.
+    EasyMock.reportMatcher(
+        new IArgumentMatcher()
+        {
+          @Override
+          public boolean matches(Object argument)
+          {
+            if (!(argument instanceof ListObjectsV2Request)) {
+              return false;
+            }
+
+            final ListObjectsV2Request request = (ListObjectsV2Request) argument;
+            return prefixUri.getAuthority().equals(request.getBucketName())
+                   && S3Utils.extractS3Key(prefixUri).equals(request.getPrefix());
+          }
+
+          @Override
+          public void appendTo(StringBuffer buffer)
+          {
+            buffer.append("<request for prefix [").append(prefixUri).append("]>");
+          }
+        }
+    );
+
+    return null;
   }
 
   public static ObjectMapper createS3ObjectMapper()

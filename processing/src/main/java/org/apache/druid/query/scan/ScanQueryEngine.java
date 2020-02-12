@@ -56,7 +56,7 @@ import java.util.concurrent.TimeoutException;
 
 public class ScanQueryEngine
 {
-  private static final String LEGACY_TIMESTAMP_KEY = "timestamp";
+  static final String LEGACY_TIMESTAMP_KEY = "timestamp";
 
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
@@ -202,9 +202,9 @@ public class ScanQueryEngine
                             throw new UnsupportedOperationException();
                           }
 
-                          private List<Object> rowsToCompactedList()
+                          private List<List<Object>> rowsToCompactedList()
                           {
-                            final List<Object> events = new ArrayList<>(batchSize);
+                            final List<List<Object>> events = new ArrayList<>(batchSize);
                             final long iterLimit = Math.min(limit, offset + batchSize);
                             for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
                               final List<Object> theEvent = new ArrayList<>(allColumns.size());

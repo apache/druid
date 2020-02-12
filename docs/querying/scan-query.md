@@ -24,7 +24,7 @@ sidebar_label: "Scan"
   -->
 
 
-The Scan query returns raw Apache Druid (incubating) rows in streaming mode.  
+The Scan query returns raw Apache Druid rows in streaming mode.  
 
 In addition to straightforward usage where a Scan query is issued to the Broker, the Scan query can also be issued
 directly to Historical processes or streaming ingestion tasks. This can be useful if you want to retrieve large

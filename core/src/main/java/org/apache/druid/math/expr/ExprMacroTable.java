@@ -23,11 +23,11 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -160,7 +160,7 @@ public class ExprMacroTable
 
     private BindingDetails supplyAnalyzeInputs()
     {
-      final Set<Expr> argSet = new HashSet<>(args.size());
+      final Set<Expr> argSet = Sets.newHashSetWithExpectedSize(args.size());
       BindingDetails accumulator = new BindingDetails();
       for (Expr arg : args) {
         accumulator = accumulator.with(arg);

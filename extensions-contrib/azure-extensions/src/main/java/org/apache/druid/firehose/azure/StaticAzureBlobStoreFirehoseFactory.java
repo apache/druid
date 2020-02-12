@@ -43,7 +43,11 @@ import java.util.Objects;
 
 /**
  * This class is heavily inspired by the StaticS3FirehoseFactory class in the org.apache.druid.firehose.s3 package
+ *
+ * @deprecated as of version 0.18.0 because support for firehose has been discontinued. Please use
+ * {@link org.apache.druid.data.input.azure.AzureInputSource} instead.
  */
+@Deprecated
 public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<AzureBlob>
 {
   private final AzureStorage azureStorage;

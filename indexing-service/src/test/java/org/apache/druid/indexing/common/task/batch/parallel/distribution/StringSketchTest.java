@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.hamcrest.Matchers;
 import org.hamcrest.number.IsCloseTo;
 import org.junit.Assert;
@@ -68,6 +70,15 @@ public class StringSketchTest
       target.put(MIN_STRING);
       target.put(MAX_STRING);
       TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
+    }
+
+    @Test
+    public void abidesEqualsContract()
+    {
+      EqualsVerifier.forClass(StringSketch.class)
+                    .usingGetClass()
+                    .withNonnullFields("delegate")
+                    .verify();
     }
   }
 

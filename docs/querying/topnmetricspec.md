@@ -23,7 +23,7 @@ title: "TopNMetricSpec"
   -->
 
 
-In Apache Druid (incubating), the topN metric spec specifies how topN values should be sorted.
+In Apache Druid, the topN metric spec specifies how topN values should be sorted.
 
 ## Numeric TopNMetricSpec
 

@@ -87,7 +87,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -421,7 +420,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   // CAUTION: This method calls RemoteTaskRunnerWorkItem.setResult(..) which results in TaskQueue.notifyStatus() being called
   // because that is attached by TaskQueue to task result future. So, this method must not be called with "statusLock"
-  // held. See https://github.com/apache/incubator-druid/issues/6201
+  // held. See https://github.com/apache/druid/issues/6201
   private void taskComplete(
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem,
       WorkerHolder workerHolder,
@@ -722,7 +721,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     Preconditions.checkArgument(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    Map<String, Object> result = new HashMap<>(workers.size());
+    Map<String, Object> result = Maps.newHashMapWithExpectedSize(workers.size());
     for (Map.Entry<String, WorkerHolder> e : workers.entrySet()) {
       WorkerHolder serverHolder = e.getValue();
       result.put(

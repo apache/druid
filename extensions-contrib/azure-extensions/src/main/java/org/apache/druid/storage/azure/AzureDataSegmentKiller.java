@@ -31,6 +31,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.Map;
 
+/**
+ * Used for removing segment files stored in Azure based deep storage
+ */
 public class AzureDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(AzureDataSegmentKiller.class);

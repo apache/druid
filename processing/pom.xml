@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.18.0-incubating-SNAPSHOT</version>
+        <version>0.18.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -156,6 +156,14 @@
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.datasketches</groupId>
+            <artifactId>datasketches-memory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-common</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -183,6 +191,11 @@
         <dependency>
             <groupId>com.google.caliper</groupId>
             <artifactId>caliper</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -252,7 +265,7 @@
                         -Dfile.encoding=UTF-8
                         -Duser.timezone=UTC
                         -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                        <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                        <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                         -Ddruid.indexing.doubleStorage=double
                     </argLine>
                     <!-- our tests are very verbose, let's keep the volume down -->

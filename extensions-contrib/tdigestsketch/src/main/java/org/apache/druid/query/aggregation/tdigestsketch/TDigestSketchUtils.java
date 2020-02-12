@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -78,18 +77,6 @@ public class TDigestSketchUtils
     intermediateSize += tempBufferSize * Integer.BYTES;
     // Adding an extra buffer of 1K for overhead
     return intermediateSize + 1000;
-  }
-
-  static void throwExceptionForWrongType(ColumnValueSelector selector)
-  {
-    final String msg = selector.getObject() == null
-                       ? StringUtils.format("Expected a number, but received null")
-                       : StringUtils.format(
-                           "Expected a number, but received [%s] of type [%s]",
-                           selector.getObject(),
-                           selector.getObject().getClass()
-                       );
-    throw new IAE(msg);
   }
 
   public static boolean matchingAggregatorFactoryExists(
