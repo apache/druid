@@ -36,13 +36,13 @@ public class LongAnyBufferAggregator extends NumericAnyBufferAggregator<BaseLong
   @Override
   void initValue(ByteBuffer buf, int position)
   {
-    buf.putLong(getFoundValueStoredPosition(position), 0);
+    buf.putLong(position + FOUND_VALUE_OFFSET, 0);
   }
 
   @Override
   void putValue(ByteBuffer buf, int position)
   {
-    buf.putLong(getFoundValueStoredPosition(position), valueSelector.getLong());
+    buf.putLong(position + FOUND_VALUE_OFFSET, valueSelector.getLong());
   }
 
   @Override
@@ -50,24 +50,24 @@ public class LongAnyBufferAggregator extends NumericAnyBufferAggregator<BaseLong
   public Object get(ByteBuffer buf, int position)
   {
     final boolean isNull = isValueNull(buf, position);
-    return isNull ? null : buf.getLong(getFoundValueStoredPosition(position));
+    return isNull ? null : buf.getLong(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getLong(getFoundValueStoredPosition(position));
+    return (float) buf.getLong(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getLong(getFoundValueStoredPosition(position));
+    return (double) buf.getLong(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return buf.getLong(getFoundValueStoredPosition(position));
+    return buf.getLong(position + FOUND_VALUE_OFFSET);
   }
 }

@@ -37,13 +37,13 @@ public class FloatAnyBufferAggregator extends NumericAnyBufferAggregator<BaseFlo
   @Override
   void initValue(ByteBuffer buf, int position)
   {
-    buf.putFloat(getFoundValueStoredPosition(position), 0);
+    buf.putFloat(position + FOUND_VALUE_OFFSET, 0);
   }
 
   @Override
   void putValue(ByteBuffer buf, int position)
   {
-    buf.putFloat(getFoundValueStoredPosition(position), valueSelector.getFloat());
+    buf.putFloat(position + FOUND_VALUE_OFFSET, valueSelector.getFloat());
   }
 
   @Override
@@ -51,25 +51,25 @@ public class FloatAnyBufferAggregator extends NumericAnyBufferAggregator<BaseFlo
   public Object get(ByteBuffer buf, int position)
   {
     final boolean isNull = isValueNull(buf, position);
-    return isNull ? null : buf.getFloat(getFoundValueStoredPosition(position));
+    return isNull ? null : buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return buf.getFloat(getFoundValueStoredPosition(position));
+    return buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getFloat(getFoundValueStoredPosition(position));
+    return (long) buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getFloat(getFoundValueStoredPosition(position));
+    return (double) buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
 }

@@ -50,7 +50,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NOT_FOUND_FLAG_VALUE) {
+    if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
       final Object object = valueSelector.getObject();
       String foundValue = DimensionHandlerUtils.convertObjectToString(object);
       if (foundValue != null) {
