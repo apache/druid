@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Represents something that can be the right-hand side of a join.
@@ -43,6 +44,10 @@ public interface Joinable
   /**
    * Returns the cardinality of "columnName", or {@link #CARDINALITY_UNKNOWN} if not known. May be used at query
    * time to trigger optimizations.
+   *
+   * If not {@link #CARDINALITY_UNKNOWN}, this must match the cardinality of selectors returned by the
+   * {@link ColumnSelectorFactory#makeDimensionSelector} method of this joinable's
+   * {@link JoinMatcher#getColumnSelectorFactory()} .
    */
   int getCardinality(String columnName);
 
@@ -70,5 +75,20 @@ public interface Joinable
       ColumnSelectorFactory leftColumnSelectorFactory,
       JoinConditionAnalysis condition,
       boolean remainderNeeded
+  );
+
+  /**
+   * Searches a column from this Joinable for a particular value, finds rows that match,
+   * and returns values of a second column for those rows.
+   *
+   * @param searchColumnName Name of the search column
+   * @param searchColumnValue Target value of the search column
+   * @param retrievalColumnName The column to retrieve values from
+   * @return The set of correlated column values. If we cannot determine correlated values, return an empty set.
+   */
+  Set<String> getCorrelatedColumnValues(
+      String searchColumnName,
+      String searchColumnValue,
+      String retrievalColumnName
   );
 }

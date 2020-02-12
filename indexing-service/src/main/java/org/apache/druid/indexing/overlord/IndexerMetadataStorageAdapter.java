@@ -64,6 +64,6 @@ public class IndexerMetadataStorageAdapter
         activeTaskInterval.getStart()
     );
 
-    return indexerMetadataStorageCoordinator.deletePendingSegments(dataSource, deleteInterval);
+    return indexerMetadataStorageCoordinator.deletePendingSegmentsCreatedInInterval(dataSource, deleteInterval);
   }
 }

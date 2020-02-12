@@ -57,7 +57,8 @@ public class InputRowSerdeTest
   private List<String> dims;
   private Map<String, Object> event;
 
-  {
+  static {
+    NullHandling.initializeForTests();
     new AggregatorsModule(); //registers ComplexMetric serde for hyperUnique
   }
 

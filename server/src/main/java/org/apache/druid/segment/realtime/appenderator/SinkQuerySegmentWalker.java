@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.CachingQueryRunner;
@@ -42,6 +41,8 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -57,19 +58,25 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
+/**
+ * Query handler for indexing tasks.
+ */
 public class SinkQuerySegmentWalker implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(SinkQuerySegmentWalker.class);
@@ -82,6 +89,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
@@ -93,6 +101,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats
@@ -104,6 +113,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
     this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
+    this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
@@ -118,40 +128,17 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     final Iterable<SegmentDescriptor> specs = FunctionalIterable
         .create(intervals)
+        .transformCat(sinkTimeline::lookup)
         .transformCat(
-            new Function<Interval, Iterable<TimelineObjectHolder<String, Sink>>>()
-            {
-              @Override
-              public Iterable<TimelineObjectHolder<String, Sink>> apply(final Interval interval)
-              {
-                return sinkTimeline.lookup(interval);
-              }
-            }
-        )
-        .transformCat(
-            new Function<TimelineObjectHolder<String, Sink>, Iterable<SegmentDescriptor>>()
-            {
-              @Override
-              public Iterable<SegmentDescriptor> apply(final TimelineObjectHolder<String, Sink> holder)
-              {
-                return FunctionalIterable
-                    .create(holder.getObject())
-                    .transform(
-                        new Function<PartitionChunk<Sink>, SegmentDescriptor>()
-                        {
-                          @Override
-                          public SegmentDescriptor apply(final PartitionChunk<Sink> chunk)
-                          {
-                            return new SegmentDescriptor(
-                                holder.getInterval(),
-                                holder.getVersion(),
-                                chunk.getChunkNumber()
-                            );
-                          }
-                        }
-                    );
-              }
-            }
+            holder -> FunctionalIterable
+                .create(holder.getObject())
+                .transform(
+                    chunk -> new SegmentDescriptor(
+                        holder.getInterval(),
+                        holder.getVersion(),
+                        chunk.getChunkNumber()
+                    )
+                )
         );
 
     return getQueryRunnerForSegments(query, specs);
@@ -161,18 +148,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
-    if (!(query.getDataSource() instanceof TableDataSource)
-        || !dataSource.equals(((TableDataSource) query.getDataSource()).getName())) {
-      log.makeAlert("Received query for unknown dataSource")
-         .addData("dataSource", query.getDataSource())
-         .emit();
-      return new NoopQueryRunner<>();
-    }
-
-    // Sanity check: we cannot actually handle joins yet, so detect them and throw an error.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    if (!analysis.getPreJoinableClauses().isEmpty()) {
-      throw new ISE("Cannot handle join dataSource");
+    final Optional<TableDataSource> baseTableDataSource = analysis.getBaseTableDataSource();
+
+    if (!baseTableDataSource.isPresent() || !dataSource.equals(baseTableDataSource.get().getName())) {
+      // Report error, since we somehow got a query for a datasource we can't handle.
+      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
     }
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
@@ -183,6 +164,19 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     final boolean skipIncrementalSegment = query.getContextValue(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
+
+    // Make sure this query type can handle the subquery, if present.
+    if (analysis.isQuery() && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
+      throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
+    }
+
+    // segmentMapFn maps each base Segment into a joined Segment if necessary.
+    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+        analysis.getPreJoinableClauses(),
+        joinableFactory,
+        cpuTimeAccumulator,
+        QueryContexts.getEnableJoinFilterPushDown(query)
+    );
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
@@ -218,7 +212,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     // Prevent the underlying segment from swapping when its being iterated
                     final Pair<Segment, Closeable> segmentAndCloseable = hydrant.getAndIncrementSegment();
                     try {
-                      QueryRunner<T> runner = factory.createRunner(segmentAndCloseable.lhs);
+                      final Segment mappedSegment = segmentMapFn.apply(segmentAndCloseable.lhs);
+
+                      QueryRunner<T> runner = factory.createRunner(mappedSegment);
 
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
@@ -244,7 +240,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                           runner,
                           segmentAndCloseable.rhs
                       );
-                      return new Pair<>(segmentAndCloseable.lhs.getDataInterval(), runner);
+                      return new Pair<>(mappedSegment.getDataInterval(), runner);
                     }
                     catch (RuntimeException e) {
                       CloseQuietly.close(segmentAndCloseable.rhs);

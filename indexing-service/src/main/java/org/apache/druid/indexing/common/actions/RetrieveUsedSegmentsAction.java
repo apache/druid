@@ -44,7 +44,7 @@ import java.util.Objects;
  * the collection only once.
  *
  * @implNote This action doesn't produce a {@link java.util.Set} because it's implemented via {@link
- * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#getUsedSegmentsForIntervals} which returns
+ * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#retrieveUsedSegmentsForIntervals} which returns
  * a collection. Producing a {@link java.util.Set} would require an unnecessary copy of segments collection.
  */
 public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSegment>>
@@ -115,7 +115,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .getUsedSegmentsForIntervals(dataSource, intervals, visibility);
+                  .retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
   }
 
   @Override

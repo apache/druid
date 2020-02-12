@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.util.ArrayList;
@@ -73,10 +72,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
             context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
-            final QueryPlus<T> retryQueryPlus = queryPlus.withQuerySegmentSpec(
-                new MultipleSpecificSegmentSpec(
-                    missingSegments
-                )
+            final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(
+                Queries.withSpecificSegments(queryPlus.getQuery(), missingSegments)
             );
             Sequence<T> retrySequence = baseRunner.run(retryQueryPlus, context);
             listOfSequences.add(retrySequence);

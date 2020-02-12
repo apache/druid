@@ -22,7 +22,7 @@ package org.apache.druid.sql.avatica;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Period;
 
-public class AvaticaServerConfig
+class AvaticaServerConfig
 {
   @JsonProperty
   public int maxConnections = 25;

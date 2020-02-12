@@ -272,6 +272,20 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
+   * Returns whether this toolchest is able to handle the provided subquery.
+   *
+   * When this method returns true, the core query stack will pass subquery datasources over to the toolchest and will
+   * assume they are properly handled.
+   *
+   * When this method returns false, the core query stack will throw an error if subqueries are present. In the future,
+   * instead of throwing an error, the core query stack will handle the subqueries on its own.
+   */
+  public boolean canPerformSubquery(final Query<?> subquery)
+  {
+    return false;
+  }
+
+  /**
    * Returns a list of field names in the order that {@link #resultsAsArrays} would return them. The returned list will
    * be the same length as each array returned by {@link #resultsAsArrays}.
    *

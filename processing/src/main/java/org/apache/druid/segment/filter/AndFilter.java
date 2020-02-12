@@ -39,6 +39,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -233,5 +234,24 @@ public class AndFilter implements BooleanFilter
         return match;
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AndFilter andFilter = (AndFilter) o;
+    return Objects.equals(getFilters(), andFilter.getFilters());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getFilters());
   }
 }

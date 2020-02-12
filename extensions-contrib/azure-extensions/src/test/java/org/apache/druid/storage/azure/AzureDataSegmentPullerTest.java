@@ -39,17 +39,21 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
   private static final String SEGMENT_FILE_NAME = "segment";
   private static final String CONTAINER_NAME = "container";
-  private static final String BLOB_PATH = "/path/to/storage/index.zip";
+  private static final String BLOB_PATH = "path/to/storage/index.zip";
+  private static final String BLOB_PATH_HADOOP = AzureDataSegmentPuller.AZURE_STORAGE_HOST_ADDRESS + "/path/to/storage/index.zip";
   private AzureStorage azureStorage;
+  private AzureByteSourceFactory byteSourceFactory;
 
   @Before
   public void before()
   {
     azureStorage = createMock(AzureStorage.class);
+    byteSourceFactory = createMock(AzureByteSourceFactory.class);
   }
 
   @Test
-  public void testZIPUncompress() throws SegmentLoadingException, URISyntaxException, StorageException, IOException
+  public void test_getSegmentFiles_success()
+      throws SegmentLoadingException, URISyntaxException, StorageException, IOException
   {
     final String value = "bucket";
     final File pulledFile = AzureTestUtils.createZipTempFile(SEGMENT_FILE_NAME, value);
@@ -57,11 +61,12 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     try {
       final InputStream zipStream = new FileInputStream(pulledFile);
 
-      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
 
       FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, toDir);
 
@@ -78,14 +83,47 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     }
   }
 
+  @Test
+  public void test_getSegmentFiles_blobPathIsHadoop_success()
+      throws SegmentLoadingException, URISyntaxException, StorageException, IOException
+  {
+    final String value = "bucket";
+    final File pulledFile = AzureTestUtils.createZipTempFile(SEGMENT_FILE_NAME, value);
+    final File toDir = FileUtils.createTempDir();
+    try {
+      final InputStream zipStream = new FileInputStream(pulledFile);
+
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
+
+      replayAll();
+
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
+
+      FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH_HADOOP, toDir);
+
+      File expected = new File(toDir, SEGMENT_FILE_NAME);
+      Assert.assertEquals(value.length(), result.size());
+      Assert.assertTrue(expected.exists());
+      Assert.assertEquals(value.length(), expected.length());
+
+      verifyAll();
+    }
+    finally {
+      pulledFile.delete();
+      FileUtils.deleteDirectory(toDir);
+    }
+  }
+
   @Test(expected = RuntimeException.class)
-  public void testDeleteOutputDirectoryWhenErrorIsRaisedPullingSegmentFiles()
+  public void test_getSegmentFiles_nonRecoverableErrorRaisedWhenPullingSegmentFiles_doNotDeleteOutputDirectory()
       throws IOException, URISyntaxException, StorageException, SegmentLoadingException
   {
 
     final File outDir = FileUtils.createTempDir();
     try {
-      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andThrow(
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
           new URISyntaxException(
               "error",
               "error",
@@ -95,13 +133,46 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
+
+      puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
+    }
+    catch (Exception e) {
+      Assert.assertTrue(outDir.exists());
+      verifyAll();
+      throw e;
+    }
+    finally {
+      FileUtils.deleteDirectory(outDir);
+    }
+  }
+
+  @Test(expected = SegmentLoadingException.class)
+  public void test_getSegmentFiles_recoverableErrorRaisedWhenPullingSegmentFiles_deleteOutputDirectory()
+      throws IOException, URISyntaxException, StorageException, SegmentLoadingException
+  {
+
+    final File outDir = FileUtils.createTempDir();
+    try {
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(azureStorage.getBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
+          new StorageException(null, null, 0, null, null)
+      ).atLeastOnce();
+
+      replayAll();
+
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
 
       Assert.assertFalse(outDir.exists());
 
       verifyAll();
+    }
+    catch (Exception e) {
+      Assert.assertFalse(outDir.exists());
+      verifyAll();
+      throw e;
     }
     finally {
       FileUtils.deleteDirectory(outDir);

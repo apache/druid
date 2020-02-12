@@ -41,8 +41,6 @@ import java.util.stream.StreamSupport;
 
 public class S3InputSource extends CloudObjectInputSource<S3Entity>
 {
-  private static final int MAX_LISTING_LENGTH = 1024;
-
   private final ServerSideEncryptingAmazonS3 s3Client;
 
   @JsonCreator

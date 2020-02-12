@@ -24,7 +24,6 @@ import org.apache.druid.segment.AbstractSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -41,24 +40,21 @@ public class HashJoinSegment extends AbstractSegment
 {
   private final Segment baseSegment;
   private final List<JoinableClause> clauses;
+  private final boolean enableFilterPushDown;
 
   public HashJoinSegment(
       Segment baseSegment,
-      List<JoinableClause> clauses
+      List<JoinableClause> clauses,
+      boolean enableFilterPushDown
   )
   {
     this.baseSegment = baseSegment;
     this.clauses = clauses;
+    this.enableFilterPushDown = enableFilterPushDown;
 
-    // Verify no clauses would shadow the special __time field.
-    for (JoinableClause clause : clauses) {
-      if (clause.includesColumn(ColumnHolder.TIME_COLUMN_NAME)) {
-        throw new IAE(
-            "Clause cannot have prefix[%s], since it would shadow %s",
-            clause.getPrefix(),
-            ColumnHolder.TIME_COLUMN_NAME
-        );
-      }
+    // Verify 'clauses' is nonempty (otherwise it's a waste to create this object, and the caller should know)
+    if (clauses.isEmpty()) {
+      throw new IAE("'clauses' is empty, no need to create HashJoinSegment");
     }
   }
 
@@ -87,7 +83,7 @@ public class HashJoinSegment extends AbstractSegment
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses);
+    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, enableFilterPushDown);
   }
 
   @Override

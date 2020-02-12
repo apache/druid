@@ -58,7 +58,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
@@ -81,6 +80,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -812,8 +812,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           .flatMap(report -> report.getNewSegments().stream())
           .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
-      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
-                            .equals(newSegments)) {
+      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers).equals(newSegments)) {
         LOG.info("Our segments really do exist, awaiting handoff.");
       } else {
         throw new ISE("Failed to publish segments[%s]", newSegments);

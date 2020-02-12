@@ -32,6 +32,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Represents analysis of a join condition.
@@ -49,28 +51,35 @@ import java.util.Optional;
 public class JoinConditionAnalysis
 {
   private final String originalExpression;
+  private final String rightPrefix;
   private final List<Equality> equiConditions;
   private final List<Expr> nonEquiConditions;
   private final boolean isAlwaysFalse;
   private final boolean isAlwaysTrue;
   private final boolean canHashJoin;
+  private final Set<String> rightKeyColumns;
 
   private JoinConditionAnalysis(
       final String originalExpression,
+      final String rightPrefix,
       final List<Equality> equiConditions,
       final List<Expr> nonEquiConditions
   )
   {
     this.originalExpression = Preconditions.checkNotNull(originalExpression, "originalExpression");
+    this.rightPrefix = Preconditions.checkNotNull(rightPrefix, "rightPrefix");
     this.equiConditions = Collections.unmodifiableList(equiConditions);
     this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
     // if any nonEquiCondition is an expression and it evaluates to false
     isAlwaysFalse = nonEquiConditions.stream()
-            .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings()).asBoolean());
+                                     .anyMatch(expr -> expr.isLiteral() && !expr.eval(ExprUtils.nilBindings())
+                                                                                .asBoolean());
     // if there are no equiConditions and all nonEquiConditions are literals and the evaluate to true
     isAlwaysTrue = equiConditions.isEmpty() && nonEquiConditions.stream()
-            .allMatch(expr -> expr.isLiteral() && expr.eval(ExprUtils.nilBindings()).asBoolean());
+                                                                .allMatch(expr -> expr.isLiteral() && expr.eval(
+                                                                    ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
+    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toSet());
   }
 
   /**
@@ -113,14 +122,14 @@ public class JoinConditionAnalysis
       }
     }
 
-    return new JoinConditionAnalysis(condition, equiConditions, nonEquiConditions);
+    return new JoinConditionAnalysis(condition, rightPrefix, equiConditions, nonEquiConditions);
   }
 
   private static boolean isLeftExprAndRightColumn(final Expr a, final Expr b, final String rightPrefix)
   {
-    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> c.startsWith(rightPrefix))
+    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> Joinables.isPrefixedBy(c, rightPrefix))
            && b.getIdentifierIfIdentifier() != null
-           && b.getIdentifierIfIdentifier().startsWith(rightPrefix);
+           && Joinables.isPrefixedBy(b.getIdentifierIfIdentifier(), rightPrefix);
   }
 
   /**
@@ -171,6 +180,14 @@ public class JoinConditionAnalysis
     return canHashJoin;
   }
 
+  /**
+   * Returns the distinct column keys from the RHS required to evaluate the equi conditions.
+   */
+  public Set<String> getRightEquiConditionKeys()
+  {
+    return rightKeyColumns;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -181,13 +198,14 @@ public class JoinConditionAnalysis
       return false;
     }
     JoinConditionAnalysis that = (JoinConditionAnalysis) o;
-    return Objects.equals(originalExpression, that.originalExpression);
+    return Objects.equals(originalExpression, that.originalExpression) &&
+           Objects.equals(rightPrefix, that.rightPrefix);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(originalExpression);
+    return Objects.hash(originalExpression, rightPrefix);
   }
 
   @Override

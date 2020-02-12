@@ -34,9 +34,11 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
@@ -685,8 +687,17 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
       // build LocalParallelIndexTaskClient
       final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(null, getId(), 0, null, 0);
-
-      final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
+      final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) getIngestionSchema()
+          .getTuningConfig()
+          .getGivenOrDefaultPartitionsSpec();
+      final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
+          toolbox,
+          new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
+          getIngestionSchema().getDataSchema(),
+          getTaskLockHelper(),
+          getIngestionSchema().getIOConfig().isAppendToExisting(),
+          partitionsSpec
+      );
 
       final SegmentIdWithShardSpec segmentIdentifier = segmentAllocator.allocate(
           new MapBasedInputRow(DateTimes.of("2017-01-01"), Collections.emptyList(), Collections.emptyMap()),

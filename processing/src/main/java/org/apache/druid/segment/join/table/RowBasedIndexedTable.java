@@ -30,8 +30,10 @@ import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,13 +49,13 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   private final List<String> columns;
   private final List<ValueType> columnTypes;
   private final List<Function<RowType, Object>> columnFunctions;
-  private final List<String> keyColumns;
+  private final Set<String> keyColumns;
 
   public RowBasedIndexedTable(
       final List<RowType> table,
       final RowAdapter<RowType> rowAdapter,
       final Map<String, ValueType> rowSignature,
-      final List<String> keyColumns
+      final Set<String> keyColumns
   )
   {
     this.table = table;
@@ -62,6 +64,10 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     this.columnTypes = new ArrayList<>(columns.size());
     this.columnFunctions = columns.stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
     this.keyColumns = keyColumns;
+
+    if (new HashSet<>(keyColumns).size() != keyColumns.size()) {
+      throw new ISE("keyColumns[%s] must not contain duplicates", keyColumns);
+    }
 
     if (!rowSignature.keySet().containsAll(keyColumns)) {
       throw new ISE(
@@ -102,7 +108,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
-  public List<String> keyColumns()
+  public Set<String> keyColumns()
   {
     return keyColumns;
   }

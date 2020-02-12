@@ -101,7 +101,7 @@ public class Rules
           JoinPushExpressionsRule.INSTANCE,
           FilterAggregateTransposeRule.INSTANCE,
           ProjectWindowTransposeRule.INSTANCE,
-          JoinCommuteRule.INSTANCE,
+          JoinCommuteRule.SWAP_OUTER,
           JoinPushThroughJoinRule.RIGHT,
           JoinPushThroughJoinRule.LEFT,
           SortProjectTransposeRule.INSTANCE,
@@ -130,13 +130,13 @@ public class Rules
           AggregateValuesRule.INSTANCE
       );
 
-  // Rules from VolcanoPlanner's registerAbstractRelationalRules.
+  // Rules from VolcanoPlanner's registerAbstractRelationalRules, minus JoinCommuteRule since it's already
+  // in DEFAULT_RULES.
   private static final List<RelOptRule> VOLCANO_ABSTRACT_RULES =
       ImmutableList.of(
           FilterJoinRule.FILTER_ON_JOIN,
           FilterJoinRule.JOIN,
           AbstractConverter.ExpandConversionRule.INSTANCE,
-          JoinCommuteRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
           UnionToDistinctRule.INSTANCE,
           ProjectRemoveRule.INSTANCE,
