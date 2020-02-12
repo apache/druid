@@ -170,6 +170,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       catch (EntryExistsException e) {
         throw new RuntimeException(e);
       }
+
+      // WARNING: In production, subtasks are created via HTTP calls and instantiated by Jackson, which means they
+      // cannot share objects like they can here. For example, if the indexing task uses JsonParseSpec, the same
+      // JSONFlattenerMaker instance is shared among subtasks, which is bad since JSONFlattenerMaker is not thread-safe.
       tasks.put(subTask.getId(), service.submit(() -> {
         try {
           final TaskToolbox toolbox = createTaskToolbox(subTask);

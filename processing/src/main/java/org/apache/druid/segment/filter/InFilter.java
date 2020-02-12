@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -234,5 +235,27 @@ public class InFilter implements Filter
         return input -> doublePredicateSupplier.get().applyDouble(input);
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InFilter inFilter = (InFilter) o;
+    return Objects.equals(dimension, inFilter.dimension) &&
+           Objects.equals(values, inFilter.values) &&
+           Objects.equals(extractionFn, inFilter.extractionFn) &&
+           Objects.equals(filterTuning, inFilter.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, values, extractionFn, filterTuning);
   }
 }

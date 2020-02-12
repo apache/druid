@@ -49,7 +49,9 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_DATASOURCE,
           INDEX_TASK,
           INDEX_QUERIES_RESOURCE,
-          false
+          false,
+          true,
+          true
       );
       doReindexTest(
           INDEX_DATASOURCE,

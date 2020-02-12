@@ -285,10 +285,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (e instanceof RuntimeException && e.getCause() instanceof InvocationTargetException) {
         InvocationTargetException ite = (InvocationTargetException) e.getCause();
         effectiveException = ite.getCause();
-        log.error(effectiveException, "Got invocation target exception in run(), cause: ");
+        log.error(effectiveException, "Got invocation target exception in run()");
       } else {
         effectiveException = e;
-        log.error(e, "Encountered exception in run():");
+        log.error(e, "Encountered exception in run()");
       }
 
       errorMsg = Throwables.getStackTraceAsString(effectiveException);
@@ -489,7 +489,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
 
         Thread.currentThread().setContextClassLoader(loader);
-        final String killStatusString[] = (String[]) innerProcessingRunTask.invoke(
+        final String[] killStatusString = (String[]) innerProcessingRunTask.invoke(
             killMRJobInnerProcessingRunner,
             new Object[]{buildKillJobInput}
         );
@@ -616,7 +616,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         );
       }
       catch (Exception e) {
-        log.error(e, "Got exception from getTotalMetrics(): ");
+        log.error(e, "Got exception from getTotalMetrics()");
         return null;
       }
     }

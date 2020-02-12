@@ -37,8 +37,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -63,6 +63,8 @@ import java.util.stream.Collectors;
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
+  public static final String TYPE = "segmentAllocate";
+
   private static final Logger log = new Logger(SegmentAllocateAction.class);
 
   // Prevent spinning forever in situations where the segment list just won't stop changing.
@@ -75,7 +77,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   private final String sequenceName;
   private final String previousSegmentId;
   private final boolean skipSegmentLineageCheck;
-  private final ShardSpecFactory shardSpecFactory;
+  private final PartialShardSpec partialShardSpec;
   private final LockGranularity lockGranularity;
 
   @JsonCreator
@@ -88,7 +90,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       @JsonProperty("previousSegmentId") String previousSegmentId,
       @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck,
       // nullable for backward compatibility
-      @JsonProperty("shardSpecFactory") @Nullable ShardSpecFactory shardSpecFactory,
+      @JsonProperty("shardSpecFactory") @Nullable PartialShardSpec partialShardSpec,
       @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity // nullable for backward compatibility
   )
   {
@@ -102,7 +104,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     this.sequenceName = Preconditions.checkNotNull(sequenceName, "sequenceName");
     this.previousSegmentId = previousSegmentId;
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
-    this.shardSpecFactory = shardSpecFactory == null ? NumberedShardSpecFactory.instance() : shardSpecFactory;
+    this.partialShardSpec = partialShardSpec == null ? NumberedPartialShardSpec.instance() : partialShardSpec;
     this.lockGranularity = lockGranularity == null ? LockGranularity.TIME_CHUNK : lockGranularity;
   }
 
@@ -148,10 +150,10 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     return skipSegmentLineageCheck;
   }
 
-  @JsonProperty
-  public ShardSpecFactory getShardSpecFactory()
+  @JsonProperty("shardSpecFactory")
+  public PartialShardSpec getPartialShardSpec()
   {
-    return shardSpecFactory;
+    return partialShardSpec;
   }
 
   @JsonProperty
@@ -266,7 +268,11 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
     if (!usedSegment.getInterval().contains(rowInterval)) {
-      log.error("The interval of existing segment[%s] doesn't contain rowInterval[%s]", usedSegment, rowInterval);
+      log.error(
+          "The interval of existing segment[%s] doesn't contain rowInterval[%s]",
+          usedSegment.getId(),
+          rowInterval
+      );
       return null;
     } else {
       // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
@@ -293,7 +299,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
             task.getGroupId(),
             dataSource,
             tryInterval,
-            shardSpecFactory,
+            partialShardSpec,
             task.getPriority(),
             sequenceName,
             previousSegmentId,
@@ -355,7 +361,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
            ", sequenceName='" + sequenceName + '\'' +
            ", previousSegmentId='" + previousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
-           ", shardSpecFactory=" + shardSpecFactory +
+           ", partialShardSpec=" + partialShardSpec +
            ", lockGranularity=" + lockGranularity +
            '}';
   }

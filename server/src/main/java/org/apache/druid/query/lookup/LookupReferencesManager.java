@@ -161,7 +161,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
             () -> {
               try {
                 if (!lifecycleLock.awaitStarted()) {
-                  LOG.error("WTF! lifecycle not started, lookup update notices will not be handled.");
+                  LOG.error("Lifecycle not started, lookup update notices will not be handled.");
                   return;
                 }
 

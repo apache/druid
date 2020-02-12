@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -96,7 +95,7 @@ public class InputSourceProcessor
       InputSource inputSource,
       @Nullable InputFormat inputFormat,
       File tmpDir,
-      IndexTaskSegmentAllocator segmentAllocator
+      SequenceNameFunction sequenceNameFunction
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     @Nullable
@@ -140,7 +139,7 @@ public class InputSourceProcessor
           @SuppressWarnings("OptionalGetWithoutIsPresent")
           final Interval interval = optInterval.get();
 
-          final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
+          final String sequenceName = sequenceNameFunction.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
@@ -156,7 +155,7 @@ public class InputSourceProcessor
                 // If those segments are not pushed here, the remaining available space in appenderator will be kept
                 // small which could lead to smaller segments.
                 final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-                LOG.debug("Pushed segments: %s", SegmentUtils.commaSeparatedIdentifiers(pushed.getSegments()));
+                LOG.debugSegments(pushed.getSegments(), "Pushed segments");
               }
             }
           } else {
@@ -175,8 +174,7 @@ public class InputSourceProcessor
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-
-      LOG.debug("Pushed segments: %s", SegmentUtils.commaSeparatedIdentifiers(pushed.getSegments()));
+      LOG.debugSegments(pushed.getSegments(), "Pushed segments");
 
       return pushed;
     }
@@ -191,7 +189,7 @@ public class InputSourceProcessor
     }
 
     if (logParseExceptions) {
-      LOG.error(e, "Encountered parse exception:");
+      LOG.error(e, "Encountered parse exception");
     }
 
     if (buildSegmentsSavedParseExceptions != null) {

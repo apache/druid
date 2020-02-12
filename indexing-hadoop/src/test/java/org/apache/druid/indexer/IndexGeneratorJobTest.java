@@ -369,7 +369,14 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
-                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("B", "F", "M", "Q", "X", "Y")), null, null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                            "B",
+                            "F",
+                            "M",
+                            "Q",
+                            "X",
+                            "Y"
+                        )), null, null),
                         null,
                         null
                     ),
@@ -553,12 +560,22 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = new ArrayList<>();
     if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
+        specs.add(new HashBasedNumberedShardSpec(
+            shardInfo[0],
+            shardInfo[1],
+            null,
+            HadoopDruidIndexerConfig.JSON_MAPPER
+        ));
       }
     } else if ("single".equals(partitionType)) {
       int partitionNum = 0;
       for (String[] shardInfo : (String[][]) shardInfoForEachShard) {
-        specs.add(new SingleDimensionShardSpec("host", shardInfo[0], shardInfo[1], partitionNum++));
+        specs.add(new SingleDimensionShardSpec(
+            "host",
+            shardInfo[0],
+            shardInfo[1],
+            partitionNum++
+        ));
       }
     } else {
       throw new RE("Invalid partition type:[%s]", partitionType);

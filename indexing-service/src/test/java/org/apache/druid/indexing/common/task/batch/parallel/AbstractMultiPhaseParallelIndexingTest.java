@@ -108,7 +108,8 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       File inputDir,
       String filter,
       DimensionBasedPartitionsSpec partitionsSpec,
-      int maxNumConcurrentSubTasks
+      int maxNumConcurrentSubTasks,
+      TaskState expectedTaskStatus
   ) throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
@@ -129,7 +130,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
     TaskStatus taskStatus = task.run(toolbox);
 
-    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
     shutdownTask(task);
     return actionClient.getPublishedSegments();
   }

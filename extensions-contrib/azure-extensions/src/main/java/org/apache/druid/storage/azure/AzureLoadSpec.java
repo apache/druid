@@ -29,6 +29,9 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 
 import java.io.File;
 
+/**
+ * A means of pulling segment files into Azure based deep storage
+ */
 @JsonTypeName(AzureStorageDruidModule.SCHEME)
 public class AzureLoadSpec implements LoadSpec
 {

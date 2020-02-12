@@ -92,6 +92,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-assistedinject</artifactId>
+            <version>${guice.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <scope>provided</scope>
@@ -114,6 +119,11 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -140,6 +150,11 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -160,36 +175,36 @@
                                 <limit>
                                     <counter>INSTRUCTION</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.79</minimum>
+                                    <minimum>0.84</minimum>
                                 </limit>
                                 <limit>
                                     <counter>LINE</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.80</minimum>
+                                    <minimum>0.84</minimum>
                                 </limit>
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.70</minimum>
+                                    <minimum>0.86</minimum>
                                 </limit>
                                 <limit>
                                     <counter>COMPLEXITY</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.73</minimum>
+                                    <minimum>0.80</minimum>
                                 </limit>
                                 <limit>
                                     <counter>METHOD</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.76</minimum>
+                                    <minimum>0.79</minimum>
                                 </limit>
                                 <limit>
                                     <counter>CLASS</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.83</minimum>
+                                    <minimum>0.90</minimum>
                                 </limit>
                             </limits>
                         </rule>
-                    </rules> 
+                    </rules>
                 </configuration>
                 <executions>
                     <execution>
@@ -199,7 +214,7 @@
                             <goal>report</goal>
                             <goal>check</goal>
                         </goals>
-                    </execution> 
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

@@ -26,6 +26,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import java.util.Comparator;
@@ -95,7 +96,7 @@ public class TopNBinaryFn implements BinaryOperator<Result<TopNResultValue>>
 
       if (arg1Val != null) {
         // size of map = aggregator + topNDim + postAgg (If sorting is done on post agg field)
-        Map<String, Object> retVal = new LinkedHashMap<>(aggregations.size() + 2);
+        Map<String, Object> retVal = CollectionUtils.newLinkedHashMapWithExpectedSize(aggregations.size() + 2);
 
         retVal.put(dimension, dimensionValue);
         for (AggregatorFactory factory : aggregations) {

@@ -308,7 +308,7 @@ notices:
       Google Guice - Extensions - Servlet
       Copyright 2006-2016 Google, Inc.
   - guice-assistedinject: |
-      Google Guice - Extensions - AssistedInect
+      Google Guice - Extensions - AssistedInject
       Copyright 2006-2016 Google, Inc.
 
 ---
@@ -3057,7 +3057,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0-incubating
+version: 1.2.0-incubating
 libraries:
   - org.apache.datasketches: datasketches-java
 
