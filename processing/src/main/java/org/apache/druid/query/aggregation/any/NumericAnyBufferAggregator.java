@@ -34,8 +34,8 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
 {
   // Rightmost bit for is null check (0 for is null and 1 for not null)
   // Second rightmost bit for is found check (0 for not found and 1 for found)
-  private static final byte BYTE_FLAG_FOUND_MASK = 0b0010;
-  private static final byte BYTE_FLAG_NULL_MASK = 0b0001;
+  private static final byte BYTE_FLAG_FOUND_MASK = 0x02;
+  private static final byte BYTE_FLAG_NULL_MASK = 0x01;
   static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
   private final boolean useDefault = NullHandling.replaceWithDefault();

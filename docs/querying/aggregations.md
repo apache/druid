@@ -238,7 +238,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 (Double/Float/Long/String) ANY aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 
-Returns any value including null. This aggregator simplify and optimize the performance by returning the first encoutnered value (including null)
+Returns any value including null. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)
 
 #### `doubleAny` aggregator
 
