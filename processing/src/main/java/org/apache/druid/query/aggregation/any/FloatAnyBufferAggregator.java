@@ -19,20 +19,11 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-/**
- * This Aggregator is created by the {@link FloatAnyAggregatorFactory} which has no special null handling logic.
- * Hence, null can be pass into this aggregator from the valueSelector and null can be return from this aggregator.
- */
 public class FloatAnyBufferAggregator extends NumericAnyBufferAggregator<BaseFloatColumnValueSelector>
 {
   public FloatAnyBufferAggregator(

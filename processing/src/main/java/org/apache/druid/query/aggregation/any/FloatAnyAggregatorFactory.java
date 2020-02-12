@@ -19,31 +19,22 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.FloatSumAggregator;
-import org.apache.druid.query.aggregation.SimpleFloatAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregator;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstBufferAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -196,14 +187,13 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
     return "float";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Float.BYTES + Byte.BYTES + Byte.BYTES;
+    return Float.BYTES + Byte.BYTES;
   }
 
   @Override

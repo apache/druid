@@ -23,10 +23,6 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-/**
- * This Aggregator is created by the {@link FloatAnyAggregatorFactory} which has no special null handling logic.
- * Hence, null can be pass into this aggregator from the valueSelector and null can be return from this aggregator.
- */
 public class FloatAnyAggregator extends NumericAnyAggregator<BaseFloatColumnValueSelector>
 {
   private float foundValue;

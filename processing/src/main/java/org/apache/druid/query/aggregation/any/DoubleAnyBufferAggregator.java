@@ -24,10 +24,6 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-/**
- * This Aggregator is created by the {@link DoubleAnyAggregatorFactory} which has no special null handling logic.
- * Hence, null can be pass into this aggregator from the valueSelector and null can be return from this aggregator.
- */
 public class DoubleAnyBufferAggregator extends NumericAnyBufferAggregator<BaseDoubleColumnValueSelector>
 {
   public DoubleAnyBufferAggregator(
@@ -40,13 +36,13 @@ public class DoubleAnyBufferAggregator extends NumericAnyBufferAggregator<BaseDo
   @Override
   void initValue(ByteBuffer buf, int position)
   {
-    buf.putDouble(getFoundValueStoredPosition(position), 0);
+    buf.putDouble(position + FOUND_VALUE_OFFSET, 0);
   }
 
   @Override
   void putValue(ByteBuffer buf, int position)
   {
-    buf.putDouble(getFoundValueStoredPosition(position), valueSelector.getDouble());
+    buf.putDouble(position + FOUND_VALUE_OFFSET, valueSelector.getDouble());
   }
 
   @Override
@@ -54,24 +50,24 @@ public class DoubleAnyBufferAggregator extends NumericAnyBufferAggregator<BaseDo
   public Object get(ByteBuffer buf, int position)
   {
     final boolean isNull = isValueNull(buf, position);
-    return isNull ? null : buf.getDouble(getFoundValueStoredPosition(position));
+    return isNull ? null : buf.getDouble(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getDouble(getFoundValueStoredPosition(position));
+    return (float) buf.getDouble(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getDouble(getFoundValueStoredPosition(position));
+    return (long) buf.getDouble(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return buf.getDouble(getFoundValueStoredPosition(position));
+    return buf.getDouble(position + FOUND_VALUE_OFFSET);
   }
 }

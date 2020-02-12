@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.DoubleSumAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -190,14 +189,13 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
     return storeDoubleAsFloat ? "float" : "double";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Double.BYTES + Byte.BYTES + Byte.BYTES;
+    return Double.BYTES + Byte.BYTES;
   }
 
   @Override

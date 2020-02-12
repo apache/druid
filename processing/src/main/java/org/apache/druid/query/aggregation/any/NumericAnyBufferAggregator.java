@@ -32,11 +32,11 @@ import java.nio.ByteBuffer;
 public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableColumnValueSelector>
     implements BufferAggregator
 {
-  private static final byte BYTE_FLAG_IS_NOT_SET = 0;
-  private static final byte BYTE_FLAG_IS_SET = 1;
-  private static final int IS_FOUND_FLAG_OFFSET_POSITION = 0;
-  private static final int IS_NULL_FLAG_OFFSET_POSITION = IS_FOUND_FLAG_OFFSET_POSITION + Byte.BYTES;
-  private static final int FOUND_VALUE_OFFSET_POSITION = IS_NULL_FLAG_OFFSET_POSITION + Byte.BYTES;
+  // Rightmost bit for is null check (0 for is null and 1 for not null)
+  // Second rightmost bit for is found check (0 for not found and 1 for found)
+  private static final byte BYTE_FLAG_FOUND_MASK = 0b0010;
+  private static final byte BYTE_FLAG_NULL_MASK = 0b0001;
+  static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
   private final boolean useDefault = NullHandling.replaceWithDefault();
 
@@ -61,32 +61,26 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position + IS_FOUND_FLAG_OFFSET_POSITION, BYTE_FLAG_IS_NOT_SET);
-    buf.put(position + IS_NULL_FLAG_OFFSET_POSITION, useDefault ? BYTE_FLAG_IS_NOT_SET : BYTE_FLAG_IS_SET);
+    buf.put(position, useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
     initValue(buf, position);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (buf.get(position + IS_FOUND_FLAG_OFFSET_POSITION) == BYTE_FLAG_IS_NOT_SET) {
+    if ((buf.get(position) & BYTE_FLAG_FOUND_MASK) != BYTE_FLAG_FOUND_MASK) {
       if (useDefault || !valueSelector.isNull()) {
         putValue(buf, position);
-        buf.put(position + IS_NULL_FLAG_OFFSET_POSITION, BYTE_FLAG_IS_NOT_SET);
+        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
       } else {
-        buf.put(position + IS_NULL_FLAG_OFFSET_POSITION, BYTE_FLAG_IS_SET);
+        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
       }
-      buf.put(position + IS_FOUND_FLAG_OFFSET_POSITION, BYTE_FLAG_IS_SET);
     }
   }
 
   boolean isValueNull(ByteBuffer buf, int position)
   {
-    return buf.get(position + IS_NULL_FLAG_OFFSET_POSITION) == BYTE_FLAG_IS_SET;
-  }
-
-  int getFoundValueStoredPosition(int position) {
-    return position + FOUND_VALUE_OFFSET_POSITION;
+    return (buf.get(position) & BYTE_FLAG_NULL_MASK) == NullHandling.IS_NULL_BYTE;
   }
 
   @Override

@@ -19,31 +19,22 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.LongSumAggregator;
-import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregator;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstBufferAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -194,14 +185,13 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
     return "long";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Byte.BYTES + Byte.BYTES;
+    return Long.BYTES + Byte.BYTES;
   }
 
 
