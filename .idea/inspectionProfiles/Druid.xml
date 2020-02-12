@@ -89,6 +89,7 @@
     <inspection_tool class="InnerClassReferencedViaSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InstanceofIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InstantiationOfUtilityClass" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="IntegerDivisionInFloatingPointContext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InvalidComparatorMethodReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
