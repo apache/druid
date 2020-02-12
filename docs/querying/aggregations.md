@@ -238,7 +238,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 (Double/Float/Long/String) ANY aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 
-If `druid.generic.useDefaultValueForNull=true` aggregation can returns the default value for null and does not prefer "non-null" values over the default value for null. If `druid.generic.useDefaultValueForNull=false`, then aggregation will returns any non-null value.
+Returns any value including null. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)
 
 #### `doubleAny` aggregator
 
