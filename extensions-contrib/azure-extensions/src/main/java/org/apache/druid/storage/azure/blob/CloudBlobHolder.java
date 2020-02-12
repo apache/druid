@@ -17,53 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.storage.azure.blob;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import java.net.URISyntaxException;
 
 /**
- * Stores the configuration for writing task logs to Azure .
+ * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
+ * is a final class and so is difficult to mock in unit tests.
  */
-public class AzureTaskLogsConfig
+public class CloudBlobHolder
 {
-  @JsonProperty
-  @NotNull
-  private String container = null;
+  private final CloudBlob delegate;
 
-  @JsonProperty
-  @NotNull
-  private String prefix = null;
-
-  @JsonProperty
-  @Min(1)
-  private int maxTries = 3;
-
-  public AzureTaskLogsConfig()
+  public CloudBlobHolder(CloudBlob delegate)
   {
+    this.delegate = delegate;
   }
 
-  public AzureTaskLogsConfig(String container, String prefix, int maxTries)
+  public String getContainerName() throws URISyntaxException, StorageException
   {
-    this.container = container;
-    this.prefix = prefix;
-    this.maxTries = maxTries;
+    return delegate.getContainer().getName();
   }
 
-  public String getContainer()
+  public String getName()
   {
-    return container;
-  }
-
-  public String getPrefix()
-  {
-    return prefix;
-  }
-
-  public int getMaxTries()
-  {
-    return maxTries;
+    return delegate.getName();
   }
 }

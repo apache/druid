@@ -19,51 +19,12 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import com.google.inject.assistedinject.Assisted;
 
 /**
- * Stores the configuration for writing task logs to Azure .
+ * Factory used to create {@link AzureByteSource}
  */
-public class AzureTaskLogsConfig
+public interface AzureByteSourceFactory
 {
-  @JsonProperty
-  @NotNull
-  private String container = null;
-
-  @JsonProperty
-  @NotNull
-  private String prefix = null;
-
-  @JsonProperty
-  @Min(1)
-  private int maxTries = 3;
-
-  public AzureTaskLogsConfig()
-  {
-  }
-
-  public AzureTaskLogsConfig(String container, String prefix, int maxTries)
-  {
-    this.container = container;
-    this.prefix = prefix;
-    this.maxTries = maxTries;
-  }
-
-  public String getContainer()
-  {
-    return container;
-  }
-
-  public String getPrefix()
-  {
-    return prefix;
-  }
-
-  public int getMaxTries()
-  {
-    return maxTries;
-  }
+  AzureByteSource create(@Assisted("containerName") String containerName, @Assisted("blobPath") String blobPath);
 }
