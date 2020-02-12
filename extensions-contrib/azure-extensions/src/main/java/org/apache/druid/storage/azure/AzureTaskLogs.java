@@ -33,6 +33,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 
+/**
+ * Deals with reading and writing task logs stored in Azure.
+ */
 public class AzureTaskLogs implements TaskLogs
 {
 

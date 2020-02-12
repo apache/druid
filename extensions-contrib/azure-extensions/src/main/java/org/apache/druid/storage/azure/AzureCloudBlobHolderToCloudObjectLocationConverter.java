@@ -19,51 +19,24 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 /**
- * Stores the configuration for writing task logs to Azure .
+ * Converts a {@link CloudBlobHolder} object to a {@link CloudObjectLocation} object
  */
-public class AzureTaskLogsConfig
+public class AzureCloudBlobHolderToCloudObjectLocationConverter
+    implements ICloudSpecificObjectToCloudObjectLocationConverter<CloudBlobHolder>
 {
-  @JsonProperty
-  @NotNull
-  private String container = null;
-
-  @JsonProperty
-  @NotNull
-  private String prefix = null;
-
-  @JsonProperty
-  @Min(1)
-  private int maxTries = 3;
-
-  public AzureTaskLogsConfig()
+  @Override
+  public CloudObjectLocation createCloudObjectLocation(CloudBlobHolder cloudBlob)
   {
-  }
-
-  public AzureTaskLogsConfig(String container, String prefix, int maxTries)
-  {
-    this.container = container;
-    this.prefix = prefix;
-    this.maxTries = maxTries;
-  }
-
-  public String getContainer()
-  {
-    return container;
-  }
-
-  public String getPrefix()
-  {
-    return prefix;
-  }
-
-  public int getMaxTries()
-  {
-    return maxTries;
+    try {
+      return new CloudObjectLocation(cloudBlob.getContainerName(), cloudBlob.getName());
+    }
+    catch (Exception e) {
+      throw new RE(e);
+    }
   }
 }
