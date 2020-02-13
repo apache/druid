@@ -36,13 +36,6 @@ public class AzureDataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
-  // The azure storage hadoop access pattern is:
-  // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
-  // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
-  static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
-  
-  static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
-
   private final AzureByteSourceFactory byteSourceFactory;
 
   @Inject

@@ -87,6 +87,7 @@ public class AzureStorageDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.azure", AzureDataSegmentConfig.class);
     JsonConfigProvider.bind(binder, "druid.azure", AzureAccountConfig.class);
 
     Binders.dataSegmentPusherBinder(binder)

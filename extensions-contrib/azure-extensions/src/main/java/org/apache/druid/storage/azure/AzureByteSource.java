@@ -63,12 +63,12 @@ public class AzureByteSource extends ByteSource
       return azureStorage.getBlobInputStream(offset, containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {
-      log.warn("Exception when opening stream to azure resource, containerName: %s, blobPath: %s, Error: %s",
-               containerName, blobPath, e.getMessage()
-      );
       if (AzureUtils.AZURE_RETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }
+      log.warn("Exception when opening stream to azure resource, containerName: %s, blobPath: %s, Error: %s",
+               containerName, blobPath, e.getMessage()
+      );
       throw new RuntimeException(e);
     }
   }

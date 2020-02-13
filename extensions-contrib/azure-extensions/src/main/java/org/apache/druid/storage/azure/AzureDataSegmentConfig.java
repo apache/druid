@@ -22,70 +22,55 @@ package org.apache.druid.storage.azure;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 /**
- * Stores the configuration for an Azure account.
+ * Stores the configuration for segments written to Azure deep storage
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AzureAccountConfig
+public class AzureDataSegmentConfig
 {
   @JsonProperty
-  private String protocol = "https";
+  @NotNull
+  private String container;
+
+  @JsonProperty
+  @Nonnull
+  private String prefix = "";
 
   @JsonProperty
   @Min(1)
-  private int maxTries = 3;
+  private int maxListingLength = 1024;
 
-  @JsonProperty
-  @NotNull
-  private String account;
-
-  @JsonProperty
-  @NotNull
-  private String key;
-
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public void setProtocol(String protocol)
+  public void setContainer(String container)
   {
-    this.protocol = protocol;
+    this.container = container;
   }
 
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public void setMaxTries(int maxTries)
+  public void setPrefix(String prefix)
   {
-    this.maxTries = maxTries;
+    this.prefix = prefix;
   }
 
-  public void setAccount(String account)
+  public void setMaxListingLength(int maxListingLength)
   {
-    this.account = account;
+    this.maxListingLength = maxListingLength;
   }
 
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public void setKey(String key)
+  public String getContainer()
   {
-    this.key = key;
+    return container;
   }
 
-  public String getProtocol()
+  public String getPrefix()
   {
-    return protocol;
+    return prefix;
   }
 
-  public int getMaxTries()
+  public int getMaxListingLength()
   {
-    return maxTries;
-  }
-
-  public String getAccount()
-  {
-    return account;
-  }
-
-  public String getKey()
-  {
-    return key;
+    return maxListingLength;
   }
 }

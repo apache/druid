@@ -21,6 +21,7 @@ package org.apache.druid.storage.google;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 public class GoogleAccountConfig
@@ -32,6 +33,10 @@ public class GoogleAccountConfig
   @JsonProperty
   private String prefix;
 
+  @JsonProperty
+  @Min(1)
+  private int maxListingLength = 1024;
+
   public void setBucket(String bucket)
   {
     this.bucket = bucket;
@@ -42,6 +47,11 @@ public class GoogleAccountConfig
     this.prefix = prefix;
   }
 
+  public void setMaxListingLength(int maxListingLength)
+  {
+    this.maxListingLength = maxListingLength;
+  }
+
   public String getBucket()
   {
     return bucket;
@@ -50,5 +60,10 @@ public class GoogleAccountConfig
   public String getPrefix()
   {
     return prefix;
+  }
+
+  public int getMaxListingLength()
+  {
+    return maxListingLength;
   }
 }

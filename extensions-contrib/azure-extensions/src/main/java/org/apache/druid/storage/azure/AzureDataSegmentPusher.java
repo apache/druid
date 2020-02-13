@@ -47,16 +47,19 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   private static final Logger log = new Logger(AzureDataSegmentPusher.class);
   static final List<String> ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP = ImmutableList.of("druid.azure");
   private final AzureStorage azureStorage;
-  private final AzureAccountConfig config;
+  private final AzureAccountConfig accountConfig;
+  private final AzureDataSegmentConfig segmentConfig;
 
   @Inject
   public AzureDataSegmentPusher(
       AzureStorage azureStorage,
-      AzureAccountConfig config
+      AzureAccountConfig accountConfig,
+      AzureDataSegmentConfig segmentConfig
   )
   {
     this.azureStorage = azureStorage;
-    this.config = config;
+    this.accountConfig = accountConfig;
+    this.segmentConfig = segmentConfig;
   }
 
   @Deprecated
@@ -70,11 +73,12 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     String hadoopPath = StringUtils.format(
-        "%s://%s@%s.%s/",
-        AzureDataSegmentPuller.AZURE_STORAGE_HADOOP_PROTOCOL,
-        config.getContainer(),
-        config.getAccount(),
-        AzureDataSegmentPuller.AZURE_STORAGE_HOST_ADDRESS
+        "%s://%s@%s.%s/%s",
+        AzureUtils.AZURE_STORAGE_HADOOP_PROTOCOL,
+        segmentConfig.getContainer(),
+        accountConfig.getAccount(),
+        AzureUtils.AZURE_STORAGE_HOST_ADDRESS,
+        segmentConfig.getPrefix().isEmpty() ? "" : segmentConfig.getPrefix() + '/'
     );
 
     log.info("Using Azure blob storage Hadoop path: %s", hadoopPath);
@@ -85,7 +89,10 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getStorageDir(DataSegment dataSegment, boolean useUniquePath)
   {
+    String prefix = segmentConfig.getPrefix();
+    boolean prefixIsNullOrEmpty = (prefix == null || prefix.isEmpty());
     String seg = JOINER.join(
+        prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(segmentConfig.getPrefix()),
         dataSegment.getDataSource(),
         StringUtils.format(
             "%s_%s",
@@ -127,7 +134,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
       return AzureUtils.retryAzureOperation(
           () -> uploadDataSegment(segment, binaryVersion, size, outFile, azurePath),
-          config.getMaxTries()
+          accountConfig.getMaxTries()
       );
     }
     catch (Exception e) {
@@ -148,7 +155,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         "type",
         AzureStorageDruidModule.SCHEME,
         "containerName",
-        config.getContainer(),
+        segmentConfig.getContainer(),
         "blobPath",
         uri.toString()
     );
@@ -173,7 +180,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   )
       throws StorageException, IOException, URISyntaxException
   {
-    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePath);
+    azureStorage.uploadBlob(compressedSegmentData, segmentConfig.getContainer(), azurePath);
 
     final DataSegment outSegment = segment
         .withSize(size)

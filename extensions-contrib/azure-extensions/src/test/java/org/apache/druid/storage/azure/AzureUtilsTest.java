@@ -19,11 +19,14 @@
 
 package org.apache.druid.storage.azure;
 
+import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 public class AzureUtilsTest
 {
@@ -34,6 +37,19 @@ public class AzureUtilsTest
                                                                     + "/"
                                                                     + BLOB_NAME;
   private static final URI URI_WITH_PATH_WITH_LEADING_SLASH;
+
+  private static final URISyntaxException URI_SYNTAX_EXCEPTION = new URISyntaxException("", "");
+  private static final StorageException STORAGE_EXCEPTION = new StorageException("", "", null);
+  private static final IOException IO_EXCEPTION = new IOException();
+  private static final RuntimeException RUNTIME_EXCEPTION = new RuntimeException();
+  private static final RuntimeException IO_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION = new RuntimeException(
+      "",
+      new IOException()
+  );
+  private static final IOException RUNTIME_EXCEPTION_WRAPPED_IN_IO_EXCEPTION = new IOException(
+      "",
+      new RuntimeException()
+  );
 
   static {
     try {
@@ -66,5 +82,47 @@ public class AzureUtilsTest
   {
     String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME);
     Assert.assertEquals(BLOB_NAME, path);
+  }
+
+  @Test
+  public void test_azureRetry_URISyntaxException_returnsFalse()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(URI_SYNTAX_EXCEPTION);
+    Assert.assertFalse(retry);
+  }
+
+  @Test
+  public void test_azureRetry_StorageException_returnsTrue()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(STORAGE_EXCEPTION);
+    Assert.assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_IOException_returnsTrue()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(IO_EXCEPTION);
+    Assert.assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_RunTimeException_returnsFalse()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION);
+    Assert.assertFalse(retry);
+  }
+
+  @Test
+  public void test_azureRetry_IOExceptionWrappedInRunTimeException_returnsTrue()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(IO_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION);
+    Assert.assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_RunTimeExceptionWrappedInIOException_returnsFalse()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_IO_EXCEPTION);
+    Assert.assertFalse(retry);
   }
 }

@@ -22,7 +22,6 @@ package org.apache.druid.data.input.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
@@ -31,6 +30,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureDataSegmentConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
@@ -47,14 +47,13 @@ import java.util.stream.StreamSupport;
  */
 public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
 {
-  @VisibleForTesting
-  static final int MAX_LISTING_LENGTH = 1024;
   public static final String SCHEME = "azure";
 
   private final AzureStorage storage;
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private final AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
+  private final AzureDataSegmentConfig segmentConfig;
 
   @JsonCreator
   public AzureInputSource(
@@ -62,6 +61,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       @JacksonInject AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
+      @JacksonInject AzureDataSegmentConfig segmentConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
@@ -74,6 +74,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
         azureCloudBlobIterableFactory,
         "AzureCloudBlobIterableFactory"
     );
+    this.segmentConfig = Preconditions.checkNotNull(segmentConfig, "AzureDataSegmentConfig");
     this.azureCloudBlobToLocationConverter = Preconditions.checkNotNull(azureCloudBlobToLocationConverter, "AzureCloudBlobToLocationConverter");
   }
 
@@ -85,6 +86,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
+        segmentConfig,
         null,
         null,
         ImmutableList.of(split.get())
@@ -117,7 +119,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
 
   private Iterable<CloudBlobHolder> getIterableObjectsFromPrefixes()
   {
-    return azureCloudBlobIterableFactory.create(getPrefixes(), MAX_LISTING_LENGTH);
+    return azureCloudBlobIterableFactory.create(getPrefixes(), segmentConfig.getMaxListingLength());
   }
 
   @Override
@@ -128,7 +130,8 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
         storage,
         entityFactory,
         azureCloudBlobIterableFactory,
-        azureCloudBlobToLocationConverter
+        azureCloudBlobToLocationConverter,
+        segmentConfig
     );
   }
 
@@ -148,6 +151,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
     return storage.equals(that.storage) &&
            entityFactory.equals(that.entityFactory) &&
            azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
-           azureCloudBlobToLocationConverter.equals(that.azureCloudBlobToLocationConverter);
+           azureCloudBlobToLocationConverter.equals(that.azureCloudBlobToLocationConverter) &&
+           segmentConfig.equals(that.segmentConfig);
   }
 }
