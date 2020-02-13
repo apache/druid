@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nonnull;
@@ -29,7 +28,6 @@ import javax.validation.constraints.NotNull;
 /**
  * Stores the configuration for segments written to Azure deep storage
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class AzureDataSegmentConfig
 {
   @JsonProperty

@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 import org.easymock.EasyMock;
@@ -215,6 +216,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
+            new JacksonModule(),
             new Module()
             {
               @Override

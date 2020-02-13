@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.Min;
@@ -28,7 +27,6 @@ import javax.validation.constraints.NotNull;
 /**
  * Stores the configuration for an Azure account.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class AzureAccountConfig
 {
   @JsonProperty
