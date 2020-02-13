@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 /**
  * InputSourceReader iterating multiple {@link InputEntity}s. This class could be used for
@@ -48,23 +48,23 @@ public class InputEntityIteratingReader implements InputSourceReader
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      Stream<InputEntity> sourceStream,
+      Iterator<? extends InputEntity> sourceStream,
       File temporaryDirectory
   )
   {
-    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceStream.iterator()), temporaryDirectory);
+    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceStream), temporaryDirectory);
   }
 
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      CloseableIterator<InputEntity> sourceIterator,
+      CloseableIterator<? extends InputEntity> sourceIterator,
       File temporaryDirectory
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.inputFormat = inputFormat;
-    this.sourceIterator = sourceIterator;
+    this.sourceIterator = (CloseableIterator<InputEntity>) sourceIterator;
     this.temporaryDirectory = temporaryDirectory;
   }
 

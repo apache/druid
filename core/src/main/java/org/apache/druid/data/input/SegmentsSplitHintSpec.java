@@ -23,7 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * {@link SplitHintSpec} for IngestSegmentFirehoseFactory.
@@ -41,9 +44,7 @@ public class SegmentsSplitHintSpec implements SplitHintSpec
   private final long maxInputSegmentBytesPerTask;
 
   @JsonCreator
-  public SegmentsSplitHintSpec(
-      @JsonProperty("maxInputSegmentBytesPerTask") @Nullable Long maxInputSegmentBytesPerTask
-  )
+  public SegmentsSplitHintSpec(@JsonProperty("maxInputSegmentBytesPerTask") @Nullable Long maxInputSegmentBytesPerTask)
   {
     this.maxInputSegmentBytesPerTask = maxInputSegmentBytesPerTask == null
                                        ? DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK
@@ -54,6 +55,12 @@ public class SegmentsSplitHintSpec implements SplitHintSpec
   public long getMaxInputSegmentBytesPerTask()
   {
     return maxInputSegmentBytesPerTask;
+  }
+
+  @Override
+  public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputAttribute> inputAttributeExtractor)
+  {
+    throw new UnsupportedOperationException();
   }
 
   @Override

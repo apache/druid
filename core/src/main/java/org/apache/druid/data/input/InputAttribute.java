@@ -17,38 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure.blob;
-
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
-
-import java.net.URISyntaxException;
+package org.apache.druid.data.input;
 
 /**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
- * is a final class and so is difficult to mock in unit tests.
+ * A class storing some characteristics of an input file.
+ * This information is used to make splits in the parallel indexing.
+ *
+ * @see SplitHintSpec
+ * @see org.apache.druid.data.input.impl.SplittableInputSource
  */
-public class CloudBlobHolder
+public class InputAttribute
 {
-  private final CloudBlob delegate;
+  /**
+   * The size of the input file.
+   */
+  private final long size;
 
-  public CloudBlobHolder(CloudBlob delegate)
+  public InputAttribute(long size)
   {
-    this.delegate = delegate;
+    this.size = size;
   }
 
-  public String getContainerName() throws URISyntaxException, StorageException
+  public long getSize()
   {
-    return delegate.getContainer().getName();
-  }
-
-  public String getName()
-  {
-    return delegate.getName();
-  }
-
-  public long getBlobLength()
-  {
-    return delegate.getProperties().getLength();
+    return size;
   }
 }

@@ -21,19 +21,17 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
 import javax.annotation.Nullable;
@@ -43,64 +41,45 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
+public class SpecificFilesLocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
-  private final File baseDir;
-  private final String filter;
+  private final List<File> files;
 
   @JsonCreator
-  public LocalInputSource(
-      @JsonProperty("baseDir") File baseDir,
-      @JsonProperty("filter") String filter
-  )
+  public SpecificFilesLocalInputSource(@JsonProperty("files") List<File> files)
   {
-    this.baseDir = Preconditions.checkNotNull(baseDir, "baseDir");
-    this.filter = Preconditions.checkNotNull(filter, "filter");
+    Preconditions.checkArgument(!CollectionUtils.isNullOrEmpty(files), "empty files");
+    this.files = files;
   }
 
   @JsonProperty
-  public File getBaseDir()
+  public List<File> getFiles()
   {
-    return baseDir;
-  }
-
-  @JsonProperty
-  public String getFilter()
-  {
-    return filter;
+    return files;
   }
 
   @Override
   public Stream<InputSplit<List<File>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Streams.sequentialStreamFrom(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)))
-                  .map(InputSplit::new);
+    final Iterator<List<File>> iterator = getSplitHintSpecOrDefault(splitHintSpec).split(
+        files.iterator(),
+        file -> new InputAttribute(file.length())
+    );
+    return Streams.sequentialStreamFrom(iterator).map(InputSplit::new);
   }
 
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Iterators.size(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)));
-  }
-
-  private Iterator<List<File>> getSplitFileIterator(SplitHintSpec splitHintSpec)
-  {
-    final Iterator<File> fileIterator = getFileIterator();
-    return splitHintSpec.split(fileIterator, file -> new InputAttribute(file.length()));
-  }
-
-  @VisibleForTesting
-  Iterator<File> getFileIterator()
-  {
-    return FileUtils.iterateFiles(
-        baseDir.getAbsoluteFile(),
-        new WildcardFileFilter(filter),
-        TrueFileFilter.INSTANCE
+    final Iterator<List<File>> iterator = getSplitHintSpecOrDefault(splitHintSpec).split(
+        files.iterator(),
+        file -> new InputAttribute(file.length())
     );
+    return Iterators.size(iterator);
   }
 
   @Override
-  public SplittableInputSource<List<File>> withSplit(InputSplit<List<File>> split)
+  public InputSource withSplit(InputSplit<List<File>> split)
   {
     return new SpecificFilesLocalInputSource(split.get());
   }
@@ -122,7 +101,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Iterators.transform(getFileIterator(), FileEntity::new),
+        Iterators.transform(files.iterator(), FileEntity::new),
         temporaryDirectory
     );
   }
@@ -136,14 +115,21 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    LocalInputSource that = (LocalInputSource) o;
-    return Objects.equals(baseDir, that.baseDir) &&
-           Objects.equals(filter, that.filter);
+    SpecificFilesLocalInputSource that = (SpecificFilesLocalInputSource) o;
+    return Objects.equals(files, that.files);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDir, filter);
+    return Objects.hash(files);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SpecificFilesLocalInputSource{" +
+           "files=" + files +
+           '}';
   }
 }

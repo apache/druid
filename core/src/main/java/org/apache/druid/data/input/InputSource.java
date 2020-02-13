@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.SpecificFilesLocalInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 import javax.annotation.Nullable;
@@ -49,6 +50,7 @@ import java.io.File;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "local", value = LocalInputSource.class),
+    @Type(name = "specific_files_local", value = SpecificFilesLocalInputSource.class),
     @Type(name = "http", value = HttpInputSource.class),
     @Type(name = "inline", value = InlineInputSource.class)
 })

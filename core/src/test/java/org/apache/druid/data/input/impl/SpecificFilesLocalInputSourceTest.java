@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -30,19 +31,23 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class LocalInputSourceTest
+public class SpecificFilesLocalInputSourceTest
 {
   @Test
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final LocalInputSource source = new LocalInputSource(new File("myFile").getAbsoluteFile(), "myFilter");
+    final SpecificFilesLocalInputSource source = new SpecificFilesLocalInputSource(
+        ImmutableList.of(new File("foo").getAbsoluteFile(), new File("bar").getAbsoluteFile())
+    );
     final byte[] json = mapper.writeValueAsBytes(source);
-    final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
+    final SpecificFilesLocalInputSource fromJson = (SpecificFilesLocalInputSource) mapper.readValue(
+        json,
+        InputSource.class
+    );
     Assert.assertEquals(source, fromJson);
   }
 
@@ -52,14 +57,7 @@ public class LocalInputSourceTest
     final long fileSize = 15;
     final long maxSplitSize = 50;
     final List<File> files = prepareFiles(10, fileSize);
-    final LocalInputSource inputSource = new LocalInputSource(new File("baseDir"), "filter")
-    {
-      @Override
-      public Iterator<File> getFileIterator()
-      {
-        return files.iterator();
-      }
-    };
+    final SpecificFilesLocalInputSource inputSource = new SpecificFilesLocalInputSource(files);
     final List<InputSplit<List<File>>> splits = inputSource
         .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))
         .collect(Collectors.toList());
@@ -76,14 +74,7 @@ public class LocalInputSourceTest
     final long fileSize = 13;
     final long maxSplitSize = 40;
     final List<File> files = prepareFiles(10, fileSize);
-    final LocalInputSource inputSource = new LocalInputSource(new File("baseDir"), "filter")
-    {
-      @Override
-      public Iterator<File> getFileIterator()
-      {
-        return files.iterator();
-      }
-    };
+    final SpecificFilesLocalInputSource inputSource = new SpecificFilesLocalInputSource(files);
     Assert.assertEquals(
         4,
         inputSource.estimateNumSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))

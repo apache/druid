@@ -35,6 +35,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -57,9 +58,11 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -79,8 +82,10 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       URI.create("gs://bar/foo/file2.csv.gz")
   );
 
-  private static final List<CloudObjectLocation> EXPECTED_OBJECTS =
-      EXPECTED_URIS.stream().map(CloudObjectLocation::new).collect(Collectors.toList());
+  private static final List<List<CloudObjectLocation>> EXPECTED_OBJECTS =
+      EXPECTED_URIS.stream()
+                   .map(uri -> Collections.singletonList(new CloudObjectLocation(uri)))
+                   .collect(Collectors.toList());
 
   private static final List<URI> PREFIXES = Arrays.asList(
       URI.create("gs://foo/bar"),
@@ -139,7 +144,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     GoogleCloudStorageInputSource inputSource =
         new GoogleCloudStorageInputSource(STORAGE, EXPECTED_URIS, ImmutableList.of(), null);
 
-    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
         null
     );
@@ -157,12 +162,34 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     GoogleCloudStorageInputSource inputSource =
         new GoogleCloudStorageInputSource(STORAGE, null, PREFIXES, null);
 
-    Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
-        null
+        new MaxSizeSplitHintSpec(1L) // set maxSplitSize to 1 so that each inputSplit has only one object
     );
 
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testCreateSplitsWithSplitHintSpecRespectingHint() throws IOException
+  {
+    EasyMock.reset(STORAGE);
+    addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
+    addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
+    EasyMock.replay(STORAGE);
+
+    GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, null, PREFIXES, null);
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new MaxSizeSplitHintSpec(CONTENT.length * 3L)
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(EXPECTED_URIS.stream().map(CloudObjectLocation::new).collect(Collectors.toList())),
+        splits.map(InputSplit::get).collect(Collectors.toList())
+    );
   }
 
   @Test
@@ -260,6 +287,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       StorageObject s = new StorageObject();
       s.setBucket(bucket);
       s.setName(uri.getPath());
+      s.setSize(BigInteger.valueOf(CONTENT.length));
       mockObjects.add(s);
     }
     Objects response = new Objects();

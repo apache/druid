@@ -24,6 +24,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Function;
+
 /**
  * In native parallel indexing, the supervisor task partitions input data into splits and assigns each of them
  * to a single sub task. How to create splits could mainly depend on the input file format, but sometimes druid users
@@ -37,8 +41,16 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = SegmentsSplitHintSpec.TYPE, value = SegmentsSplitHintSpec.class)
+    @Type(name = SegmentsSplitHintSpec.TYPE, value = SegmentsSplitHintSpec.class),
+    @Type(name = MaxSizeSplitHintSpec.TYPE, value = MaxSizeSplitHintSpec.class)
 })
 public interface SplitHintSpec
 {
+  /**
+   * Returns an iterator of splits. A split has a list of files of the type {@link T}.
+   *
+   * @param inputIterator           that returns input files.
+   * @param inputAttributeExtractor to create {@link InputAttribute} for each input file.
+   */
+  <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputAttribute> inputAttributeExtractor);
 }

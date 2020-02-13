@@ -24,22 +24,27 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.apache.druid.utils.Streams;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-public class S3InputSource extends CloudObjectInputSource<S3Entity>
+public class S3InputSource extends CloudObjectInputSource
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
 
@@ -56,23 +61,30 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   }
 
   @Override
-  protected S3Entity createEntity(InputSplit<CloudObjectLocation> split)
+  protected InputEntity createEntity(CloudObjectLocation location)
   {
-    return new S3Entity(s3Client, split.get());
+    return new S3Entity(s3Client, location);
   }
 
   @Override
-  protected Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream()
+  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
   {
-    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
-                        .map(S3Utils::summaryToCloudObjectLocation)
-                        .map(InputSplit::new);
+    final Iterator<List<S3ObjectSummary>> splitIterator = splitHintSpec.split(
+        getIterableObjectsFromPrefixes().iterator(),
+        object -> new InputAttribute(object.getSize())
+    );
+
+    return Streams.sequentialStreamFrom(splitIterator)
+                  .map(objects -> objects.stream()
+                                         .map(S3Utils::summaryToCloudObjectLocation)
+                                         .collect(Collectors.toList()))
+                  .map(InputSplit::new);
   }
 
   @Override
-  public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
+  public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new S3InputSource(s3Client, null, null, ImmutableList.of(split.get()));
+    return new S3InputSource(s3Client, null, null, split.get());
   }
 
   @Override

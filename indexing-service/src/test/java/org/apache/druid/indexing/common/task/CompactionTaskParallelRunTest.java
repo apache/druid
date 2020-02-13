@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Lists;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -182,12 +183,14 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     Interval interval = Intervals.of("2014-01-01/2014-01-02");
 
-    List<InputSplit<List<WindowedSegmentId>>> splits = DruidInputSource.createSplits(
-        coordinatorClient,
-        RETRY_POLICY_FACTORY,
-        DATA_SOURCE,
-        interval,
-        new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
+    List<InputSplit<List<WindowedSegmentId>>> splits = Lists.newArrayList(
+        DruidInputSource.createSplits(
+            coordinatorClient,
+            RETRY_POLICY_FACTORY,
+            DATA_SOURCE,
+            interval,
+            new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
+        )
     );
 
     List<DataSegment> segments = new ArrayList<>(

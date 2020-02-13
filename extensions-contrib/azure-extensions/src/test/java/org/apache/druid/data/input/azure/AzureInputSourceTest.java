@@ -22,6 +22,7 @@ package org.apache.druid.data.input.azure;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +41,6 @@ import org.junit.Test;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Spliterators;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,7 +61,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
 
-  private InputSplit<CloudObjectLocation> inputSplit;
+  private InputSplit<List<CloudObjectLocation>> inputSplit;
   private AzureEntity azureEntity1;
   private CloudBlobHolder cloudBlobDruid1;
   private AzureCloudBlobIterable azureCloudBlobIterable;
@@ -109,7 +109,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   public void test_createEntity_returnsExpectedEntity()
   {
     EasyMock.expect(entityFactory.create(CLOUD_OBJECT_LOCATION_1)).andReturn(azureEntity1);
-    EasyMock.expect(inputSplit.get()).andReturn(CLOUD_OBJECT_LOCATION_1);
+    EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1)).times(2);
     replayAll();
 
     List<CloudObjectLocation> objects = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
@@ -123,7 +123,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         objects
     );
 
-    AzureEntity actualAzureEntity = azureInputSource.createEntity(inputSplit);
+    Assert.assertEquals(1, inputSplit.get().size());
+    AzureEntity actualAzureEntity = azureInputSource.createEntity(inputSplit.get().get(0));
     Assert.assertSame(azureEntity1, actualAzureEntity);
     verifyAll();
   }
@@ -132,15 +133,15 @@ public class AzureInputSourceTest extends EasyMockSupport
   public void test_getPrefixesSplitStream_successfullyCreatesCloudLocation_returnsExpectedLocations()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
-    List<CloudObjectLocation> expectedCloudLocations = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
+    List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
     EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, AzureInputSource.MAX_LISTING_LENGTH)).andReturn(
         azureCloudBlobIterable);
-    EasyMock.expect(azureCloudBlobIterable.spliterator())
-            .andReturn(Spliterators.spliteratorUnknownSize(expectedCloudBlobsIterator, 0));
+    EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
     EasyMock.expect(azureCloudBlobToLocationConverter.createCloudObjectLocation(cloudBlobDruid1))
             .andReturn(CLOUD_OBJECT_LOCATION_1);
+    EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L);
     replayAll();
 
     azureInputSource = new AzureInputSource(
@@ -153,10 +154,12 @@ public class AzureInputSourceTest extends EasyMockSupport
         EMPTY_OBJECTS
     );
 
-    Stream<InputSplit<CloudObjectLocation>> cloudObjectStream = azureInputSource.getPrefixesSplitStream();
+    Stream<InputSplit<List<CloudObjectLocation>>> cloudObjectStream = azureInputSource.getPrefixesSplitStream(
+        new MaxSizeSplitHintSpec(1L)
+    );
 
-    List<CloudObjectLocation> actualCloudLocationList = cloudObjectStream.map(split -> split.get())
-                                                                         .collect(Collectors.toList());
+    List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream.map(InputSplit::get)
+                                                                               .collect(Collectors.toList());
     verifyAll();
     Assert.assertEquals(expectedCloudLocations, actualCloudLocationList);
   }
@@ -165,7 +168,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   public void test_withSplit_constructsExpectedInputSource()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
-    EasyMock.expect(inputSplit.get()).andReturn(CLOUD_OBJECT_LOCATION_1);
+    EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     replayAll();
 
     azureInputSource = new AzureInputSource(
@@ -178,7 +181,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         EMPTY_OBJECTS
     );
 
-    SplittableInputSource<CloudObjectLocation> newInputSource = azureInputSource.withSplit(inputSplit);
+    SplittableInputSource<List<CloudObjectLocation>> newInputSource = azureInputSource.withSplit(inputSplit);
     Assert.assertTrue(newInputSource.isSplittable());
     verifyAll();
   }
