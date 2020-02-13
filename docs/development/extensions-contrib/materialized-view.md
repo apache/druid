@@ -134,3 +134,4 @@ There are 2 parts in a view query:
 |query	|The real query of this `view` query. The real query must be [groupBy](../../querying/groupbyquery.md), [topN](../../querying/topnquery.md), or [timeseries](../../querying/timeseriesquery.md) type.|yes|
 
 **Note that Materialized View is currently designated as experimental. Please make sure the time of all processes are the same and increase monotonically. Otherwise, some unexpected errors may happen on query results.**
+**Note Does not support Post-Aggregations**
