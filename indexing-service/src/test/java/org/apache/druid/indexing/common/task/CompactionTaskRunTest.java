@@ -61,6 +61,7 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -181,9 +182,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
@@ -382,7 +386,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null,
@@ -510,17 +514,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Set<DataSegment> expectedSegments = new HashSet<>();
     final Pair<TaskStatus, List<DataSegment>> compactionResult = runTask(compactionTask);
     Assert.assertTrue(compactionResult.lhs.isSuccess());
-    expectedSegments.addAll(compactionResult.rhs);
+    final Set<DataSegment> expectedSegments = new HashSet<>(compactionResult.rhs);
 
     final Pair<TaskStatus, List<DataSegment>> appendResult = runAppendTask();
     Assert.assertTrue(appendResult.lhs.isSuccess());
     expectedSegments.addAll(appendResult.rhs);
 
     final Set<DataSegment> usedSegments = new HashSet<>(
-        getStorageCoordinator().getUsedSegmentsForIntervals(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
             Segments.ONLY_VISIBLE
@@ -723,7 +726,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 ),
                 false
             ),
-            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, null, false, true)
+            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -793,7 +796,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             appendToExisting
         ),
         null,
@@ -877,6 +880,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
+        NoopJoinableFactory.INSTANCE,
         null,
         loader,
         objectMapper,

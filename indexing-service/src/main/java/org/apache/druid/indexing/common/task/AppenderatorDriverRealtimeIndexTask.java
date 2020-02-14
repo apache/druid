@@ -79,7 +79,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -90,7 +90,7 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.servlet.http.HttpServletRequest;
@@ -136,7 +136,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private final RealtimeAppenderatorIngestionSpec spec;
 
   @JsonIgnore
-  private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
+  private final Queue<ListenableFuture<SegmentsAndCommitMetadata>> pendingHandoffs;
 
   @JsonIgnore
   private volatile Appenderator appenderator = null;
@@ -634,7 +634,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     if (spec.getTuningConfig().isLogParseExceptions()) {
-      log.error(pe, "Encountered parse exception: ");
+      log.error(pe, "Encountered parse exception");
     }
 
     if (savedParseExceptions != null) {
@@ -677,7 +677,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       String sequenceName
   )
   {
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = driver.publish(
         publisher,
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
@@ -772,6 +772,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
         toolbox.getQueryExecutorService(),
+        toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats()
@@ -798,7 +799,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 sequenceName,
                 previousSegmentId,
                 skipSegmentLineageCheck,
-                NumberedShardSpecFactory.instance(),
+                NumberedPartialShardSpec.instance(),
                 LockGranularity.TIME_CHUNK
             )
         ),

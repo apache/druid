@@ -22,6 +22,7 @@
 64-bit
 ACL
 APIs
+AvroStorage
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -58,6 +59,7 @@ Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
 Dropwizard
 dropwizard
+DruidInputSource
 DruidSQL
 EC2
 EC2ContainerCredentialsProviderWrapper
@@ -67,6 +69,7 @@ EMRFS
 ETL
 Elasticsearch
 FirehoseFactory
+FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.POSITIVE_INFINITY
 ForwardedRequestCustomizer
@@ -77,6 +80,7 @@ GUIs
 GroupBy
 Guice
 HDFS
+HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -92,6 +96,7 @@ IndexSpec
 IndexTask
 InfluxDB
 InputFormat
+InputSource
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -103,6 +108,7 @@ JMX
 JRE
 JS
 JSON
+JsonPath
 JVM
 JVMs
 Joda
@@ -221,12 +227,16 @@ e.g.
 encodings
 endian
 enum
+expr
 failover
+featureSpec
+findColumnsFromHeader
 filenames
 filesystem
 firefox
 firehose
 firehoses
+fromPigAvroStorage
 frontends
 granularities
 gzip
@@ -244,6 +254,7 @@ influxdb
 injective
 inlined
 interruptible
+jackson-jq
 javadoc
 kerberos
 keystore
@@ -263,6 +274,7 @@ mergeable
 metadata
 millis
 misconfiguration
+mostAvailableSize
 multitenancy
 multitenant
 mysql
@@ -330,6 +342,7 @@ searchable
 servlet
 sharded
 sharding
+skipHeaderRows
 smooshed
 splittable
 stdout
@@ -363,6 +376,7 @@ unparseable
 unparsed
 uptime
 uris
+useFieldDiscovery
 v1
 v2
 vCPUs
@@ -1120,7 +1134,6 @@ SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
 bufferPoolName
-chunkInterval
 cms
 cpuName
 cpuTime
@@ -1240,7 +1253,6 @@ TimeseriesQuery
 D1
 D2
 D3
-chunkPeriod
 druid.query.groupBy.defaultStrategy
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
@@ -1566,7 +1578,6 @@ allowAll
 array_mod
 batch_index_task
 cgroup
-chunkPeriod
 classloader
 com.metamx
 common.runtime.properties

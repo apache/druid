@@ -46,7 +46,6 @@ public class StringFirstBufferAggregatorTest
   @Test
   public void testBufferAggregate()
   {
-
     final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
     Integer maxStringBytes = 1024;
@@ -61,7 +60,8 @@ public class StringFirstBufferAggregatorTest
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        false
     );
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
@@ -77,8 +77,44 @@ public class StringFirstBufferAggregatorTest
 
 
     Assert.assertEquals("expected last string value", strings[0], sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[0]), new Long(sp.lhs));
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[0]), sp.lhs);
+  }
 
+  @Test
+  public void testBufferAggregateWithFoldCheck()
+  {
+    final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
+    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
+    Integer maxStringBytes = 1024;
+
+    TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
+        "billy", "billy", maxStringBytes
+    );
+
+    StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
+        longColumnSelector,
+        objectColumnSelector,
+        maxStringBytes,
+        true
+    );
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    int position = 0;
+
+    agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < timestamps.length; i++) {
+      aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
+    }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+
+    Assert.assertEquals("expected last string value", strings[0], sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[0]), sp.lhs);
   }
 
   @Test
@@ -99,7 +135,8 @@ public class StringFirstBufferAggregatorTest
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        false
     );
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
@@ -115,7 +152,7 @@ public class StringFirstBufferAggregatorTest
 
 
     Assert.assertEquals("expected last string value", strings[1], sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[1]), new Long(sp.lhs));
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[1]), sp.lhs);
 
   }
 
@@ -137,7 +174,8 @@ public class StringFirstBufferAggregatorTest
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        false
     );
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
@@ -151,7 +189,7 @@ public class StringFirstBufferAggregatorTest
 
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
-    Assert.assertEquals(1526724600L, (long) sp.lhs);
-    Assert.assertEquals("2.0", sp.rhs);
+    Assert.assertEquals(1526724000L, (long) sp.lhs);
+    Assert.assertEquals(null, sp.rhs);
   }
 }

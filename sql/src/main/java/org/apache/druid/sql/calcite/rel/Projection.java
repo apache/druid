@@ -197,7 +197,7 @@ public class Projection
   )
   {
     final List<String> rowOrder = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefix(
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits(
         basePrefix,
         new TreeSet<>(inputRowSignature.getRowOrder())
     );

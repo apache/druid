@@ -65,6 +65,8 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
       return Double.POSITIVE_INFINITY;
     }
 
+    // This is probably intentional. The tests fail if this is changed to floating point division.
+    //noinspection IntegerDivisionInFloatingPointContext
     return cost * (server.getMaxSize() / server.getAvailableSize());
   }
 

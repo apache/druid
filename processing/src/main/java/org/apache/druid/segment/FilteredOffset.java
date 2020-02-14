@@ -118,7 +118,7 @@ public final class FilteredOffset extends Offset
    * If clone is made possible for FilteredOffset, some improvements could become possible in {@link
    * org.apache.druid.query.topn.PooledTopNAlgorithm#computeSpecializedScanAndAggregateImplementations}.
    *
-   * See also https://github.com/apache/incubator-druid/issues/5132.
+   * See also https://github.com/apache/druid/issues/5132.
    */
   @Override
   public Offset clone()

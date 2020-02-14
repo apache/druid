@@ -35,29 +35,32 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -118,6 +121,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
+  private final boolean nullNumeric = !NullHandling.replaceWithDefault();
+
   @BeforeClass
   public static void setUpClass()
   {
@@ -157,10 +162,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
+    testRequestLogger = new TestRequestLogger();
 
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -176,31 +182,24 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
                 binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
                 binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+                binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+                binder.bind(SchemaPlus.class).toInstance(rootSchema);
+                binder.bind(QueryLifecycleFactory.class)
+                      .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
+                binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
+                binder.bind(ExprMacroTable.class).toInstance(macroTable);
+                binder.bind(PlannerConfig.class).toInstance(plannerConfig);
+                binder.bind(String.class)
+                      .annotatedWith(DruidSchemaName.class)
+                      .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
+                binder.bind(AvaticaServerConfig.class).toInstance(AVATICA_CONFIG);
+                binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
               }
             }
         )
     );
 
-    testRequestLogger = new TestRequestLogger();
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        operatorTable,
-        macroTable,
-        plannerConfig,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
-    );
-    druidMeta = new DruidMeta(
-        new SqlLifecycleFactory(
-            plannerFactory,
-            new NoopServiceEmitter(),
-            testRequestLogger
-        ),
-        AVATICA_CONFIG,
-        injector
-    );
+    druidMeta = injector.getInstance(DruidMeta.class);
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
         new DruidNode("dummy", "dummy", false, 1, null, true, false),
@@ -496,7 +495,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -528,7 +527,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -536,7 +535,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -587,7 +586,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -611,7 +610,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -619,7 +618,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", "NO")
+                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -815,22 +814,22 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
-              druidSchema,
-              systemSchema,
+              rootSchema,
               CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
               operatorTable,
               macroTable,
               plannerConfig,
               AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-              CalciteTests.getJsonMapper()
+              CalciteTests.getJsonMapper(),
+              CalciteTests.DRUID_SCHEMA_NAME
           )
         ),
         smallFrameConfig,
@@ -906,7 +905,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger.clear();
     try {
       client.createStatement().executeQuery("SELECT notexist FROM druid.foo");
-      Assert.fail("invalid sql should throw SQLException");
+      Assert.fail("invalid SQL should throw SQLException");
     }
     catch (SQLException e) {
     }
@@ -920,7 +919,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger.clear();
     try {
       client.createStatement().executeQuery("SELECT count(*) FROM druid.forbiddenDatasource");
-      Assert.fail("unauthorzed sql should throw SQLException");
+      Assert.fail("unauthorzed SQL should throw SQLException");
     }
     catch (SQLException e) {
     }

@@ -41,8 +41,6 @@ import java.util.stream.StreamSupport;
 
 public class S3InputSource extends CloudObjectInputSource<S3Entity>
 {
-  private static final int MAX_LISTING_LENGTH = 1024;
-
   private final ServerSideEncryptingAmazonS3 s3Client;
 
   @JsonCreator
@@ -89,6 +87,6 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> S3Utils.lazyFetchingObjectSummariesIterator(s3Client, getPrefixes().iterator(), MAX_LISTING_LENGTH);
+    return () -> S3Utils.objectSummaryIterator(s3Client, getPrefixes(), MAX_LISTING_LENGTH);
   }
 }

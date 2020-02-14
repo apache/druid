@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.18.0-incubating-SNAPSHOT</version>
+        <version>0.18.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -265,6 +265,9 @@
     <profiles>
         <profile>
             <id>integration-tests</id>
+            <properties>
+                <jvm.runtime>8</jvm.runtime>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -278,7 +281,7 @@
                                 </goals>
                                 <phase>pre-integration-test</phase>
                                 <configuration>
-                                    <executable>${project.basedir}/run_cluster.sh</executable>
+                                    <executable>${project.basedir}/run_cluster_using_java_runtime_${jvm.runtime}.sh</executable>
                                 </configuration>
                             </execution>
                             <execution>

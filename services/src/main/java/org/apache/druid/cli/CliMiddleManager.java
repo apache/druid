@@ -37,6 +37,7 @@ import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -182,6 +183,7 @@ public class CliMiddleManager extends ServerRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTuningConfigModule(),
         new LookupSerdeModule()
     );
   }

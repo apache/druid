@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby.strategy;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -70,15 +69,6 @@ public interface GroupByStrategy
    * {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)}.
    */
   boolean doMergeResults(GroupByQuery query);
-
-  /**
-   * Decorate a runner with an interval chunking decorator.
-   */
-  QueryRunner<ResultRow> createIntervalChunkingRunner(
-      IntervalChunkingQueryRunnerDecorator decorator,
-      QueryRunner<ResultRow> runner,
-      GroupByQueryQueryToolChest toolChest
-  );
 
   /**
    * Runs a provided {@link QueryRunner} on a provided {@link GroupByQuery}, which is assumed to return rows that are

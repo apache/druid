@@ -85,7 +85,10 @@ public class S3DataSegmentMoverTest
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
-    Assert.assertEquals("targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip", MapUtils.getString(targetLoadSpec, "key"));
+    Assert.assertEquals(
+        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+        MapUtils.getString(targetLoadSpec, "key")
+    );
     Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
     Assert.assertTrue(mockS3Client.didMove());
   }
@@ -108,7 +111,10 @@ public class S3DataSegmentMoverTest
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
 
-    Assert.assertEquals("targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip", MapUtils.getString(targetLoadSpec, "key"));
+    Assert.assertEquals(
+        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+        MapUtils.getString(targetLoadSpec, "key")
+    );
     Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
     Assert.assertFalse(mockS3Client.didMove());
   }
@@ -261,8 +267,7 @@ public class S3DataSegmentMoverTest
     @Override
     public PutObjectResult putObject(String bucketName, String key, File file)
     {
-      storage.putIfAbsent(bucketName, new HashSet<>());
-      storage.get(bucketName).add(key);
+      storage.computeIfAbsent(bucketName, bName -> new HashSet<>()).add(key);
       return new PutObjectResult();
     }
   }

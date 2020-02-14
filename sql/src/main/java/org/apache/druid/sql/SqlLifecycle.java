@@ -157,7 +157,7 @@ public class SqlLifecycle
   {
     synchronized (lock) {
       Preconditions.checkState(plannerResult != null,
-                               "must be called after sql has been planned");
+                               "must be called after SQL has been planned");
       return plannerResult.rowType();
     }
   }
@@ -332,7 +332,7 @@ public class SqlLifecycle
         );
       }
       catch (Exception ex) {
-        log.error(ex, "Unable to log sql [%s]!", sql);
+        log.error(ex, "Unable to log SQL [%s]!", sql);
       }
     }
   }

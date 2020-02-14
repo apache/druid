@@ -206,7 +206,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.1
+version: 2.10.2
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -306,6 +306,7 @@ libraries:
   - com.google.inject: guice
   - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
+  - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
@@ -315,6 +316,9 @@ notices:
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
+      Copyright 2006-2016 Google, Inc.
+  - guice-assistedinject: |
+      Google Guice - Extensions - AssistedInject
       Copyright 2006-2016 Google, Inc.
 
 ---
@@ -892,7 +896,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.42.Final
+version: 4.1.45.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -3163,7 +3167,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0-incubating
+version: 1.2.0-incubating
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3203,7 +3207,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.2.1
+version: 2.2.2
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3212,7 +3216,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2018 The Apache Software Foundation.
+      Copyright 2019 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -3245,7 +3249,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.10.1
+version: 1.11.0
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3253,9 +3257,10 @@ libraries:
   - org.apache.parquet: parquet-encoding
   - org.apache.parquet: parquet-hadoop
   - org.apache.parquet: parquet-jackson
+  - org.apache.parquet: parquet-format-structures
 notices:
   - parquet-avro: |
-      Apache Parquet MR (Incubating)
+      Apache Parquet MR
       Copyright 2014 The Apache Software Foundation
 
 
@@ -4076,14 +4081,14 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.1.1
+version: 2.2.2
 libraries:
   - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
 notices:
   - kafka-clients:
       Apache Kafka
-      Copyright 2018 The Apache Software Foundation.
+      Copyright 2019 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.

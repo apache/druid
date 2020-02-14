@@ -26,7 +26,7 @@ sidebar_label: "Configuring data retention"
 
 This tutorial demonstrates how to configure retention rules on a datasource to set the time intervals of data that will be retained or dropped.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in
+For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).

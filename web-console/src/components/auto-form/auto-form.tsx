@@ -45,6 +45,7 @@ export interface Field<M> {
     | 'json'
     | 'interval';
   defaultValue?: any;
+  emptyValue?: any;
   suggestions?: Functor<M, Suggestion[]>;
   placeholder?: string;
   min?: number;
@@ -99,10 +100,16 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { model } = this.props;
     if (!model) return;
 
-    const newModel =
-      typeof newValue === 'undefined'
-        ? deepDelete(model, field.name)
-        : deepSet(model, field.name, newValue);
+    let newModel: T;
+    if (typeof newValue === 'undefined') {
+      if (typeof field.emptyValue === 'undefined') {
+        newModel = deepDelete(model, field.name);
+      } else {
+        newModel = deepSet(model, field.name, field.emptyValue);
+      }
+    } else {
+      newModel = deepSet(model, field.name, newValue);
+    }
 
     this.modelChange(newModel);
   };

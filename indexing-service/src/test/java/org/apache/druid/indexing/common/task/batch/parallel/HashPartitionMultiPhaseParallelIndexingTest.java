@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -77,6 +78,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       false,
       0
   );
+  private static final int MAX_NUM_CONCURRENT_SUB_TASKS = 2;
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
@@ -129,7 +131,9 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         Intervals.of("2017/2018"),
         inputDir,
         "test_*",
-        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2"))
+        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+        MAX_NUM_CONCURRENT_SUB_TASKS,
+        TaskState.SUCCESS
     );
     assertHashedPartition(publishedSegments);
   }

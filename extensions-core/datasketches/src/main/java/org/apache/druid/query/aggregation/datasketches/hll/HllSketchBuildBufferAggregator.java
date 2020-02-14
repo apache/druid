@@ -217,7 +217,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     inspector.visit("selector", selector);
     // lgK should be inspected because different execution paths exist in HllSketch.update() that is called from
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
-    // See https://github.com/apache/incubator-druid/pull/6893#discussion_r250726028
+    // See https://github.com/apache/druid/pull/6893#discussion_r250726028
     inspector.visit("lgK", lgK);
   }
 }

@@ -54,6 +54,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -169,6 +170,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       catch (EntryExistsException e) {
         throw new RuntimeException(e);
       }
+
+      // WARNING: In production, subtasks are created via HTTP calls and instantiated by Jackson, which means they
+      // cannot share objects like they can here. For example, if the indexing task uses JsonParseSpec, the same
+      // JSONFlattenerMaker instance is shared among subtasks, which is bad since JSONFlattenerMaker is not thread-safe.
       tasks.put(subTask.getId(), service.submit(() -> {
         try {
           final TaskToolbox toolbox = createTaskToolbox(subTask);
@@ -259,7 +264,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public String killTask(String taskId)
+    public String cancelTask(String taskId)
     {
       final Future<TaskStatus> taskStatusFuture = tasks.remove(taskId);
       if (taskStatusFuture != null) {
@@ -301,6 +306,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
+        NoopJoinableFactory.INSTANCE,
         null,
         newSegmentLoader(temporaryFolder.newFolder()),
         getObjectMapper(),

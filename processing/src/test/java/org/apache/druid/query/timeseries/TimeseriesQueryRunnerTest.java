@@ -61,6 +61,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -84,7 +85,7 @@ import java.util.stream.StreamSupport;
 /**
  */
 @RunWith(Parameterized.class)
-public class TimeseriesQueryRunnerTest
+public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -96,9 +97,7 @@ public class TimeseriesQueryRunnerTest
         // runners
         QueryRunnerTestHelper.makeQueryRunners(
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(
-                    QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                ),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -543,9 +542,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     // Must create a toolChest so we can run mergeResults (which applies grand totals).
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
 
     // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
     final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
@@ -594,9 +591,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     // Must create a toolChest so we can run mergeResults (which creates the zeroed-out row).
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
 
     // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
     final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
@@ -2532,9 +2527,7 @@ public class TimeseriesQueryRunnerTest
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, results);
 
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
     QueryRunner<Result<TimeseriesResultValue>> optimizedRunner = toolChest.postMergeQueryDecoration(
         toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
     Iterable<Result<TimeseriesResultValue>> results2 = new FinalizeResultsQueryRunner(optimizedRunner, toolChest)
@@ -2563,9 +2556,7 @@ public class TimeseriesQueryRunnerTest
                                   .build();
 
     // Must create a toolChest so we can run mergeResults.
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
 
     // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
     final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(

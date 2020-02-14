@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -116,7 +117,7 @@ public class SegmentPublishResult
   public String toString()
   {
     return "SegmentPublishResult{" +
-           "segments=" + segments +
+           "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", success=" + success +
            ", errorMsg='" + errorMsg + '\'' +
            '}';

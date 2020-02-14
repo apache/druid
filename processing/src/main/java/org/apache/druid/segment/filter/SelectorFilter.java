@@ -27,13 +27,14 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -81,7 +82,7 @@ public class SelectorFilter implements Filter
   {
     return DimensionHandlerUtils.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(value);
   }
@@ -126,5 +127,36 @@ public class SelectorFilter implements Filter
   public String toString()
   {
     return StringUtils.format("%s = %s", dimension, value);
+  }
+
+  public String getDimension()
+  {
+    return dimension;
+  }
+
+  public String getValue()
+  {
+    return value;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SelectorFilter that = (SelectorFilter) o;
+    return Objects.equals(getDimension(), that.getDimension()) &&
+           Objects.equals(getValue(), that.getValue()) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getDimension(), getValue(), filterTuning);
   }
 }

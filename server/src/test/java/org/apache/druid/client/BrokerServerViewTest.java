@@ -39,6 +39,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -114,7 +115,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    TimelineLookup timeline = brokerServerView.getTimeline(
+        DataSourceAnalysis.forDataSource(new TableDataSource("test_broker_server_view"))
+    ).get();
     List<TimelineObjectHolder> serverLookupRes = (List<TimelineObjectHolder>) timeline.lookup(
         Intervals.of(
             "2014-10-20T00:00:00Z/P1D"
@@ -203,7 +206,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    TimelineLookup timeline = brokerServerView.getTimeline(
+        DataSourceAnalysis.forDataSource(new TableDataSource("test_broker_server_view"))
+    ).get();
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -224,7 +229,9 @@ public class BrokerServerViewTest extends CuratorTestBase
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
 
-    timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    timeline = brokerServerView.getTimeline(
+        DataSourceAnalysis.forDataSource(new TableDataSource("test_broker_server_view"))
+    ).get();
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),

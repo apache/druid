@@ -126,6 +126,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new ExtractionDimensionSpec(newDimension, outputName, outputType, extractionFn);
+  }
+
+  @Override
   public String toString()
   {
     return "ExtractionDimensionSpec{" +

@@ -41,9 +41,10 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 /**
- * DruidRel that uses a "query" dataSource.
+ * DruidRel that uses a {@link QueryDataSource}.
  */
 public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {
@@ -199,9 +200,9 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
-    return ((DruidRel) sourceRel).getDataSourceNames();
+    return ((DruidRel<?>) sourceRel).getDataSourceNames();
   }
 
   @Override

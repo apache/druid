@@ -35,12 +35,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.Interval;
 
@@ -87,16 +86,16 @@ public class InputSourceProcessor
    * All read data is consumed by {@link BatchAppenderatorDriver} which creates new segments.
    * All created segments are pushed when all input data is processed successfully.
    *
-   * @return {@link SegmentsAndMetadata} for the pushed segments.
+   * @return {@link SegmentsAndCommitMetadata} for the pushed segments.
    */
-  public SegmentsAndMetadata process(
+  public SegmentsAndCommitMetadata process(
       DataSchema dataSchema,
       BatchAppenderatorDriver driver,
       PartitionsSpec partitionsSpec,
       InputSource inputSource,
       @Nullable InputFormat inputFormat,
       File tmpDir,
-      IndexTaskSegmentAllocator segmentAllocator
+      SequenceNameFunction sequenceNameFunction
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     @Nullable
@@ -140,7 +139,7 @@ public class InputSourceProcessor
           @SuppressWarnings("OptionalGetWithoutIsPresent")
           final Interval interval = optInterval.get();
 
-          final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
+          final String sequenceName = sequenceNameFunction.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
@@ -155,8 +154,8 @@ public class InputSourceProcessor
                 // in the future.
                 // If those segments are not pushed here, the remaining available space in appenderator will be kept
                 // small which could lead to smaller segments.
-                final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
-                LOG.debug("Pushed segments: %s", SegmentUtils.commaSeparateIdentifiers(pushed.getSegments()));
+                final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
+                LOG.debugSegments(pushed.getSegments(), "Pushed segments");
               }
             }
           } else {
@@ -174,9 +173,8 @@ public class InputSourceProcessor
         }
       }
 
-      final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
-
-      LOG.debug("Pushed segments: %s", SegmentUtils.commaSeparateIdentifiers(pushed.getSegments()));
+      final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
+      LOG.debugSegments(pushed.getSegments(), "Pushed segments");
 
       return pushed;
     }
@@ -191,7 +189,7 @@ public class InputSourceProcessor
     }
 
     if (logParseExceptions) {
-      LOG.error(e, "Encountered parse exception:");
+      LOG.error(e, "Encountered parse exception");
     }
 
     if (buildSegmentsSavedParseExceptions != null) {

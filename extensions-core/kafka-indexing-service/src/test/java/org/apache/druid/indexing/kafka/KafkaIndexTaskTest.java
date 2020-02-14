@@ -87,13 +87,10 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.scan.ScanQuery;
@@ -108,6 +105,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -366,7 +364,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -413,7 +411,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -464,7 +462,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -610,7 +608,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -744,14 +742,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
 
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -836,8 +834,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 2L, 1, 0L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
+  }
+
+  DataSourceMetadata newDataSchemaMetadata()
+  {
+    return metadataStorageCoordinator.retrieveDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource());
   }
 
   @Test(timeout = 60_000L)
@@ -990,7 +993,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1042,7 +1045,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1096,7 +1099,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
 
     // Check segments in deep storage
@@ -1184,7 +1187,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1235,7 +1238,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1279,7 +1282,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
   }
 
   @Test(timeout = 60_000L)
@@ -1329,7 +1332,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
@@ -1402,7 +1405,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
@@ -1490,7 +1493,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1558,7 +1561,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1607,7 +1610,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     SegmentDescriptorAndExpectedDim1Values desc1 = sdd("2010/P1D", 0, ImmutableList.of("c"));
     SegmentDescriptorAndExpectedDim1Values desc2 = sdd("2011/P1D", 0, ImmutableList.of("d", "e"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
 
     // Run second task
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
@@ -1625,7 +1628,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
     SegmentDescriptorAndExpectedDim1Values desc4 = sdd("2013/P1D", 0, ImmutableList.of("f"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
   }
 
   @Test(timeout = 60_000L)
@@ -1672,7 +1675,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 2L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1741,7 +1744,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 1L))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1839,7 +1842,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 6L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1955,7 +1958,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2045,7 +2048,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 6L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2171,7 +2174,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2316,7 +2319,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2365,7 +2368,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Test
   public void testSerde() throws Exception
   {
-    // This is both a serde test and a regression test for https://github.com/apache/incubator-druid/issues/7724.
+    // This is both a serde test and a regression test for https://github.com/apache/druid/issues/7724.
 
     final KafkaIndexTask task = createTask(
         "taskid",
@@ -2508,24 +2511,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private QueryRunnerFactoryConglomerate makeTimeseriesAndScanConglomerate()
   {
-    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
-        null,
-        null,
-        null
-    )
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return delegate;
-      }
-    };
     return new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
             .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     (query, future) -> {
                       // do nothing
@@ -2667,6 +2658,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         handoffNotifierFactory,
         this::makeTimeseriesAndScanConglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),

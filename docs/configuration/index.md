@@ -353,7 +353,7 @@ The following monitors are available:
 |`org.apache.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime processes.|
 |`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
-|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/incubator-druid/pull/4973.|
+|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
 
 
 ### Emitting Metrics
@@ -636,6 +636,18 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#sql-compatible-null-handling) for more details.
 
+### HTTP Client
+
+All Druid components can communicate with each other over HTTP.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.global.http.numConnections`|Size of connection pool per destination URL. If there are more HTTP requests than this number that all need to speak to the same URL, then they will queue up.|`20`|
+|`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
+|`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
+|`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
+|`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+
 ## Master Server
 
 This section contains the configuration options for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.html#server-types).
@@ -662,7 +674,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.coordinator.period`|The run period for the Coordinator. The Coordinator’s operates by maintaining the current state of the world in memory and periodically looking at the set of segments available and segments being served to make decisions about whether any changes need to be made to the data topology. This property sets the delay between each of these runs.|PT60S|
+|`druid.coordinator.period`|The run period for the Coordinator. The Coordinator operates by maintaining the current state of the world in memory and periodically looking at the set of "used" segments and segments being served to make decisions about whether any changes need to be made to the data topology. This property sets the delay between each of these runs.|PT60S|
 |`druid.coordinator.period.indexingPeriod`|How often to send compact/merge/conversion tasks to the indexing service. It's recommended to be longer than `druid.manager.segments.pollDuration`|PT1800S (30 mins)|
 |`druid.coordinator.startDelay`|The operation of the Coordinator works on the assumption that it has an up-to-date view of the state of the world when it runs, the current ZK interaction code, however, is written in a way that doesn’t allow the Coordinator to know for a fact that it’s done loading the current state of the world. This delay is a hack to give it enough time to believe that it has all the data.|PT300S|
 |`druid.coordinator.load.timeout`|The timeout duration for when the Coordinator assigns a segment to a Historical process.|PT15M|
@@ -729,7 +741,8 @@ A sample Coordinator dynamic config JSON object is shown below:
   "emitBalancingStats": false,
   "killDataSourceWhitelist": ["wikipedia", "testDatasource"],
   "decommissioningNodes": ["localhost:8182", "localhost:8282"],
-  "decommissioningMaxPercentOfMaxSegmentsToMove": 70
+  "decommissioningMaxPercentOfMaxSegmentsToMove": 70,
+  "pauseCoordinator": false
 }
 ```
 
@@ -737,7 +750,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`millisToWaitBeforeDeleting`|How long does the Coordinator need to be active before it can start removing (marking unused) segments in metadata storage.|900000 (15 mins)|
+|`millisToWaitBeforeDeleting`|How long does the Coordinator need to be a leader before it can start marking overshadowed segments as unused in metadata storage.|900000 (15 mins)|
 |`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
@@ -745,12 +758,14 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
 |`balancerComputeThreads`|Thread pool size for computing moving cost of segments in segment balancing. Consider increasing this if you have a lot of segments and moving segments starts to get stuck.|1|
 |`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
-|`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true. This can be a list of comma-separated dataSources or a JSON array.|none|
+|`killDataSourceWhitelist`|List of specific data sources for which kill tasks are sent if property `druid.coordinator.kill.on` is true. This can be a list of comma-separated data source names or a JSON array.|none|
 |`killAllDataSources`|Send kill tasks for ALL dataSources if property `druid.coordinator.kill.on` is true. If this is set to true then `killDataSourceWhitelist` must not be specified or be empty list.|false|
-|`killPendingSegmentsSkipList`|List of dataSources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated dataSources or a JSON array.|none|
+|`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded) |0|
 |`decommissioningNodes`| List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning' servers,  and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `decommissioningMaxPercentOfMaxSegmentsToMove`.|none|
 |`decommissioningMaxPercentOfMaxSegmentsToMove`|  The maximum number of segments that may be moved away from 'decommissioning' servers to non-decommissioning (that is, active) servers during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by `maxSegmentsToMove`. If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, segments will neither be moved from _or to_ 'decommissioning' servers, effectively putting them in a sort of "maintenance" mode that will not participate in balancing or assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place the segments. By leveraging the maximum percent of decommissioning segment movements, an operator can prevent active servers from overload by prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.|70|
+|`pauseCoordinator`| Boolean flag for whether or not the coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` Interface. Such duties include: Segment balancing, Segment compaction, Emission of metrics controlled by the dynamic coordinator config `emitBalancingStats`, Submitting kill tasks for unused segments (if enabled), Logging of used segments in the cluster, Marking of newly unused or overshadowed segments, Matching and execution of load/drop rules for used segments, Unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS Name Nodes with downtime and don't want the coordinator to be directing Historical Nodes to hit the Name Node with API requests until maintenance is done and the deep store is declared healthy for use again. |false|
+
 
 To view the audit history of Coordinator dynamic config issue a GET request to the URL -
 
@@ -981,8 +996,8 @@ Worker select strategies control how Druid assigns tasks to MiddleManagers.
 
 ###### Equal Distribution
 
-Tasks are assigned to the MiddleManager with the most available capacity at the time the task begins running. This is
-useful if you want work evenly distributed across your MiddleManagers.
+Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running. This is useful if
+you want work evenly distributed across your MiddleManagers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1058,7 +1073,7 @@ its better to write a druid extension module with extending current worker selec
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`javascript`.|required; must be `javascript`|
-|`function`|String representing JavaScript function||
+|`function`|String representing JavaScript function| |
 
 Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
 
@@ -1148,7 +1163,7 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 |`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for peon processes. If provided and non-empty, ports for peon processes will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the MiddleManager.|0|
-|`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of available processors - 1|
+|`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of CPUs on the machine - 1|
 |`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`__default_worker_category`|
 
 #### Peon Processing
@@ -1353,7 +1368,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.segmentCache.locations`|Segments assigned to a Historical process are first stored on the local file system (in a disk cache) and then served by the Historical process. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": 10000, "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on File.getTotalSpace() and File.getFreeSpace() methods, so enable if only if they work for your File System.| none |
-|`druid.segmentCache.locationSelectorStrategy`|The strategy used to select a location from the configured `druid.segmentCache.locations` for segment distribution. Possible values are `leastBytesUsed` or `roundRobin` or `random`. |leastBytesUsed|
+|`druid.segmentCache.locationSelectorStrategy`|The strategy used to select a location from the configured `druid.segmentCache.locations` for segment distribution. Possible values are `leastBytesUsed`, `roundRobin`, `random`, or `mostAvailableSize`. |leastBytesUsed|
 |`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a process is no longer serving a segment.|true|
 |`druid.segmentCache.dropSegmentDelayMillis`|How long a process delays before completely dropping segment.|30000 (30 seconds)|
 |`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
@@ -1365,7 +1380,16 @@ These Historical configurations can be defined in the `historical/runtime.proper
 
 In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
 
-In `druid.segmentCache.locationSelectorStrategy`, one of leastBytesUsed or roundRobin could be specified to represent the strategy to distribute segments across multiple segment cache locations. The leastBytesUsed which is the default strategy always selects a location which has least bytes used in absolute terms. The roundRobin strategy selects a location in a round robin fashion oblivious to the bytes used or the capacity. Note that `if druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the leastBytesUsed strategy, historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
+In `druid.segmentCache.locationSelectorStrategy`, one of leastBytesUsed, roundRobin, random, or mostAvailableSize could be specified to represent the strategy to distribute segments across multiple segment cache locations.
+
+|Strategy|Description|
+|--------|-----------|
+|`leastBytesUsed`|selects a location which has least bytes used in absolute terms.|
+|`roundRobin`|selects a location in a round robin fashion oblivious to the bytes used or the capacity.|
+|`random`|selects a segment cache location randomly each time among the available storage locations.|
+|`mostAvailableSize`|selects a segment cache location that has most free space among the available storage locations.|
+
+Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the leastBytesUsed strategy or mostAvailableSize strategy, historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
 
 #### Historical query configs
 
@@ -1476,11 +1500,12 @@ client has the following configuration options.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|20|
-|`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|gzip|
-|`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|PT15M|
-|`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
-|`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `druid.server.http.maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled. Can be overridden by the ["maxQueuedBytes" query context parameter](../querying/query-context.md).|0 (disabled)|
+|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|`gzip`|
+|`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
+|`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
+|`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `druid.server.http.maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled. Can be overridden by the ["maxQueuedBytes" query context parameter](../querying/query-context.md).|`0` (disabled)|
+|`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 
 ##### Retry Policy
 
@@ -1492,7 +1517,7 @@ Druid broker can optionally retry queries internally for transient errors.
 
 ##### Processing
 
-The broker uses processing configs for nested groupBy queries. And, if you use groupBy v1, long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in the [query context](../querying/query-context.md) doc.
+The broker uses processing configs for nested groupBy queries.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1577,8 +1602,9 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 This section describes caching configuration that is common to Broker, Historical, and MiddleManager/Peon processes.
 
-Caching can optionally be enabled on the Broker, Historical, and MiddleManager/Peon processes. See [Broker](#broker-caching),
-[Historical](#historical-caching), and [Peon](#peon-caching) configuration options for how to enable it for different processes.
+Caching could optionally be enabled on the Broker, Historical, and MiddleManager/Peon processes. See
+[Broker](#broker-caching), [Historical](#historical-caching), and [Peon](#peon-caching) configuration options for how to
+enable it for different processes.
 
 Druid uses a local in-memory cache by default, unless a different type of cache is specified.
 Use the `druid.cache.type` configuration to set a different kind of cache.
@@ -1627,7 +1653,7 @@ Below are the configuration options known to this module:
 
 Here are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run
 
-* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/incubator-druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
+* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
 * `SINGLE_THREAD` Use a single-threaded executor.
 * `SAME_THREAD` Cache maintenance is done eagerly.
 
@@ -1803,13 +1829,17 @@ Supported query contexts:
 
 #### Runtime Configuration
 
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.router.defaultBrokerServiceName`|Any string.|The default Broker to connect to in case service discovery fails.|druid/broker|
-|`druid.router.tierToBrokerMap`|An ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|Queries for a certain tier of data are routed to their appropriate Broker.|{"_default_tier": "<defaultBrokerServiceName>"}|
-|`druid.router.defaultRule`|Any string.|The default rule for all datasources.|"_default"|
-|`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
-|`druid.router.strategies`|An ordered JSON array of objects.|Please see [Router Strategies](../design/router.html#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
-|`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name. Please see [Avatica Query Balancing](../design/router.html#avatica-query-balancing)|Class to use for balancing Avatica queries across Brokers|rendezvousHash|
-|`druid.router.http.maxRequestBufferSize`|Maximum size of the buffer used to write requests when forwarding them to the Broker. This should be set to at least the maxHeaderSize allowed on the Broker|8 * 1024|
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.router.defaultBrokerServiceName`|The default Broker to connect to in case service discovery fails.|druid/broker|
+|`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|{"_default_tier": "<defaultBrokerServiceName>"}|
+|`druid.router.defaultRule`|The default rule for all datasources.|"_default"|
+|`druid.router.pollPeriod`|How often to poll for new rules.|PT1M|
+|`druid.router.strategies`|Please see [Router Strategies](../design/router.html#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
+|`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.html#avatica-query-balancing).|rendezvousHash|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.html#router-as-management-proxy) functionality.|false|
+|`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
+|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
+|`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|

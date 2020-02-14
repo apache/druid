@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 
 /**
  * Helper class for NullHandling. This class is used to switch between SQL compatible Null Handling behavior
- * introduced as part of https://github.com/apache/incubator-druid/issues/4349 and the old druid behavior
+ * introduced as part of https://github.com/apache/druid/issues/4349 and the old druid behavior
  * where null values are replaced with default values e.g Null Strings are replaced with empty values.
  */
 public class NullHandling
@@ -116,6 +116,29 @@ public class NullHandling
   public static Double defaultDoubleValue()
   {
     return replaceWithDefault() ? ZERO_DOUBLE : null;
+  }
+
+  /**
+   * Returns the default value for an object of the provided class. Will be null in SQL-compatible null handling mode.
+   * May be null or some non-null default value when not in SQL-compatible null handling mode.
+   */
+  @Nullable
+  @SuppressWarnings("unchecked")
+  public static <T> T defaultValueForClass(final Class<T> clazz)
+  {
+    if (clazz == Float.class) {
+      return (T) defaultFloatValue();
+    } else if (clazz == Double.class) {
+      return (T) defaultDoubleValue();
+    } else if (clazz == Long.class) {
+      return (T) defaultLongValue();
+    } else if (clazz == Number.class) {
+      return (T) defaultDoubleValue();
+    } else if (clazz == String.class) {
+      return (T) defaultStringValue();
+    } else {
+      return null;
+    }
   }
 
   public static boolean isNullOrEquivalent(@Nullable String value)

@@ -31,7 +31,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.18.0-incubating-SNAPSHOT</version>
+    <version>0.18.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -322,6 +322,11 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>nl.jqno.equalsverifier</groupId>
+      <artifactId>equalsverifier</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

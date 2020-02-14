@@ -25,7 +25,6 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
-import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -224,8 +223,6 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void segment(String segmentIdentifier);
 
-  void chunkInterval(Interval interval);
-
   void preFilters(List<Filter> preFilters);
 
   void postFilters(List<Filter> postFilters);
@@ -280,11 +277,6 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Registers "segmentAndCache time" metric.
    */
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
-
-  /**
-   * Registers "interval chunk time" metric.
-   */
-  QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs);
 
   /**
    * Registers "cpu time" metric.
