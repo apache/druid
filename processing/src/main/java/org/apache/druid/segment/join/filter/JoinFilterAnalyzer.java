@@ -99,8 +99,6 @@ public class JoinFilterAnalyzer
     // build the prefix and equicondition maps
     // We should check that the prefixes do not duplicate or shadow each other. This is not currently implemented,
     // but this is tracked at https://github.com/apache/druid/issues/9329
-    // We should also consider the case where one RHS column is joined to multiple columns:
-    // https://github.com/apache/druid/issues/9328
     Map<String, Set<Expr>> equiconditions = new HashMap<>();
     Map<String, JoinableClause> prefixes = new HashMap<>();
     for (JoinableClause clause : hashJoinSegmentStorageAdapter.getClauses()) {
