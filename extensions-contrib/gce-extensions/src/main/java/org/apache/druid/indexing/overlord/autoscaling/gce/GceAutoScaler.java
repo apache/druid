@@ -246,7 +246,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   }
 
   /**
-   * Terminats the instances in the list of IPs provided by the caller
+   * Terminates the instances in the list of IPs provided by the caller
    */
   @Override
   public AutoScalingData terminate(List<String> ips)
@@ -283,7 +283,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   }
 
   /**
-   * Terminats the instances in the list of IDs provided by the caller
+   * Terminates the instances in the list of IDs provided by the caller
    */
   @Override
   public AutoScalingData terminateWithIds(List<String> ids)
