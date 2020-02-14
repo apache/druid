@@ -38,6 +38,7 @@ import com.google.api.services.compute.model.ManagedInstance;
 import com.google.api.services.compute.model.Operation;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
+import org.apache.curator.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
@@ -92,6 +93,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   /**
    * CAVEAT: this is meant to be used only for testing passing a mock version of Compute
    */
+  @VisibleForTesting
   public GceAutoScaler(
           int minNumWorkers,
           int maxNumWorkers,
