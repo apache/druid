@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -157,7 +158,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         null,
         null,
         null,
-        null,
+        new MaxSizeSplitHintSpec(1L), // set maxSplitSize to 1 so that each split has only one file.
         partitionsSpec,
         null,
         null,
