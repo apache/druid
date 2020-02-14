@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,12 +101,18 @@ public class JoinFilterAnalyzer
     // but this is tracked at https://github.com/apache/druid/issues/9329
     // We should also consider the case where one RHS column is joined to multiple columns:
     // https://github.com/apache/druid/issues/9328
-    Map<String, Expr> equiconditions = new HashMap<>();
+    Map<String, Set<Expr>> equiconditions = new HashMap<>();
     Map<String, JoinableClause> prefixes = new HashMap<>();
     for (JoinableClause clause : hashJoinSegmentStorageAdapter.getClauses()) {
       prefixes.put(clause.getPrefix(), clause);
       for (Equality equality : clause.getCondition().getEquiConditions()) {
-        equiconditions.put(clause.getPrefix() + equality.getRightColumn(), equality.getLeftExpr());
+        Set<Expr> exprsForRhs = equiconditions.computeIfAbsent(
+            clause.getPrefix() + equality.getRightColumn(),
+            (rhs) -> {
+              return new HashSet<>();
+            }
+        );
+        exprsForRhs.add(equality.getLeftExpr());
       }
     }
 
@@ -170,7 +177,7 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter adapter,
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
-      Map<String, Expr> equiconditions,
+      Map<String, Set<Expr>> equiconditions,
       Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
   )
   {
@@ -232,7 +239,7 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter adapter,
       OrFilter orFilter,
       Map<String, JoinableClause> prefixes,
-      Map<String, Expr> equiconditions,
+      Map<String, Set<Expr>> equiconditions,
       Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
   )
   {
@@ -294,7 +301,7 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter baseAdapter,
       SelectorFilter selectorFilter,
       Map<String, JoinableClause> prefixes,
-      Map<String, Expr> equiconditions,
+      Map<String, Set<Expr>> equiconditions,
       Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
   )
   {
@@ -459,57 +466,34 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter adapter,
       String tablePrefix,
       JoinableClause clauseForTablePrefix,
-      Map<String, Expr> equiConditions
+      Map<String, Set<Expr>> equiConditions
   )
   {
     JoinConditionAnalysis jca = clauseForTablePrefix.getCondition();
 
-    List<String> rhsColumns = new ArrayList<>();
+    Set<String> rhsColumns = new HashSet<>();
     for (Equality eq : jca.getEquiConditions()) {
       rhsColumns.add(tablePrefix + eq.getRightColumn());
     }
 
     List<JoinFilterColumnCorrelationAnalysis> correlations = new ArrayList<>();
 
-
     for (String rhsColumn : rhsColumns) {
-      List<String> correlatedBaseColumns = new ArrayList<>();
-      List<Expr> correlatedBaseExpressions = new ArrayList<>();
-      boolean terminate = false;
-      String findMappingFor = rhsColumn;
-      while (!terminate) {
-        Expr lhs = equiConditions.get(findMappingFor);
-        if (lhs == null) {
-          break;
-        }
+      Set<String> correlatedBaseColumns = new HashSet<>();
+      Set<Expr> correlatedBaseExpressions = new HashSet<>();
 
-        String identifier = lhs.getBindingIfIdentifier();
-        if (identifier == null) {
-          // We push down if the function only requires base table columns
-          Expr.BindingDetails bindingDetails = lhs.analyzeInputs();
-          Set<String> requiredBindings = bindingDetails.getRequiredBindings();
-          if (!requiredBindings.stream().allMatch(requiredBinding -> adapter.isBaseColumn(requiredBinding))) {
-            return Optional.empty();
-          }
-
-          terminate = true;
-          correlatedBaseExpressions.add(lhs);
-        } else {
-          // simple identifier, see if we can correlate it with a column on the base table
-          findMappingFor = identifier;
-          if (adapter.isBaseColumn(identifier)) {
-            terminate = true;
-            correlatedBaseColumns.add(findMappingFor);
-          }
-        }
-      }
+      getCorrelationForRHSColumn(
+          adapter,
+          equiConditions,
+          rhsColumn,
+          correlatedBaseColumns,
+          correlatedBaseExpressions
+      );
 
       if (correlatedBaseColumns.isEmpty() && correlatedBaseExpressions.isEmpty()) {
         return Optional.empty();
       }
 
-      // We should merge correlation analyses if they're for the same rhsColumn
-      // See https://github.com/apache/druid/issues/9328
       correlations.add(
           new JoinFilterColumnCorrelationAnalysis(
               rhsColumn,
@@ -519,7 +503,94 @@ public class JoinFilterAnalyzer
       );
     }
 
-    return Optional.of(correlations);
+    List<JoinFilterColumnCorrelationAnalysis> dedupCorrelations = eliminateCorrelationDuplicates(correlations);
+
+    return Optional.of(dedupCorrelations);
+  }
+
+  /**
+   * Helper method for {@link #findCorrelatedBaseTableColumns} that determines correlated base table columns
+   * and/or expressions for a single RHS column and adds them to the provided sets as it traverses the
+   * equicondition column relationships.
+   *
+   * @param adapter The adapter for the join. Used to determine if a column is a base table column.
+   * @param equiConditions Map of equiconditions, keyed by the right hand columns
+   * @param rhsColumn RHS column to find base table correlations for
+   * @param correlatedBaseColumns Set of correlated base column names for the provided RHS column. Will be modified.
+   * @param correlatedBaseExpressions Set of correlated base column expressions for the provided RHS column. Will be
+   *                                  modified.
+   */
+  private static void getCorrelationForRHSColumn(
+      HashJoinSegmentStorageAdapter adapter,
+      Map<String, Set<Expr>> equiConditions,
+      String rhsColumn,
+      Set<String> correlatedBaseColumns,
+      Set<Expr> correlatedBaseExpressions
+  )
+  {
+    String findMappingFor = rhsColumn;
+    Set<Expr> lhsExprs = equiConditions.get(findMappingFor);
+    if (lhsExprs == null) {
+      return;
+    }
+
+    for (Expr lhsExpr : lhsExprs) {
+      String identifier = lhsExpr.getBindingIfIdentifier();
+      if (identifier == null) {
+        // We push down if the function only requires base table columns
+        Expr.BindingDetails bindingDetails = lhsExpr.analyzeInputs();
+        Set<String> requiredBindings = bindingDetails.getRequiredBindings();
+        if (!requiredBindings.stream().allMatch(requiredBinding -> adapter.isBaseColumn(requiredBinding))) {
+          break;
+        }
+        correlatedBaseExpressions.add(lhsExpr);
+      } else {
+        // simple identifier, see if we can correlate it with a column on the base table
+        findMappingFor = identifier;
+        if (adapter.isBaseColumn(identifier)) {
+          correlatedBaseColumns.add(findMappingFor);
+        } else {
+          getCorrelationForRHSColumn(
+              adapter,
+              equiConditions,
+              findMappingFor,
+              correlatedBaseColumns,
+              correlatedBaseExpressions
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Given a list of JoinFilterColumnCorrelationAnalysis, prune the list so that we only have one
+   * JoinFilterColumnCorrelationAnalysis for each unique combination of base columns.
+   *
+   * Suppose we have a join condition like the following, where A is the base table:
+   *   A.joinColumn == B.joinColumn && A.joinColumn == B.joinColumn2
+   *
+   * We only need to consider one correlation to A.joinColumn since B.joinColumn and B.joinColumn2 must
+   * have the same value in any row that matches the join condition.
+   *
+   * In the future this method could consider which column correlation should be preserved based on availability of
+   * indices and other heuristics.
+   *
+   * When push down of filters with LHS expressions in the join condition is supported, this method should also
+   * consider expressions.
+   *
+   * @param originalList Original list of column correlation analyses.
+   * @return Pruned list of column correlation analyses.
+   */
+  private static List<JoinFilterColumnCorrelationAnalysis> eliminateCorrelationDuplicates(
+      List<JoinFilterColumnCorrelationAnalysis> originalList
+  )
+  {
+    Map<List<String>, JoinFilterColumnCorrelationAnalysis> uniquesMap = new HashMap<>();
+    for (JoinFilterColumnCorrelationAnalysis jca : originalList) {
+      uniquesMap.put(jca.getBaseColumns(), jca);
+    }
+
+    return new ArrayList<>(uniquesMap.values());
   }
 
   private static boolean filterMatchesNull(Filter filter)
