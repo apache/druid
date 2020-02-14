@@ -27,26 +27,26 @@ import java.util.List;
 
 /**
  */
-public class GCEUtilsTest
+public class GceUtilsTest
 {
   @Test
   public void testExtractNameFromInstance()
   {
     String instance0 =
         "https://www.googleapis.com/compute/v1/projects/X/zones/Y/instances/name-of-the-thing";
-    Assert.assertEquals("name-of-the-thing", GCEUtils.extractNameFromInstance(instance0));
+    Assert.assertEquals("name-of-the-thing", GceUtils.extractNameFromInstance(instance0));
 
     String instance1 = "https://www.googleapis.com/compute/v1/projects/X/zones/Y/instances/";
-    Assert.assertEquals("", GCEUtils.extractNameFromInstance(instance1));
+    Assert.assertEquals("", GceUtils.extractNameFromInstance(instance1));
 
     String instance2 = "name-of-the-thing";
-    Assert.assertEquals("name-of-the-thing", GCEUtils.extractNameFromInstance(instance2));
+    Assert.assertEquals("name-of-the-thing", GceUtils.extractNameFromInstance(instance2));
 
     String instance3 = null;
-    Assert.assertEquals(null, GCEUtils.extractNameFromInstance(instance3));
+    Assert.assertEquals(null, GceUtils.extractNameFromInstance(instance3));
 
     String instance4 = "";
-    Assert.assertEquals("", GCEUtils.extractNameFromInstance(instance4));
+    Assert.assertEquals("", GceUtils.extractNameFromInstance(instance4));
   }
 
   @Test
@@ -54,7 +54,7 @@ public class GCEUtilsTest
   {
     List<String> list0 = null;
     try {
-      String x = GCEUtils.buildFilter(list0, "name");
+      String x = GceUtils.buildFilter(list0, "name");
       Assert.fail("Exception should have been thrown!");
     }
     catch (IllegalArgumentException e) {
@@ -63,7 +63,7 @@ public class GCEUtilsTest
 
     List<String> list1 = new ArrayList<>();
     try {
-      String x = GCEUtils.buildFilter(list1, "name");
+      String x = GceUtils.buildFilter(list1, "name");
       Assert.fail("Exception should have been thrown!");
     }
     catch (IllegalArgumentException e) {
@@ -73,7 +73,7 @@ public class GCEUtilsTest
     List<String> list2 = new ArrayList<>();
     list2.add("foo");
     try {
-      String x = GCEUtils.buildFilter(list2, null);
+      String x = GceUtils.buildFilter(list2, null);
       Assert.fail("Exception should have been thrown!");
     }
     catch (IllegalArgumentException e) {
@@ -82,14 +82,14 @@ public class GCEUtilsTest
 
     List<String> list3 = new ArrayList<>();
     list3.add("foo");
-    Assert.assertEquals("(name = \"foo\")", GCEUtils.buildFilter(list3, "name"));
+    Assert.assertEquals("(name = \"foo\")", GceUtils.buildFilter(list3, "name"));
 
     List<String> list4 = new ArrayList<>();
     list4.add("foo");
     list4.add("bar");
     Assert.assertEquals(
         "(name = \"foo\") OR (name = \"bar\")",
-         GCEUtils.buildFilter(list4, "name")
+        GceUtils.buildFilter(list4, "name")
     );
   }
 

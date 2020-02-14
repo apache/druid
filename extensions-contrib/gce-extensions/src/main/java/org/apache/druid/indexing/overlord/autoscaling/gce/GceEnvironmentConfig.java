@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public class GCEEnvironmentConfig
+public class GceEnvironmentConfig
 {
   /**
    * numInstances: the number of workers to try to spawn at each call to provision
@@ -43,7 +43,7 @@ public class GCEEnvironmentConfig
   private final String managedInstanceGroupName;
 
   @JsonCreator
-  public GCEEnvironmentConfig(
+  public GceEnvironmentConfig(
           @JsonProperty("numInstances") int numInstances,
           @JsonProperty("projectId") String projectId,
           @JsonProperty("zoneName") String zoneName,
@@ -84,7 +84,7 @@ public class GCEEnvironmentConfig
   @Override
   public String toString()
   {
-    return "GCEEnvironmentConfig={" +
+    return "GceEnvironmentConfig={" +
             "projectId=" + projectId +
             ", zoneName=" + zoneName +
             ", numInstances=" + numInstances +
@@ -102,7 +102,7 @@ public class GCEEnvironmentConfig
       return false;
     }
 
-    GCEEnvironmentConfig that = (GCEEnvironmentConfig) o;
+    GceEnvironmentConfig that = (GceEnvironmentConfig) o;
     return (numInstances == that.numInstances &&
             projectId.equals(that.projectId) &&
             zoneName.equals(that.zoneName) &&

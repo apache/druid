@@ -27,12 +27,12 @@ import org.apache.druid.initialization.DruidModule;
 import java.util.Collections;
 import java.util.List;
 
-public class GCEModule implements DruidModule
+public class GceModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.singletonList(new SimpleModule("DruidGCEModule").registerSubtypes(GCEAutoScaler.class));
+    return Collections.singletonList(new SimpleModule("DruidGCEModule").registerSubtypes(GceAutoScaler.class));
   }
 
   @Override

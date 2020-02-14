@@ -50,7 +50,7 @@ import java.util.Locale;
 
 /**
  */
-public class GCEAutoScalerTest
+public class GceAutoScalerTest
 {
   private Compute mockCompute = null;
   // id -> ip & ip -> id
@@ -92,7 +92,7 @@ public class GCEAutoScalerTest
     // not calling verify here as we use different bits and pieces in each test
   }
 
-  private static void verifyAutoScaler(final GCEAutoScaler autoScaler)
+  private static void verifyAutoScaler(final GceAutoScaler autoScaler)
   {
     Assert.assertEquals(1, autoScaler.getEnvConfig().getNumInstances());
     Assert.assertEquals(4, autoScaler.getMaxNumWorkers());
@@ -118,7 +118,7 @@ public class GCEAutoScalerTest
             + "}";
 
     final ObjectMapper objectMapper = new DefaultObjectMapper()
-            .registerModules((Iterable<Module>) new GCEModule().getJacksonModules());
+            .registerModules((Iterable<Module>) new GceModule().getJacksonModules());
     objectMapper.setInjectableValues(
           new InjectableValues()
           {
@@ -136,11 +136,11 @@ public class GCEAutoScalerTest
     );
 
     try {
-      final GCEAutoScaler autoScaler =
-              (GCEAutoScaler) objectMapper.readValue(json, AutoScaler.class);
+      final GceAutoScaler autoScaler =
+              (GceAutoScaler) objectMapper.readValue(json, AutoScaler.class);
       verifyAutoScaler(autoScaler);
 
-      final GCEAutoScaler roundTripAutoScaler = (GCEAutoScaler) objectMapper.readValue(
+      final GceAutoScaler roundTripAutoScaler = (GceAutoScaler) objectMapper.readValue(
               objectMapper.writeValueAsBytes(autoScaler),
               AutoScaler.class
       );
@@ -166,10 +166,10 @@ public class GCEAutoScalerTest
   @Test
   public void testIpToId() throws IOException // for the mock calls, not really throwing
   {
-    GCEAutoScaler autoScaler = new GCEAutoScaler(
+    GceAutoScaler autoScaler = new GceAutoScaler(
         2,
         4,
-        new GCEEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
         null,
         mockCompute // <-- I pretend to be Google
     );
@@ -216,10 +216,10 @@ public class GCEAutoScalerTest
   @Test
   public void testIdToIp() throws IOException // for the mock calls, not really throwing
   {
-    GCEAutoScaler autoScaler = new GCEAutoScaler(
+    GceAutoScaler autoScaler = new GceAutoScaler(
         2,
         4,
-        new GCEEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
         null,
         mockCompute // <-- I pretend to be Google
     );
@@ -279,10 +279,10 @@ public class GCEAutoScalerTest
   @Test
   public void testTerminateWithIds() throws IOException // for the mock calls, not really throwing
   {
-    GCEAutoScaler autoScaler = new GCEAutoScaler(
+    GceAutoScaler autoScaler = new GceAutoScaler(
         2,
         4,
-        new GCEEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
         null,
         mockCompute // <-- I pretend to be Google
     );
@@ -357,10 +357,10 @@ public class GCEAutoScalerTest
   @Test
   public void testProvision() throws IOException // for the mock calls, not really throwing
   {
-    GCEAutoScaler autoScaler = new GCEAutoScaler(
+    GceAutoScaler autoScaler = new GceAutoScaler(
             2,
             4,
-            new GCEEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+            new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
             null,
             mockCompute // <-- I pretend to be Google
     );
@@ -429,10 +429,10 @@ public class GCEAutoScalerTest
   @Test
   public void testProvisionSkipped() throws IOException // for the mock calls, not really throwing
   {
-    GCEAutoScaler autoScaler = new GCEAutoScaler(
+    GceAutoScaler autoScaler = new GceAutoScaler(
             2,
             4,
-            new GCEEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+            new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
             null,
             mockCompute // <-- I pretend to be Google
     );

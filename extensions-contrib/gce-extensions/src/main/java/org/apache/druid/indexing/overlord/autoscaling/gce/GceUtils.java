@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Simple collection of utilities extracted to ease testing and simplify the GCEAutoScaler class
+ * Simple collection of utilities extracted to ease testing and simplify the GceAutoScaler class
  */
-public class GCEUtils
+public class GceUtils
 {
 
   /**
@@ -66,7 +66,7 @@ public class GCEUtils
   }
 
   // cannot build it!
-  private GCEUtils()
+  private GceUtils()
   {
   }
 }

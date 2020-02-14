@@ -57,11 +57,11 @@ import java.util.Locale;
  *   where the prefix is chosen by you and abcd is a suffix assigned by GCE
  */
 @JsonTypeName("gce")
-public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
+public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 {
-  private static final EmittingLogger log = new EmittingLogger(GCEAutoScaler.class);
+  private static final EmittingLogger log = new EmittingLogger(GceAutoScaler.class);
 
-  private final GCEEnvironmentConfig envConfig;
+  private final GceEnvironmentConfig envConfig;
   private final int minNumWorkers;
   private final int maxNumWorkers;
   private final SimpleWorkerProvisioningConfig config;  // For future use
@@ -69,10 +69,10 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
   private Compute cachedComputeService = null;
 
   @JsonCreator
-  public GCEAutoScaler(
+  public GceAutoScaler(
           @JsonProperty("minNumWorkers") int minNumWorkers,
           @JsonProperty("maxNumWorkers") int maxNumWorkers,
-          @JsonProperty("envConfig") GCEEnvironmentConfig envConfig,
+          @JsonProperty("envConfig") GceEnvironmentConfig envConfig,
           @JacksonInject SimpleWorkerProvisioningConfig config
   )
   {
@@ -85,10 +85,10 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
   /**
    * CAVEAT: this is meant to be used only for testing passing a mock version of Compute
    */
-  public GCEAutoScaler(
+  public GceAutoScaler(
           int minNumWorkers,
           int maxNumWorkers,
-          GCEEnvironmentConfig envConfig,
+          GceEnvironmentConfig envConfig,
           SimpleWorkerProvisioningConfig config,
           Compute compute
   )
@@ -113,7 +113,7 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
 
   @Override
   @JsonProperty
-  public GCEEnvironmentConfig getEnvConfig()
+  public GceEnvironmentConfig getEnvConfig()
   {
     return envConfig;
   }
@@ -338,7 +338,7 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
       request.setMaxResults(500L); // 500 is sadly the max
       InstanceGroupManagersListManagedInstancesResponse response = request.execute();
       for (ManagedInstance mi : response.getManagedInstances()) {
-        ids.add(GCEUtils.extractNameFromInstance(mi.getInstance()));
+        ids.add(GceUtils.extractNameFromInstance(mi.getInstance()));
       }
       log.debug("Found running instances [%s]", String.join(",", ids));
     }
@@ -374,7 +374,7 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
       Compute computeService = createComputeService();
       Compute.Instances.List request = computeService.instances().list(project, zone);
       // Cannot filter by IP atm, see below
-      // request.setFilter(GCEUtils.buildFilter(ips, "networkInterfaces[0].networkIP"));
+      // request.setFilter(GceUtils.buildFilter(ips, "networkInterfaces[0].networkIP"));
 
       List<String> instanceIds = new ArrayList<>();
       InstanceList response;
@@ -422,7 +422,7 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
     try {
       Compute computeService = createComputeService();
       Compute.Instances.List request = computeService.instances().list(project, zone);
-      request.setFilter(GCEUtils.buildFilter(nodeIds, "name"));
+      request.setFilter(GceUtils.buildFilter(nodeIds, "name"));
 
       List<String> instanceIps = new ArrayList<>();
       InstanceList response;
@@ -477,7 +477,7 @@ public class GCEAutoScaler implements AutoScaler<GCEEnvironmentConfig>
       return false;
     }
 
-    GCEAutoScaler that = (GCEAutoScaler) o;
+    GceAutoScaler that = (GceAutoScaler) o;
 
     return (envConfig != null ? envConfig.equals(that.envConfig) : that.envConfig == null) &&
             minNumWorkers == that.minNumWorkers &&
