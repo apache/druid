@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -234,6 +235,9 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.
       if (baseColumns.containsAll(virtualColumn.requiredColumns())) {
         preJoinVirtualColumns.add(virtualColumn);
+        // Since pre-join virtual columns can be computed using only base columns, we include them in the
+        // base column set.
+        baseColumns.add(virtualColumn.getOutputName());
       } else {
         postJoinVirtualColumns.add(virtualColumn);
       }
@@ -241,6 +245,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
         this,
+        baseColumns,
         filter,
         enableFilterPushDown
     );
@@ -295,6 +300,22 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   public boolean isEnableFilterPushDown()
   {
     return enableFilterPushDown;
+  }
+
+  @VisibleForTesting
+  public Set<String> getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns virtualColumns)
+  {
+    final Set<String> baseColumns = new HashSet<>();
+    Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
+    Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
+
+    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
+      if (baseColumns.containsAll(virtualColumn.requiredColumns())) {
+        baseColumns.add(virtualColumn.getOutputName());
+      }
+    }
+
+    return baseColumns;
   }
 
   /**
