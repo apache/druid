@@ -36,6 +36,7 @@ import com.google.api.services.compute.model.InstanceGroupManagersListManagedIns
 import com.google.api.services.compute.model.InstanceList;
 import com.google.api.services.compute.model.ManagedInstance;
 import com.google.api.services.compute.model.Operation;
+import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
@@ -76,7 +77,13 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
           @JacksonInject SimpleWorkerProvisioningConfig config
   )
   {
+    Preconditions.checkArgument(minNumWorkers > 0,
+                                "minNumWorkers must be greater than 0");
     this.minNumWorkers = minNumWorkers;
+    Preconditions.checkArgument(maxNumWorkers > 0,
+                                "maxNumWorkers must be greater than 0");
+    Preconditions.checkArgument(maxNumWorkers > minNumWorkers,
+                                "maxNumWorkers must be greater than minNumWorkers");
     this.maxNumWorkers = maxNumWorkers;
     this.envConfig = envConfig;
     this.config = config;

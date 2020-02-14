@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.autoscaling.gce;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 /**
  */
@@ -50,10 +51,17 @@ public class GceEnvironmentConfig
           @JsonProperty("managedInstanceGroupName") String managedInstanceGroupName
   )
   {
+    Preconditions.checkArgument(numInstances > 0,
+                                "numIntances must be greater than 0");
     this.numInstances = numInstances;
-    this.projectId = projectId;
-    this.zoneName = zoneName;
-    this.managedInstanceGroupName = managedInstanceGroupName;
+    this.projectId = Preconditions.checkNotNull(projectId,
+                                                "projectId must be not null");
+    this.zoneName = Preconditions.checkNotNull(zoneName,
+                                               "zoneName nust be not null");
+    this.managedInstanceGroupName = Preconditions.checkNotNull(
+            managedInstanceGroupName,
+            "managedInstanceGroupName must be not null"
+    );
   }
 
   @JsonProperty
