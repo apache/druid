@@ -25,8 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.LineIterator;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.prefetch.CacheManager;
 import org.apache.druid.data.input.impl.prefetch.FetchConfig;
@@ -49,6 +51,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /**
  * PrefetchSqlFirehoseFactory is an abstract firehose factory for reading prefetched sql resultset data. Regardless
@@ -89,7 +92,7 @@ import java.util.concurrent.TimeUnit;
  * and the read will fail.
  */
 public abstract class PrefetchSqlFirehoseFactory<T>
-    implements FirehoseFactory<InputRowParser<Map<String, Object>>>
+    implements FiniteFirehoseFactory<InputRowParser<Map<String, Object>>, T>
 {
   private static final Logger LOG = new Logger(PrefetchSqlFirehoseFactory.class);
 
@@ -234,6 +237,32 @@ public abstract class PrefetchSqlFirehoseFactory<T>
           }
         }
     );
+  }
+
+  protected void initializeObjectsIfNeeded() throws IOException
+  {
+    if (objects == null) {
+      objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
+    }
+  }
+
+  public List<T> getObjects()
+  {
+    return objects;
+  }
+
+  @Override
+  public Stream<InputSplit<T>> getSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+  {
+    initializeObjectsIfNeeded();
+    return getObjects().stream().map(InputSplit::new);
+  }
+
+  @Override
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+  {
+    initializeObjectsIfNeeded();
+    return getObjects().size();
   }
 
   /**
