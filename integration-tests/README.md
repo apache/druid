@@ -36,7 +36,8 @@ Integration Testing Using Docker
 
 Before starting, if you don't already have docker on your machine, install it as described on 
 [Docker installation instructions](https://docs.docker.com/install/). Ensure that you 
-have at least 4GB of memory allocated to the docker engine. (Set under Preferences > Advanced.)
+have at least 4GB of memory allocated to the docker engine. (You can verify it 
+under Preferences > Advanced.)
 
 Also set the `DOCKER_IP`
 environment variable to localhost on your system, as follows:
