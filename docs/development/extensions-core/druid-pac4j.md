@@ -23,7 +23,7 @@ title: "Druid pac4j based Security extension"
   -->
 
 
-Apache Druid (incubating) Extension to enable [OpenID Connect](https://openid.net/connect/) based Authentication for Druid Processes using [pac4j](https://github.com/pac4j/pac4j) as the underlying client library.
+Apache Druid Extension to enable [OpenID Connect](https://openid.net/connect/) based Authentication for Druid Processes using [pac4j](https://github.com/pac4j/pac4j) as the underlying client library.
 This can be used  with any authentication server that supports same e.g. [Okta](https://developer.okta.com/).
 This extension is primarily useful at the edge of druid cluster i.e. the router node to enable a group of users in existing authentication server to interact with Druid cluster, using the [Web Console](../../operations/druid-console.html)
 
