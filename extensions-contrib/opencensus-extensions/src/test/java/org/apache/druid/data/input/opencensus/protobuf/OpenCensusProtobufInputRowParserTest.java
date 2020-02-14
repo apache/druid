@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.opencensus.protobuf;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Int64Value;
@@ -35,6 +36,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
@@ -59,6 +61,8 @@ public class OpenCensusProtobufInputRowParserTest
 
   private ParseSpec parseSpec;
 
+  private ParseSpec parseSpecWithDimensions;
+
   @Before
   public void setUp()
   {
@@ -75,6 +79,20 @@ public class OpenCensusProtobufInputRowParserTest
         ), null
     );
 
+    parseSpecWithDimensions = new JSONParseSpec(
+        new TimestampSpec("timestamp", "millis", null),
+        new DimensionsSpec(ImmutableList.of(
+            new StringDimensionSchema("foo_key"),
+            new StringDimensionSchema("env_key")), null, null),
+        new JSONPathSpec(
+            true,
+            Lists.newArrayList(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "name", ""),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
+            )
+        ), null
+    );
   }
 
 
@@ -92,9 +110,9 @@ public class OpenCensusProtobufInputRowParserTest
 
     System.out.println(timestamp.getSeconds() * 1000);
 
-    Metric d = doubleGaugeMetric(timestamp);
+    Metric metric = doubleGaugeMetric(timestamp);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    d.writeTo(out);
+    metric.writeTo(out);
 
     InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
     Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
@@ -117,9 +135,9 @@ public class OpenCensusProtobufInputRowParserTest
     Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
         .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
 
-    Metric d = summaryMetric(timestamp);
+    Metric metric = summaryMetric(timestamp);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    d.writeTo(out);
+    metric.writeTo(out);
 
     List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
 
@@ -136,6 +154,70 @@ public class OpenCensusProtobufInputRowParserTest
     assertDimensionEquals(row, "name", "metric_summary-sum");
     assertDimensionEquals(row, "foo_key", "foo_value");
     Assert.assertEquals(10, row.getMetric("value").doubleValue(), 0.0);
+
+  }
+
+  @Test
+  public void testDimensionsParseWithParseSpecDimensions() throws Exception
+  {
+    //configure parser with desc file
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpecWithDimensions);
+
+    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+
+    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
+        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
+
+    Metric metric = summaryMetric(timestamp);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    metric.writeTo(out);
+
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+
+    Assert.assertEquals(2, rows.size());
+
+    InputRow row = rows.get(0);
+    Assert.assertEquals(2, row.getDimensions().size());
+    assertDimensionEquals(row, "env_key", "env_val");
+    assertDimensionEquals(row, "foo_key", "foo_value");
+
+    row = rows.get(1);
+    Assert.assertEquals(2, row.getDimensions().size());
+    assertDimensionEquals(row, "env_key", "env_val");
+    assertDimensionEquals(row, "foo_key", "foo_value");
+
+  }
+
+  @Test
+  public void testDimensionsParseWithoutParseSpecDimensions() throws Exception
+  {
+    //configure parser with desc file
+    OpenCensusProtobufInputRowParser parser = new OpenCensusProtobufInputRowParser(parseSpec);
+
+    DateTime dateTime = new DateTime(2019, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+
+    Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
+        .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
+
+    Metric metric = summaryMetric(timestamp);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    metric.writeTo(out);
+
+    List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
+
+    Assert.assertEquals(2, rows.size());
+
+    InputRow row = rows.get(0);
+    Assert.assertEquals(4, row.getDimensions().size());
+    assertDimensionEquals(row, "name", "metric_summary-count");
+    assertDimensionEquals(row, "env_key", "env_val");
+    assertDimensionEquals(row, "foo_key", "foo_value");
+
+    row = rows.get(1);
+    Assert.assertEquals(4, row.getDimensions().size());
+    assertDimensionEquals(row, "name", "metric_summary-sum");
+    assertDimensionEquals(row, "env_key", "env_val");
+    assertDimensionEquals(row, "foo_key", "foo_value");
 
   }
 
