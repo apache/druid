@@ -264,8 +264,7 @@ public class Expressions
           rexNode,
           postAggregatorVisitor
       );
-
-        return expression;
+      return expression;
     }
   }
 
