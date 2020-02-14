@@ -239,7 +239,7 @@ public abstract class PrefetchSqlFirehoseFactory<T>
     );
   }
 
-  protected void initializeObjectsIfNeeded() throws IOException
+  protected void initializeObjectsIfNeeded()
   {
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
@@ -252,14 +252,14 @@ public abstract class PrefetchSqlFirehoseFactory<T>
   }
 
   @Override
-  public Stream<InputSplit<T>> getSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+  public Stream<InputSplit<T>> getSplits(@Nullable SplitHintSpec splitHintSpec)
   {
     initializeObjectsIfNeeded();
     return getObjects().stream().map(InputSplit::new);
   }
 
   @Override
-  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
   {
     initializeObjectsIfNeeded();
     return getObjects().size();
