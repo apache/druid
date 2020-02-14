@@ -971,11 +971,6 @@ A sample worker config spec is shown below:
 
 Issuing a GET request at the same URL will return the current worker config spec that is currently in place. The worker config spec list above is just a sample for EC2 and it is possible to extend the code base for other deployment environments. A description of the worker config spec is shown below.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
-|`autoScaler`|Only used if autoscaling is enabled. See below.|null|
-
 To view the audit history of worker config issue a GET request to the URL -
 
 ```
@@ -989,6 +984,22 @@ To view last <n> entries of the audit history of worker config issue a GET reque
 ```
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 ```
+
+##### Default Worker Config
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
+|`autoScaler`|Only used if autoscaling is enabled. See below.|null|
+
+##### Categoried Worker Config
+Gives ability for overlord to work with several autoscalers to run tasks of different categories on clusters with different configurations.
+ 
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|Type of the config|required; must be `categoried`|
+|`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
+|`autoScalers`|List of [Autoscaler](#autoscaler) to serve tasks of appropriate category. In the list can be one autoscaler of default category (category declaration is omit). When [Worker Category Spec](#workercategoryspec) is not in strong assignment mode the default autoscaler will be used to serve tasks with categories which not have corresponding autoscaler|required; At least one autoscaler should be declared|
 
 ##### Worker Select Strategy
 
@@ -1113,6 +1124,64 @@ field. If not provided, the default is to not use it at all.
 |`defaultCategory`|Specify default category for a task type.|null|
 |`categoryAffinity`|A JSON map object mapping a datasource String name to a category String name of the MiddleManager. If category isn't specified for a datasource, then using the `defaultCategory`. If no specified category and the `defaultCategory` is also null, then tasks can run on any available MiddleManagers.|null|
 
+###### Autoscalers
+List of [Autoscaler](#autoscaler) instances for each category of task specified in a [CategoryConfig](#categoryconfig)
+
+Example: declare separate autoscalers for different categories of tasks
+
+```json
+{
+  "autoScalers": [
+    {
+      "type": "ec2",
+      "category": "category0",
+      "minNumWorkers": 0,
+      "maxNumWorkers": 12,
+      "envConfig": {
+        "availabilityZone": "us-east-1a",
+        "nodeData": {
+          "amiId": "${AMI}",
+          "instanceType": "c3.8xlarge",
+          "minInstances": 1,
+          "maxInstances": 1,
+          "securityGroupIds": ["${IDs}"],
+          "keyName": "${KEY_NAME}"
+        },
+        "userData": {
+          "impl": "string",
+          "data": "${SCRIPT_COMMAND}",
+          "versionReplacementString": ":VERSION:",
+          "version": null
+        }
+      }
+    },
+    {
+      "type": "ec2",
+      "category": "category1",
+      "minNumWorkers": 2,
+      "maxNumWorkers": 7,
+      "envConfig": {
+        "availabilityZone": "us-east-2a",
+        "nodeData": {
+          "amiId": "${AMI}",
+          "instanceType": "r3.4xlarge",
+          "minInstances": 1,
+          "maxInstances": 1,
+          "securityGroupIds": ["${IDs}"],
+          "keyName": "${KEY_NAME}"
+        },
+        "userData": {
+          "impl": "string",
+          "data": "${SCRIPT_COMMAND}",
+          "versionReplacementString": ":VERSION:",
+          "version": null
+        }
+      }
+    }
+  ]
+}
+```
+
 ##### Autoscaler
 
 Amazon's EC2 is currently the only supported autoscaler.
@@ -1121,6 +1190,7 @@ Amazon's EC2 is currently the only supported autoscaler.
 |--------|-----------|-------|
 |`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
 |`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
+|`category`|Category of tasks which should be served by this autoscaler|_default_worker_category; optional|
 |`availabilityZone`|What availability zone to run in.|none|
 |`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
 |`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|

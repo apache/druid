@@ -59,11 +59,15 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
+/**
+ * Autoscaler provisioning strategy based on {@link AutoScaler#getCategory()} field. It selects autoscaler based on
+ * a worker's category.
+ */
 @JsonTypeName("categoriedTaskBased")
-public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningStrategy
+public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisioningStrategy
 {
   private static final String SCHEME = "http";
-  private static final EmittingLogger log = new EmittingLogger(CategoriedProvisioningStrategy.class);
+  private static final EmittingLogger log = new EmittingLogger(CategoriedWorkerProvisioningStrategy.class);
 
   private final CategoriedProvisioningConfig config;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
@@ -103,7 +107,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
   }
 
   @Inject
-  public CategoriedProvisioningStrategy(
+  public CategoriedWorkerProvisioningStrategy(
       CategoriedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
@@ -117,7 +121,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     );
   }
 
-  public CategoriedProvisioningStrategy(
+  public CategoriedWorkerProvisioningStrategy(
       CategoriedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
