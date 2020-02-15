@@ -109,9 +109,13 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitDoubleArray(ExprParser.DoubleArrayContext ctx)
   {
-    Double[] values = new Double[ctx.DOUBLE().size()];
+    Double[] values = new Double[ctx.doubleElement().size()];
     for (int i = 0; i < values.length; i++) {
-      values[i] = Double.parseDouble(ctx.DOUBLE(i).getText());
+      if (ctx.doubleElement(i).getText().equalsIgnoreCase("null")) {
+        values[i] = null;
+      } else {
+        values[i] = Double.parseDouble(ctx.doubleElement(i).getText());
+      }
     }
     nodes.put(ctx, new DoubleArrayExpr(values));
   }
@@ -188,9 +192,13 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitLongArray(ExprParser.LongArrayContext ctx)
   {
-    Long[] values = new Long[ctx.LONG().size()];
+    Long[] values = new Long[ctx.longElement().size()];
     for (int i = 0; i < values.length; i++) {
-      values[i] = Long.parseLong(ctx.LONG(i).getText());
+      if (ctx.longElement(i).getText().equalsIgnoreCase("null")) {
+        values[i] = null;
+      } else {
+        values[i] = Long.parseLong(ctx.longElement(i).getText());
+      }
     }
     nodes.put(ctx, new LongArrayExpr(values));
   }
@@ -406,9 +414,9 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitStringArray(ExprParser.StringArrayContext ctx)
   {
-    String[] values = new String[ctx.STRING().size()];
+    String[] values = new String[ctx.stringElement().size()];
     for (int i = 0; i < values.length; i++) {
-      values[i] = escapeStringLiteral(ctx.STRING(i).getText());
+      values[i] = escapeStringLiteral(ctx.stringElement(i).getText());
     }
     nodes.put(ctx, new StringArrayExpr(values));
   }
@@ -417,6 +425,24 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitEmptyArray(ExprParser.EmptyArrayContext ctx)
   {
     nodes.put(ctx, new StringArrayExpr(new String[0]));
+  }
+
+  @Override
+  public void exitEmptyStringArray(ExprParser.EmptyStringArrayContext ctx)
+  {
+    nodes.put(ctx, new StringArrayExpr(new String[0]));
+  }
+
+  @Override
+  public void exitEmptyDoubleArray(ExprParser.EmptyDoubleArrayContext ctx)
+  {
+    nodes.put(ctx, new DoubleArrayExpr(new Double[0]));
+  }
+
+  @Override
+  public void exitEmptyLongArray(ExprParser.EmptyLongArrayContext ctx)
+  {
+    nodes.put(ctx, new LongArrayExpr(new Long[0]));
   }
 
   /**
@@ -457,6 +483,9 @@ public class ExprListenerImpl extends ExprBaseListener
    */
   private static String escapeStringLiteral(String text)
   {
+    if (text.equalsIgnoreCase("null")) {
+      return null;
+    }
     String unquoted = text.substring(1, text.length() - 1);
     return unquoted.indexOf('\\') >= 0 ? StringEscapeUtils.unescapeJava(unquoted) : unquoted;
   }

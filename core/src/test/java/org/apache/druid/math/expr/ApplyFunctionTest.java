@@ -102,7 +102,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     assertExpr("fold((b, acc) -> b * acc, map((b) -> b * 2, filter(b -> b > 3, b)), 1)", 80L);
     assertExpr("fold((a, acc) -> concat(a, acc), a, '')", "foobarbazbarfoo");
     assertExpr("fold((a, acc) -> array_append(acc, a), a, [])", new String[]{"foo", "bar", "baz", "foobar"});
-    assertExpr("fold((a, acc) -> array_append(acc, a), b, cast([], 'LONG_ARRAY'))", new Long[]{1L, 2L, 3L, 4L, 5L});
+    assertExpr("fold((a, acc) -> array_append(acc, a), b, <LONG>[])", new Long[]{1L, 2L, 3L, 4L, 5L});
   }
 
   @Test
@@ -161,6 +161,16 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
+
+    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
+
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
+
+    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
+    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
   }
 
   private void assertExpr(final String expression, final Object[] expectedResult)
@@ -170,6 +180,22 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     if (expectedResult.length != 0 || result == null || result.length != 0) {
       Assert.assertArrayEquals(expression, expectedResult, result);
     }
+
+    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    final Object[] resultRoundTrip = roundTrip.eval(bindings).asArray();
+    if (expectedResult.length != 0 || resultRoundTrip == null || resultRoundTrip.length != 0) {
+      Assert.assertArrayEquals(expr.stringify(), expectedResult, resultRoundTrip);
+    }
+
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    final Object[] resultRoundTripFlatten = roundTripFlatten.eval(bindings).asArray();
+    if (expectedResult.length != 0 || resultRoundTripFlatten == null || resultRoundTripFlatten.length != 0) {
+      Assert.assertArrayEquals(expr.stringify(), expectedResult, resultRoundTripFlatten);
+    }
+
+    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
+    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
   }
 
   private void assertExpr(final String expression, final Double[] expectedResult)
@@ -180,5 +206,23 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     for (int i = 0; i < result.length; i++) {
       Assert.assertEquals(expression, expectedResult[i], result[i], 0.00001); // something is lame somewhere..
     }
+
+    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    Double[] resultRoundTrip = (Double[]) roundTrip.eval(bindings).value();
+    Assert.assertEquals(expectedResult.length, resultRoundTrip.length);
+    for (int i = 0; i < resultRoundTrip.length; i++) {
+      Assert.assertEquals(expression, expectedResult[i], resultRoundTrip[i], 0.00001);
+    }
+
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    Double[] resultRoundTripFlatten= (Double[]) roundTripFlatten.eval(bindings).value();
+    Assert.assertEquals(expectedResult.length, resultRoundTripFlatten.length);
+    for (int i = 0; i < resultRoundTripFlatten.length; i++) {
+      Assert.assertEquals(expression, expectedResult[i], resultRoundTripFlatten[i], 0.00001);
+    }
+
+    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
+    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
   }
 }

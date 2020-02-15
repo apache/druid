@@ -19,12 +19,14 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -46,6 +48,8 @@ import java.util.stream.Collectors;
  */
 public interface Expr
 {
+  String NULL_LITERAL = "null";
+  Joiner ARG_JOINER = Joiner.on(", ");
   /**
    * Indicates expression is a constant whose literal value can be extracted by {@link Expr#getLiteralValue()},
    * making evaluating with arguments and bindings unecessary
@@ -105,6 +109,12 @@ public interface Expr
    * {@link ExprEval} with the result.
    */
   ExprEval eval(ObjectBinding bindings);
+
+  /**
+   * Convert the {@link Expr} back into parseable string that when parsed with
+   * {@link Parser#parse(String, ExprMacroTable)} will produce an equivalent {@link Expr}.
+   */
+  String stringify();
 
   /**
    * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
@@ -460,6 +470,12 @@ abstract class ConstantExpr implements Expr
   {
     return new BindingDetails();
   }
+
+  @Override
+  public String stringify()
+  {
+    return toString();
+  }
 }
 
 abstract class NullNumericConstantExpr extends ConstantExpr
@@ -473,7 +489,7 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   @Override
   public String toString()
   {
-    return "null";
+    return NULL_LITERAL;
   }
 }
 
@@ -541,6 +557,15 @@ class LongArrayExpr extends ConstantExpr
   {
     return ExprEval.ofLongArray(value);
   }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<LONG>[]";
+    }
+    return toString();
+  }
 }
 
 class StringExpr extends ConstantExpr
@@ -571,6 +596,12 @@ class StringExpr extends ConstantExpr
   {
     return ExprEval.of(value);
   }
+
+  @Override
+  public String stringify()
+  {
+    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(value));
+  }
 }
 
 class StringArrayExpr extends ConstantExpr
@@ -598,6 +629,25 @@ class StringArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofStringArray(value);
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<STRING>[]";
+    }
+    return StringUtils.format(
+        "[%s]",
+        ARG_JOINER.join(
+            Arrays.stream(value)
+                  .map(s -> s == null
+                            ? NULL_LITERAL
+                            : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(s))
+                  )
+                  .iterator()
+        )
+    );
   }
 }
 
@@ -663,6 +713,15 @@ class DoubleArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDoubleArray(value);
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<DOUBLE>[]";
+    }
+    return toString();
   }
 }
 
@@ -755,6 +814,12 @@ class IdentifierExpr implements Expr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format("\"%s\"", StringEscapeUtils.escapeJava(binding));
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     visitor.visit(this);
@@ -821,6 +886,12 @@ class LambdaExpr implements Expr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(getIdentifiers()), expr.stringify());
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     expr.visit(visitor);
@@ -874,6 +945,12 @@ class FunctionExpr implements Expr
   public ExprEval eval(ObjectBinding bindings)
   {
     return function.apply(args, bindings);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
   }
 
   @Override
@@ -960,6 +1037,17 @@ class ApplyFunctionExpr implements Expr
   public ExprEval eval(ObjectBinding bindings)
   {
     return function.apply(lambdaExpr, argsExpr, bindings);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format(
+        "%s(%s, %s)",
+        name,
+        lambdaExpr.stringify(),
+        ARG_JOINER.join(argsExpr.stream().map(Expr::stringify).iterator())
+    );
   }
 
   @Override
@@ -1057,6 +1145,12 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format("-%s", expr.stringify());
+  }
+
+  @Override
   public String toString()
   {
     return StringUtils.format("-%s", expr);
@@ -1086,6 +1180,12 @@ class UnaryNotExpr extends UnaryExpr
     // conforming to other boolean-returning binary operators
     ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
     return ExprEval.of(!ret.asBoolean(), retType);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("!%s", expr.stringify());
   }
 
   @Override
@@ -1139,6 +1239,12 @@ abstract class BinaryOpExprBase implements Expr
   public String toString()
   {
     return StringUtils.format("(%s %s %s)", op, left, right);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("(%s %s %s)", left.stringify(), op, right.stringify());
   }
 
   protected abstract BinaryOpExprBase copy(Expr left, Expr right);

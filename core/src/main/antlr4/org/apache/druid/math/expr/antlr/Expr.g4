@@ -29,10 +29,13 @@ expr : 'null'                                         # null
      | DOUBLE                                         # doubleExpr
      | LONG                                           # longExpr
      | STRING                                         # string
-     | '[' DOUBLE  (',' DOUBLE)* ']'                  # doubleArray
-     | '[' LONG (',' LONG)* ']'                       # longArray
-     | '[' STRING (',' STRING)* ']'                   # stringArray
+     | '[' doubleElement  (',' doubleElement)* ']'    # doubleArray
+     | '[' longElement (',' longElement)* ']'         # longArray
+     | '[' stringElement (',' stringElement)* ']'     # stringArray
      | '[]'                                           # emptyArray
+     | '<STRING>[]'                                   # emptyStringArray
+     | '<DOUBLE>[]'                                   # emptyDoubleArray
+     | '<LONG>[]'                                     # emptyLongArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
@@ -40,6 +43,12 @@ lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
 
 fnArgs : expr (',' expr)*                             # functionArgs
        ;
+
+longElement : (LONG | 'null');
+
+doubleElement : (DOUBLE | 'null');
+
+stringElement : (STRING | 'null');
 
 IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ [\"\\])* '"';
 LONG : [0-9]+ ;

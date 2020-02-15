@@ -191,6 +191,15 @@ public class ParserTest extends InitializedNullHandlingTest
     validateConstantExpression("[1.0, 2.345]", new Double[]{1.0, 2.345});
     validateConstantExpression("[1, 3]", new Long[]{1L, 3L});
     validateConstantExpression("[\'hello\', \'world\']", new String[]{"hello", "world"});
+
+    validateConstantExpression("[1.0, null, 2.345]", new Double[]{1.0, null, 2.345});
+    validateConstantExpression("[null, 1, 3]", new Long[]{null, 1L, 3L});
+    validateConstantExpression("[\'hello\', \'world\', null]", new String[]{"hello", "world", null});
+
+    validateConstantExpression("[]", new String[0]);
+    validateConstantExpression("<STRING>[]", new String[0]);
+    validateConstantExpression("<DOUBLE>[]", new Double[0]);
+    validateConstantExpression("<LONG>[]", new Long[0]);
   }
 
   @Test
@@ -454,8 +463,17 @@ public class ParserTest extends InitializedNullHandlingTest
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {
-    Assert.assertEquals(expression, withoutFlatten, Parser.parse(expression, ExprMacroTable.nil(), false).toString());
-    Assert.assertEquals(expression, withFlatten, Parser.parse(expression, ExprMacroTable.nil(), true).toString());
+    Expr notFlat = Parser.parse(expression, ExprMacroTable.nil(), false);
+    Expr flat = Parser.parse(expression, ExprMacroTable.nil(), true);
+    Assert.assertEquals(expression, withoutFlatten, notFlat.toString());
+    Assert.assertEquals(expression, withFlatten, flat.toString());
+
+    Expr notFlatRoundTrip = Parser.parse(notFlat.stringify(), ExprMacroTable.nil(), false);
+    Expr flatRoundTrip = Parser.parse(flat.stringify(), ExprMacroTable.nil(), true);
+    Assert.assertEquals(expression, withoutFlatten, notFlatRoundTrip.toString());
+    Assert.assertEquals(expression, withFlatten, flatRoundTrip.toString());
+    Assert.assertEquals(notFlat.stringify(), notFlatRoundTrip.stringify());
+    Assert.assertEquals(flat.stringify(), flatRoundTrip.stringify());
   }
 
   private void validateParser(String expression, String expected, List<String> identifiers)
@@ -482,6 +500,14 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
     Assert.assertEquals(expression, arrays, deets.getArrayVariables());
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
+    final Expr.BindingDetails roundTripDeets = roundTrip.analyzeInputs();
+    Assert.assertEquals(expression, identifiers, roundTripDeets.getRequiredBindingsList());
+    Assert.assertEquals(expression, scalars, roundTripDeets.getScalarVariables());
+    Assert.assertEquals(expression, arrays, roundTripDeets.getArrayVariables());
   }
 
   private void validateApplyUnapplied(
@@ -497,23 +523,54 @@ public class ParserTest extends InitializedNullHandlingTest
     final Expr transformed = Parser.applyUnappliedBindings(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
     Assert.assertEquals(applied, applied, transformed.toString());
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr parsedRoundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Expr.BindingDetails roundTripDeets = parsedRoundTrip.analyzeInputs();
+    Parser.validateExpr(parsedRoundTrip, roundTripDeets);
+    final Expr transformedRoundTrip = Parser.applyUnappliedBindings(parsedRoundTrip, roundTripDeets, identifiers);
+    Assert.assertEquals(expression, unapplied, parsedRoundTrip.toString());
+    Assert.assertEquals(applied, applied, transformedRoundTrip.toString());
+
+    Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
+    Assert.assertEquals(transformed.stringify(), transformedRoundTrip.stringify());
   }
 
   private void validateConstantExpression(String expression, Object expected)
   {
+    Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(
         expression,
         expected,
-        Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
+        parsed.eval(Parser.withMap(ImmutableMap.of())).value()
     );
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    Expr parsedRoundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertEquals(
+        expression,
+        expected,
+        parsedRoundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+    );
+    Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
   }
 
   private void validateConstantExpression(String expression, Object[] expected)
   {
+    Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
+        (Object[]) parsed.eval(Parser.withMap(ImmutableMap.of())).value()
     );
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertArrayEquals(
+        expression,
+        expected,
+        (Object[]) roundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+    );
+    Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
   }
 }
