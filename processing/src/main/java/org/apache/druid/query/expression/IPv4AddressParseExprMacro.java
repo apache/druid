@@ -47,12 +47,12 @@ import java.util.List;
  */
 public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String NAME = "ipv4_parse";
+  public static final String FN_NAME = "ipv4_parse";
 
   @Override
   public String name()
   {
-    return NAME;
+    return FN_NAME;
   }
 
   @Override
@@ -68,7 +68,7 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
     {
       private IPv4AddressParseExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull

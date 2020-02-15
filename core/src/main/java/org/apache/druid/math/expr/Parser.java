@@ -108,7 +108,7 @@ public class Parser
   }
 
   @VisibleForTesting
-  static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
+  public static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
   {
     ExprLexer lexer = new ExprLexer(new ANTLRInputStream(in));
     CommonTokenStream tokens = new CommonTokenStream(lexer);

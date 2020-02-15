@@ -32,10 +32,11 @@ import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_floor";
   @Override
   public String name()
   {
-    return "timestamp_floor";
+    return FN_NAME;
   }
 
   @Override
@@ -68,7 +69,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
     TimestampFloorExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
       this.granularity = computeGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -113,7 +114,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
   {
     TimestampFloorDynamicExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
     }
 
     @Nonnull

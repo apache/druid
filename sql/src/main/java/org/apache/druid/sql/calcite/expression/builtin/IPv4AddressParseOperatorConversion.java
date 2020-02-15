@@ -33,7 +33,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 public class IPv4AddressParseOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(IPv4AddressParseExprMacro.NAME))
+      .operatorBuilder(StringUtils.toUpperCase(IPv4AddressParseExprMacro.FN_NAME))
       .operandTypeChecker(
           OperandTypes.or(
               OperandTypes.family(SqlTypeFamily.STRING),
@@ -45,7 +45,7 @@ public class IPv4AddressParseOperatorConversion extends DirectOperatorConversion
 
   public IPv4AddressParseOperatorConversion()
   {
-    super(SQL_FUNCTION, IPv4AddressParseExprMacro.NAME);
+    super(SQL_FUNCTION, IPv4AddressParseExprMacro.FN_NAME);
   }
 
   @Override
