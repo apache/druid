@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.antlr.ExprBaseListener;
 import org.apache.druid.math.expr.antlr.ExprParser;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -481,6 +482,7 @@ public class ExprListenerImpl extends ExprBaseListener
   /**
    * Remove single quote from a string literal, returning unquoted string value
    */
+  @Nullable
   private static String escapeStringLiteral(String text)
   {
     if (text.equalsIgnoreCase("null")) {
