@@ -89,7 +89,7 @@ public class ArchiveTask extends AbstractFixedIntervalTask
       if (archivedSegment != null) {
         toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
       } else {
-        log.info("No action was taken for [%s]", segment);
+        log.info("No action was taken for [%s]", segment.getId());
       }
     }
 

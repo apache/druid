@@ -641,4 +641,26 @@ public class Filters
     }
     return false;
   }
+
+  /**
+   * Create a filter representing an AND relationship across a list of filters.
+   *
+   * @param filterList List of filters
+   * @return If filterList has more than one element, return an AND filter composed of the filters from filterList
+   *         If filterList has a single element, return that element alone
+   *         If filterList is empty, return null
+   */
+  @Nullable
+  public static Filter and(List<Filter> filterList)
+  {
+    if (filterList.isEmpty()) {
+      return null;
+    }
+
+    if (filterList.size() == 1) {
+      return filterList.get(0);
+    }
+
+    return new AndFilter(filterList);
+  }
 }

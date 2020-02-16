@@ -86,18 +86,6 @@ public class Groupers
     return smear(obj.hashCode()) & USED_FLAG_MASK;
   }
 
-  public static int hashIntArray(final int[] ints, final int start, final int length)
-  {
-    // Similar to what Arrays.hashCode would do.
-    // Also apply the "smear" function, to improve distribution.
-    int hashCode = 1;
-    for (int i = 0; i < length; i++) {
-      hashCode = 31 * hashCode + ints[start + i];
-    }
-
-    return smear(hashCode) & USED_FLAG_MASK;
-  }
-
   static int getUsedFlag(int keyHash)
   {
     return keyHash | 0x80000000;

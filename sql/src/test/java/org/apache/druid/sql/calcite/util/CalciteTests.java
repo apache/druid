@@ -270,8 +270,11 @@ public class CalciteTests
               ImmutableList.<DimensionSchema>builder()
                   .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
                   .add(new DoubleDimensionSchema("d1"))
+                  .add(new DoubleDimensionSchema("d2"))
                   .add(new FloatDimensionSchema("f1"))
+                  .add(new FloatDimensionSchema("f2"))
                   .add(new LongDimensionSchema("l1"))
+                  .add(new LongDimensionSchema("l2"))
                   .build(),
               null,
               null
@@ -415,8 +418,11 @@ public class CalciteTests
               .put("m1", "2.0")
               .put("m2", "2.0")
               .put("d1", 1.7)
+              .put("d2", 1.7)
               .put("f1", 0.1f)
+              .put("f2", 0.1f)
               .put("l1", 325323L)
+              .put("l2", 325323L)
               .put("dim1", "10.1")
               .put("dim2", ImmutableList.of())
               .put("dim3", ImmutableList.of("b", "c"))
@@ -429,8 +435,11 @@ public class CalciteTests
               .put("m1", "3.0")
               .put("m2", "3.0")
               .put("d1", 0.0)
+              .put("d2", 0.0)
               .put("f1", 0.0)
+              .put("f2", 0.0)
               .put("l1", 0)
+              .put("l2", 0)
               .put("dim1", "2")
               .put("dim2", ImmutableList.of(""))
               .put("dim3", ImmutableList.of("d"))
@@ -742,7 +751,8 @@ public class CalciteTests
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
-        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class)
+        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
+        null
     ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)

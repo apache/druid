@@ -30,7 +30,7 @@ import java.util.Arrays;
 
 public class CascadeExtractionFn implements ExtractionFn
 {
-  private final ExtractionFn extractionFns[];
+  private final ExtractionFn[] extractionFns;
   private final ChainedExtractionFn chainedExtractionFn;
   private final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
       new ExtractionFn()

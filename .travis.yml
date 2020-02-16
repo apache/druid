@@ -47,6 +47,12 @@ env:
 # output.  To compensate, use travis_wait to extend the timeout.
 install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
+stages:
+  - name: test  # jobs that do not specify a stage get this default value
+    if: type != cron
+  - name: cron
+    if: type = cron
+
 jobs:
   include:
     - name: "animal sniffer checks"
@@ -93,9 +99,8 @@ jobs:
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
     - name: "analyze dependencies"
-      script: MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true
-      after_failure: |-
-        echo "FAILURE EXPLANATION:
+      script: |-
+        MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
 
         The dependency analysis has found a dependency that is either:
 
@@ -112,19 +117,8 @@ jobs:
 
         For more information, refer to:
         https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
-        "
 
-    - name: "security vulnerabilities"
-      install: skip
-      script: ${MVN} dependency-check:check
-      after_failure: |-
-        echo "FAILURE EXPLANATION:
-
-        The OWASP dependency check has found security vulnerabilities. Please use a newer version
-        of the dependency that does not have vulenerabilities. If the analysis has false positives,
-        they can be suppressed by adding entries to owasp-dependency-check-suppressions.xml (for more
-        information, see https://jeremylong.github.io/DependencyCheck/general/suppression.html).
-        "
+        " && false; }
 
     - &package
       name: "(openjdk8) packaging check"
@@ -259,9 +253,8 @@ jobs:
 
     - name: "docs"
       install: (cd website && npm install)
-      script: (cd website && npm run lint && npm run spellcheck)
-      after_failure: |-
-        echo "FAILURE EXPLANATION:
+      script: |-
+        (cd website && npm run lint && npm run spellcheck) || { echo "
 
         If there are spell check errors:
 
@@ -272,15 +265,21 @@ jobs:
         2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
 
         For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
-        "
 
+        " && false; }
+
+    # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
+    # Integration tests Java Runtime version is set by the JVM_RUNTIME env property (set env key to -Djvm.runtime=<JVM_RUNTIME_VERSION>)
+    # (Currently integration tests only support running with jvm runtime 8 and 11)
+    # START - Integration tests for Compile with Java 8 and Run with Java 8
     - &integration_batch_index
-      name: "batch index integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test"
+      jdk: openjdk8
       services: &integration_test_services
         - docker
-      env: TESTNG_GROUPS='-Dgroups=batch-index'
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: &run_integration_test
-        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${MAVEN_SKIP}
+        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} ${MAVEN_SKIP}
       after_failure: &integration_test_diags
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
@@ -291,36 +290,132 @@ jobs:
           done
 
     - &integration_perfect_rollup_parallel_batch_index
-      name: "perfect rollup parallel batch index integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test"
+      jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index'
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
     - &integration_kafka_index
-      name: "kafka index integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
+      jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=kafka-index'
+      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
     - &integration_query
-      name: "query integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) query integration test"
+      jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
     - &integration_realtime_index
-      name: "realtime index integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) realtime index integration test"
+      jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=realtime-index'
+      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
     - &integration_tests
-      name: "other integration test"
+      name: "(Compile=openjdk8, Run=openjdk8) other integration test"
+      jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
+    # END - Integration tests for Compile with Java 8 and Run with Java 8
+
+    # START - Integration tests for Compile with Java 11 and Run with Java 11
+    - <<: *integration_batch_index
+      name: "(Compile=openjdk11, Run=openjdk11) batch index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=11'
+
+    - <<: *integration_perfect_rollup_parallel_batch_index
+      name: "(Compile=openjdk11, Run=openjdk11) perfect rollup parallel batch index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11'
+
+    - <<: *integration_kafka_index
+      name: "(Compile=openjdk11, Run=openjdk11) kafka index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=11'
+
+    - <<: *integration_query
+      name: "(Compile=openjdk11, Run=openjdk11) query integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11'
+
+    - <<: *integration_realtime_index
+      name: "(Compile=openjdk11, Run=openjdk11) realtime index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=11'
+
+    - <<: *integration_tests
+      name: "(Compile=openjdk11, Run=openjdk11) other integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index' JVM_RUNTIME='-Djvm.runtime=11'
+    # END - Integration tests for Compile with Java 11 and Run with Java 11
+
+    # START - Integration tests for Compile with Java 11 and Run with Java 8
+    - <<: *integration_batch_index
+      name: "(Compile=openjdk11, Run=openjdk8) batch index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8'
+
+    - <<: *integration_perfect_rollup_parallel_batch_index
+      name: "(Compile=openjdk11, Run=openjdk8) perfect rollup parallel batch index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8'
+
+    - <<: *integration_kafka_index
+      name: "(Compile=openjdk11, Run=openjdk8) kafka index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8'
+
+    - <<: *integration_query
+      name: "(Compile=openjdk11, Run=openjdk8) query integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8'
+
+    - <<: *integration_realtime_index
+      name: "(Compile=openjdk11, Run=openjdk8) realtime index integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
+
+    - <<: *integration_tests
+      name: "(Compile=openjdk11, Run=openjdk8) other integration test"
+      jdk: openjdk11
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
+    # END - Integration tests for Compile with Java 11 and Run with Java 8
+    
+    - name: "security vulnerabilities"
+      stage: cron
+      install: skip
+      script: |-
+        ${MVN} dependency-check:check || { echo "
+
+        The OWASP dependency check has found security vulnerabilities. Please use a newer version
+        of the dependency that does not have vulnerabilities. If the analysis has false positives,
+        they can be suppressed by adding entries to owasp-dependency-check-suppressions.xml (for more
+        information, see https://jeremylong.github.io/DependencyCheck/general/suppression.html).
+
+        " && false; }
+
+# Travis CI only supports per build (and not per-job notifications): https://github.com/travis-ci/travis-ci/issues/9888
+notifications:
+  email:
+    if: type = cron
+    recipients:
+      # This is the string "dev@druid.apache.org" encrypted against the apache/druid repo so that forks are unable to
+      # use this notification:
+      # https://github.com/travis-ci/travis-ci/issues/1094#issuecomment-215019909
+      # https://github.com/travis-ci/travis-ci/issues/2711
+      - secure: "MupjX/0jLwh3XzHPl74BTk2/Kp5r+8TrEewfRhpQdWKFMBXLKNqu0k2VXf5C/NIg3uvPianq3REk+qeTHI8dL2ShjiWS/eIRkJOHLfObdNNBuos5fo4TxAuBQcXyT4VjAq5jnAkH84Pxf2Nl0rkisWoIhvwSX7+kNrjW1qdu7K0="
+    on_success: change
+    on_failure: change

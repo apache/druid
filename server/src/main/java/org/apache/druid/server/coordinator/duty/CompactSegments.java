@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -29,7 +30,6 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -92,7 +92,8 @@ public class CompactSegments implements CoordinatorDuty
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
         // dataSource -> list of intervals of compaction tasks
-        final Map<String, List<Interval>> compactionTaskIntervals = new HashMap<>(compactionConfigList.size());
+        final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
+            compactionConfigList.size());
         int numEstimatedNonCompleteCompactionTasks = 0;
         for (TaskStatusPlus status : compactionTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
@@ -208,10 +209,11 @@ public class CompactSegments implements CoordinatorDuty
             newAutoCompactionContext(config.getTaskContext())
         );
         LOG.info(
-            "Submitted a compactionTask[%s] for segments %s",
+            "Submitted a compactionTask[%s] for %s segments",
             taskId,
-            SegmentUtils.commaSeparatedIdentifiers(segmentsToCompact)
+            segmentsToCompact.size()
         );
+        LOG.infoSegments(segmentsToCompact, "Compacting segments");
         // Count the compaction task itself + its sub tasks
         numSubmittedTasks += findNumMaxConcurrentSubTasks(config.getTuningConfig()) + 1;
       } else {

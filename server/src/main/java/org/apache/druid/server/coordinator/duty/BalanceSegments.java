@@ -233,7 +233,9 @@ public class BalanceSegments implements CoordinatorDuty
         log.info(
             "Unable to select %d remaining candidate segments out of %d total to balance "
             + "after %d iterations, ending run.",
-            (maxSegmentsToMove - moved - unmoved), maxSegmentsToMove, iter
+            (maxSegmentsToMove - moved - unmoved),
+            maxSegmentsToMove,
+            iter
         );
         break;
       }

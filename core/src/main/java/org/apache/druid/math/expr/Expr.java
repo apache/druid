@@ -421,7 +421,7 @@ public interface Expr
         java.util.function.Function<IdentifierExpr, String> mapper
     )
     {
-      Set<String> results = new HashSet<>(variables.size());
+      Set<String> results = Sets.newHashSetWithExpectedSize(variables.size());
       for (IdentifierExpr variable : variables) {
         results.add(mapper.apply(variable));
       }

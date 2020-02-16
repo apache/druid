@@ -47,7 +47,7 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
-    LOG.info("Killing segment [%s]", segment);
+    LOG.info("Killing segment [%s]", segment.getId());
 
     Map<String, Object> loadSpec = segment.getLoadSpec();
     final String bucket = MapUtils.getString(loadSpec, "bucket");

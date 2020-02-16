@@ -25,6 +25,7 @@ import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.hamcrest.Matchers;
 import org.hamcrest.number.IsCloseTo;
 import org.junit.Assert;

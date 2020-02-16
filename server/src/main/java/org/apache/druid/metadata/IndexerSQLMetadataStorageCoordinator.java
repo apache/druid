@@ -48,9 +48,9 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -494,7 +494,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String sequenceName,
       @Nullable final String previousSegmentId,
       final Interval interval,
-      final ShardSpecFactory shardSpecFactory,
+      final PartialShardSpec partialShardSpec,
       final String maxVersion,
       final boolean skipSegmentLineageCheck
   )
@@ -512,7 +512,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 dataSource,
                 sequenceName,
                 interval,
-                shardSpecFactory,
+                partialShardSpec,
                 maxVersion
             );
           } else {
@@ -522,7 +522,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 sequenceName,
                 previousSegmentId,
                 interval,
-                shardSpecFactory,
+                partialShardSpec,
                 maxVersion
             );
           }
@@ -537,7 +537,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String sequenceName,
       @Nullable final String previousSegmentId,
       final Interval interval,
-      final ShardSpecFactory shardSpecFactory,
+      final PartialShardSpec partialShardSpec,
       final String maxVersion
   ) throws IOException
   {
@@ -569,7 +569,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle,
         dataSource,
         interval,
-        shardSpecFactory,
+        partialShardSpec,
         maxVersion
     );
     if (newIdentifier == null) {
@@ -611,7 +611,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String dataSource,
       final String sequenceName,
       final Interval interval,
-      final ShardSpecFactory shardSpecFactory,
+      final PartialShardSpec partialShardSpec,
       final String maxVersion
   ) throws IOException
   {
@@ -645,7 +645,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle,
         dataSource,
         interval,
-        shardSpecFactory,
+        partialShardSpec,
         maxVersion
     );
     if (newIdentifier == null) {
@@ -788,7 +788,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final Interval interval,
-      final ShardSpecFactory shardSpecFactory,
+      final PartialShardSpec partialShardSpec,
       final String maxVersion
   ) throws IOException
   {
@@ -812,8 +812,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       if (existingChunks
           .stream()
           .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-          .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(shardSpecFactory.getShardSpecClass()))) {
-        // All existing segments should have a compatible shardSpec with shardSpecFactory.
+          .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(partialShardSpec.getShardSpecClass()))) {
+        // All existing segments should have a compatible shardSpec with partialShardSpec.
         return null;
       }
 
@@ -828,7 +828,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             // Here we check only the segments of the same shardSpec to find out the max partitionId.
             // Note that OverwriteShardSpec has the higher range for partitionId than others.
             // See PartitionIds.
-            .filter(chunk -> chunk.getObject().getShardSpec().getClass() == shardSpecFactory.getShardSpecClass())
+            .filter(chunk -> chunk.getObject().getShardSpec().getClass() == partialShardSpec.getShardSpecClass())
             .max(Comparator.comparing(chunk -> chunk.getObject().getShardSpec().getPartitionNum()))
             .map(chunk -> SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))
             .orElse(null);
@@ -845,7 +845,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       maxId = pendings.stream()
-                      .filter(id -> id.getShardSpec().getClass() == shardSpecFactory.getShardSpecClass())
+                      .filter(id -> id.getShardSpec().getClass() == partialShardSpec.getShardSpecClass())
                       .max((id1, id2) -> {
                         final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
                         if (versionCompare != 0) {
@@ -867,7 +867,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       if (maxId == null) {
-        final ShardSpec shardSpec = shardSpecFactory.create(jsonMapper, null);
+        final ShardSpec shardSpec = partialShardSpec.complete(jsonMapper, null);
         String version = versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks;
         return new SegmentIdWithShardSpec(dataSource, interval, version, shardSpec);
       } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(maxVersion) > 0) {
@@ -880,7 +880,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         );
         return null;
       } else {
-        final ShardSpec newShardSpec = shardSpecFactory.create(jsonMapper, maxId.getShardSpec());
+        final ShardSpec newShardSpec = partialShardSpec.complete(jsonMapper, maxId.getShardSpec());
         return new SegmentIdWithShardSpec(
             dataSource,
             maxId.getInterval(),

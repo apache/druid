@@ -28,12 +28,10 @@ import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
-import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -209,13 +207,13 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getTestIndexMergerV9();
   }
 
-  public class TestLocalTaskActionClient extends LocalTaskActionClient
+  public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
 
     private TestLocalTaskActionClient(Task task)
     {
-      super(task, taskStorage, createTaskActionToolbox(), new TaskAuditLogConfig(false));
+      super(task, taskStorage, createTaskActionToolbox());
     }
 
     @Override

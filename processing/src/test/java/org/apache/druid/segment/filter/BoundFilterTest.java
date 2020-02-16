@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Pair;
@@ -720,5 +721,15 @@ public class BoundFilterTest extends BaseFilterTest
         ),
         ImmutableList.of("1", "2", "4", "5", "6")
     );
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(BoundFilter.class)
+                  .usingGetClass()
+                  .withNonnullFields("boundDimFilter", "comparator")
+                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .verify();
   }
 }

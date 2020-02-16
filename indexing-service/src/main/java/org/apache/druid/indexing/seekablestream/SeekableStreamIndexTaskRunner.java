@@ -78,7 +78,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -1018,11 +1017,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
           {
             log.info(
-                "Published segments %s for sequence [%s] with metadata [%s].",
-                SegmentUtils.commaSeparatedIdentifiers(publishedSegmentsAndCommitMetadata.getSegments()),
+                "Published %s segments for sequence [%s] with metadata [%s].",
+                publishedSegmentsAndCommitMetadata.getSegments().size(),
                 sequenceMetadata.getSequenceName(),
                 Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
+            log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
@@ -1046,8 +1046,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   {
                     if (handoffSegmentsAndCommitMetadata == null) {
                       log.warn(
-                          "Failed to hand off segments: %s",
-                          SegmentUtils.commaSeparatedIdentifiers(publishedSegmentsAndCommitMetadata.getSegments())
+                          "Failed to hand off %s segments",
+                          publishedSegmentsAndCommitMetadata.getSegments().size()
+                      );
+                      log.warnSegments(
+                          publishedSegmentsAndCommitMetadata.getSegments(),
+                          "Failed to hand off segments"
                       );
                     }
                     handoffFuture.set(handoffSegmentsAndCommitMetadata);

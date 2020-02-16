@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -346,6 +347,16 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn3, null, "c"), ImmutableList.of("a", "b", "d", "e", "f"));
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn3, "e"), ImmutableList.of());
 
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(InFilter.class)
+                  .usingGetClass()
+                  .withNonnullFields("dimension", "values")
+                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .verify();
   }
 
   private DimFilter toInFilter(String dim)
