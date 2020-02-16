@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
   private static final String FN_NAME = "timestamp_floor";
+
   @Override
   public String name()
   {

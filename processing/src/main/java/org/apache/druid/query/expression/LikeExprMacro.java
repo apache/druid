@@ -34,6 +34,7 @@ import java.util.List;
 public class LikeExprMacro implements ExprMacroTable.ExprMacro
 {
   private static final String FN_NAME = "like";
+
   @Override
   public String name()
   {

@@ -216,7 +216,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     }
 
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
-    Double[] resultRoundTripFlatten= (Double[]) roundTripFlatten.eval(bindings).value();
+    Double[] resultRoundTripFlatten = (Double[]) roundTripFlatten.eval(bindings).value();
     Assert.assertEquals(expectedResult.length, resultRoundTripFlatten.length);
     for (int i = 0; i < resultRoundTripFlatten.length; i++) {
       Assert.assertEquals(expression, expectedResult[i], resultRoundTripFlatten[i], 0.00001);
