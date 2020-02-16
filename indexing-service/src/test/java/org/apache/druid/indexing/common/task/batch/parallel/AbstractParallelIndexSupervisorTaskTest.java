@@ -113,10 +113,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 {
-  static final String DISABLE_INJECT_CONTEXT_KEY = "disableInject";
+  static final String DISABLE_TASK_INJECT_CONTEXT_KEY = "disableInject";
   static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
@@ -280,7 +282,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    private TaskStatus waitToFinish(Task task)
+    private TaskStatus waitToFinish(Task task, long waitTime, TimeUnit timeUnit)
     {
       final TaskContainer taskContainer = tasks.get(task.getId());
       if (taskContainer == null) {
@@ -290,13 +292,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         while (taskContainer.statusFuture == null && !Thread.currentThread().isInterrupted()) {
           Thread.sleep(10);
         }
-        return taskContainer.statusFuture.get();
+        return taskContainer.statusFuture.get(waitTime, timeUnit);
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
-      catch (ExecutionException e) {
+      catch (ExecutionException | TimeoutException e) {
         throw new RuntimeException(e);
       }
     }
@@ -417,14 +419,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return taskRunner.runAndWait(injectIfNeeded(task));
     }
 
-    public TaskStatus waitToFinish(Task task)
+    public TaskStatus waitToFinish(Task task, long timeout, TimeUnit timeUnit)
     {
-      return taskRunner.waitToFinish(task);
+      return taskRunner.waitToFinish(task, timeout, timeUnit);
     }
 
     private Task injectIfNeeded(Task task)
     {
-      if (!task.getContextValue(DISABLE_INJECT_CONTEXT_KEY, false)) {
+      if (!task.getContextValue(DISABLE_TASK_INJECT_CONTEXT_KEY, false)) {
         try {
           final byte[] json = objectMapper.writeValueAsBytes(task);
           return objectMapper.readValue(json, Task.class);

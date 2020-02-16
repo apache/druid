@@ -72,6 +72,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private static final int DIM_FILE_CARDINALITY = 2;
   private static final int NUM_PARTITION = 2;
   private static final int YEAR = 2017;
+  private static final Interval INTERVAL_TO_INDEX = Intervals.of("%s-12/P1M", YEAR);
   private static final String TIME = "ts";
   private static final String DIM1 = "dim1";
   private static final String DIM2 = "dim2";
@@ -193,7 +194,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = runTestTask(
         PARSE_SPEC,
-        Intervals.of("%s-12/P1M", YEAR),
+        INTERVAL_TO_INDEX,
         inputDir,
         TEST_FILE_NAME_PREFIX + "*",
         new SingleDimensionPartitionsSpec(

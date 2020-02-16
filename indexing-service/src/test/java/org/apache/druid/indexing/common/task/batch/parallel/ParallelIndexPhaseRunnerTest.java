@@ -233,7 +233,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
           0,
           null,
           null,
-          Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_INJECT_CONTEXT_KEY, true)
+          Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_TASK_INJECT_CONTEXT_KEY, true)
       );
       this.phaseRunner = phaseRunner;
     }

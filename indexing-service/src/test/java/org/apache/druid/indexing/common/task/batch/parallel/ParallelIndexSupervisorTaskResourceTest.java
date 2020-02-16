@@ -75,6 +75,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -240,7 +241,10 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().waitToFinish(task).getStatusCode());
+    Assert.assertEquals(
+        TaskState.SUCCESS,
+        getIndexingServiceClient().waitToFinish(task, 1000, TimeUnit.MILLISECONDS).getStatusCode()
+    );
   }
 
   @SuppressWarnings({"ConstantConditions"})
@@ -444,7 +448,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         null,
         null,
         ingestionSpec,
-        Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_INJECT_CONTEXT_KEY, true),
+        Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_TASK_INJECT_CONTEXT_KEY, true),
         getIndexingServiceClient()
     );
   }
@@ -595,7 +599,10 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           getParallelIndexTaskClientFactory()
       );
       final TestInputSource inputSource = (TestInputSource) getIngestionSpec().getIOConfig().getInputSource();
-      final InputSplit<Integer> split = inputSource.createSplits(getIngestionSpec().getIOConfig().getInputFormat(), null)
+      final InputSplit<Integer> split = inputSource.createSplits(
+          getIngestionSpec().getIOConfig().getInputFormat(),
+          null
+      )
                                                    .findFirst()
                                                    .orElse(null);
       if (split == null) {
@@ -658,7 +665,13 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       }
 
       // build LocalParallelIndexTaskClient
-      final ParallelIndexSupervisorTaskClient taskClient = getParallelIndexTaskClientFactory().build(null, getId(), 0, null, 0);
+      final ParallelIndexSupervisorTaskClient taskClient = getParallelIndexTaskClientFactory().build(
+          null,
+          getId(),
+          0,
+          null,
+          0
+      );
       final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) getIngestionSchema()
           .getTuningConfig()
           .getGivenOrDefaultPartitionsSpec();

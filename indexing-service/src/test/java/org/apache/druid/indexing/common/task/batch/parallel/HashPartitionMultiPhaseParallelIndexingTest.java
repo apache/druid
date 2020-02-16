@@ -67,6 +67,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       0
   );
   private static final int MAX_NUM_CONCURRENT_SUB_TASKS = 2;
+  private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
@@ -113,7 +114,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   {
     final Set<DataSegment> publishedSegments = runTestTask(
         PARSE_SPEC,
-        Intervals.of("2017/2018"),
+        INTERVAL_TO_INDEX,
         inputDir,
         "test_*",
         new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),

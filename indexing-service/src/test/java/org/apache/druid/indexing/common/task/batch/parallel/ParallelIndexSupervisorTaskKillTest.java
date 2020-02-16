@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSupervisorTaskTest
@@ -89,7 +90,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     task.stopGracefully(null);
     expectedException.expect(RuntimeException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
-    getIndexingServiceClient().waitToFinish(task);
+    getIndexingServiceClient().waitToFinish(task, 3000L, TimeUnit.MILLISECONDS);
 
     final TestSinglePhaseParallelIndexTaskRunner runner = (TestSinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
@@ -196,7 +197,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     // set up test tools
     return new TestSupervisorTask(
         ingestionSpec,
-        Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_INJECT_CONTEXT_KEY, true),
+        Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_TASK_INJECT_CONTEXT_KEY, true),
         getIndexingServiceClient()
     );
   }

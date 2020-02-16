@@ -77,6 +77,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     );
   }
 
+  private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+
   private final LockGranularity lockGranularity;
   private final boolean useInputFormatApi;
 
@@ -119,7 +121,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testIsReady() throws Exception
   {
-    final ParallelIndexSupervisorTask task = newTask(Intervals.of("2017-12/P1M"), false, true);
+    final ParallelIndexSupervisorTask task = newTask(INTERVAL_TO_INDEX, false, true);
     final TaskActionClient actionClient = createActionClient(task);
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
     prepareTaskForLocking(task);

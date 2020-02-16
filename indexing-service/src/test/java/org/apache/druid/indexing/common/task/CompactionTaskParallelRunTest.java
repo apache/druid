@@ -69,6 +69,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
   private static final String DATA_SOURCE = "test";
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
+  private static final Interval INTERVAL_TO_INDEX = Intervals.of("2014-01-01/2014-01-02");
 
   private final AppenderatorsManager appenderatorsManager = new TestAppenderatorsManager();
   private final LockGranularity lockGranularity;
@@ -97,7 +98,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         DATA_SOURCE,
         null,
         null,
-        new CompactionIOConfig(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null)),
+        new CompactionIOConfig(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null)),
         null,
         null,
         null,
@@ -123,20 +124,18 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   {
     runIndexTask();
 
-    Interval interval = Intervals.of("2014-01-01/2014-01-02");
-
     List<InputSplit<List<WindowedSegmentId>>> splits = DruidInputSource.createSplits(
         getCoordinatorClient(),
         RETRY_POLICY_FACTORY,
         DATA_SOURCE,
-        interval,
+        INTERVAL_TO_INDEX,
         new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
     );
 
     List<DataSegment> segments = new ArrayList<>(
         getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(
             DATA_SOURCE,
-            ImmutableList.of(interval)
+            ImmutableList.of(INTERVAL_TO_INDEX)
         )
     );
 

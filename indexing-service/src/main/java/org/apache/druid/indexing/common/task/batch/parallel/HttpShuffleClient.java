@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.java.util.common.FileUtils;
@@ -33,10 +34,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * HTTP-based ShuffleClient.
+ * This class is injected as a lazy singleton instance and thus must be stateless.
+ */
 public class HttpShuffleClient implements ShuffleClient
 {
+  @VisibleForTesting
+  static final int NUM_FETCH_RETRIES = 3;
+
   private static final int BUFFER_SIZE = 1024 * 4;
-  private static final int NUM_FETCH_RETRIES = 3;
 
   private final HttpClient httpClient;
 
@@ -53,6 +60,8 @@ public class HttpShuffleClient implements ShuffleClient
       P location
   ) throws IOException
   {
+    // Create a local buffer since this class is not thread-safe.
+    // Note that this method can be called by different threads at the same time with ThreadingTaskRunner.
     final byte[] buffer = new byte[BUFFER_SIZE];
     final File zippedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
     final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
@@ -64,7 +73,7 @@ public class HttpShuffleClient implements ShuffleClient
                              .get();
           }
           catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+            throw new IOException(e);
           }
         },
         zippedFile,
