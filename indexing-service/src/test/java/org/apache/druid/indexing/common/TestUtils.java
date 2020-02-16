@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.NoopInputFormat;
@@ -41,9 +40,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
@@ -57,7 +53,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
-import org.joda.time.Duration;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -70,28 +65,6 @@ public class TestUtils
   public static final IndexingServiceClient INDEXING_SERVICE_CLIENT = new NoopIndexingServiceClient();
   public static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY = new NoopIndexTaskClientFactory<>();
   public static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
-
-  public static final HttpClient SHUFFLE_CLIENT = new HttpClient()
-  {
-    @Override
-    public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request,
-        HttpResponseHandler<Intermediate, Final> handler
-    )
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request,
-        HttpResponseHandler<Intermediate, Final> handler,
-        Duration readTimeout
-    )
-    {
-      throw new UnsupportedOperationException();
-    }
-  };
 
   private static final Logger log = new Logger(TestUtils.class);
 
@@ -126,7 +99,6 @@ public class TestUtils
             .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(IndexTaskClientFactory.class, TASK_CLIENT_FACTORY)
-            .addValue(HttpClient.class, SHUFFLE_CLIENT)
     );
 
     jsonMapper.registerModule(

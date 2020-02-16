@@ -110,8 +110,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
         getTaskId(),
         getContext(),
         split,
-        subTaskIngestionSpec,
-        getIndexingServiceClient()
+        subTaskIngestionSpec
     );
   }
 
@@ -124,7 +123,6 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
       String supervisorTaskId,
       Map<String, Object> context,
       InputSplit split,
-      ParallelIndexIngestionSpec subTaskIngestionSpec,
-      IndexingServiceClient indexingServiceClient
+      ParallelIndexIngestionSpec subTaskIngestionSpec
   );
 }
