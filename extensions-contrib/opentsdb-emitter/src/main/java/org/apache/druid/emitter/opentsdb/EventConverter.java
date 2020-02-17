@@ -41,15 +41,22 @@ public class EventConverter
   private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
 
   private final Map<String, Set<String>> metricMap;
+  private final String namespacePrefix;
 
-  public EventConverter(ObjectMapper mapper, String metricMapPath)
+  public EventConverter(ObjectMapper mapper, String metricMapPath, String namespacePrefix)
   {
     metricMap = readMap(mapper, metricMapPath);
+    this.namespacePrefix = namespacePrefix;
   }
 
   protected String sanitize(String metric)
   {
     return WHITESPACE.matcher(metric.trim()).replaceAll("_").replace('/', '.');
+  }
+
+  private String buildNamespace()
+  {
+    return namespacePrefix == null ? "" : sanitize(namespacePrefix) + ".";
   }
 
   /**
@@ -88,7 +95,7 @@ public class EventConverter
       }
     }
 
-    return new OpentsdbEvent(sanitize(metric), timestamp, value, tags);
+    return new OpentsdbEvent(buildNamespace() + sanitize(metric), timestamp, value, tags);
   }
 
   private Map<String, Set<String>> readMap(ObjectMapper mapper, String metricMapPath)
