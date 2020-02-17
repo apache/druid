@@ -329,6 +329,8 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   // Returns the list of the IDs of the machines running in the MIG
   private List<String> getRunningInstances()
   {
+    static long maxResults = 500L; // 500 is sadly the max, see below
+
     ArrayList<String> ids = new ArrayList<>();
     try {
       final String project = envConfig.getProjectId();
@@ -342,7 +344,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
                       .listManagedInstances(project, zone, managedInstanceGroupName);
       // Notice that while the doc says otherwise, there is not nextPageToken to page
       // through results and so everything needs to be in the same page
-      request.setMaxResults(500L); // 500 is sadly the max
+      request.setMaxResults(maxResults);
       InstanceGroupManagersListManagedInstancesResponse response = request.execute();
       for (ManagedInstance mi : response.getManagedInstances()) {
         ids.add(GceUtils.extractNameFromInstance(mi.getInstance()));
