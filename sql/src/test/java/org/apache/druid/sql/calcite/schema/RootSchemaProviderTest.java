@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -34,7 +35,7 @@ import org.junit.runner.RunWith;
 import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
-public class RootSchemaProviderTest
+public class RootSchemaProviderTest extends CalciteTestBase
 {
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";

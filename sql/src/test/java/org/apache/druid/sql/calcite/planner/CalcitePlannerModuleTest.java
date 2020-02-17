@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
@@ -49,7 +50,7 @@ import javax.validation.Validator;
 import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
-public class CalcitePlannerModuleTest
+public class CalcitePlannerModuleTest extends CalciteTestBase
 {
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";
