@@ -35,6 +35,7 @@ import com.google.api.services.compute.model.InstanceGroupManagersDeleteInstance
 import com.google.api.services.compute.model.InstanceGroupManagersListManagedInstancesResponse;
 import com.google.api.services.compute.model.InstanceList;
 import com.google.api.services.compute.model.ManagedInstance;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
@@ -329,7 +330,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   // Returns the list of the IDs of the machines running in the MIG
   private List<String> getRunningInstances()
   {
-    static long maxResults = 500L; // 500 is sadly the max, see below
+    final long maxResults = 500L; // 500 is sadly the max, see below
 
     ArrayList<String> ids = new ArrayList<>();
     try {
@@ -395,8 +396,10 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
         for (Instance instance : response.getItems()) {
           // This stupid look up is needed because atm it is not possible to filter
           // by IP, see https://issuetracker.google.com/issues/73455339
-          if (ips.contains(instance.getNetworkInterfaces().get(0).getNetworkIP())) {
-            instanceIds.add(instance.getName());
+          for (NetworkInterface ni : instance.getNetworkInterfaces()) {
+            if (ips.contains(ni.getNetworkIP())) {
+              instanceIds.add(instance.getName());
+            }
           }
         }
         request.setPageToken(response.getNextPageToken());
