@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactor
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -200,8 +201,8 @@ public class CliOverlord extends ServerRunnable
             binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
             binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>()
             {
-            })
-                  .toProvider(Providers.of(null));
+            }).toProvider(Providers.of(null));
+            binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
 
             PolyBind.createChoice(

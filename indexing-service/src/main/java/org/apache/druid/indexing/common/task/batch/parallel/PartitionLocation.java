@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.Interval;
@@ -84,6 +85,12 @@ abstract class PartitionLocation<T>
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @JsonIgnore
+  public T getSecondaryPartition()
+  {
+    return secondaryPartition;
   }
 
   abstract int getPartitionId();
