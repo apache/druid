@@ -128,7 +128,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   }
 
   private synchronized Compute createComputeService()
-      throws IOException, GeneralSecurityException, InterruptedException
+      throws IOException, GeneralSecurityException, InterruptedException, GceServiceException
   {
     final int max_retries = 5;
     final long retries_interval = 5 * 1000; // 5 secs.
@@ -156,8 +156,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
         }
 
         if (credential.getClientAuthentication() != null) {
-          log.error("Not using a service account, terminating");
-          System.exit(1);
+          throw new GceServiceException("Not using a service account");
         }
 
         cachedComputeService = new Compute.Builder(httpTransport, jsonFactory, credential)
