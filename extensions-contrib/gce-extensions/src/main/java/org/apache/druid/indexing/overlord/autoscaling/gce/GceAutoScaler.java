@@ -70,6 +70,8 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 
   private Compute cachedComputeService = null;
 
+  private final long POLL_INTERVAL_MS = 5 * 1000;  // 5 sec
+
   @JsonCreator
   public GceAutoScaler(
           @JsonProperty("minNumWorkers") int minNumWorkers,
@@ -130,16 +132,15 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   private synchronized Compute createComputeService()
       throws IOException, GeneralSecurityException, InterruptedException, GceServiceException
   {
-    final int max_retries = 5;
-    final long retries_interval = 5 * 1000; // 5 secs.
+    final int maxRetries = 5;
 
     int retries = 0;
-    while (cachedComputeService == null && retries < max_retries) {
+    while (cachedComputeService == null && retries < maxRetries) {
       if (retries > 0) {
-        Thread.sleep(retries_interval);
+        Thread.sleep(this.POLL_INTERVAL_MS);
       }
 
-      log.info("Creating new ComputeService [%d/%d]", retries + 1, max_retries);
+      log.info("Creating new ComputeService [%d/%d]", retries + 1, maxRetries);
 
       try {
         HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
@@ -178,12 +179,10 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
       Compute compute,
       Operation operation) throws Exception
   {
-    final long pollInterval = 5 * 1000;  // 5 sec
-
     String status = operation.getStatus();
     String opId = operation.getName();
     while (operation != null && !"DONE".equals(status)) {
-      Thread.sleep(pollInterval);
+      Thread.sleep(this.POLL_INTERVAL_MS);
       Compute.ZoneOperations.Get get = compute.zoneOperations().get(
           envConfig.getProjectId(),
           envConfig.getZoneName(),
