@@ -35,6 +35,7 @@ import com.google.api.services.compute.model.Operation;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -46,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  */
@@ -149,7 +149,7 @@ public class GceAutoScalerTest
       Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
     }
     catch (Exception e) {
-      Assert.fail(String.format(Locale.US, "Got exception in test %s", e.getMessage()));
+      Assert.fail(StringUtils.format("Got exception in test %s", e.getMessage()));
     }
   }
 

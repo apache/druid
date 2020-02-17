@@ -42,13 +42,13 @@ import org.apache.curator.shaded.com.google.common.annotations.VisibleForTesting
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * This module permits the autoscaling of the workers in GCE
@@ -276,7 +276,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
     for (String name : names) {
       instances.add(
           // convert the name into a URL's path to be used in calls to the API
-          String.format(Locale.US, "zones/%s/instances/%s", envConfig.getZoneName(), name)
+          StringUtils.format("zones/%s/instances/%s", envConfig.getZoneName(), name)
       );
     }
     return instances;
