@@ -170,7 +170,7 @@ public class DruidStatement implements Closeable
         PrepareResult prepareResult = sqlLifecycle.prepare(authenticationResult);
         this.maxRowCount = maxRowCount;
         this.query = query;
-        ArrayList<AvaticaParameter> params = new ArrayList<>();
+        List<AvaticaParameter> params = new ArrayList<>();
         final RelDataType parameterRowType = prepareResult.getParameterRowType();
         for (RelDataTypeField field : parameterRowType.getFieldList()) {
           RelDataType type = field.getType();

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -1063,7 +1064,7 @@ public class CalciteTests
 
     FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
     {
-      this.nodes = new HashSet<>(nodes.size());
+      this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
       nodes.forEach((k, v) -> {
         addNode(v, k);
       });

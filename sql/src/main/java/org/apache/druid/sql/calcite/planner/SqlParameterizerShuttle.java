@@ -51,6 +51,9 @@ public class SqlParameterizerShuttle extends SqlShuttle
     try {
       if (plannerContext.getParameters().size() > param.getIndex()) {
         TypedValue paramBinding = plannerContext.getParameters().get(param.getIndex());
+        if (paramBinding.value == null) {
+          return SqlLiteral.createNull(param.getParserPosition());
+        }
         SqlTypeName typeName = SqlTypeName.getNameForJdbcType(paramBinding.type.typeId);
         if (SqlTypeName.APPROX_TYPES.contains(typeName)) {
           return SqlLiteral.createApproxNumeric(paramBinding.value.toString(), param.getParserPosition());
@@ -62,6 +65,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
               param.getParserPosition()
           );
         }
+
         return typeName.createLiteral(paramBinding.value, param.getParserPosition());
       }
     }

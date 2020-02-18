@@ -198,6 +198,9 @@ public class RelParameterizerShuttle implements RelShuttle
       // if we have a value for dynamic parameter, replace with a literal, else add to list of unbound parameters
       if (plannerContext.getParameters().size() > dynamicParam.getIndex()) {
         TypedValue param = plannerContext.getParameters().get(dynamicParam.getIndex());
+        if (param.value == null) {
+          return builder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.NULL));
+        }
         SqlTypeName typeName = SqlTypeName.getNameForJdbcType(param.type.typeId);
         return builder.makeLiteral(
             param.value,

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -45,5 +46,12 @@ public class SqlQueryTest extends CalciteTestBase
         ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(SqlQuery.class).withNonnullFields("query").usingGetClass().verify();
+    EqualsVerifier.forClass(SqlParameter.class).withNonnullFields("type").usingGetClass().verify();
   }
 }

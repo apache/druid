@@ -613,4 +613,82 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );
   }
+
+  @Test
+  public void testNullParameter() throws Exception
+  {
+    // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
+    // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
+    cannotVectorize();
+
+    // this will optimize out the 3rd argument because 2nd argument will be constant and not null
+    testQuery(
+        "SELECT COALESCE(dim2, ?, ?), COUNT(*) FROM druid.foo GROUP BY 1\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 1L},
+            new Object[]{"parameter", 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 1L},
+            new Object[]{"parameter", 2L}
+        ),
+        ImmutableList.of(new SqlParameter(SqlType.VARCHAR, "parameter"), new SqlParameter(SqlType.VARCHAR, null))
+    );
+
+    // when converting to rel expression, this will optimize out 2nd argument to coalesce which is null
+    testQuery(
+        "SELECT COALESCE(dim2, ?, ?), COUNT(*) FROM druid.foo GROUP BY 1\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
+                                ValueType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 1L},
+            new Object[]{"parameter", 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 1L},
+            new Object[]{"parameter", 2L}
+        ),
+        ImmutableList.of(new SqlParameter(SqlType.VARCHAR, null), new SqlParameter(SqlType.VARCHAR, "parameter"))
+    );
+  }
 }

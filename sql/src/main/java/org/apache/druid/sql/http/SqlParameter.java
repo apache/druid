@@ -30,6 +30,7 @@ import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 
+import javax.annotation.Nullable;
 import java.sql.Date;
 import java.util.Objects;
 
@@ -41,11 +42,11 @@ public class SqlParameter
   @JsonCreator
   public SqlParameter(
       @JsonProperty("type") SqlType type,
-      @JsonProperty("value") Object value
+      @JsonProperty("value") @Nullable Object value
   )
   {
     this.type = Preconditions.checkNotNull(type);
-    this.value = Preconditions.checkNotNull(value);
+    this.value = value;
   }
 
   @JsonProperty
@@ -63,7 +64,6 @@ public class SqlParameter
   @JsonIgnore
   public TypedValue getTypedValue()
   {
-
     Object adjustedValue = value;
 
     // perhaps there is a better way to do this?

@@ -641,7 +641,7 @@ Properties connectionProperties = new Properties();
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (
       final Statement statement = connection.createStatement();
-      final ResultSet resultSet = statement.executeQuery(query);
+      final ResultSet resultSet = statement.executeQuery(query)
   ) {
     while (resultSet.next()) {
       // Do something
@@ -671,7 +671,7 @@ Parameterized queries are supported with JDBC:
 PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");
 statement.setString(1, "abc");
 statement.setString(2, "def");
-final ResultSet resultSet = statement.executeQuery(query);
+final ResultSet resultSet = statement.executeQuery();
 ```
 
 ### Connection context

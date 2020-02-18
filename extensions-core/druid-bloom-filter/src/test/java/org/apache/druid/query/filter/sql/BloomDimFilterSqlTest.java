@@ -56,6 +56,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.http.SqlParameter;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -275,6 +276,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
+  @Ignore
   @Test
   public void testBloomFilterBigNoParam() throws Exception
   {
@@ -302,6 +304,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
+  @Ignore
   @Test
   public void testBloomFilterBigParameter() throws Exception
   {
@@ -330,6 +333,34 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testBloomFilterNullParameter() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addBytes(null, 0, 0);
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+
+    // bloom filter expression is evaluated and optimized out at planning time since parameter is null and null matches
+    // the supplied filter of the other parameter
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(?, ?)",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        ),
+        // there are no empty strings in the druid expression language since empty is coerced into a null when parsed
+        ImmutableList.of(new SqlParameter(SqlType.VARCHAR, NullHandling.defaultStringValue()), new SqlParameter(SqlType.VARCHAR, base64))
+    );
+  }
 
   @Override
   public List<Object[]> getResults(
