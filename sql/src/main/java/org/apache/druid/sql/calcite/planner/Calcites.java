@@ -405,6 +405,7 @@ public class Calcites
 
   public static Class<?> sqlTypeNameJdbcToJavaClass(SqlTypeName typeName)
   {
+    // reference: https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
     JDBCType jdbcType = JDBCType.valueOf(typeName.getJdbcOrdinal());
     switch (jdbcType) {
       case CHAR:
