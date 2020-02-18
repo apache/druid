@@ -1339,7 +1339,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "10.1", 2L, 2.0f, "1"})
+        NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"}) : ImmutableList.of(new Object[]{1L, 1.0f, 1.0, "", 2L, 2.0f, "1"})
     );
   }
 
@@ -1677,7 +1677,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 11.1}
+            new Object[]{NullHandling.sqlCompatible() ? 12.1 : 10.1}
         )
     );
   }
@@ -1781,6 +1781,82 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             // first row of dim1 is empty string, which is null in default mode, last non-null numeric rows are zeros
             new Object[]{useDefault ? "10.1" : "", 0L, 0.0, 0.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testAnyAggregatorsDoesNotSkipNulls() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT ANY_VALUE(dim1, 32), ANY_VALUE(l2), ANY_VALUE(d2), ANY_VALUE(f2) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new StringAnyAggregatorFactory("a0", "dim1", 32),
+                          new LongAnyAggregatorFactory("a1", "l2"),
+                          new DoubleAnyAggregatorFactory("a2", "d2"),
+                          new FloatAnyAggregatorFactory("a3", "f2")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        // first row has null for l2, d2, f2 and dim1 as empty string (which is null in default mode)
+        ImmutableList.of(
+            useDefault ? new Object[]{"", 0L, 0.0, 0f} : new Object[]{"", null, null, null}
+        )
+    );
+  }
+
+  @Test
+  public void testAnyAggregatorsSkipNullsWithFilter() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    final DimFilter filter;
+    if (useDefault) {
+      filter = not(selector("dim1", null, null));
+    } else {
+      filter = and(
+          not(selector("dim1", null, null)),
+          not(selector("l2", null, null)),
+          not(selector("d2", null, null)),
+          not(selector("f2", null, null))
+      );
+    }
+    testQuery(
+        "SELECT ANY_VALUE(dim1, 32), ANY_VALUE(l2), ANY_VALUE(d2), ANY_VALUE(f2) "
+        + "FROM druid.numfoo "
+        + "WHERE dim1 IS NOT NULL AND l2 IS NOT NULL AND d2 IS NOT NULL AND f2 is NOT NULL",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(filter)
+                  .aggregators(
+                      aggregators(
+                          new StringAnyAggregatorFactory("a0", "dim1", 32),
+                          new LongAnyAggregatorFactory("a1", "l2"),
+                          new DoubleAnyAggregatorFactory("a2", "d2"),
+                          new FloatAnyAggregatorFactory("a3", "f2")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            // first row of dim1 is empty string, which is null in default mode
+            new Object[]{"10.1", 325323L, 1.7, 0.1f}
         )
     );
   }
@@ -2057,6 +2133,154 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .aggregators(
                     aggregators(
                         new LongLastAggregatorFactory("a0", "l1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByAnyFloat() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0f},
+          new Object[]{"2", 0.0f},
+          new Object[]{"abc", 0.0f},
+          new Object[]{"def", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"2", 0.0f},
+          new Object[]{"10.1", 0.1f},
+          new Object[]{"", 1.0f},
+          // Nulls are last because of the null first wrapped Comparator in InvertedTopNMetricSpec which is then
+          // reversed by TopNNumericResultBuilder.build()
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null}
+      );
+    }
+
+    testQuery(
+        "SELECT dim1, ANY_VALUE(f1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new FloatAnyAggregatorFactory("a0", "f1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByAnyDouble() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0.0},
+          new Object[]{"2", 0.0},
+          new Object[]{"abc", 0.0},
+          new Object[]{"def", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"2", 0.0},
+          new Object[]{"", 1.0},
+          new Object[]{"10.1", 1.7},
+          // Nulls are last because of the null first wrapped Comparator in InvertedTopNMetricSpec which is then
+          // reversed by TopNNumericResultBuilder.build()
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null}
+      );
+    }
+    testQuery(
+        "SELECT dim1, ANY_VALUE(d1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new DoubleAnyAggregatorFactory("a0", "d1")
+                    )
+                )
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testOrderByAnyLong() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+    List<Object[]> expected;
+    if (NullHandling.replaceWithDefault()) {
+      expected = ImmutableList.of(
+          new Object[]{"1", 0L},
+          new Object[]{"2", 0L},
+          new Object[]{"abc", 0L},
+          new Object[]{"def", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{"2", 0L},
+          new Object[]{"", 7L},
+          new Object[]{"10.1", 325323L},
+          // Nulls are last because of the null first wrapped Comparator in InvertedTopNMetricSpec which is then
+          // reversed by TopNNumericResultBuilder.build()
+          new Object[]{"1", null},
+          new Object[]{"abc", null},
+          new Object[]{"def", null}
+      );
+    }
+    testQuery(
+        "SELECT dim1, ANY_VALUE(l1) FROM druid.numfoo GROUP BY 1 ORDER BY 2 LIMIT 10",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim1", "_d0"))
+                .aggregators(
+                    aggregators(
+                        new LongAnyAggregatorFactory("a0", "l1")
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -7730,7 +7954,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           + "AND EXTRACT(ISODOW FROM __time) = 6\n"
           + "AND EXTRACT(ISOYEAR FROM __time) = 2000\n"
           + "AND EXTRACT(DECADE FROM __time) = 200\n"
-          + "AND EXTRACT(CENTURY FROM __time) = 21\n"
+          + "AND EXTRACT(CENTURY FROM __time) = 20\n"
           + "AND EXTRACT(MILLENNIUM FROM __time) = 2\n",
 
         TIMESERIES_CONTEXT_DEFAULT,
@@ -7758,7 +7982,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               selector("v3", "6", null),
               selector("v4", "2000", null),
               selector("v5", "200", null),
-              selector("v6", "21", null),
+              selector("v6", "20", null),
               selector("v7", "2", null)
             )
           )

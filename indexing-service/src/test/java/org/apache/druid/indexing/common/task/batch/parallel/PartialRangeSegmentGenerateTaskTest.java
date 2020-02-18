@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
@@ -40,10 +39,8 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 
-public class PartialRangeSegmentGenerateTaskTest
+public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
-
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -95,7 +92,7 @@ public class PartialRangeSegmentGenerateTaskTest
   public void serializesDeserializes()
   {
     PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
-    TestHelper.testSerializesDeserializes(OBJECT_MAPPER, task);
+    TestHelper.testSerializesDeserializes(getObjectMapper(), task);
   }
 
   @Test

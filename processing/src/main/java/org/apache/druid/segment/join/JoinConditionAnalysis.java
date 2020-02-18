@@ -113,9 +113,9 @@ public class JoinConditionAnalysis
 
         if (isLeftExprAndRightColumn(lhs, rhs, rightPrefix)) {
           // rhs is a right-hand column; lhs is an expression solely of the left-hand side.
-          equiConditions.add(new Equality(lhs, rhs.getIdentifierIfIdentifier().substring(rightPrefix.length())));
+          equiConditions.add(new Equality(lhs, rhs.getBindingIfIdentifier().substring(rightPrefix.length())));
         } else if (isLeftExprAndRightColumn(rhs, lhs, rightPrefix)) {
-          equiConditions.add(new Equality(rhs, lhs.getIdentifierIfIdentifier().substring(rightPrefix.length())));
+          equiConditions.add(new Equality(rhs, lhs.getBindingIfIdentifier().substring(rightPrefix.length())));
         } else {
           nonEquiConditions.add(childExpr);
         }
@@ -128,8 +128,8 @@ public class JoinConditionAnalysis
   private static boolean isLeftExprAndRightColumn(final Expr a, final Expr b, final String rightPrefix)
   {
     return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> Joinables.isPrefixedBy(c, rightPrefix))
-           && b.getIdentifierIfIdentifier() != null
-           && Joinables.isPrefixedBy(b.getIdentifierIfIdentifier(), rightPrefix);
+           && b.getBindingIfIdentifier() != null
+           && Joinables.isPrefixedBy(b.getBindingIfIdentifier(), rightPrefix);
   }
 
   /**

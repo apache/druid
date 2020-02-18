@@ -123,7 +123,7 @@ public class BasicAuthUtils
 
   public static byte[] generateSalt()
   {
-    byte salt[] = new byte[SALT_LENGTH];
+    byte[] salt = new byte[SALT_LENGTH];
     SECURE_RANDOM.nextBytes(salt);
     return salt;
   }

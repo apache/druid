@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
+/**
+ * Stores the configuration for writing task logs to Azure .
+ */
 public class AzureTaskLogsConfig
 {
   @JsonProperty

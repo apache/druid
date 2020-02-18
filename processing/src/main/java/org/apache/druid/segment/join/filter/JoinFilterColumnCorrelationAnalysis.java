@@ -21,7 +21,9 @@ package org.apache.druid.segment.join.filter;
 
 import org.apache.druid.math.expr.Expr;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Represents an analysis of what base table columns, if any, can be correlated with a column that will
@@ -38,13 +40,14 @@ public class JoinFilterColumnCorrelationAnalysis
 
   public JoinFilterColumnCorrelationAnalysis(
       String joinColumn,
-      List<String> baseColumns,
-      List<Expr> baseExpressions
+      Set<String> baseColumns,
+      Set<Expr> baseExpressions
   )
   {
     this.joinColumn = joinColumn;
-    this.baseColumns = baseColumns;
-    this.baseExpressions = baseExpressions;
+    this.baseColumns = new ArrayList<>(baseColumns);
+    this.baseExpressions = new ArrayList<>(baseExpressions);
+    this.baseColumns.sort(String.CASE_INSENSITIVE_ORDER);
   }
 
   public String getJoinColumn()

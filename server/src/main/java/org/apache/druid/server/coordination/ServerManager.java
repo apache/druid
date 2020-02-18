@@ -39,6 +39,7 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.PerSegmentOptimizingQueryRunner;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -194,7 +195,8 @@ public class ServerManager implements QuerySegmentWalker
     final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         joinableFactory,
-        cpuTimeAccumulator
+        cpuTimeAccumulator,
+        QueryContexts.getEnableJoinFilterPushDown(query)
     );
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable

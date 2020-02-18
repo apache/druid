@@ -34,39 +34,17 @@ describing the cluster.
 Integration Testing Using Docker 
 -------------------
 
-For running integration tests using docker there are 2 approaches.
-If your platform supports docker natively, you can simply set `DOCKER_IP`
-environment variable to localhost and skip to [Running tests](#running-tests) section. Ensure that you have
-at least 4GiB of memory allocated to the docker engine (This can be set under Preferences > Advanced).
+Before starting, if you don't already have docker on your machine, install it as described on 
+[Docker installation instructions](https://docs.docker.com/install/). Ensure that you 
+have at least 4GB of memory allocated to the docker engine. (You can verify it 
+under Preferences > Advanced.)
+
+Also set the `DOCKER_IP`
+environment variable to localhost on your system, as follows:
 
 ```
 export DOCKER_IP=127.0.0.1
 ```
-
-The other approach is to use separate virtual machine to run docker
-containers with help of `docker-machine` tool.
-
-## Installing Docker Machine
-
-Please refer to instructions at [https://github.com/druid-io/docker-druid/blob/master/docker-install.md](https://github.com/druid-io/docker-druid/blob/master/docker-install.md).
-
-## Creating the Docker VM
-
-Create a new VM for integration tests with at least 6GB of memory.
-
-```
-docker-machine create --driver virtualbox --virtualbox-memory 6000 integration
-```
-
-Set the docker environment:
-
-```
-eval "$(docker-machine env integration)"
-export DOCKER_IP=$(docker-machine ip integration)
-export DOCKER_MACHINE_IP=$(docker-machine inspect integration | jq -r .Driver[\"HostOnlyCIDR\"])
-```
-
-The final command uses the `jq` tool to read the Driver->HostOnlyCIDR field from the `docker-machine inspect` output. If you don't wish to install `jq`, you will need to set DOCKER_MACHINE_IP manually.
 
 ## Running tests
 
