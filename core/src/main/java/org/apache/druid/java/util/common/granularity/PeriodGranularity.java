@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
+import org.apache.druid.CoverageTool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -227,53 +228,74 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   private long truncate(long t)
   {
     if (isCompound) {
+      CoverageTool.setBranch(0);
       try {
+        CoverageTool.setBranch(2);
         return truncateMillisPeriod(t);
       }
       catch (UnsupportedOperationException e) {
+        CoverageTool.setBranch(3);
         return truncateCompoundPeriod(t);
       }
+    } else {
+      CoverageTool.setBranch(1);
     }
 
     final int years = period.getYears();
     if (years > 0) {
       if (years > 1 || hasOrigin) {
+        CoverageTool.setBranch(5);
         int y = chronology.years().getDifference(t, origin);
         y -= y % years;
         long tt = chronology.years().add(origin, y);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
+          CoverageTool.setBranch(7);
           t = chronology.years().add(tt, -years);
         } else {
+          CoverageTool.setBranch(8);
           t = tt;
         }
+        int id = 10;
         return t;
       } else {
+        CoverageTool.setBranch(6);
         return chronology.year().roundFloor(t);
       }
+    } else {
+      CoverageTool.setBranch(4);
     }
 
     final int months = period.getMonths();
     if (months > 0) {
+      CoverageTool.setBranch(9);
       if (months > 1 || hasOrigin) {
+        CoverageTool.setBranch(11);
         int m = chronology.months().getDifference(t, origin);
         m -= m % months;
         long tt = chronology.months().add(origin, m);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
+          CoverageTool.setBranch(12);
           t = chronology.months().add(tt, -months);
         } else {
+          CoverageTool.setBranch(13);
           t = tt;
         }
         return t;
       } else {
+        CoverageTool.setBranch(10);
         return chronology.monthOfYear().roundFloor(t);
       }
+    } else {
+      CoverageTool.setBranch(18);
     }
 
     final int weeks = period.getWeeks();
     if (weeks > 0) {
+      CoverageTool.setBranch(14);
       if (weeks > 1 || hasOrigin) {
+        CoverageTool.setBranch(16);
         // align on multiples from origin
         int w = chronology.weeks().getDifference(t, origin);
         w -= w % weeks;
@@ -288,105 +310,143 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       } else {
         t = chronology.dayOfWeek().roundFloor(t);
         // default to Monday as beginning of the week
+        CoverageTool.setBranch(15);
         return chronology.dayOfWeek().set(t, 1);
       }
+    } else {
+      CoverageTool.setBranch(17);
     }
 
     final int days = period.getDays();
     if (days > 0) {
+      CoverageTool.setBranch(19);
       if (days > 1 || hasOrigin) {
+        CoverageTool.setBranch(21);
         // align on multiples from origin
         int d = chronology.days().getDifference(t, origin);
         d -= d % days;
         long tt = chronology.days().add(origin, d);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
+          CoverageTool.setBranch(23);
           t = chronology.days().add(tt, -days);
         } else {
+          CoverageTool.setBranch(24);
           t = tt;
         }
         return t;
       } else {
+        CoverageTool.setBranch(22);
         return chronology.dayOfMonth().roundFloor(t);
       }
+    } else {
+      CoverageTool.setBranch(20);
     }
 
     final int hours = period.getHours();
     if (hours > 0) {
+      CoverageTool.setBranch(25);
       if (hours > 1 || hasOrigin) {
+        CoverageTool.setBranch(27);
         // align on multiples from origin
         long h = chronology.hours().getDifferenceAsLong(t, origin);
         h -= h % hours;
         long tt = chronology.hours().add(origin, h);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt && origin > 0) {
+          CoverageTool.setBranch(29);
           t = chronology.hours().add(tt, -hours);
         } else if (t > tt && origin < 0) {
+          CoverageTool.setBranch(30);
           t = chronology.minuteOfHour().roundFloor(tt);
           t = chronology.minuteOfHour().set(t, 0);
         } else {
+          CoverageTool.setBranch(28);
           t = tt;
         }
         return t;
       } else {
         return chronology.hourOfDay().roundFloor(t);
       }
+    } else {
+      CoverageTool.setBranch(26);
     }
 
     final int minutes = period.getMinutes();
     if (minutes > 0) {
+      CoverageTool.setBranch(31);
       // align on multiples from origin
       if (minutes > 1 || hasOrigin) {
+        CoverageTool.setBranch(33);
         long m = chronology.minutes().getDifferenceAsLong(t, origin);
         m -= m % minutes;
         long tt = chronology.minutes().add(origin, m);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
+          CoverageTool.setBranch(35);
           t = chronology.minutes().add(tt, -minutes);
         } else {
+          CoverageTool.setBranch(36);
           t = tt;
         }
         return t;
       } else {
+        CoverageTool.setBranch(34);
         return chronology.minuteOfHour().roundFloor(t);
       }
+    } else {
+      CoverageTool.setBranch(32);
     }
 
     final int seconds = period.getSeconds();
     if (seconds > 0) {
+      CoverageTool.setBranch(38);
       // align on multiples from origin
       if (seconds > 1 || hasOrigin) {
+        CoverageTool.setBranch(40);
         long s = chronology.seconds().getDifferenceAsLong(t, origin);
         s -= s % seconds;
         long tt = chronology.seconds().add(origin, s);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
+          CoverageTool.setBranch(42);
           t = chronology.seconds().add(tt, -seconds);
         } else {
+          CoverageTool.setBranch(43);
           t = tt;
         }
         return t;
       } else {
+        CoverageTool.setBranch(41);
         return chronology.millisOfSecond().set(t, 0);
       }
+    } else {
+      CoverageTool.setBranch(39);
     }
 
     final int millis = period.getMillis();
     if (millis > 0) {
+      CoverageTool.setBranch(44);
       if (millis > 1) {
+        CoverageTool.setBranch(46);
         long ms = chronology.millis().getDifferenceAsLong(t, origin);
         ms -= ms % millis;
         long tt = chronology.millis().add(origin, ms);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
+          CoverageTool.setBranch(48);
           t = chronology.millis().add(tt, -millis);
         } else {
+          CoverageTool.setBranch(49);
           t = tt;
         }
         return t;
       } else {
+        CoverageTool.setBranch(47);
         return t;
       }
+    } else {
+      CoverageTool.setBranch(45);
     }
 
     return t;

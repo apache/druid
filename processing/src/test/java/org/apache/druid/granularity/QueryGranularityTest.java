@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.CoverageTool;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,8 +44,10 @@ import org.joda.time.Months;
 import org.joda.time.Period;
 import org.joda.time.Weeks;
 import org.joda.time.Years;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -55,6 +58,11 @@ import java.util.TimeZone;
  */
 public class QueryGranularityTest
 {
+  @AfterAll
+  public void printResult() {
+    CoverageTool.getResult();
+  }
+
   @Test
   public void testIterableNone()
   {
