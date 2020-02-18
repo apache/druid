@@ -72,6 +72,18 @@ public class JoinFilterAnalyzer
   private static final String PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE = "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-";
   private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
+  /**
+   * Analyze a filter and return a JoinFilterSplit indicating what parts of the filter should be applied pre-join
+   * and post-join.
+   *
+   * @param hashJoinSegmentStorageAdapter The storage adapter that is being queried
+   * @param baseColumnNames               Set of names of columns that belong to the base table,
+   *                                      including pre-join virtual columns
+   * @param originalFilter                Original filter from the query
+   * @param enableFilterPushDown          Whether to enable filter push down
+   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join
+   *         and post-join.
+   */
   public static JoinFilterSplit splitFilter(
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
       Set<String> baseColumnNames,
@@ -166,6 +178,7 @@ public class JoinFilterAnalyzer
    * The clause is expected to be an OR filter or a leaf filter.
    *
    * @param adapter          Adapter for the join
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param filterClause     Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
    * @param prefixes         Map of table prefixes
    * @param equiconditions   Equicondition map
@@ -230,6 +243,7 @@ public class JoinFilterAnalyzer
    * the base table.
    *
    * @param adapter          Adapter for the join
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param orFilter         OrFilter to be rewritten
    * @param prefixes         Map of table prefixes to clauses
    * @param equiconditions   Map of equiconditions
@@ -294,6 +308,8 @@ public class JoinFilterAnalyzer
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
    * @param baseAdapter      The adapter for the join
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual
+   *                         columns
    * @param selectorFilter   SelectorFilter to be rewritten
    * @param prefixes         Map of join table prefixes to clauses
    * @param equiconditions   Map of equiconditions
@@ -317,7 +333,6 @@ public class JoinFilterAnalyzer
         Optional<List<JoinFilterColumnCorrelationAnalysis>> correlations = correlationCache.computeIfAbsent(
             prefixAndClause.getKey(),
             p -> findCorrelatedBaseTableColumns(
-                baseAdapter,
                 baseColumnNames,
                 p,
                 prefixes.get(p),
@@ -470,7 +485,8 @@ public class JoinFilterAnalyzer
    * Because we cannot reverse the function f() applied to the second table B in all cases,
    * we cannot relate C.joinColumn to A.joinColumn, and we would not generate a correlation for C.joinColumn
    *
-   * @param adapter              The adapter for the join. Used to determine if a column is a base table column.
+   * @param baseColumnNames      Set of names of columns that belong to the base table, including pre-join virtual
+   *                             columns
    * @param tablePrefix          Prefix for a join table
    * @param clauseForTablePrefix Joinable clause for the prefix
    * @param equiConditions       Map of equiconditions, keyed by the right hand columns
@@ -479,7 +495,6 @@ public class JoinFilterAnalyzer
    * the tablePrefix
    */
   private static Optional<List<JoinFilterColumnCorrelationAnalysis>> findCorrelatedBaseTableColumns(
-      HashJoinSegmentStorageAdapter adapter,
       Set<String> baseColumnNames,
       String tablePrefix,
       JoinableClause clauseForTablePrefix,
@@ -530,6 +545,7 @@ public class JoinFilterAnalyzer
    * and/or expressions for a single RHS column and adds them to the provided sets as it traverses the
    * equicondition column relationships.
    *
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param equiConditions Map of equiconditions, keyed by the right hand columns
    * @param rhsColumn RHS column to find base table correlations for
    * @param correlatedBaseColumns Set of correlated base column names for the provided RHS column. Will be modified.
