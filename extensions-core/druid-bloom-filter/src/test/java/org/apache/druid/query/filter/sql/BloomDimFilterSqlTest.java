@@ -276,7 +276,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
-  @Ignore
+  @Ignore("this test is really slow and is intended to use for comparisons with testBloomFilterBigParameter")
   @Test
   public void testBloomFilterBigNoParam() throws Exception
   {
@@ -304,7 +304,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
-  @Ignore
+  @Ignore("this test is for comparison with testBloomFilterBigNoParam")
   @Test
   public void testBloomFilterBigParameter() throws Exception
   {
