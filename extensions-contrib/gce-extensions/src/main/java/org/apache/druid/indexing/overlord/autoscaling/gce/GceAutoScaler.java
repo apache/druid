@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This module permits the autoscaling of the workers in GCE
@@ -491,7 +492,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 
     GceAutoScaler that = (GceAutoScaler) o;
 
-    return Object.equals(envConfig, that.envConfig) &&
+    return Objects.equals(envConfig, that.envConfig) &&
             minNumWorkers == that.minNumWorkers &&
             maxNumWorkers == that.maxNumWorkers;
   }
@@ -500,7 +501,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   public int hashCode()
   {
     int result = 0;
-    result = 31 * result + Object.hashCode(envConfig);
+    result = 31 * result + Objects.hashCode(envConfig);
     result = 31 * result + minNumWorkers;
     result = 31 * result + maxNumWorkers;
     return result;
