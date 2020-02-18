@@ -564,7 +564,7 @@ class LongArrayExpr extends ConstantExpr
     if (value.length == 0) {
       return "<LONG>[]";
     }
-    return toString();
+    return StringUtils.format("<LONG>%s", toString());
   }
 }
 
@@ -638,7 +638,7 @@ class StringArrayExpr extends ConstantExpr
       return "<STRING>[]";
     }
     return StringUtils.format(
-        "[%s]",
+        "<STRING>[%s]",
         ARG_JOINER.join(
             Arrays.stream(value)
                   .map(s -> s == null
@@ -721,7 +721,7 @@ class DoubleArrayExpr extends ConstantExpr
     if (value.length == 0) {
       return "<DOUBLE>[]";
     }
-    return toString();
+    return StringUtils.format("<DOUBLE>%s", toString());
   }
 }
 

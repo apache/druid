@@ -200,6 +200,15 @@ public class ParserTest extends InitializedNullHandlingTest
     validateConstantExpression("<STRING>[]", new String[0]);
     validateConstantExpression("<DOUBLE>[]", new Double[0]);
     validateConstantExpression("<LONG>[]", new Long[0]);
+
+    validateConstantExpression("[null, null, null]", new String[]{null, null, null});
+    validateConstantExpression("<DOUBLE>[null, null, null]", new Double[]{null, null, null});
+    validateConstantExpression("<LONG>[null, null, null]", new Long[]{null, null, null});
+    validateConstantExpression("<STRING>[null, null, null]", new String[]{null, null, null});
+
+    validateConstantExpression("<DOUBLE>[1, null, 2]", new Double[]{1.0, null, 2.0});
+    validateConstantExpression("<LONG>[3, null, 4]", new Long[]{3L, null, 4L});
+    validateConstantExpression("<STRING>['foo', 'bar', 'baz']", new String[]{"foo", "bar", "baz"});
   }
 
   @Test
@@ -558,12 +567,14 @@ public class ParserTest extends InitializedNullHandlingTest
   private void validateConstantExpression(String expression, Object[] expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    Object evaluated = parsed.eval(Parser.withMap(ImmutableMap.of())).value();
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) parsed.eval(Parser.withMap(ImmutableMap.of())).value()
+        (Object[]) evaluated
     );
 
+    Assert.assertEquals(expected.getClass(), evaluated.getClass());
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertArrayEquals(

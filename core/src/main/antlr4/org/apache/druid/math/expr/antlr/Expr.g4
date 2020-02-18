@@ -15,27 +15,27 @@
 
 grammar Expr;
 
-expr : 'null'                                         # null
-     | ('-'|'!') expr                                 # unaryOpExpr
-     |<assoc=right> expr '^' expr                     # powOpExpr
-     | expr ('*'|'/'|'%') expr                        # mulDivModuloExpr
-     | expr ('+'|'-') expr                            # addSubExpr
-     | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr        # logicalOpExpr
-     | expr ('&&'|'||') expr                          # logicalAndOrExpr
-     | '(' expr ')'                                   # nestedExpr
-     | IDENTIFIER '(' lambda ',' fnArgs ')'           # applyFunctionExpr
-     | IDENTIFIER '(' fnArgs? ')'                     # functionExpr
-     | IDENTIFIER                                     # identifierExpr
-     | DOUBLE                                         # doubleExpr
-     | LONG                                           # longExpr
-     | STRING                                         # string
-     | '[' doubleElement  (',' doubleElement)* ']'    # doubleArray
-     | '[' longElement (',' longElement)* ']'         # longArray
-     | '[' stringElement (',' stringElement)* ']'     # stringArray
-     | '[]'                                           # emptyArray
-     | '<STRING>[]'                                   # emptyStringArray
-     | '<DOUBLE>[]'                                   # emptyDoubleArray
-     | '<LONG>[]'                                     # emptyLongArray
+expr : 'null'                                                       # null
+     | ('-'|'!') expr                                               # unaryOpExpr
+     |<assoc=right> expr '^' expr                                   # powOpExpr
+     | expr ('*'|'/'|'%') expr                                      # mulDivModuloExpr
+     | expr ('+'|'-') expr                                          # addSubExpr
+     | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr                      # logicalOpExpr
+     | expr ('&&'|'||') expr                                        # logicalAndOrExpr
+     | '(' expr ')'                                                 # nestedExpr
+     | IDENTIFIER '(' lambda ',' fnArgs ')'                         # applyFunctionExpr
+     | IDENTIFIER '(' fnArgs? ')'                                   # functionExpr
+     | IDENTIFIER                                                   # identifierExpr
+     | DOUBLE                                                       # doubleExpr
+     | LONG                                                         # longExpr
+     | STRING                                                       # string
+     | '<STRING>'? '[' stringElement (',' stringElement)* ']'       # stringArray
+     | '<DOUBLE>'? '[' doubleElement  (',' doubleElement)* ']'      # doubleArray
+     | '<LONG>'? '[' longElement (',' longElement)* ']'             # longArray
+     | '[]'                                                         # emptyArray
+     | '<STRING>[]'                                                 # emptyStringArray
+     | '<DOUBLE>[]'                                                 # emptyDoubleArray
+     | '<LONG>[]'                                                   # emptyLongArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
