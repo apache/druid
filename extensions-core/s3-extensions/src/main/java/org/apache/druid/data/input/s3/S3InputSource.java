@@ -19,6 +19,10 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -30,6 +34,7 @@ import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -49,6 +54,8 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject AmazonS3ClientBuilder amazonS3ClientBuilder,
+      @JacksonInject S3StorageConfig storageConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
@@ -56,7 +63,16 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, cloudConfigProperties);
-    this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
+    if (cloudConfigProperties != null) {
+      if (cloudConfigProperties.credentialsConfigured()) {
+        BasicAWSCredentials creds = new BasicAWSCredentials(cloudConfigProperties.getAccessKeyId().getPassword(),
+                                                            cloudConfigProperties.getSecretAccessKey().getPassword());
+        amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
+      }
+      this.s3Client = new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
+    } else {
+      this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
+    }
   }
 
   @Override
@@ -76,9 +92,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new S3InputSource(
-        s3Client, null, null, ImmutableList.of(split.get()), getCloudConfigProperties()
-    );
+    return new S3InputSource(s3Client, null, null, null, null, ImmutableList.of(split.get()), null);
   }
 
   @Override

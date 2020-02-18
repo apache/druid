@@ -166,16 +166,13 @@ public class S3StorageDruidModule implements DruidModule
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
-
-
   @Provides
   @LazySingleton
-  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
+  public AmazonS3ClientBuilder getAmazonS3ClientBuilder(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
-      AWSClientConfig clientConfig,
-      S3StorageConfig storageConfig
+      AWSClientConfig clientConfig
   )
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
@@ -194,6 +191,16 @@ public class S3StorageDruidModule implements DruidModule
       );
     }
 
-    return new ServerSideEncryptingAmazonS3(builder.build(), storageConfig.getServerSideEncryption());
+    return builder;
+  }
+
+  @Provides
+  @LazySingleton
+  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
+      AmazonS3ClientBuilder amazonS3ClientBuilder,
+      S3StorageConfig storageConfig
+  )
+  {
+    return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
   }
 }

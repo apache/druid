@@ -21,6 +21,7 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
@@ -43,19 +44,24 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
+import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.apache.druid.storage.s3.ServerSideEncryption;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
@@ -63,6 +69,7 @@ import org.easymock.IArgumentMatcher;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -82,6 +89,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
   private static final AmazonS3Client S3_CLIENT = EasyMock.createMock(AmazonS3Client.class);
+  private static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
+  private static final S3StorageConfig S3_STORAGE_CONFIG = EasyMock.createMock(S3StorageConfig.class);
+  private static final ServerSideEncryption SERVER_SIDE_ENCRYPTION = EasyMock.createMock(ServerSideEncryption.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
       new NoopServerSideEncryption()
@@ -105,6 +115,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo")
   );
 
+  private static final CloudConfigProperties CLOUD_CONFIG_PROPERTIES = new CloudConfigProperties(
+      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
+
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
       ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
 
@@ -121,7 +134,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithUris() throws Exception
   {
-    final S3InputSource withUris = new S3InputSource(SERVICE, EXPECTED_URIS, null, null);
+    final S3InputSource withUris = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG, EXPECTED_URIS, null, null, null);
     final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
@@ -129,7 +142,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithPrefixes() throws Exception
   {
-    final S3InputSource withPrefixes = new S3InputSource(SERVICE, null, PREFIXES, null);
+    final S3InputSource withPrefixes = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG,null, PREFIXES, null, null);
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
@@ -141,9 +154,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         null,
         null,
-        EXPECTED_LOCATION
+        EXPECTED_LOCATION,
+        null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -151,13 +167,37 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSerdeWithCloudConfigProperties() throws Exception
+  {
+    EasyMock.expect(S3_STORAGE_CONFIG.getServerSideEncryption())
+            .andStubReturn(SERVER_SIDE_ENCRYPTION);
+    EasyMock.replay(S3_STORAGE_CONFIG);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        CLOUD_CONFIG_PROPERTIES
+    );
+    final S3InputSource serdeWithPrefixes =
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    EasyMock.verify(S3_STORAGE_CONFIG);
+  }
+
+  @Test
   public void testSerdeWithExtraEmptyLists() throws Exception
   {
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         ImmutableList.of(),
         ImmutableList.of(),
-        EXPECTED_LOCATION
+        EXPECTED_LOCATION,
+        null
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -171,9 +211,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // constructor will explode
     new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
-        EXPECTED_LOCATION
+        EXPECTED_LOCATION,
+        null
     );
   }
 
@@ -184,9 +227,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // constructor will explode
     new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
-        ImmutableList.of()
+        ImmutableList.of(),
+        null
     );
   }
 
@@ -197,16 +243,19 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // constructor will explode
     new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         ImmutableList.of(),
         PREFIXES,
-        EXPECTED_LOCATION
+        EXPECTED_LOCATION,
+        null
     );
   }
 
   @Test
   public void testWithUrisSplit()
   {
-    S3InputSource inputSource = new S3InputSource(SERVICE, EXPECTED_URIS, null, null);
+    S3InputSource inputSource = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG, EXPECTED_URIS, null, null, null);
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -224,7 +273,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     expectListObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     EasyMock.replay(S3_CLIENT);
 
-    S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES, null);
+    S3InputSource inputSource = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG,null, PREFIXES, null, null);
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -245,8 +294,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null
     );
 
@@ -273,8 +325,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null
     );
 
@@ -314,8 +369,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
         null
     );
 
@@ -446,13 +504,26 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     {
       // Deserializer is need for AmazonS3Client even though it is injected.
       // See https://github.com/FasterXML/jackson-databind/issues/962.
-      return ImmutableList.of(new SimpleModule().addDeserializer(AmazonS3.class, new ItemDeserializer()));
+      return ImmutableList.of(
+          new SimpleModule()
+              .addDeserializer(AmazonS3.class, new ItemDeserializer<AmazonS3>())
+              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<AmazonS3ClientBuilder>())
+      );
     }
 
     @Override
     public void configure(Binder binder)
     {
+    }
 
+    @Provides
+    public S3StorageConfig getS3StorageConfig() {
+      return S3_STORAGE_CONFIG;
+    }
+
+    @Provides
+    public AmazonS3ClientBuilder getAmazonS3ClientBuilder() {
+      return AMAZON_S3_CLIENT_BUILDER;
     }
 
     @Provides
@@ -462,7 +533,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
   }
 
-  public static class ItemDeserializer extends StdDeserializer<AmazonS3>
+  public static class ItemDeserializer<T> extends StdDeserializer<T>
   {
     ItemDeserializer()
     {
@@ -475,7 +546,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public AmazonS3 deserialize(JsonParser jp, DeserializationContext ctxt)
+    public T deserialize(JsonParser jp, DeserializationContext ctxt)
     {
       throw new UnsupportedOperationException();
     }

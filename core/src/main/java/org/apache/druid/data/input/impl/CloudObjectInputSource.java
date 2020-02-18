@@ -43,6 +43,7 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+  @JsonProperty("properties")
   private final CloudConfigProperties cloudConfigProperties;
 
   public CloudObjectInputSource(
@@ -90,7 +91,7 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("properties")
   public CloudConfigProperties getCloudConfigProperties()
   {
     return cloudConfigProperties;

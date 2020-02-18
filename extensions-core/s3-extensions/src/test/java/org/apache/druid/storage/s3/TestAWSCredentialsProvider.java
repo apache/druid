@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.google.common.io.Files;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
@@ -62,11 +63,15 @@ public class TestAWSCredentialsProvider
     Assert.assertEquals("secretKeySample", credentials.getAWSSecretKey());
 
     // try to create
-    s3Module.getAmazonS3Client(
+    AmazonS3ClientBuilder amazonS3ClientBuilder = s3Module.getAmazonS3ClientBuilder(
         provider,
         new AWSProxyConfig(),
         new AWSEndpointConfig(),
-        new AWSClientConfig(),
+        new AWSClientConfig()
+    );
+
+    s3Module.getAmazonS3Client(
+        amazonS3ClientBuilder,
         new S3StorageConfig(new NoopServerSideEncryption())
     );
   }
@@ -93,11 +98,15 @@ public class TestAWSCredentialsProvider
     Assert.assertEquals("sessionTokenSample", sessionCredentials.getSessionToken());
 
     // try to create
-    s3Module.getAmazonS3Client(
+    AmazonS3ClientBuilder amazonS3ClientBuilder = s3Module.getAmazonS3ClientBuilder(
         provider,
         new AWSProxyConfig(),
         new AWSEndpointConfig(),
-        new AWSClientConfig(),
+        new AWSClientConfig()
+    );
+
+    s3Module.getAmazonS3Client(
+        amazonS3ClientBuilder,
         new S3StorageConfig(new NoopServerSideEncryption())
     );
   }
