@@ -71,7 +71,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 
   private Compute cachedComputeService = null;
 
-  private final long POLL_INTERVAL_MS = 5 * 1000;  // 5 sec
+  private static final long POLL_INTERVAL_MS = 5 * 1000;  // 5 sec
 
   @JsonCreator
   public GceAutoScaler(
@@ -138,7 +138,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
     int retries = 0;
     while (cachedComputeService == null && retries < maxRetries) {
       if (retries > 0) {
-        Thread.sleep(this.POLL_INTERVAL_MS);
+        Thread.sleep(POLL_INTERVAL_MS);
       }
 
       log.info("Creating new ComputeService [%d/%d]", retries + 1, maxRetries);
@@ -183,7 +183,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
     String status = operation.getStatus();
     String opId = operation.getName();
     while (operation != null && !"DONE".equals(status)) {
-      Thread.sleep(this.POLL_INTERVAL_MS);
+      Thread.sleep(POLL_INTERVAL_MS);
       Compute.ZoneOperations.Get get = compute.zoneOperations().get(
           envConfig.getProjectId(),
           envConfig.getZoneName(),
@@ -491,7 +491,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 
     GceAutoScaler that = (GceAutoScaler) o;
 
-    return (envConfig != null ? envConfig.equals(that.envConfig) : that.envConfig == null) &&
+    return Object.equals(envConfig, that.envConfig) &&
             minNumWorkers == that.minNumWorkers &&
             maxNumWorkers == that.maxNumWorkers;
   }
@@ -500,7 +500,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   public int hashCode()
   {
     int result = 0;
-    result = 31 * result + (envConfig != null ? envConfig.hashCode() : 0);
+    result = 31 * result + Object.hashCode(envConfig);
     result = 31 * result + minNumWorkers;
     result = 31 * result + maxNumWorkers;
     return result;
