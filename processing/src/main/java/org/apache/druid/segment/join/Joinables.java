@@ -74,7 +74,8 @@ public class Joinables
   public static Function<Segment, Segment> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
       final JoinableFactory joinableFactory,
-      final AtomicLong cpuTimeAccumulator
+      final AtomicLong cpuTimeAccumulator,
+      final boolean enableFilterPushDown
   )
   {
     return JvmUtils.safeAccumulateThreadCpuTime(
@@ -84,7 +85,7 @@ public class Joinables
             return Function.identity();
           } else {
             final List<JoinableClause> joinableClauses = createJoinableClauses(clauses, joinableFactory);
-            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses);
+            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, enableFilterPushDown);
           }
         }
     );

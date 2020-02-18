@@ -20,23 +20,30 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 
+/**
+ * Used for getting an {@link InputStream} to an azure resource.
+ */
 public class AzureByteSource extends ByteSource
 {
-
+  private static final Logger log = new Logger(AzureByteSource.class);
   private final AzureStorage azureStorage;
   private final String containerName;
   private final String blobPath;
 
+  @AssistedInject
   public AzureByteSource(
       AzureStorage azureStorage,
-      String containerName,
-      String blobPath
+      @Assisted("containerName") String containerName,
+      @Assisted("blobPath") String blobPath
   )
   {
     this.azureStorage = azureStorage;
@@ -47,10 +54,18 @@ public class AzureByteSource extends ByteSource
   @Override
   public InputStream openStream() throws IOException
   {
+    return openStream(0L);
+  }
+
+  public InputStream openStream(long offset) throws IOException
+  {
     try {
-      return azureStorage.getBlobInputStream(containerName, blobPath);
+      return azureStorage.getBlobInputStream(offset, containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {
+      log.warn("Exception when opening stream to azure resource, containerName: %s, blobPath: %s, Error: %s",
+               containerName, blobPath, e.getMessage()
+      );
       if (AzureUtils.AZURE_RETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }

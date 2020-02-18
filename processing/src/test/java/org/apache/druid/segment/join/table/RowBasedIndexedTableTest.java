@@ -93,7 +93,7 @@ public class RowBasedIndexedTableTest
   @Test
   public void test_numRows_countries()
   {
-    Assert.assertEquals(15, countriesTable.numRows());
+    Assert.assertEquals(18, countriesTable.numRows());
   }
 
   @Test

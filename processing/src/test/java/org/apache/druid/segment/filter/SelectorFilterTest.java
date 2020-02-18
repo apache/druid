@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -327,5 +328,11 @@ public class SelectorFilterTest extends BaseFilterTest
       assertFilterMatches(new SelectorDimFilter("d0", null, null), ImmutableList.of("2"));
       assertFilterMatches(new SelectorDimFilter("l0", null, null), ImmutableList.of("3"));
     }
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(SelectorFilter.class).usingGetClass().withNonnullFields("dimension").verify();
   }
 }

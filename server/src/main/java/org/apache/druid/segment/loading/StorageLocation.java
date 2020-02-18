@@ -149,7 +149,10 @@ public class StorageLocation
     if (availableSizeBytes() < segmentSize) {
       log.warn(
           "Segment[%s:%,d] too large for storage[%s:%,d]. Check your druid.segmentCache.locations maxSize param",
-          segmentId, segmentSize, getPath(), availableSizeBytes()
+          segmentId,
+          segmentSize,
+          getPath(),
+          availableSizeBytes()
       );
       return false;
     }

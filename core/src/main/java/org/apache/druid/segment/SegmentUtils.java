@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -82,13 +83,18 @@ public class SegmentUtils
    * for log messages. Not useful for anything else, because this doesn't take special effort to escape commas that
    * occur in identifiers (not common, but could potentially occur in a datasource name).
    */
-  public static Object commaSeparatedIdentifiers(final Collection<DataSegment> segments)
+  @Nullable
+  public static Object commaSeparatedIdentifiers(@Nullable final Collection<DataSegment> segments)
   {
+    if (segments == null || segments.isEmpty()) {
+      return null;
+    }
     // Lazy, to avoid preliminary string creation if logging level is turned off
     return Collections2.transform(segments, DataSegment::getId);
   }
 
   private SegmentUtils()
   {
+    // no instantiation
   }
 }

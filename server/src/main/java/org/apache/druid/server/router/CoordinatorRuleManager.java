@@ -21,7 +21,9 @@ package org.apache.druid.server.router;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -40,6 +42,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,24 +51,29 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 @ManageLifecycle
 public class CoordinatorRuleManager
 {
-  private static final Logger log = new Logger(CoordinatorRuleManager.class);
+  private static final Logger LOG = new Logger(CoordinatorRuleManager.class);
+
+  private static final TypeReference<Map<String, List<Rule>>> TYPE_REFERENCE =
+      new TypeReference<Map<String, List<Rule>>>()
+      {
+      };
 
   private final ObjectMapper jsonMapper;
   private final Supplier<TieredBrokerConfig> config;
-
   private final AtomicReference<Map<String, List<Rule>>> rules;
-
   private final DruidLeaderClient druidLeaderClient;
-
-  private volatile ScheduledExecutorService exec;
 
   private final Object lock = new Object();
 
   private volatile boolean started = false;
+
+  @GuardedBy("lock")
+  private ScheduledExecutorService exec;
 
   @Inject
   public CoordinatorRuleManager(
@@ -78,9 +86,7 @@ public class CoordinatorRuleManager
     this.config = config;
     this.druidLeaderClient = druidLeaderClient;
 
-    this.rules = new AtomicReference<>(
-        Collections.emptyMap()
-    );
+    this.rules = new AtomicReference<>(Collections.emptyMap());
   }
 
   @LifecycleStart
@@ -97,14 +103,7 @@ public class CoordinatorRuleManager
           exec,
           new Duration(0),
           config.get().getPollPeriod().toStandardDuration(),
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              poll();
-            }
-          }
+          this::poll
       );
 
       started = true;
@@ -132,7 +131,6 @@ public class CoordinatorRuleManager
     return started;
   }
 
-  @SuppressWarnings("unchecked")
   public void poll()
   {
     try {
@@ -148,16 +146,13 @@ public class CoordinatorRuleManager
         );
       }
 
-      rules.set(
-          Collections.unmodifiableMap(jsonMapper.readValue(
-              response.getContent(), new TypeReference<Map<String, List<Rule>>>()
-              {
-              }
-          ))
-      );
+      final Map<String, List<Rule>> map = jsonMapper.readValue(response.getContent(), TYPE_REFERENCE);
+      final Map<String, List<Rule>> immutableMapBuilder = Maps.newHashMapWithExpectedSize(map.size());
+      map.forEach((k, list) -> immutableMapBuilder.put(k, Collections.unmodifiableList(list)));
+      rules.set(Collections.unmodifiableMap(immutableMapBuilder));
     }
     catch (Exception e) {
-      log.error(e, "Exception while polling for rules");
+      LOG.error(e, "Exception while polling for rules");
     }
   }
 
@@ -174,5 +169,15 @@ public class CoordinatorRuleManager
       rulesWithDefault.addAll(defaultRules);
     }
     return rulesWithDefault;
+  }
+
+  /**
+   * Returns the current snapshot of the rules.
+   * This method should be used for only testing.
+   */
+  @VisibleForTesting
+  Map<String, List<Rule>> getRules()
+  {
+    return rules.get();
   }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
@@ -43,9 +42,6 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -56,13 +52,11 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CompressionUtils;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -72,7 +66,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -82,16 +75,14 @@ import java.util.stream.Collectors;
 abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionLocation> extends PerfectRollupWorkerTask
 {
   private static final Logger LOG = new Logger(PartialSegmentMergeTask.class);
-  private static final int BUFFER_SIZE = 1024 * 4;
-  private static final int NUM_FETCH_RETRIES = 3;
+
 
   private final PartialSegmentMergeIOConfig<P> ioConfig;
   private final int numAttempts;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
-  private final HttpClient shuffleClient;
-  private final byte[] buffer;
+  private final ShuffleClient shuffleClient;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -106,7 +97,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       final Map<String, Object> context,
       IndexingServiceClient indexingServiceClient,
       IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      HttpClient shuffleClient
+      ShuffleClient shuffleClient
   )
   {
     super(
@@ -124,7 +115,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
     this.shuffleClient = shuffleClient;
-    this.buffer = new byte[BUFFER_SIZE];
   }
 
   @JsonProperty
@@ -234,7 +224,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         );
         FileUtils.forceMkdir(partitionDir);
         for (P location : entryPerPartitionId.getValue()) {
-          final File zippedFile = fetchSegmentFile(partitionDir, location);
+          final File zippedFile = shuffleClient.fetchSegmentFile(partitionDir, supervisorTaskId, location);
           try {
             final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
             FileUtils.forceMkdir(unzippedDir);
@@ -252,31 +242,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       }
     }
     return intervalToUnzippedFiles;
-  }
-
-  @VisibleForTesting
-  File fetchSegmentFile(File partitionDir, P location) throws IOException
-  {
-    final File zippedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
-    final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
-    org.apache.druid.java.util.common.FileUtils.copyLarge(
-        uri,
-        u -> {
-          try {
-            return shuffleClient.go(new Request(HttpMethod.GET, u.toURL()), new InputStreamResponseHandler())
-                                .get();
-          }
-          catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-          }
-        },
-        zippedFile,
-        buffer,
-        t -> t instanceof IOException,
-        NUM_FETCH_RETRIES,
-        StringUtils.format("Failed to fetch file[%s]", uri)
-    );
-    return zippedFile;
   }
 
   /**

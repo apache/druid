@@ -467,6 +467,9 @@
       "tutorials/cluster": {
         "title": "Clustered deployment"
       },
+      "tutorials/docker": {
+        "title": "Docker"
+      },
       "tutorials/index": {
         "title": "Quickstart"
       },

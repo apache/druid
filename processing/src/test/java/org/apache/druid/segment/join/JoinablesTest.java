@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
@@ -93,7 +94,8 @@ public class JoinablesTest
     final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
-        new AtomicLong()
+        new AtomicLong(),
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 
     Assert.assertSame(Function.identity(), segmentMapFn);
@@ -116,7 +118,8 @@ public class JoinablesTest
     final Function<Segment, Segment> ignored = Joinables.createSegmentMapFn(
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
-        new AtomicLong()
+        new AtomicLong(),
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
   }
 
@@ -147,7 +150,8 @@ public class JoinablesTest
             return Optional.empty();
           }
         },
-        new AtomicLong()
+        new AtomicLong(),
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);
