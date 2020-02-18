@@ -56,7 +56,7 @@ public class EventConverter
 
   private String buildNamespace()
   {
-    return namespacePrefix == null ? "" : sanitize(namespacePrefix) + ".";
+    return (namespacePrefix == null || namespacePrefix == "") ? "" : sanitize(namespacePrefix) + ".";
   }
 
   /**
