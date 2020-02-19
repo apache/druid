@@ -145,7 +145,8 @@ public class SqlLifecycle
     this.parameters = parameters;
   }
 
-  public PrepareResult prepare(AuthenticationResult authenticationResult) throws ValidationException, RelConversionException, SqlParseException
+  public PrepareResult prepare(AuthenticationResult authenticationResult)
+      throws ValidationException, RelConversionException, SqlParseException
   {
     synchronized (lock) {
       try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {

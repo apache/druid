@@ -49,6 +49,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +189,7 @@ public class DruidMeta extends MetaImpl
       throw new ForbiddenException("Authentication failed.");
     }
     druidStatement.prepare(sql, maxRowCount, authenticationResult);
-    final Frame firstFrame = druidStatement.execute()
+    final Frame firstFrame = druidStatement.execute(Collections.emptyList())
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
@@ -257,9 +258,7 @@ public class DruidMeta extends MetaImpl
   ) throws NoSuchStatementException
   {
     final DruidStatement druidStatement = getDruidStatement(statement);
-    druidStatement.setParameters(parameterValues);
-
-    final Frame firstFrame = druidStatement.execute()
+    final Frame firstFrame = druidStatement.execute(parameterValues)
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)

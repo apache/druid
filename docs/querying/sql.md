@@ -55,8 +55,7 @@ like `100` (denoting an integer), `100.0` (denoting a floating point value), or 
 timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
 written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
 
-Druid SQL supports dynamic parameters using the `?` syntax where parameters are bound to `?` in order. Replace any 
-literal with a `?` and supply parameters to the query and the values will be bound at execution time.
+Druid SQL supports dynamic parameters in question mark (`?`) syntax, where parameters are bound to the `?` placeholders at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and ensure that corresponding parameter values are provided at execution time. Parameters are bound to the placeholders in the order in which they are passed.
  
 Druid SQL supports SELECT queries with the following structure:
 
@@ -570,7 +569,7 @@ Parameterized SQL queries are also supported:
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|`String` (`SqlType`) | String value of `SqlType` of parameter. [`SqlType`](https://calcite.apache.org/avatica/apidocs/org/apache/calcite/avatica/SqlType.html) is an friendly wrapper around [`java.sql.Types`](https://docs.oracle.com/javase/8/docs/api/java/sql/Types.html?is-external=true)|yes|
+|`type`|`String` (`SqlType`) | String value of `SqlType` of parameter. [`SqlType`](https://calcite.apache.org/avatica/javadocAggregate/org/apache/calcite/avatica/SqlType.html) is a friendly wrapper around [`java.sql.Types`](https://docs.oracle.com/javase/8/docs/api/java/sql/Types.html?is-external=true)|yes|
 |`value`|`Object`| Value of the parameter|yes|
 
 
@@ -665,7 +664,7 @@ Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and do
 
 ### Dynamic Parameters
 
-Parameterized queries are supported with JDBC:
+You can also use parameterized queries in JDBC code, as in this example;
 
 ```java
 PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");

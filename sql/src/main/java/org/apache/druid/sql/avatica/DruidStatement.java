@@ -44,7 +44,6 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import java.io.Closeable;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -84,7 +83,6 @@ public class DruidStatement implements Closeable
   private Yielder<Object[]> yielder;
   private int offset = 0;
   private Throwable throwable;
-  private List<TypedValue> parameters;
   private AuthenticationResult authenticationResult;
 
   public DruidStatement(
@@ -103,7 +101,6 @@ public class DruidStatement implements Closeable
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
         StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
     );
-    this.parameters = Collections.emptyList();
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -150,11 +147,6 @@ public class DruidStatement implements Closeable
     return columns;
   }
 
-  public void setParameters(List<TypedValue> parameters)
-  {
-    this.parameters = parameters;
-  }
-
   public DruidStatement prepare(
       final String query,
       final long maxRowCount,
@@ -194,7 +186,7 @@ public class DruidStatement implements Closeable
   }
 
 
-  public DruidStatement execute()
+  public DruidStatement execute(List<TypedValue> parameters)
   {
     synchronized (lock) {
       ensure(State.PREPARED);
@@ -359,6 +351,8 @@ public class DruidStatement implements Closeable
 
   private AvaticaParameter createParameter(RelDataTypeField field, RelDataType type)
   {
+    // signed is always false because no way to extract from RelDataType, and the only usage of this AvaticaParameter
+    // constructor I can find, in CalcitePrepareImpl, does it this way with hard coded false
     return new AvaticaParameter(
         false,
         type.getPrecision(),
