@@ -146,7 +146,6 @@ public class JoinFilterAnalyzer
 
     for (Filter orClause : normalizedOrClauses) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(
-          hashJoinSegmentStorageAdapter,
           baseColumnNames,
           orClause,
           prefixes,
@@ -177,7 +176,6 @@ public class JoinFilterAnalyzer
    * Analyze a filter clause from a filter that is in conjunctive normal form (AND of ORs).
    * The clause is expected to be an OR filter or a leaf filter.
    *
-   * @param adapter          Adapter for the join
    * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param filterClause     Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
    * @param prefixes         Map of table prefixes
@@ -187,7 +185,6 @@ public class JoinFilterAnalyzer
    * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
    */
   private static JoinFilterAnalysis analyzeJoinFilterClause(
-      HashJoinSegmentStorageAdapter adapter,
       Set<String> baseColumnNames,
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
@@ -205,7 +202,6 @@ public class JoinFilterAnalyzer
     // Currently we only support rewrites of selector filters and selector filters within OR filters.
     if (filterClause instanceof SelectorFilter) {
       return rewriteSelectorFilter(
-          adapter,
           baseColumnNames,
           (SelectorFilter) filterClause,
           prefixes,
@@ -216,7 +212,6 @@ public class JoinFilterAnalyzer
 
     if (filterClause instanceof OrFilter) {
       return rewriteOrFilter(
-          adapter,
           baseColumnNames,
           (OrFilter) filterClause,
           prefixes,
@@ -242,7 +237,6 @@ public class JoinFilterAnalyzer
    * Potentially rewrite the subfilters of an OR filter so that the whole OR filter can be pushed down to
    * the base table.
    *
-   * @param adapter          Adapter for the join
    * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param orFilter         OrFilter to be rewritten
    * @param prefixes         Map of table prefixes to clauses
@@ -253,7 +247,6 @@ public class JoinFilterAnalyzer
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteOrFilter(
-      HashJoinSegmentStorageAdapter adapter,
       Set<String> baseColumnNames,
       OrFilter orFilter,
       Map<String, JoinableClause> prefixes,
@@ -276,7 +269,6 @@ public class JoinFilterAnalyzer
         retainRhs = true;
         if (filter instanceof SelectorFilter) {
           JoinFilterAnalysis rewritten = rewriteSelectorFilter(
-              adapter,
               baseColumnNames,
               (SelectorFilter) filter,
               prefixes,
@@ -307,7 +299,6 @@ public class JoinFilterAnalyzer
   /**
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
-   * @param baseAdapter      The adapter for the join
    * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual
    *                         columns
    * @param selectorFilter   SelectorFilter to be rewritten
@@ -319,7 +310,6 @@ public class JoinFilterAnalyzer
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteSelectorFilter(
-      HashJoinSegmentStorageAdapter baseAdapter,
       Set<String> baseColumnNames,
       SelectorFilter selectorFilter,
       Map<String, JoinableClause> prefixes,
