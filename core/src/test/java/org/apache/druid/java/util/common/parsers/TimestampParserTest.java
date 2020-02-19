@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
@@ -37,22 +38,17 @@ public class TimestampParserTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void TestCreateNumericTimestampParserTest()
+  public void TestcreateTimestampParserISO()
   {
     Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
-            TimestampParser.createNumericTimestampParser("posix").apply(1));
+            TimestampParser.createTimestampParser("iso").apply("1970-01-01T00:00:01.000Z"));
+  }
 
-    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
-            TimestampParser.createNumericTimestampParser("micro").apply(1000000));
-
-    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
-            TimestampParser.createNumericTimestampParser("nano").apply(1000000000));
-
-    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
-            TimestampParser.createNumericTimestampParser("ruby").apply(1));
-
-    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
-            TimestampParser.createNumericTimestampParser("").apply(1000));
+  @Test
+  public void TestcreateTimestampParserException()
+  {
+    expectedException.expect(IAE.class);
+    TimestampParser.createTimestampParser("").apply("2002");
   }
 
   @Test
