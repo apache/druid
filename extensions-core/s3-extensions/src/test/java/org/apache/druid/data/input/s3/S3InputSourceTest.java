@@ -173,8 +173,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSerdeWithCloudConfigProperties() throws Exception
+  public void testSerdeWithCloudConfigPropertiesWithKeyAndSecret() throws Exception
   {
+    EasyMock.reset(S3_STORAGE_CONFIG);
     EasyMock.expect(S3_STORAGE_CONFIG.getServerSideEncryption())
             .andStubReturn(SERVER_SIDE_ENCRYPTION);
     EasyMock.replay(S3_STORAGE_CONFIG);
@@ -191,6 +192,31 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
     EasyMock.verify(S3_STORAGE_CONFIG);
+  }
+
+  @Test
+  public void testS3InputSourceUseDefaultPasswordWhenCloudConfigPropertiesWithoutCrediential() throws Exception
+  {
+    CloudConfigProperties mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(CloudConfigProperties.class);
+    EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
+            .andStubReturn(false);
+    EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
+    EasyMock.reset(S3_STORAGE_CONFIG);
+    EasyMock.expect(S3_STORAGE_CONFIG.getServerSideEncryption())
+            .andStubReturn(SERVER_SIDE_ENCRYPTION);
+    EasyMock.replay(S3_STORAGE_CONFIG);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        mockConfigPropertiesWithoutKeyAndSecret
+    );
+    EasyMock.verify(S3_STORAGE_CONFIG);
+    EasyMock.verify(mockConfigPropertiesWithoutKeyAndSecret);
   }
 
   @Test

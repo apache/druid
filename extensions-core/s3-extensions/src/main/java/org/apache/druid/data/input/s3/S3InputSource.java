@@ -61,7 +61,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, cloudConfigProperties);
     if (amazonS3ClientBuilder != null && storageConfig != null && cloudConfigProperties != null) {
-      if (cloudConfigProperties.credentialsConfigured()) {
+      if (cloudConfigProperties.isCredentialsConfigured()) {
         BasicAWSCredentials creds = new BasicAWSCredentials(cloudConfigProperties.getAccessKeyId().getPassword(),
                                                             cloudConfigProperties.getSecretAccessKey().getPassword());
         amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
@@ -99,6 +99,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", cloudConfigProperties=" + getCloudConfigProperties() +
            '}';
   }
 

@@ -80,7 +80,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
         null,
         null,
         ImmutableList.of(split.get()),
-        getCloudConfigProperties()
+        null
     );
   }
 
@@ -102,6 +102,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", cloudConfigProperties=" + getCloudConfigProperties() +
            '}';
   }
 }

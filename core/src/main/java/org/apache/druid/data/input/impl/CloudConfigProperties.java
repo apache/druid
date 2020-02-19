@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class CloudConfigProperties
 {
@@ -57,8 +58,37 @@ public class CloudConfigProperties
     return secretAccessKey;
   }
 
-  public boolean credentialsConfigured()
+  public boolean isCredentialsConfigured()
   {
     return accessKeyId != null && secretAccessKey != null;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "CloudConfigProperties{" +
+           "accessKeyId=" + accessKeyId +
+           ", secretAccessKey=" + secretAccessKey +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CloudConfigProperties that = (CloudConfigProperties) o;
+    return Objects.equals(accessKeyId, that.accessKeyId) &&
+           Objects.equals(secretAccessKey, that.secretAccessKey);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(accessKeyId, secretAccessKey);
   }
 }

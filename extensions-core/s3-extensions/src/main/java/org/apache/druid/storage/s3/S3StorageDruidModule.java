@@ -167,7 +167,6 @@ public class S3StorageDruidModule implements DruidModule
   }
 
   @Provides
-  @LazySingleton
   public AmazonS3ClientBuilder getAmazonS3ClientBuilder(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,

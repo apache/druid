@@ -101,6 +101,7 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", cloudConfigProperties=" + getCloudConfigProperties() +
            '}';
   }
 
