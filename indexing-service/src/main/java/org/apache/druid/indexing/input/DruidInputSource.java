@@ -28,7 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -317,7 +317,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return Iterators.transform(
         convertedSplitHintSpec.split(
             segmentIdToSize.keySet().iterator(),
-            segmentId -> new InputAttribute(
+            segmentId -> new InputFileAttribute(
                 Preconditions.checkNotNull(segmentIdToSize.get(segmentId), "segment size for [%s]", segmentId)
             )
         ),

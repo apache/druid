@@ -20,20 +20,20 @@
 package org.apache.druid.data.input;
 
 /**
- * A class storing some characteristics of an input file.
+ * A class storing some attributes of an input file.
  * This information is used to make splits in the parallel indexing.
  *
  * @see SplitHintSpec
  * @see org.apache.druid.data.input.impl.SplittableInputSource
  */
-public class InputAttribute
+public class InputFileAttribute
 {
   /**
    * The size of the input file.
    */
   private final long size;
 
-  public InputAttribute(long size)
+  public InputFileAttribute(long size)
   {
     this.size = size;
   }

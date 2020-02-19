@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
@@ -109,7 +109,7 @@ public class AzureInputSource extends CloudObjectInputSource
   {
     final Iterator<List<CloudBlobHolder>> splitIterator = splitHintSpec.split(
         getIterableObjectsFromPrefixes().iterator(),
-        blobHolder -> new InputAttribute(blobHolder.getBlobLength())
+        blobHolder -> new InputFileAttribute(blobHolder.getBlobLength())
     );
     return Streams.sequentialStreamFrom(splitIterator)
                   .map(objects -> objects.stream()

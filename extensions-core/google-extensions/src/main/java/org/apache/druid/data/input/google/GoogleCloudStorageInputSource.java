@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -86,7 +86,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
               sizeInLong = Long.MAX_VALUE;
             }
           }
-          return new InputAttribute(sizeInLong);
+          return new InputFileAttribute(sizeInLong);
         }
     );
 

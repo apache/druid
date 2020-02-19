@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -178,7 +178,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
         path -> {
           try {
             final long size = path.getFileSystem(configuration).getFileStatus(path).getLen();
-            return new InputAttribute(size);
+            return new InputFileAttribute(size);
           }
           catch (IOException e) {
             throw new UncheckedIOException(e);

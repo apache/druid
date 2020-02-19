@@ -52,7 +52,7 @@ public class MaxSizeSplitHintSpecTest
   {
     final int eachInputSize = 3;
     final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(10L);
-    final Function<Integer, InputAttribute> inputAttributeExtractor = InputAttribute::new;
+    final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
     final List<List<Integer>> splits = Lists.newArrayList(
         splitHintSpec.split(IntStream.generate(() -> eachInputSize).limit(10).iterator(), inputAttributeExtractor)
     );
@@ -68,7 +68,7 @@ public class MaxSizeSplitHintSpecTest
   {
     final int eachInputSize = 15;
     final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(10L);
-    final Function<Integer, InputAttribute> inputAttributeExtractor = InputAttribute::new;
+    final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
     final List<List<Integer>> splits = Lists.newArrayList(
         splitHintSpec.split(IntStream.generate(() -> eachInputSize).limit(10).iterator(), inputAttributeExtractor)
     );

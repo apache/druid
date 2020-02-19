@@ -28,7 +28,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -86,7 +86,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   private Iterator<List<File>> getSplitFileIterator(SplitHintSpec splitHintSpec)
   {
     final Iterator<File> fileIterator = getFileIterator();
-    return splitHintSpec.split(fileIterator, file -> new InputAttribute(file.length()));
+    return splitHintSpec.split(fileIterator, file -> new InputFileAttribute(file.length()));
   }
 
   @VisibleForTesting

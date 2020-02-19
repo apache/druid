@@ -58,7 +58,7 @@ public class SegmentsSplitHintSpec implements SplitHintSpec
   }
 
   @Override
-  public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputAttribute> inputAttributeExtractor)
+  public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor)
   {
     throw new UnsupportedOperationException();
   }

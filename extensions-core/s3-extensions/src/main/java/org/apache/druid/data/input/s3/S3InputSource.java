@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -71,7 +71,7 @@ public class S3InputSource extends CloudObjectInputSource
   {
     final Iterator<List<S3ObjectSummary>> splitIterator = splitHintSpec.split(
         getIterableObjectsFromPrefixes().iterator(),
-        object -> new InputAttribute(object.getSize())
+        object -> new InputFileAttribute(object.getSize())
     );
 
     return Streams.sequentialStreamFrom(splitIterator)

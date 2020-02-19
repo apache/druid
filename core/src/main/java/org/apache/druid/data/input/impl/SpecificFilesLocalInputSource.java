@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputAttribute;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
@@ -63,7 +63,7 @@ public class SpecificFilesLocalInputSource extends AbstractInputSource implement
   {
     final Iterator<List<File>> iterator = getSplitHintSpecOrDefault(splitHintSpec).split(
         files.iterator(),
-        file -> new InputAttribute(file.length())
+        file -> new InputFileAttribute(file.length())
     );
     return Streams.sequentialStreamFrom(iterator).map(InputSplit::new);
   }
@@ -73,7 +73,7 @@ public class SpecificFilesLocalInputSource extends AbstractInputSource implement
   {
     final Iterator<List<File>> iterator = getSplitHintSpecOrDefault(splitHintSpec).split(
         files.iterator(),
-        file -> new InputAttribute(file.length())
+        file -> new InputFileAttribute(file.length())
     );
     return Iterators.size(iterator);
   }
