@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -64,10 +65,11 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
       @JacksonInject AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
+      @JsonProperty("properties") @Nullable CloudConfigProperties cloudConfigProperties
   )
   {
-    super(SCHEME, uris, prefixes, objects);
+    super(SCHEME, uris, prefixes, objects, cloudConfigProperties);
     this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
@@ -87,7 +89,8 @@ public class AzureInputSource extends CloudObjectInputSource<AzureEntity>
         azureCloudBlobToLocationConverter,
         null,
         null,
-        ImmutableList.of(split.get())
+        ImmutableList.of(split.get()),
+        null
     );
   }
 

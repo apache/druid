@@ -22,9 +22,11 @@ package org.apache.druid.data.input.azure;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
@@ -101,7 +103,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         EMPTY_PREFIXES,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
   }
 
@@ -120,7 +123,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         EMPTY_PREFIXES,
-        objects
+        objects,
+        null
     );
 
     AzureEntity actualAzureEntity = azureInputSource.createEntity(inputSplit);
@@ -150,7 +154,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
 
     Stream<InputSplit<CloudObjectLocation>> cloudObjectStream = azureInputSource.getPrefixesSplitStream();
@@ -175,7 +180,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
 
     SplittableInputSource<CloudObjectLocation> newInputSource = azureInputSource.withSplit(inputSplit);
@@ -194,7 +200,8 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS
+        EMPTY_OBJECTS,
+        null
     );
 
     String actualToString = azureInputSource.toString();
