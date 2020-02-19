@@ -66,7 +66,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -138,7 +138,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -193,7 +193,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -256,7 +256,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -313,7 +313,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -370,7 +370,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(virtualColumns),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(virtualColumns, null, null),
         originalFilter,
         true
     );
@@ -440,7 +440,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(virtualColumns),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(virtualColumns, null, null),
         originalFilter,
         true
     );
@@ -599,7 +599,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -670,7 +670,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -828,7 +828,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -906,7 +906,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         filter,
         true
     );
@@ -969,7 +969,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1024,7 +1024,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1077,7 +1077,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1138,7 +1138,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1190,7 +1190,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         filter,
         true
     );
@@ -1245,7 +1245,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1310,7 +1310,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1368,7 +1368,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         true
     );
@@ -1413,7 +1413,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
         adapter,
-        adapter.getAdapterBaseColumnNamesWithVirtualColumns(VirtualColumns.EMPTY),
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
         adapter.isEnableFilterPushDown()
     );
