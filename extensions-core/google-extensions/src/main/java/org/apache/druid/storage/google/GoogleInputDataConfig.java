@@ -21,34 +21,29 @@ package org.apache.druid.storage.google;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Min;
 
-public class GoogleAccountConfig
+/**
+ * Stores the configuration for options related to reading
+ * input data from Google blob store into Druid
+ */
+public class GoogleInputDataConfig
 {
+  /**
+   * The maximum number of input files matching a given prefix to retrieve
+   * from Google at a time.
+   */
   @JsonProperty
-  @NotNull
-  private String bucket;
+  @Min(1)
+  private int maxListingLength = 1024;
 
-  @JsonProperty
-  private String prefix;
-
-  public void setBucket(String bucket)
+  public void setMaxListingLength(int maxListingLength)
   {
-    this.bucket = bucket;
+    this.maxListingLength = maxListingLength;
   }
 
-  public void setPrefix(String prefix)
+  public int getMaxListingLength()
   {
-    this.prefix = prefix;
-  }
-
-  public String getBucket()
-  {
-    return bucket;
-  }
-
-  public String getPrefix()
-  {
-    return prefix;
+    return maxListingLength;
   }
 }

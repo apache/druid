@@ -66,7 +66,7 @@ public class AzureByteSource extends ByteSource
       if (AzureUtils.AZURE_RETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }
-      log.warn("Exception when opening stream to azure resource, containerName: %s, blobPath: %s, Error: %s",
+      log.error("Exception when opening stream to azure resource, containerName: %s, blobPath: %s, Error: %s",
                containerName, blobPath, e.getMessage()
       );
       throw new RuntimeException(e);

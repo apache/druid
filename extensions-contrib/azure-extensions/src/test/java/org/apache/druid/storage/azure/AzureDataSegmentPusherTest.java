@@ -19,11 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import com.microsoft.azure.storage.StorageException;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -88,7 +86,6 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private AzureAccountConfig azureAccountConfig;
   private AzureDataSegmentConfig segmentConfigWithPrefix;
   private AzureDataSegmentConfig segmentConfigWithoutPrefix;
-  private ObjectMapper jsonMapper;
 
   @Before
   public void before()
@@ -99,12 +96,10 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     segmentConfigWithPrefix = new AzureDataSegmentConfig();
     segmentConfigWithPrefix.setContainer(CONTAINER_NAME);
-    segmentConfigWithPrefix.setPrefix(PREFIX);
+    segmentConfigWithPrefix.setPrefix(PREFIX + "/");
 
     segmentConfigWithoutPrefix = new AzureDataSegmentConfig();
     segmentConfigWithoutPrefix.setContainer(CONTAINER_NAME);
-
-    jsonMapper = new DefaultObjectMapper();
   }
 
   @Test

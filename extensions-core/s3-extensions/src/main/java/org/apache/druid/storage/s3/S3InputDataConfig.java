@@ -17,38 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google;
+package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Min;
 
-public class GoogleAccountConfig
+/**
+ * Stores the configuration for options related to reading
+ * input data from Amazon S3 into Druid
+ */
+public class S3InputDataConfig
 {
+  /**
+   * The maximum number of input files matching a given prefix to retrieve
+   * from Amazon S3 at a time.
+   */
   @JsonProperty
-  @NotNull
-  private String bucket;
+  @Min(1)
+  private int maxListingLength = 1024;
 
-  @JsonProperty
-  private String prefix;
-
-  public void setBucket(String bucket)
+  public void setMaxListingLength(int maxListingLength)
   {
-    this.bucket = bucket;
+    this.maxListingLength = maxListingLength;
   }
 
-  public void setPrefix(String prefix)
+  public int getMaxListingLength()
   {
-    this.prefix = prefix;
-  }
-
-  public String getBucket()
-  {
-    return bucket;
-  }
-
-  public String getPrefix()
-  {
-    return prefix;
+    return maxListingLength;
   }
 }

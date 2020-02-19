@@ -42,11 +42,12 @@ public class AzureUtilsTest
   private static final StorageException STORAGE_EXCEPTION = new StorageException("", "", null);
   private static final IOException IO_EXCEPTION = new IOException();
   private static final RuntimeException RUNTIME_EXCEPTION = new RuntimeException();
+  private static final RuntimeException NULL_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION = new RuntimeException("", null);
   private static final RuntimeException IO_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION = new RuntimeException(
       "",
       new IOException()
   );
-  private static final IOException RUNTIME_EXCEPTION_WRAPPED_IN_IO_EXCEPTION = new IOException(
+  private static final RuntimeException RUNTIME_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTON = new RuntimeException(
       "",
       new RuntimeException()
   );
@@ -106,9 +107,23 @@ public class AzureUtilsTest
   }
 
   @Test
+  public void test_azureRetry_nullException_returnsFalse()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(null);
+    Assert.assertFalse(retry);
+  }
+
+  @Test
   public void test_azureRetry_RunTimeException_returnsFalse()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION);
+    Assert.assertFalse(retry);
+  }
+
+  @Test
+  public void test_azureRetry_nullExceptionWrappedInRunTimeException_returnsFalse()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(NULL_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION);
     Assert.assertFalse(retry);
   }
 
@@ -120,9 +135,9 @@ public class AzureUtilsTest
   }
 
   @Test
-  public void test_azureRetry_RunTimeExceptionWrappedInIOException_returnsFalse()
+  public void test_azureRetry_RunTimeExceptionWrappedInRunTimeException_returnsFalse()
   {
-    boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_IO_EXCEPTION);
+    boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTON);
     Assert.assertFalse(retry);
   }
 }

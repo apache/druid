@@ -27,6 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureDataSegmentConfig;
+import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
 import org.easymock.EasyMockSupport;
@@ -65,7 +66,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
-  private AzureDataSegmentConfig segmentConfig;
+  private AzureInputDataConfig inputDataConfig;
 
   static {
     try {
@@ -88,7 +89,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     entityFactory = createMock(AzureEntityFactory.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
     azureCloudBlobToLocationConverter = createMock(AzureCloudBlobHolderToCloudObjectLocationConverter.class);
-    segmentConfig = createMock(AzureDataSegmentConfig.class);
+    inputDataConfig = createMock(AzureInputDataConfig.class);
 
   }
 
@@ -114,7 +115,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   public void test_prefixSerde_constructsProperAzureInputSource() throws Exception
   {
     final InjectableValues.Std injectableValues = initInjectableValues();
-    injectableValues.addValue(AzureDataSegmentConfig.class, segmentConfig);
+    injectableValues.addValue(AzureDataSegmentConfig.class, inputDataConfig);
     final ObjectMapper objectMapper = new DefaultObjectMapper()
         .registerModules(new AzureStorageDruidModule().getJacksonModules());
     objectMapper.setInjectableValues(injectableValues);
@@ -156,7 +157,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
         AzureCloudBlobHolderToCloudObjectLocationConverter.class,
         azureCloudBlobToLocationConverter
     );
-    injectableValues.addValue(AzureDataSegmentConfig.class, segmentConfig);
+    injectableValues.addValue(AzureInputDataConfig.class, inputDataConfig);
     return injectableValues;
   }
 

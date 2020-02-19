@@ -72,13 +72,15 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
+    String prefix = segmentConfig.getPrefix();
+    boolean prefixIsNullOrEmpty = org.apache.commons.lang.StringUtils.isEmpty(prefix);
     String hadoopPath = StringUtils.format(
         "%s://%s@%s.%s/%s",
         AzureUtils.AZURE_STORAGE_HADOOP_PROTOCOL,
         segmentConfig.getContainer(),
         accountConfig.getAccount(),
         AzureUtils.AZURE_STORAGE_HOST_ADDRESS,
-        segmentConfig.getPrefix().isEmpty() ? "" : segmentConfig.getPrefix() + '/'
+        prefixIsNullOrEmpty ? "" : StringUtils.maybeRemoveTrailingSlash(prefix) + '/'
     );
 
     log.info("Using Azure blob storage Hadoop path: %s", hadoopPath);
@@ -90,9 +92,9 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public String getStorageDir(DataSegment dataSegment, boolean useUniquePath)
   {
     String prefix = segmentConfig.getPrefix();
-    boolean prefixIsNullOrEmpty = (prefix == null || prefix.isEmpty());
+    boolean prefixIsNullOrEmpty = org.apache.commons.lang.StringUtils.isEmpty(prefix);
     String seg = JOINER.join(
-        prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(segmentConfig.getPrefix()),
+        prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(prefix),
         dataSegment.getDataSource(),
         StringUtils.format(
             "%s_%s",

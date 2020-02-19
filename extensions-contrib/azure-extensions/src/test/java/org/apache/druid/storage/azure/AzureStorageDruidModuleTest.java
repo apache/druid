@@ -54,6 +54,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_ACCOUNT_KEY;
   private static final String AZURE_CONTAINER;
   private static final String AZURE_PREFIX;
+  private static final int AZURE_MAX_LISTING_LENGTH;
   private static final String PATH = "path";
   private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
   private static final Properties PROPERTIES;
@@ -73,6 +74,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
                                 .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8.toString()));
       AZURE_CONTAINER = "azureContainer1";
       AZURE_PREFIX = "azurePrefix1";
+      AZURE_MAX_LISTING_LENGTH = 10;
       PROPERTIES = initializePropertes();
     }
     catch (Exception e) {
@@ -107,6 +109,15 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
 
     Assert.assertEquals(AZURE_CONTAINER, segmentConfig.getContainer());
     Assert.assertEquals(AZURE_PREFIX, segmentConfig.getPrefix());
+  }
+
+  @Test
+  public void test_getAzureInputDataConfig_expectedConfig()
+  {
+    injector = makeInjectorWithProperties(PROPERTIES);
+    AzureInputDataConfig inputDataConfig = injector.getInstance(AzureInputDataConfig.class);
+
+    Assert.assertEquals(AZURE_MAX_LISTING_LENGTH, inputDataConfig.getMaxListingLength());
   }
 
   @Test
@@ -238,6 +249,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
     props.put("druid.azure.container", AZURE_CONTAINER);
     props.put("druid.azure.prefix", AZURE_PREFIX);
+    props.put("druid.azure.maxListingLength", String.valueOf(AZURE_MAX_LISTING_LENGTH));
     return props;
   }
 }

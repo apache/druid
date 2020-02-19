@@ -21,8 +21,6 @@ package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.annotation.Nonnull;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -35,12 +33,8 @@ public class AzureDataSegmentConfig
   private String container;
 
   @JsonProperty
-  @Nonnull
+  @NotNull
   private String prefix = "";
-
-  @JsonProperty
-  @Min(1)
-  private int maxListingLength = 1024;
 
   public void setContainer(String container)
   {
@@ -52,11 +46,6 @@ public class AzureDataSegmentConfig
     this.prefix = prefix;
   }
 
-  public void setMaxListingLength(int maxListingLength)
-  {
-    this.maxListingLength = maxListingLength;
-  }
-
   public String getContainer()
   {
     return container;
@@ -65,10 +54,5 @@ public class AzureDataSegmentConfig
   public String getPrefix()
   {
     return prefix;
-  }
-
-  public int getMaxListingLength()
-  {
-    return maxListingLength;
   }
 }

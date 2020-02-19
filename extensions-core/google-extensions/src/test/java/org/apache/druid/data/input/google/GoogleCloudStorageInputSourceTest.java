@@ -46,7 +46,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.storage.google.GoogleAccountConfig;
+import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
@@ -67,9 +67,9 @@ import java.util.stream.Stream;
 
 public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTest
 {
-  private static final int EXPECTED_MAX_LISTING_LENGTH = 10;
+  private static final int MAX_LISTING_LENGTH = 10;
   private static final GoogleStorage STORAGE = EasyMock.createMock(GoogleStorage.class);
-  private static final GoogleAccountConfig CONFIG = EasyMock.createMock(GoogleAccountConfig.class);
+  private static final GoogleInputDataConfig INPUT_DATA_CONFIG = EasyMock.createMock(GoogleInputDataConfig.class);
 
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
       URI.create("gs://foo/bar/file.csv"),
@@ -101,7 +101,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
     final GoogleCloudStorageInputSource withUris =
-        new GoogleCloudStorageInputSource(STORAGE, CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
     final GoogleCloudStorageInputSource serdeWithUris =
         mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
@@ -112,7 +112,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
     final GoogleCloudStorageInputSource withPrefixes =
-        new GoogleCloudStorageInputSource(STORAGE, CONFIG, ImmutableList.of(), PREFIXES, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, ImmutableList.of(), PREFIXES, null);
     final GoogleCloudStorageInputSource serdeWithPrefixes =
         mapper.readValue(mapper.writeValueAsString(withPrefixes), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
@@ -125,7 +125,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     final GoogleCloudStorageInputSource withObjects =
         new GoogleCloudStorageInputSource(
             STORAGE,
-            CONFIG,
+            INPUT_DATA_CONFIG,
             null,
             null,
             ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz"))
@@ -140,7 +140,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
 
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -153,15 +153,15 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   public void testWithPrefixesSplit() throws IOException
   {
     EasyMock.reset(STORAGE);
-    EasyMock.reset(CONFIG);
+    EasyMock.reset(INPUT_DATA_CONFIG);
     addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
     addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
-    EasyMock.expect(CONFIG.getMaxListingLength()).andReturn(EXPECTED_MAX_LISTING_LENGTH);
+    EasyMock.expect(INPUT_DATA_CONFIG.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
     EasyMock.replay(STORAGE);
-    EasyMock.replay(CONFIG);
+    EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, CONFIG, null, PREFIXES, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null);
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -175,18 +175,18 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   public void testReader() throws IOException
   {
     EasyMock.reset(STORAGE);
-    EasyMock.reset(CONFIG);
+    EasyMock.reset(INPUT_DATA_CONFIG);
     addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
     addExpectedGetObjectMock(EXPECTED_URIS.get(0));
     addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     addExpectedGetObjectMock(EXPECTED_URIS.get(1));
-    EasyMock.expect(CONFIG.getMaxListingLength()).andReturn(EXPECTED_MAX_LISTING_LENGTH);
+    EasyMock.expect(INPUT_DATA_CONFIG.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
     EasyMock.replay(STORAGE);
-    EasyMock.replay(CONFIG);
+    EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
         STORAGE,
-        CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         PREFIXES,
         null
@@ -218,18 +218,18 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   public void testCompressedReader() throws IOException
   {
     EasyMock.reset(STORAGE);
-    EasyMock.reset(CONFIG);
+    EasyMock.reset(INPUT_DATA_CONFIG);
     addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(0)));
     addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(0));
     addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_COMPRESSED_URIS.get(1)));
     addExpectedGetCompressedObjectMock(EXPECTED_COMPRESSED_URIS.get(1));
-    EasyMock.expect(CONFIG.getMaxListingLength()).andReturn(EXPECTED_MAX_LISTING_LENGTH);
+    EasyMock.expect(INPUT_DATA_CONFIG.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
     EasyMock.replay(STORAGE);
-    EasyMock.replay(CONFIG);
+    EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
         STORAGE,
-        CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         PREFIXES,
         null
@@ -264,7 +264,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     Storage.Objects.List listRequest = EasyMock.createMock(Storage.Objects.List.class);
     EasyMock.expect(STORAGE.list(EasyMock.eq(bucket))).andReturn(listRequest).once();
     EasyMock.expect(listRequest.setPageToken(EasyMock.anyString())).andReturn(listRequest).once();
-    EasyMock.expect(listRequest.setMaxResults((long) EXPECTED_MAX_LISTING_LENGTH)).andReturn(listRequest).once();
+    EasyMock.expect(listRequest.setMaxResults((long) MAX_LISTING_LENGTH)).andReturn(listRequest).once();
     EasyMock.expect(listRequest.setPrefix(EasyMock.eq(StringUtils.maybeRemoveLeadingSlash(prefix.getPath()))))
             .andReturn(listRequest)
             .once();
