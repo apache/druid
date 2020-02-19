@@ -57,7 +57,8 @@ public class CloudConfigProperties
     return secretAccessKey;
   }
 
-  public boolean credentialsConfigured() {
+  public boolean credentialsConfigured()
+  {
     return accessKeyId != null && secretAccessKey != null;
   }
 }

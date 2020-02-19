@@ -140,7 +140,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithPrefixes() throws Exception
   {
-    final S3InputSource withPrefixes = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG,null, PREFIXES, null, null);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        null
+    );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
@@ -253,7 +261,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testWithUrisSplit()
   {
-    S3InputSource inputSource = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG, EXPECTED_URIS, null, null, null);
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null
+    );
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -271,7 +287,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     expectListObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     EasyMock.replay(S3_CLIENT);
 
-    S3InputSource inputSource = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG,null, PREFIXES, null, null);
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        AMAZON_S3_CLIENT_BUILDER,
+        S3_STORAGE_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        null
+    );
 
     Stream<InputSplit<CloudObjectLocation>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
@@ -515,12 +539,14 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
 
     @Provides
-    public S3StorageConfig getS3StorageConfig() {
+    public S3StorageConfig getS3StorageConfig()
+    {
       return S3_STORAGE_CONFIG;
     }
 
     @Provides
-    public AmazonS3ClientBuilder getAmazonS3ClientBuilder() {
+    public AmazonS3ClientBuilder getAmazonS3ClientBuilder()
+    {
       return AMAZON_S3_CLIENT_BUILDER;
     }
 

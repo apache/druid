@@ -76,7 +76,11 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
     return new GoogleCloudStorageInputSource(
-        storage, null, null, ImmutableList.of(split.get()), getCloudConfigProperties()
+        storage,
+        null,
+        null,
+        ImmutableList.of(split.get()),
+        getCloudConfigProperties()
     );
   }
 
