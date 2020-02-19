@@ -17,24 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.util;
+package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.http.SqlParameter;
-import org.junit.BeforeClass;
+import org.apache.calcite.rel.type.RelDataType;
 
-import java.util.List;
-
-public abstract class CalciteTestBase
+public class PrepareResult
 {
-  public static final List<SqlParameter> DEFAULT_PARAMETERS = ImmutableList.of();
+  private final RelDataType rowType;
+  private final RelDataType parameterRowType;
 
-  @BeforeClass
-  public static void setupCalciteProperties()
+  public PrepareResult(final RelDataType rowType, final RelDataType parameterRowType)
   {
-    Calcites.setSystemProperties();
-    NullHandling.initializeForTests();
+    this.rowType = rowType;
+    this.parameterRowType = parameterRowType;
+  }
+
+  public RelDataType getRowType()
+  {
+    return rowType;
+  }
+
+  public RelDataType getParameterRowType()
+  {
+    return parameterRowType;
   }
 }

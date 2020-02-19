@@ -206,7 +206,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
@@ -285,7 +290,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = lifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
     );
@@ -335,7 +345,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});

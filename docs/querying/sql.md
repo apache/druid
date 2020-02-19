@@ -55,6 +55,8 @@ like `100` (denoting an integer), `100.0` (denoting a floating point value), or 
 timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
 written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
 
+Druid SQL supports dynamic parameters in question mark (`?`) syntax, where parameters are bound to the `?` placeholders at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and ensure that corresponding parameter values are provided at execution time. Parameters are bound to the placeholders in the order in which they are passed.
+ 
 Druid SQL supports SELECT queries with the following structure:
 
 ```
@@ -518,6 +520,17 @@ of configuration.
 You can make Druid SQL queries using JSON over HTTP by posting to the endpoint `/druid/v2/sql/`. The request should
 be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
 
+##### Request
+      
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`query`|`String`| SQL query to run| yes |
+|`resultFormat`|`String` (`ResultFormat`)| Result format for output | no (default `"object"`)|
+|`header`|`Boolean`| Write column name header for supporting formats| no (default `false`)|
+|`context`|`Object`| Connection context map. see [connection context parameters](#connection-context)| no |
+|`parameters`|`SqlParameter` list| List of query parameters for parameterized queries. | no |
+
+
 You can use _curl_ to send SQL queries from the command-line:
 
 ```bash
@@ -540,7 +553,27 @@ like:
 }
 ```
 
-Metadata is available over the HTTP API by querying [system tables](#metadata-tables).
+Parameterized SQL queries are also supported:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = ? AND __time > ?",
+  "parameters": [
+    { "type": "VARCHAR", "value": "bar"},
+    { "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
+  ]
+}
+```
+
+##### SqlParameter
+
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`type`|`String` (`SqlType`) | String value of `SqlType` of parameter. [`SqlType`](https://calcite.apache.org/avatica/javadocAggregate/org/apache/calcite/avatica/SqlType.html) is a friendly wrapper around [`java.sql.Types`](https://docs.oracle.com/javase/8/docs/api/java/sql/Types.html?is-external=true)|yes|
+|`value`|`Object`| Value of the parameter|yes|
+
+
+Metadata is also available over the HTTP API by querying [system tables](#metadata-tables).
 
 #### Responses
 
@@ -617,8 +650,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 ```
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
-["INFORMATION_SCHEMA" tables](#metadata-tables). Parameterized queries (using `?` or other placeholders) don't work properly,
-so avoid those.
+["INFORMATION_SCHEMA" tables](#metadata-tables).
 
 #### Connection stickiness
 
@@ -629,6 +661,17 @@ the necessary stickiness even with a normal non-sticky load balancer. Please see
 [Router](../design/router.md) documentation for more details.
 
 Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and does not require stickiness.
+
+### Dynamic Parameters
+
+You can also use parameterized queries in JDBC code, as in this example;
+
+```java
+PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");
+statement.setString(1, "abc");
+statement.setString(2, "def");
+final ResultSet resultSet = statement.executeQuery();
+```
 
 ### Connection context
 
