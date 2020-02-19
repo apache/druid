@@ -47,7 +47,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_getInterval_factToCountry()
   {
     Assert.assertEquals(
-        Intervals.of("2015-09-12/2015-09-12T04:43:40.060Z"),
+        Intervals.of("2015-09-12/2015-09-12T05:21:00.060Z"),
         makeFactToCountrySegment().getInterval()
     );
   }
@@ -88,7 +88,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_getDimensionCardinality_factToCountryFactColumn()
   {
     Assert.assertEquals(
-        17,
+        18,
         makeFactToCountrySegment().getDimensionCardinality("countryIsoCode")
     );
   }
@@ -97,7 +97,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_getDimensionCardinality_factToCountryJoinColumn()
   {
     Assert.assertEquals(
-        17,
+        18,
         makeFactToCountrySegment().getDimensionCardinality(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
     );
   }
@@ -133,7 +133,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_getMaxTime_factToCountry()
   {
     Assert.assertEquals(
-        DateTimes.of("2015-09-12T04:43:40.059Z"),
+        DateTimes.of("2015-09-12T05:21:00.059Z"),
         makeFactToCountrySegment().getMaxTime()
     );
   }
@@ -268,7 +268,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_getMaxIngestedEventTime_factToCountry()
   {
     Assert.assertEquals(
-        DateTimes.of("2015-09-12T04:43:40.059Z"),
+        DateTimes.of("2015-09-12T05:21:00.059Z"),
         makeFactToCountrySegment().getMaxIngestedEventTime()
     );
   }
@@ -341,7 +341,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
             new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
             new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
-            new Object[]{"Orange Soda", "MatchNothing", null, null, NULL_COUNTRY}
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NULL_COUNTRY},
+            new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         )
     );
   }
@@ -390,7 +391,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
             new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
-            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
+            new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         )
     );
   }
@@ -438,7 +440,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway"},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador"},
             new Object[]{"Old Anatolian Turkish", "US", "US", "United States"},
-            new Object[]{"Cream Soda", "SU", "SU", "States United"}
+            new Object[]{"Cream Soda", "SU", "SU", "States United"},
+            new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems"}
         )
     );
   }
@@ -480,7 +483,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Giusy Ferreri discography", "IT", "IT", "Italy", 7L},
             new Object[]{"Roma-Bangkok", "IT", "IT", "Italy", 7L},
             new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
-            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
+            new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         ) :
         ImmutableList.of(
             new Object[]{"Talk:Oswald Tilghman", null, "AU", "Australia", 0L},
@@ -494,7 +498,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Giusy Ferreri discography", "IT", "IT", "Italy", 7L},
             new Object[]{"Roma-Bangkok", "IT", "IT", "Italy", 7L},
             new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
-            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
+            new Object[][]{new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}}
         )
     );
   }
@@ -534,7 +539,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Giusy Ferreri discography", "IT", "Italy"},
             new Object[]{"Roma-Bangkok", "IT", "Italy"},
             new Object[]{"Old Anatolian Turkish", "US", "United States"},
-            new Object[]{"Cream Soda", "SU", "States United"}
+            new Object[]{"Cream Soda", "SU", "States United"},
+            new Object[]{"History of Fourems", "MMMM", "Fourems"}
         ) :
         ImmutableList.of(
             new Object[]{"Talk:Oswald Tilghman", null, "Australia"},
@@ -548,7 +554,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Giusy Ferreri discography", "IT", "Italy"},
             new Object[]{"Roma-Bangkok", "IT", "Italy"},
             new Object[]{"Old Anatolian Turkish", "US", "United States"},
-            new Object[]{"Cream Soda", "SU", "States United"}
+            new Object[]{"Cream Soda", "SU", "States United"},
+            new Object[][]{new Object[]{"History of Fourems", "MMMM", "Fourems"}}
         )
     );
   }
@@ -800,7 +807,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Алиса в Зазеркалье", "NO", "NO", "Norway", 11L},
             new Object[]{"Gabinete Ministerial de Rafael Correa", "EC", "EC", "Ecuador", 4L},
             new Object[]{"Old Anatolian Turkish", "US", "US", "United States", 13L},
-            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L}
+            new Object[]{"Cream Soda", "SU", "SU", "States United", 15L},
+            new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         )
     );
   }
@@ -856,7 +864,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Gabinete Ministerial de Rafael Correa", "Provincia del Guayas", "Ecuador"},
             new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
             new Object[]{"Cream Soda", "Ainigriv", "States United"},
-            new Object[]{"Orange Soda", null, null}
+            new Object[]{"Orange Soda", null, null},
+            new Object[]{"History of Fourems", "Fourems Province", "Fourems"}
         )
     );
   }
@@ -908,7 +917,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Diskussion:Sebastian Schulz", "United States"},
             new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
             new Object[]{"Diskussion:Sebastian Schulz", "States United"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Usca"}
+            new Object[]{"Diskussion:Sebastian Schulz", "Usca"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Fourems"}
         )
     );
   }
@@ -996,7 +1006,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Diskussion:Sebastian Schulz", "United States"},
             new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
             new Object[]{"Diskussion:Sebastian Schulz", "States United"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Usca"}
+            new Object[]{"Diskussion:Sebastian Schulz", "Usca"},
+            new Object[]{"Diskussion:Sebastian Schulz", "Fourems"}
         )
     );
   }

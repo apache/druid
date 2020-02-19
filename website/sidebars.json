@@ -3,6 +3,7 @@
     "Getting started": [
       "design/index",
       "tutorials/index",
+      "tutorials/docker",
       "operations/single-server",
       "tutorials/cluster"
     ],

@@ -98,7 +98,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
             new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
             new Object[]{"Cream Soda", "Ainigriv", "States United"},
-            new Object[][]{new Object[]{"Orange Soda", null, null}}
+            new Object[]{"Orange Soda", null, null},
+            new Object[]{"History of Fourems", "Fourems Province", "Fourems"}
         )
     );
   }
@@ -400,7 +401,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new Object[]{"Roma-Bangkok", "Provincia di Varese", "Italy"},
             new Object[]{"Old Anatolian Turkish", "Virginia", "United States"},
             new Object[]{"Cream Soda", "Ainigriv", "States United"},
-            new Object[][]{new Object[]{"Orange Soda", null, null}}
+            new Object[]{"Orange Soda", null, null},
+            new Object[]{"History of Fourems", "Fourems Province", "Fourems"}
         )
     );
   }
@@ -737,8 +739,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                         new SelectorFilter("channel", "#ko.wikipedia"),
                         new AndFilter(
                             ImmutableList.of(
-                                new InDimFilter("regionIsoCode", ImmutableSet.of("VA"), null, null).toFilter(),
-                                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter()
+                                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter(),
+                                new InDimFilter("regionIsoCode", ImmutableSet.of("VA"), null, null).toFilter()
                             )
                         )
                     )
@@ -1201,13 +1203,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
-
   @Test
   public void test_filterPushDown_factToRegionTwoColumnsToOneRHSColumnAndFilterOnRHS()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot build hash-join matcher on non-key-based condition: Equality{leftExpr=countryIsoCode, rightColumn='regionIsoCode_0'}");
-
     JoinableClause factExprToRegon = new JoinableClause(
         FACT_TO_REGION_PREFIX,
         new IndexedTableJoinable(regionsTable),
@@ -1229,11 +1227,16 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             factExprToRegon
         )
     );
-    Filter originalFilter = new SelectorFilter("r1.regionName", "Blah");
+    Filter originalFilter = new SelectorFilter("r1.regionName", "Fourems Province");
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
-        null,
-        new SelectorFilter("r1.regionName", "Blah"),
+        new AndFilter(
+            ImmutableList.of(
+                new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter()
+            )
+        ),
+        new SelectorFilter("r1.regionName", "Fourems Province"),
         ImmutableList.of()
     );
     JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
@@ -1254,10 +1257,68 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of(
             "page",
-            FACT_TO_REGION_PREFIX + "regionName",
-            REGION_TO_COUNTRY_PREFIX + "countryName"
+            FACT_TO_REGION_PREFIX + "regionName"
         ),
+        ImmutableList.of(
+            new Object[]{"History of Fourems", "Fourems Province"}
+        )
+    );
+  }
+
+  @Test
+  public void test_filterPushDown_factToRegionOneColumnToTwoRHSColumnsAndFilterOnRHS()
+  {
+    JoinableClause factExprToRegon = new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%sregionIsoCode\" == regionIsoCode && \"%scountryIsoCode\" == regionIsoCode",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factExprToRegon
+        )
+    );
+    Filter originalFilter = new SelectorFilter("r1.regionName", "Fourems Province");
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter(),
+        new SelectorFilter("r1.regionName", "Fourems Province"),
         ImmutableList.of()
+    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+        adapter,
+        originalFilter,
+        true
+    );
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            originalFilter,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName"
+        ),
+        ImmutableList.of(
+            new Object[]{"History of Fourems", "Fourems Province"}
+        )
     );
   }
 
