@@ -19,11 +19,13 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.After;
@@ -64,28 +66,27 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
       }
     }
 
-    indexingServiceClient = new LocalIndexingServiceClient();
-    localDeepStorage = temporaryFolder.newFolder("localStorage");
+    getObjectMapper().registerSubtypes(new NamedType(ReportingNoopTask.class, "reporting_noop"));
   }
 
-  @Override
   @After
   public void tearDown()
   {
-    indexingServiceClient.shutdown();
     temporaryFolder.delete();
   }
 
   @Test
   public void testLargeEstimatedNumSplits() throws Exception
   {
+    final NoopTask task = NoopTask.create();
+    final TaskActionClient actionClient = createActionClient(task);
+    final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
     final TestPhaseRunner runner = new TestPhaseRunner(
         toolbox,
         "supervisorTaskId",
         "groupId",
         AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING,
-        Collections.emptyMap(),
-        indexingServiceClient,
+        getIndexingServiceClient(),
         10,
         12
     );
@@ -95,13 +96,15 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
   @Test
   public void testSmallEstimatedNumSplits() throws Exception
   {
+    final NoopTask task = NoopTask.create();
+    final TaskActionClient actionClient = createActionClient(task);
+    final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
     final TestPhaseRunner runner = new TestPhaseRunner(
         toolbox,
         "supervisorTaskId",
         "groupId",
         AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING,
-        Collections.emptyMap(),
-        indexingServiceClient,
+        getIndexingServiceClient(),
         10,
         8
     );
@@ -118,7 +121,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
         String supervisorTaskId,
         String groupId,
         ParallelIndexTuningConfig tuningConfig,
-        Map<String, Object> context,
         IndexingServiceClient indexingServiceClient,
         int actualNumSubTasks,
         int estimatedNumSubTasks
@@ -129,7 +131,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
           supervisorTaskId,
           groupId,
           tuningConfig,
-          context,
+          Collections.emptyMap(),
           indexingServiceClient
       );
       this.actualNumSubTasks = actualNumSubTasks;
@@ -223,7 +225,16 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
 
     private ReportingNoopTask(String groupId, TestPhaseRunner phaseRunner)
     {
-      super(null, groupId, null, 10, 0, null, null, null);
+      super(
+          null,
+          groupId,
+          null,
+          10,
+          0,
+          null,
+          null,
+          Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_TASK_INJECT_CONTEXT_KEY, true)
+      );
       this.phaseRunner = phaseRunner;
     }
 

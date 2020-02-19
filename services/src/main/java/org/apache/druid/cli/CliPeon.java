@@ -78,8 +78,10 @@ import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactor
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
@@ -186,11 +188,8 @@ public class CliPeon extends GuiceRunnable
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
             bindRowIngestionMeters(binder);
-
             bindChatHandler(binder);
-
             bindTaskConfigAndClients(binder);
-
             bindPeonDataSegmentHandlers(binder);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
@@ -201,18 +200,14 @@ public class CliPeon extends GuiceRunnable
                     .setStatusFile(new File(taskStatusPath))
             );
 
-            binder.bind(TaskReportFileWriter.class).toInstance(
-                new SingleFileTaskReportFileWriter(
-                    new File(taskReportPath)
-                )
-            );
+            binder.bind(TaskReportFileWriter.class)
+                  .toInstance(new SingleFileTaskReportFileWriter(new File(taskReportPath)));
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             bindRealtimeCache(binder);
-
             bindCoordinatorHandoffNotiferAndClient(binder);
 
             binder.bind(AppenderatorsManager.class)
@@ -407,6 +402,7 @@ public class CliPeon extends GuiceRunnable
 
     configureTaskActionClient(binder);
     binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
+    binder.bind(ShuffleClient.class).to(HttpShuffleClient.class).in(LazySingleton.class);
 
     binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>(){})
           .to(ParallelIndexTaskClientFactory.class)

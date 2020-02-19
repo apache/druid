@@ -89,6 +89,7 @@
     <inspection_tool class="InnerClassReferencedViaSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InstanceofIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InstantiationOfUtilityClass" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="IntegerDivisionInFloatingPointContext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InvalidComparatorMethodReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -366,6 +367,11 @@
         <constraint name="k" within="" contains="" />
         <constraint name="l" within="" contains="" />
         <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Create a simple ExecutorService (not scheduled)" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ExecutorService" expressionTypes="java.util.concurrent.ExecutorService" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ScheduledExecutorService" expressionTypes="java.util.concurrent.ScheduledExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />

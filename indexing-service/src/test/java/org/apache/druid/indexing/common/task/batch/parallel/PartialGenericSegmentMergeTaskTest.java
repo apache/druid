@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.segment.TestHelper;
 import org.hamcrest.Matchers;
@@ -29,9 +28,8 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-public class PartialGenericSegmentMergeTaskTest
+public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
       ParallelIndexTestingFactory.HOST,
       ParallelIndexTestingFactory.PORT,
@@ -78,7 +76,7 @@ public class PartialGenericSegmentMergeTaskTest
   @Test
   public void serializesDeserializes()
   {
-    TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
+    TestHelper.testSerializesDeserializes(getObjectMapper(), target);
   }
 
   @Test

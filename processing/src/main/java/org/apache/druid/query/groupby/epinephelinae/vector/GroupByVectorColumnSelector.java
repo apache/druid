@@ -45,6 +45,8 @@ public interface GroupByVectorColumnSelector
    * @param startRow  starting row (inclusive) within the current vector
    * @param endRow    ending row (exclusive) within the current vector
    */
+  // False positive unused inspection warning for "keySize": https://youtrack.jetbrains.com/issue/IDEA-231034
+  @SuppressWarnings("unused")
   void writeKeys(WritableMemory keySpace, int keySize, int keyOffset, int startRow, int endRow);
 
   /**
