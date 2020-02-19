@@ -28,12 +28,32 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Date;
 import java.util.TimeZone;
 
 public class TimestampParserTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void TestCreateNumericTimestampParserTest()
+  {
+    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
+            TimestampParser.createNumericTimestampParser("posix").apply(1));
+
+    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
+            TimestampParser.createNumericTimestampParser("micro").apply(1000000));
+
+    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
+            TimestampParser.createNumericTimestampParser("nano").apply(1000000000));
+
+    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
+            TimestampParser.createNumericTimestampParser("ruby").apply(1));
+
+    Assert.assertEquals(DateTimes.of("1970-01-01T00:00:01.000Z"),
+            TimestampParser.createNumericTimestampParser("").apply(1000));
+  }
 
   @Test
   public void testStripQuotes()
