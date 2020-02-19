@@ -562,7 +562,7 @@ public class JoinFilterAnalyzer
         // We push down if the function only requires base table columns
         Expr.BindingDetails bindingDetails = lhsExpr.analyzeInputs();
         Set<String> requiredBindings = bindingDetails.getRequiredBindings();
-        if (!requiredBindings.stream().allMatch(requiredBinding -> baseColumnNames.contains(requiredBinding))) {
+        if (!baseColumnNames.containsAll(requiredBindings)) {
           break;
         }
         correlatedBaseExpressions.add(lhsExpr);
