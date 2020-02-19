@@ -175,13 +175,14 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
     CloudObjectInputSource that = (CloudObjectInputSource) o;
     return Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
+           Objects.equals(cloudConfigProperties, that.cloudConfigProperties) &&
            Objects.equals(objects, that.objects);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, objects);
+    return Objects.hash(uris, prefixes, objects, cloudConfigProperties);
   }
 
   private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException

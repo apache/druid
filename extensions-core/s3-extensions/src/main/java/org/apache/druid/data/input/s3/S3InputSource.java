@@ -60,7 +60,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, cloudConfigProperties);
-    if (cloudConfigProperties != null) {
+    if (amazonS3ClientBuilder != null && storageConfig != null && cloudConfigProperties != null) {
       if (cloudConfigProperties.credentialsConfigured()) {
         BasicAWSCredentials creds = new BasicAWSCredentials(cloudConfigProperties.getAccessKeyId().getPassword(),
                                                             cloudConfigProperties.getSecretAccessKey().getPassword());
