@@ -116,13 +116,17 @@ public class DruidRexExecutor implements RexExecutor
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
 
-          if (exprResult.type() == ExprType.LONG) {
-            bigDecimal = BigDecimal.valueOf(exprResult.asLong());
+          if (exprResult.isNumericNull()) {
+            literal = rexBuilder.makeNullLiteral(constExp.getType());
           } else {
-            bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
-          }
+            if (exprResult.type() == ExprType.LONG) {
+              bigDecimal = BigDecimal.valueOf(exprResult.asLong());
+            } else {
+              bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
+            }
 
-          literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
+            literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
+          }
         } else if (sqlTypeName == SqlTypeName.ARRAY) {
           assert exprResult.isArray();
           literal = rexBuilder.makeLiteral(Arrays.asList(exprResult.asArray()), constExp.getType(), true);

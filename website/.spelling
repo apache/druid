@@ -156,6 +156,7 @@ SSL
 Samza
 Splunk
 SqlFirehose
+SqlParameter
 StatsD
 TCP
 TGT

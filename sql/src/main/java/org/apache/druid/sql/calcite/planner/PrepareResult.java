@@ -17,41 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.easymock.EasyMockRunner;
-import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.apache.calcite.rel.type.RelDataType;
 
-@RunWith(EasyMockRunner.class)
-public class NamedLookupSchemaTest extends CalciteTestBase
+public class PrepareResult
 {
-  private static final String SCHEMA_NAME = "lookup";
+  private final RelDataType rowType;
+  private final RelDataType parameterRowType;
 
-  @Mock
-  private LookupSchema lookupSchema;
-
-  private NamedLookupSchema target;
-
-  @Before
-  public void setUp()
+  public PrepareResult(final RelDataType rowType, final RelDataType parameterRowType)
   {
-    target = new NamedLookupSchema(lookupSchema);
+    this.rowType = rowType;
+    this.parameterRowType = parameterRowType;
   }
 
-  @Test
-  public void testGetSchemaNameShouldReturnName()
+  public RelDataType getRowType()
   {
-    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
+    return rowType;
   }
 
-  @Test
-  public void testGetSchemaShouldReturnSchema()
+  public RelDataType getParameterRowType()
   {
-    Assert.assertEquals(lookupSchema, target.getSchema());
+    return parameterRowType;
   }
 }

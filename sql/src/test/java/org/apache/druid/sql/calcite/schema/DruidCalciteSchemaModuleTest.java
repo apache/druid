@@ -42,6 +42,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -55,7 +56,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @RunWith(EasyMockRunner.class)
-public class DruidCalciteSchemaModuleTest
+public class DruidCalciteSchemaModuleTest extends CalciteTestBase
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
 

@@ -19,12 +19,13 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class NamedSystemSchemaTest
+public class NamedSystemSchemaTest extends CalciteTestBase
 {
   private static final String SCHEMA_NAME = "sys";
 

@@ -824,9 +824,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     getTaskStorage().insert(task, TaskStatus.running(task.getId()));
 
     final ObjectMapper objectMapper = getObjectMapper();
-    objectMapper.registerSubtypes(
-        new NamedType(LocalLoadSpec.class, "local")
-    );
+    objectMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
     objectMapper.registerSubtypes(LocalDataSegmentPuller.class);
 
     final TaskToolbox box = createTaskToolbox(objectMapper, task);

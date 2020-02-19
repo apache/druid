@@ -121,6 +121,7 @@ public interface ColumnarFloats extends Closeable
         @Override
         public float getFloat()
         {
+          //noinspection AssertWithSideEffects (ignore null handling test initialization check side effect)
           assert NullHandling.replaceWithDefault() || !isNull();
           return ColumnarFloats.this.get(offset.getOffset());
         }

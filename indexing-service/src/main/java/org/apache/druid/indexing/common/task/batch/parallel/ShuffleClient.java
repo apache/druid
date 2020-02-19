@@ -19,33 +19,24 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Interval;
+import java.io.File;
+import java.io.IOException;
 
 /**
- * This class represents the intermediary data server where the partition of {@code interval} and {@code partitionId}
- * is stored.
+ * An interface for intermediate data shuffle during the parallel indexing.
+ * The only available implementation for production code is {@link HttpShuffleClient} and
+ * this interface is more for easier testing.
+ *
+ * @see org.apache.druid.indexing.worker.IntermediaryDataManager
+ * @see PartialSegmentMergeTask
  */
-public class HashPartitionLocation extends PartitionLocation<Integer>
+public interface ShuffleClient
 {
-  @JsonCreator
-  public HashPartitionLocation(
-      @JsonProperty("host") String host,
-      @JsonProperty("port") int port,
-      @JsonProperty("useHttps") boolean useHttps,
-      @JsonProperty("subTaskId") String subTaskId,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("partitionId") int partitionId
-  )
-  {
-    super(host, port, useHttps, subTaskId, interval, partitionId);
-  }
-
-  @JsonProperty
-  @Override
-  public int getPartitionId()
-  {
-    return getSecondaryPartition();
-  }
+  /**
+   * Fetch the segment file into the local storage for the given supervisorTaskId and the location.
+   * If the segment file should be fetched from a remote site, the returned file will be created under the given
+   * partitionDir. Otherwise, the returned file can be located in any path.
+   */
+  <T, P extends PartitionLocation<T>> File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
+      throws IOException;
 }
