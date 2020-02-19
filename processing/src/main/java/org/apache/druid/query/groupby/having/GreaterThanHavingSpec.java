@@ -122,7 +122,7 @@ public class GreaterThanHavingSpec implements HavingSpec
   public String toString()
   {
     return "GreaterThanHavingSpec{" +
-           "{aggregationName='" + aggregationName + '\'' +
+           "aggregationName='" + aggregationName + '\'' +
            ", value=" + value +
            '}';
   }
