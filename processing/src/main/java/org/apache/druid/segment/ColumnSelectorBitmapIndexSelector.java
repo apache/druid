@@ -99,7 +99,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
 
         }

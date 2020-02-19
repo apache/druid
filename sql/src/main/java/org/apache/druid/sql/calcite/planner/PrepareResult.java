@@ -17,34 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.common.guava;
+package org.apache.druid.sql.calcite.planner;
 
-import java.util.concurrent.Callable;
+import org.apache.calcite.rel.type.RelDataType;
 
-public abstract class ThreadRenamingCallable<T> implements Callable<T>
+public class PrepareResult
 {
-  private final String name;
+  private final RelDataType rowType;
+  private final RelDataType parameterRowType;
 
-  public ThreadRenamingCallable(
-      String name
-  )
+  public PrepareResult(final RelDataType rowType, final RelDataType parameterRowType)
   {
-    this.name = name;
+    this.rowType = rowType;
+    this.parameterRowType = parameterRowType;
   }
 
-  @Override
-  public final T call()
+  public RelDataType getRowType()
   {
-    final Thread currThread = Thread.currentThread();
-    String currName = currThread.getName();
-    try {
-      currThread.setName(name);
-      return doCall();
-    }
-    finally {
-      currThread.setName(currName);
-    }
+    return rowType;
   }
 
-  public abstract T doCall();
+  public RelDataType getParameterRowType()
+  {
+    return parameterRowType;
+  }
 }
