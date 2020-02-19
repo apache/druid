@@ -112,7 +112,7 @@ public class ExprListenerImpl extends ExprBaseListener
   {
     Double[] values = new Double[ctx.doubleElement().size()];
     for (int i = 0; i < values.length; i++) {
-      if (ctx.doubleElement(i).getText().equalsIgnoreCase("null")) {
+      if (ctx.doubleElement(i).getText().equalsIgnoreCase(Expr.NULL_LITERAL)) {
         values[i] = null;
       } else {
         values[i] = Double.parseDouble(ctx.doubleElement(i).getText());
@@ -195,7 +195,7 @@ public class ExprListenerImpl extends ExprBaseListener
   {
     Long[] values = new Long[ctx.longElement().size()];
     for (int i = 0; i < values.length; i++) {
-      if (ctx.longElement(i).getText().equalsIgnoreCase("null")) {
+      if (ctx.longElement(i).getText().equalsIgnoreCase(Expr.NULL_LITERAL)) {
         values[i] = null;
       } else {
         values[i] = Long.parseLong(ctx.longElement(i).getText());
@@ -485,7 +485,7 @@ public class ExprListenerImpl extends ExprBaseListener
   @Nullable
   private static String escapeStringLiteral(String text)
   {
-    if (text.equalsIgnoreCase("null")) {
+    if (text.equalsIgnoreCase(Expr.NULL_LITERAL)) {
       return null;
     }
     String unquoted = text.substring(1, text.length() - 1);

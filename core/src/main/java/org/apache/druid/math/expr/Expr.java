@@ -603,6 +603,7 @@ class StringExpr extends ConstantExpr
   @Override
   public String stringify()
   {
+    // escape as javascript string since string literals are wrapped in single quotes
     return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(value));
   }
 }
@@ -640,12 +641,14 @@ class StringArrayExpr extends ConstantExpr
     if (value.length == 0) {
       return "<STRING>[]";
     }
+
     return StringUtils.format(
         "<STRING>[%s]",
         ARG_JOINER.join(
             Arrays.stream(value)
                   .map(s -> s == null
                             ? NULL_LITERAL
+                            // escape as javascript string since string literals are wrapped in single quotes
                             : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(s))
                   )
                   .iterator()
@@ -819,6 +822,7 @@ class IdentifierExpr implements Expr
   @Override
   public String stringify()
   {
+    // escape as java strings since identifiers are wrapped in double quotes
     return StringUtils.format("\"%s\"", StringEscapeUtils.escapeJava(binding));
   }
 
