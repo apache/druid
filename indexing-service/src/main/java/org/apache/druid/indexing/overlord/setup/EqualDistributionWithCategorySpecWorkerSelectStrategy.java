@@ -29,7 +29,7 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements CategoriedWorkerSelectStrategy
+public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements CategorizedWorkerSelectStrategy
 {
   private final WorkerCategorySpec workerCategorySpec;
 

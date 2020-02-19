@@ -22,8 +22,8 @@ package org.apache.druid.indexing.overlord.autoscaling;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerSelectStrategy;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
@@ -81,7 +81,7 @@ public class ProvisioningUtil
   }
 
   @Nullable
-  public static CategoriedWorkerBehaviorConfig getCategoriedWorkerBehaviorConfig(
+  public static CategorizedWorkerBehaviorConfig getCategorizedWorkerBehaviorConfig(
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       String action
   )
@@ -92,19 +92,19 @@ public class ProvisioningUtil
       return null;
     }
 
-    CategoriedWorkerBehaviorConfig workerConfig;
+    CategorizedWorkerBehaviorConfig workerConfig;
     if (workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig) {
       AutoScaler autoscaler = ((DefaultWorkerBehaviorConfig) workerBehaviorConfig).getAutoScaler();
       WorkerSelectStrategy workerSelectStrategy = workerBehaviorConfig.getSelectStrategy();
       List<AutoScaler> autoscalers = autoscaler == null
                                      ? Collections.emptyList()
                                      : Collections.singletonList(autoscaler);
-      workerConfig = new CategoriedWorkerBehaviorConfig(workerSelectStrategy, autoscalers);
-    } else if (workerBehaviorConfig instanceof CategoriedWorkerBehaviorConfig) {
-      workerConfig = (CategoriedWorkerBehaviorConfig) workerBehaviorConfig;
+      workerConfig = new CategorizedWorkerBehaviorConfig(workerSelectStrategy, autoscalers);
+    } else if (workerBehaviorConfig instanceof CategorizedWorkerBehaviorConfig) {
+      workerConfig = (CategorizedWorkerBehaviorConfig) workerBehaviorConfig;
     } else {
       log.error(
-          "Only DefaultWorkerBehaviorConfig or CategoriedWorkerBehaviorConfig are supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
+          "Only DefaultWorkerBehaviorConfig or CategorizedWorkerBehaviorConfig are supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
           workerBehaviorConfig,
           action
       );
@@ -119,12 +119,12 @@ public class ProvisioningUtil
   }
 
   @Nullable
-  public static WorkerCategorySpec getWorkerCategorySpec(CategoriedWorkerBehaviorConfig workerConfig)
+  public static WorkerCategorySpec getWorkerCategorySpec(CategorizedWorkerBehaviorConfig workerConfig)
   {
     if (workerConfig != null && workerConfig.getSelectStrategy() != null) {
       WorkerSelectStrategy selectStrategy = workerConfig.getSelectStrategy();
-      if (selectStrategy instanceof CategoriedWorkerSelectStrategy) {
-        return ((CategoriedWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
+      if (selectStrategy instanceof CategorizedWorkerSelectStrategy) {
+        return ((CategorizedWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
       }
     }
     return null;
@@ -149,7 +149,7 @@ public class ProvisioningUtil
   public static AutoScaler getAutoscalerByCategory(String category, Map<String, AutoScaler> autoscalersByCategory)
   {
     AutoScaler autoScaler = autoscalersByCategory.get(category);
-    boolean isStrongAssignment = !autoscalersByCategory.containsKey(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
+    boolean isStrongAssignment = !autoscalersByCategory.containsKey(CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
     log.debug("Found autoscaler %s for category %s in available categories %s. Is strong assignment=%b. ", autoScaler, category, autoscalersByCategory, isStrongAssignment);
     if (autoScaler == null && isStrongAssignment) {
       log.warn(
@@ -159,7 +159,7 @@ public class ProvisioningUtil
       return null;
     }
     return autoScaler == null
-           ? autoscalersByCategory.get(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
+           ? autoscalersByCategory.get(CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
            : autoScaler;
   }
 
@@ -171,7 +171,7 @@ public class ProvisioningUtil
   public static String getAutoscalerCategory(AutoScaler autoScaler)
   {
     return autoScaler.getCategory() == null
-           ? CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+           ? CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
            : autoScaler.getCategory();
   }
 

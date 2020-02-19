@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -39,7 +39,7 @@ public interface AutoScaler<T>
 
   default String getCategory()
   {
-    return CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+    return CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
   }
 
   /**

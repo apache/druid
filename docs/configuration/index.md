@@ -992,12 +992,12 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 |`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
-##### Categoried Worker Config
-Gives ability for overlord to work with several autoscalers to run tasks of different categories on clusters with different configurations.
+##### Categorized Worker Config
+Gives ability for overlord to work with several autoscaler setups to run tasks of different categories on clusters with different configurations.
  
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|Type of the config|required; must be `categoried`|
+|`type`|Type of the config|required; must be `categorized`|
 |`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
 |`autoScalers`|List of [Autoscaler](#autoscaler) to serve tasks of appropriate category. In the list can be one autoscaler of default category (category declaration is omit). When [Worker Category Spec](#workercategoryspec) is not in strong assignment mode the default autoscaler will be used to serve tasks with categories which not have corresponding autoscaler|required; At least one autoscaler should be declared|
 
@@ -1124,10 +1124,10 @@ field. If not provided, the default is to not use it at all.
 |`defaultCategory`|Specify default category for a task type.|null|
 |`categoryAffinity`|A JSON map object mapping a datasource String name to a category String name of the MiddleManager. If category isn't specified for a datasource, then using the `defaultCategory`. If no specified category and the `defaultCategory` is also null, then tasks can run on any available MiddleManagers.|null|
 
-###### Autoscalers
+###### Autoscaler setups
 List of [Autoscaler](#autoscaler) instances for each category of task specified in a [CategoryConfig](#categoryconfig)
 
-Example: declare separate autoscalers for different categories of tasks
+Example: declare separate autoscaler setups for different categories of tasks
 
 ```json
 {
@@ -1156,26 +1156,12 @@ Example: declare separate autoscalers for different categories of tasks
       }
     },
     {
-      "type": "ec2",
+      "type": "http",
       "category": "category1",
-      "minNumWorkers": 2,
-      "maxNumWorkers": 7,
+      "minNumWorkers": 0,
+      "maxNumWorkers": 30,
       "envConfig": {
-        "availabilityZone": "us-east-2a",
-        "nodeData": {
-          "amiId": "${AMI}",
-          "instanceType": "r3.4xlarge",
-          "minInstances": 1,
-          "maxInstances": 1,
-          "securityGroupIds": ["${IDs}"],
-          "keyName": "${KEY_NAME}"
-        },
-        "userData": {
-          "impl": "string",
-          "data": "${SCRIPT_COMMAND}",
-          "versionReplacementString": ":VERSION:",
-          "version": null
-        }
+        "endpoint": "http://druid-indexer-autoscaler"
       }
     }
   ]
@@ -1190,7 +1176,7 @@ Amazon's EC2 is currently the only supported autoscaler.
 |--------|-----------|-------|
 |`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
 |`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
-|`category`|Category of tasks which should be served by this autoscaler|_default_worker_category; optional|
+|`category`|Category of tasks which should be served by this autoscaler|`__default_worker_category`; optional|
 |`availabilityZone`|What availability zone to run in.|none|
 |`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
 |`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|

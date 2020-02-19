@@ -30,7 +30,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.ZkWorker;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class SimpleProvisioningStrategyTest
 {
-  public static final String DEFAULT_CATEGORY = CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+  public static final String DEFAULT_CATEGORY = CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
   private AutoScaler autoScaler;
   private Task testTask;
   private SimpleWorkerProvisioningStrategy strategy;

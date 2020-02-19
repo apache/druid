@@ -21,52 +21,52 @@ package org.apache.druid.indexing.overlord.autoscaling;
 
 import org.joda.time.Period;
 
-public class CategoriedProvisioningConfig extends PendingTaskBasedWorkerProvisioningConfig
+public class CategorizedProvisioningConfig extends PendingTaskBasedWorkerProvisioningConfig
 {
   @Override
-  public CategoriedProvisioningConfig setMaxScalingStep(int maxScalingStep)
+  public CategorizedProvisioningConfig setMaxScalingStep(int maxScalingStep)
   {
     super.setMaxScalingStep(maxScalingStep);
     return this;
   }
 
   @Override
-  public CategoriedProvisioningConfig setWorkerIdleTimeout(Period workerIdleTimeout)
+  public CategorizedProvisioningConfig setWorkerIdleTimeout(Period workerIdleTimeout)
   {
     super.setWorkerIdleTimeout(workerIdleTimeout);
     return this;
   }
 
   @Override
-  public CategoriedProvisioningConfig setMaxScalingDuration(Period maxScalingDuration)
+  public CategorizedProvisioningConfig setMaxScalingDuration(Period maxScalingDuration)
   {
     super.setMaxScalingDuration(maxScalingDuration);
     return this;
   }
 
   @Override
-  public CategoriedProvisioningConfig setNumEventsToTrack(int numEventsToTrack)
+  public CategorizedProvisioningConfig setNumEventsToTrack(int numEventsToTrack)
   {
     super.setNumEventsToTrack(numEventsToTrack);
     return this;
   }
 
   @Override
-  public CategoriedProvisioningConfig setWorkerVersion(String workerVersion)
+  public CategorizedProvisioningConfig setWorkerVersion(String workerVersion)
   {
     super.setWorkerVersion(workerVersion);
     return this;
   }
 
   @Override
-  public CategoriedProvisioningConfig setPendingTaskTimeout(Period pendingTaskTimeout)
+  public CategorizedProvisioningConfig setPendingTaskTimeout(Period pendingTaskTimeout)
   {
     super.setPendingTaskTimeout(pendingTaskTimeout);
     return this;
   }
 
   @Override
-  public CategoriedProvisioningConfig setWorkerPort(int workerPort)
+  public CategorizedProvisioningConfig setWorkerPort(int workerPort)
   {
     super.setWorkerPort(workerPort);
     return this;

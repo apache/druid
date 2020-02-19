@@ -33,8 +33,8 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerSelectStrategy;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
@@ -63,17 +63,17 @@ import java.util.stream.Collectors;
  * Autoscaler provisioning strategy based on {@link AutoScaler#getCategory()} field. It selects autoscaler based on
  * a worker's category.
  */
-@JsonTypeName("categoriedTaskBased")
-public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisioningStrategy
+@JsonTypeName("categorizedTaskBased")
+public class CategorizedWorkerProvisioningStrategy extends AbstractWorkerProvisioningStrategy
 {
   private static final String SCHEME = "http";
-  private static final EmittingLogger log = new EmittingLogger(CategoriedWorkerProvisioningStrategy.class);
+  private static final EmittingLogger log = new EmittingLogger(CategorizedWorkerProvisioningStrategy.class);
 
-  private final CategoriedProvisioningConfig config;
+  private final CategorizedProvisioningConfig config;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
   @Nullable
-  private static CategoriedWorkerBehaviorConfig getCategoriedWorkerBehaviorConfig(
+  private static CategorizedWorkerBehaviorConfig getCategorizedWorkerBehaviorConfig(
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       String action,
       EmittingLogger log
@@ -84,16 +84,16 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
       log.error("No workerConfig available, cannot %s workers.", action);
       return null;
     }
-    if (!(workerBehaviorConfig instanceof CategoriedWorkerBehaviorConfig)) {
+    if (!(workerBehaviorConfig instanceof CategorizedWorkerBehaviorConfig)) {
       log.error(
-          "Only CategoriedWorkerBehaviorConfig is supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
+          "Only CategorizedWorkerBehaviorConfig is supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
           workerBehaviorConfig,
           action
       );
       return null;
     }
-    final CategoriedWorkerBehaviorConfig workerConfig = (CategoriedWorkerBehaviorConfig) workerBehaviorConfig;
-    if (!(workerConfig.getSelectStrategy() instanceof CategoriedWorkerSelectStrategy)) {
+    final CategorizedWorkerBehaviorConfig workerConfig = (CategorizedWorkerBehaviorConfig) workerBehaviorConfig;
+    if (!(workerConfig.getSelectStrategy() instanceof CategorizedWorkerSelectStrategy)) {
       log.error("Select strategy %s is not supported", workerConfig.getSelectStrategy());
       return null;
     }
@@ -107,8 +107,8 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
   }
 
   @Inject
-  public CategoriedWorkerProvisioningStrategy(
-      CategoriedProvisioningConfig config,
+  public CategorizedWorkerProvisioningStrategy(
+      CategorizedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
   )
@@ -117,12 +117,12 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
         config,
         workerConfigRef,
         provisioningSchedulerConfig,
-        () -> ScheduledExecutors.fixed(1, "CategoriedProvisioning-manager--%d")
+        () -> ScheduledExecutors.fixed(1, "CategorizedProvisioning-manager--%d")
     );
   }
 
-  public CategoriedWorkerProvisioningStrategy(
-      CategoriedProvisioningConfig config,
+  public CategorizedWorkerProvisioningStrategy(
+      CategorizedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
@@ -136,10 +136,10 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
   @Override
   protected Provisioner makeProvisioner(WorkerTaskRunner runner)
   {
-    return new CategoriedProvisioner(runner);
+    return new CategorizedProvisioner(runner);
   }
 
-  private class CategoriedProvisioner implements Provisioner
+  private class CategorizedProvisioner implements Provisioner
   {
     private final WorkerTaskRunner runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
@@ -150,7 +150,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
     private DateTime lastProvisionTime = DateTimes.nowUtc();
     private DateTime lastTerminateTime = DateTimes.nowUtc();
 
-    private CategoriedProvisioner(WorkerTaskRunner runner)
+    private CategorizedProvisioner(WorkerTaskRunner runner)
     {
       this.runner = runner;
     }
@@ -163,7 +163,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final CategoriedWorkerBehaviorConfig workerConfig = getCategoriedWorkerBehaviorConfig(
+      final CategorizedWorkerBehaviorConfig workerConfig = getCategorizedWorkerBehaviorConfig(
           workerConfigRef,
           "provision",
           log
@@ -180,7 +180,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
           task -> WorkerSelectUtils.getTaskCategory(
               task,
               workerCategorySpec,
-              CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+              CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
           )
       ));
 
@@ -235,7 +235,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
         String category,
         Collection<ImmutableWorkerInfo> workers,
         Collection<Task> pendingTasks,
-        CategoriedWorkerBehaviorConfig workerConfig,
+        CategorizedWorkerBehaviorConfig workerConfig,
         Set<String> currentlyProvisioning,
         AutoScaler autoScaler
     )
@@ -316,7 +316,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
 
     private int getScaleUpNodeCount(
         final WorkerTaskRunnerConfig remoteTaskRunnerConfig,
-        final CategoriedWorkerBehaviorConfig workerConfig,
+        final CategorizedWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers,
         AutoScaler autoScaler
@@ -359,7 +359,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
 
     private int getWorkersNeededToAssignTasks(
         final WorkerTaskRunnerConfig workerTaskRunnerConfig,
-        final CategoriedWorkerBehaviorConfig workerConfig,
+        final CategorizedWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers
     )
@@ -414,7 +414,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final CategoriedWorkerBehaviorConfig workerConfig = getCategoriedWorkerBehaviorConfig(
+      final CategorizedWorkerBehaviorConfig workerConfig = getCategorizedWorkerBehaviorConfig(
           workerConfigRef,
           "terminate",
           log
@@ -627,7 +627,7 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
       );
     }
 
-    private boolean initAutoscaler(AutoScaler autoScaler, String category, CategoriedWorkerBehaviorConfig workerConfig)
+    private boolean initAutoscaler(AutoScaler autoScaler, String category, CategorizedWorkerBehaviorConfig workerConfig)
     {
       currentlyProvisioning.putIfAbsent(
           category,
@@ -645,12 +645,12 @@ public class CategoriedWorkerProvisioningStrategy extends AbstractWorkerProvisio
     }
 
     @Nullable
-    private WorkerCategorySpec getWorkerCategorySpec(CategoriedWorkerBehaviorConfig workerConfig)
+    private WorkerCategorySpec getWorkerCategorySpec(CategorizedWorkerBehaviorConfig workerConfig)
     {
       if (workerConfig != null && workerConfig.getSelectStrategy() != null) {
         WorkerSelectStrategy selectStrategy = workerConfig.getSelectStrategy();
-        if (selectStrategy instanceof CategoriedWorkerSelectStrategy) {
-          return ((CategoriedWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
+        if (selectStrategy instanceof CategorizedWorkerSelectStrategy) {
+          return ((CategorizedWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
         }
       }
       return null;

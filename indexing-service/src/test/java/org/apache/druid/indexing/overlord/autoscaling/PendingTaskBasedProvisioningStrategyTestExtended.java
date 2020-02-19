@@ -26,7 +26,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -156,7 +156,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
     PendingTaskBasedWorkerProvisioningStrategy strategy = createStrategy(workerConfig);
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         3,
         5,
         Collections.emptyList()
@@ -228,7 +228,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
   }
 
   @Test
-  public void testCategoriedAutoscalerSpawnedMinWorkers()
+  public void testCategorizedAutoscalerSpawnedMinWorkers()
   {
     WorkerCategorySpec workerCategorySpec = StrategyTestUtils.createWorkerCategorySpec(
         false,
@@ -276,7 +276,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
   }
 
   @Test
-  public void testCategoriedAutoscalerSpawnedAdditionalWorker()
+  public void testCategorizedAutoscalerSpawnedAdditionalWorker()
   {
     WorkerCategorySpec workerCategorySpec = StrategyTestUtils.createWorkerCategorySpec(
         false,
@@ -326,7 +326,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
   }
 
   @Test
-  public void testCategoriedAutoscalerSpawnedUpToMaxWorkers()
+  public void testCategorizedAutoscalerSpawnedUpToMaxWorkers()
   {
     WorkerCategorySpec workerCategorySpec = StrategyTestUtils.createWorkerCategorySpec(
         false,
@@ -379,7 +379,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
   }
 
   @Test
-  public void testAllCategoriedAutoscalersStrongly()
+  public void testAllCategorizedAutoscalersStrongly()
   {
     WorkerCategorySpec workerCategorySpec = StrategyTestUtils.createWorkerCategorySpec(
         false,
@@ -459,7 +459,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
   }
 
   @Test
-  public void testAllCategoriedAutoscalersNotStrongMode()
+  public void testAllCategorizedAutoscalersNotStrongMode()
   {
     WorkerCategorySpec workerCategorySpec = StrategyTestUtils.createWorkerCategorySpec(
         false,
@@ -492,7 +492,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
     PendingTaskBasedWorkerProvisioningStrategy strategy = createStrategy(workerConfig);
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         3,
         5,
         Collections.emptyList()
@@ -550,7 +550,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
   }
 
   @Test
-  public void testAllCategoriedAutoscalersAlert() throws InterruptedException
+  public void testAllCategorizedAutoscalersAlert() throws InterruptedException
   {
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
@@ -719,7 +719,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
 
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         1,
         3,
         Collections.emptyList()
@@ -825,7 +825,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
 
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         1,
         Collections.emptyList()
     );

@@ -30,7 +30,7 @@ import java.util.Objects;
 /**
  * This configuration allows overlord to work with several autoscalers to run tasks of different categories.
  */
-public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
+public class CategorizedWorkerBehaviorConfig implements WorkerBehaviorConfig
 {
   // Use the same category constant as for worker category to match default workers and autoscalers
   public static final String DEFAULT_AUTOSCALER_CATEGORY = WorkerConfig.DEFAULT_CATEGORY;
@@ -39,7 +39,7 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
   private final List<AutoScaler> autoScalers;
 
   @JsonCreator
-  public CategoriedWorkerBehaviorConfig(
+  public CategorizedWorkerBehaviorConfig(
       @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
       @JsonProperty("autoScalers") List<AutoScaler> autoScalers
   )
@@ -70,7 +70,7 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CategoriedWorkerBehaviorConfig that = (CategoriedWorkerBehaviorConfig) o;
+    CategorizedWorkerBehaviorConfig that = (CategorizedWorkerBehaviorConfig) o;
     return Objects.equals(selectStrategy, that.selectStrategy) &&
            Objects.equals(autoScalers, that.autoScalers);
   }

@@ -28,7 +28,7 @@ import org.apache.druid.indexing.overlord.autoscaling.NoopAutoScaler;
  */
 public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
 {
-  private static final AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler(CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
+  private static final AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler(CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
 
   public static DefaultWorkerBehaviorConfig defaultConfig()
   {

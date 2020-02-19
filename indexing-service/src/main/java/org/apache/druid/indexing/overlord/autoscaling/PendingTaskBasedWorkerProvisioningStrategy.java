@@ -32,7 +32,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
@@ -125,7 +125,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final CategoriedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategoriedWorkerBehaviorConfig(
+      final CategorizedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategorizedWorkerBehaviorConfig(
           workerConfigRef,
           "provision"
       );
@@ -141,7 +141,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           task -> WorkerSelectUtils.getTaskCategory(
               task,
               workerCategorySpec,
-              CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+              CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
           )
       ));
 
@@ -200,7 +200,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         String category,
         Collection<ImmutableWorkerInfo> workers,
         Collection<Task> pendingTasks,
-        CategoriedWorkerBehaviorConfig workerConfig,
+        CategorizedWorkerBehaviorConfig workerConfig,
         Set<String> currentlyProvisioning,
         AutoScaler autoScaler
     )
@@ -277,7 +277,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
     private int getScaleUpNodeCount(
         final WorkerTaskRunnerConfig remoteTaskRunnerConfig,
-        final CategoriedWorkerBehaviorConfig workerConfig,
+        final CategorizedWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers,
         AutoScaler autoScaler
@@ -322,7 +322,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
     private int getWorkersNeededToAssignTasks(
         final WorkerTaskRunnerConfig workerTaskRunnerConfig,
-        final CategoriedWorkerBehaviorConfig workerConfig,
+        final CategorizedWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers
     )
@@ -377,7 +377,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final CategoriedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategoriedWorkerBehaviorConfig(
+      final CategorizedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategorizedWorkerBehaviorConfig(
           workerConfigRef,
           "terminate"
       );
@@ -521,7 +521,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       return didTerminate;
     }
 
-    private boolean initAutoscalers(CategoriedWorkerBehaviorConfig workerConfig)
+    private boolean initAutoscalers(CategorizedWorkerBehaviorConfig workerConfig)
     {
       boolean didProvision = false;
       for (AutoScaler autoScaler : workerConfig.getAutoScalers()) {
@@ -534,7 +534,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     private boolean initAutoscaler(
         AutoScaler autoScaler,
         String category,
-        CategoriedWorkerBehaviorConfig workerConfig,
+        CategorizedWorkerBehaviorConfig workerConfig,
         Map<String, Set<String>> currentlyProvisioningMap
     )
     {
