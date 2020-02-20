@@ -23,19 +23,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.utils.Streams;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class LocalInputSourceTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -51,15 +59,8 @@ public class LocalInputSourceTest
   {
     final long fileSize = 15;
     final long maxSplitSize = 50;
-    final List<File> files = prepareFiles(10, fileSize);
-    final LocalInputSource inputSource = new LocalInputSource(new File("baseDir"), "filter")
-    {
-      @Override
-      public Iterator<File> getFileIterator()
-      {
-        return files.iterator();
-      }
-    };
+    final Set<File> files = prepareFiles(10, fileSize);
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     final List<InputSplit<List<File>>> splits = inputSource
         .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))
         .collect(Collectors.toList());
@@ -71,28 +72,67 @@ public class LocalInputSourceTest
   }
 
   @Test
-  public void testEstimateSplitsRespectingSplitHintSpec()
+  public void testEstimateNumSplitsRespectingSplitHintSpec()
   {
     final long fileSize = 13;
     final long maxSplitSize = 40;
-    final List<File> files = prepareFiles(10, fileSize);
-    final LocalInputSource inputSource = new LocalInputSource(new File("baseDir"), "filter")
-    {
-      @Override
-      public Iterator<File> getFileIterator()
-      {
-        return files.iterator();
-      }
-    };
+    final Set<File> files = prepareFiles(10, fileSize);
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     Assert.assertEquals(
         4,
         inputSource.estimateNumSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))
     );
   }
 
-  private static List<File> prepareFiles(int numFiles, long fileSize)
+  @Test
+  public void testGetFileIteratorWithBothBaseDirAndDuplicateFilesIteratingFilesOnlyOnce() throws IOException
   {
-    final List<File> files = new ArrayList<>();
+    File baseDir = temporaryFolder.newFolder();
+    List<File> filesInBaseDir = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      filesInBaseDir.add(File.createTempFile("local-input-source", ".data", baseDir));
+    }
+    Set<File> files = new HashSet<>(filesInBaseDir.subList(0, 5));
+    for (int i = 0; i < 3; i++) {
+      files.add(File.createTempFile("local-input-source", ".data", baseDir));
+    }
+    Set<File> expectedFiles = new HashSet<>(filesInBaseDir);
+    expectedFiles.addAll(files);
+    File.createTempFile("local-input-source", ".filtered", baseDir);
+    Iterator<File> fileIterator = new LocalInputSource(baseDir, "*.data", files).getFileIterator();
+    Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
+    Assert.assertEquals(expectedFiles, actualFiles);
+  }
+
+  @Test
+  public void testGetFileIteratorWithOnlyBaseDirIteratingAllFiles() throws IOException
+  {
+    File baseDir = temporaryFolder.newFolder();
+    Set<File> filesInBaseDir = new HashSet<>();
+    for (int i = 0; i < 10; i++) {
+      filesInBaseDir.add(File.createTempFile("local-input-source", ".data", baseDir));
+    }
+    Iterator<File> fileIterator = new LocalInputSource(baseDir, "*", null).getFileIterator();
+    Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
+    Assert.assertEquals(filesInBaseDir, actualFiles);
+  }
+
+  @Test
+  public void testGetFileIteratorWithOnlyFilesIteratingAllFiles() throws IOException
+  {
+    File baseDir = temporaryFolder.newFolder();
+    Set<File> filesInBaseDir = new HashSet<>();
+    for (int i = 0; i < 10; i++) {
+      filesInBaseDir.add(File.createTempFile("local-input-source", ".data", baseDir));
+    }
+    Iterator<File> fileIterator = new LocalInputSource(null, null, filesInBaseDir).getFileIterator();
+    Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
+    Assert.assertEquals(filesInBaseDir, actualFiles);
+  }
+
+  private static Set<File> prepareFiles(int numFiles, long fileSize)
+  {
+    final Set<File> files = new HashSet<>();
     for (int i = 0; i < numFiles; i++) {
       final File file = EasyMock.niceMock(File.class);
       EasyMock.expect(file.length()).andReturn(fileSize).anyTimes();

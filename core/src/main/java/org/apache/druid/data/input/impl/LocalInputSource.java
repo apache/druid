@@ -25,6 +25,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOCase;
+import org.apache.commons.io.filefilter.AndFileFilter;
+import org.apache.commons.io.filefilter.IOFileFilter;
+import org.apache.commons.io.filefilter.NameFileFilter;
+import org.apache.commons.io.filefilter.NotFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -34,28 +39,46 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
   private final File baseDir;
   private final String filter;
+  private final Set<File> files;
 
   @JsonCreator
   public LocalInputSource(
       @JsonProperty("baseDir") File baseDir,
-      @JsonProperty("filter") String filter
+      @JsonProperty("filter") String filter,
+      @JsonProperty("files") Set<File> files
   )
   {
-    this.baseDir = Preconditions.checkNotNull(baseDir, "baseDir");
-    this.filter = Preconditions.checkNotNull(filter, "filter");
+    this.baseDir = baseDir;
+    this.filter = baseDir != null ? Preconditions.checkNotNull(filter, "filter") : filter;
+    this.files = files;
+
+    if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
+      throw new IAE("Either one of baseDir or files should be specified");
+    }
+  }
+
+  public LocalInputSource(File baseDir, String filter)
+  {
+    this(baseDir, filter, null);
   }
 
   @JsonProperty
@@ -68,6 +91,12 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   public String getFilter()
   {
     return filter;
+  }
+
+  @JsonProperty
+  public Set<File> getFiles()
+  {
+    return files;
   }
 
   @Override
@@ -92,17 +121,49 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @VisibleForTesting
   Iterator<File> getFileIterator()
   {
-    return FileUtils.iterateFiles(
-        baseDir.getAbsoluteFile(),
-        new WildcardFileFilter(filter),
-        TrueFileFilter.INSTANCE
+    return Iterators.concat(
+        getDirectoryListingIterator(),
+        getFilesListIterator()
     );
+  }
+
+  private Iterator<File> getDirectoryListingIterator()
+  {
+    if (baseDir == null) {
+      return Collections.emptyIterator();
+    } else {
+      final IOFileFilter fileFilter;
+      if (files == null) {
+        fileFilter = new WildcardFileFilter(filter);
+      } else {
+        fileFilter = new AndFileFilter(
+            new WildcardFileFilter(filter),
+            new NotFileFilter(
+                new NameFileFilter(files.stream().map(File::getName).collect(Collectors.toList()), IOCase.SENSITIVE)
+            )
+        );
+      }
+      return FileUtils.iterateFiles(
+          baseDir.getAbsoluteFile(),
+          fileFilter,
+          TrueFileFilter.INSTANCE
+      );
+    }
+  }
+
+  private Iterator<File> getFilesListIterator()
+  {
+    if (files == null) {
+      return Collections.emptyIterator();
+    } else {
+      return files.iterator();
+    }
   }
 
   @Override
   public SplittableInputSource<List<File>> withSplit(InputSplit<List<File>> split)
   {
-    return new SpecificFilesLocalInputSource(split.get());
+    return new LocalInputSource(null, null, new HashSet<>(split.get()));
   }
 
   @Override
@@ -138,12 +199,13 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     }
     LocalInputSource that = (LocalInputSource) o;
     return Objects.equals(baseDir, that.baseDir) &&
-           Objects.equals(filter, that.filter);
+           Objects.equals(filter, that.filter) &&
+           Objects.equals(files, that.files);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDir, filter);
+    return Objects.hash(baseDir, filter, files);
   }
 }
