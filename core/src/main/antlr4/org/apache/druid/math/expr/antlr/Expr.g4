@@ -29,20 +29,22 @@ expr : 'null'                                                       # null
      | DOUBLE                                                       # doubleExpr
      | LONG                                                         # longExpr
      | STRING                                                       # string
-     | '<STRING>'? '[' stringElement (',' stringElement)* ']'       # stringArray
-     | '<DOUBLE>'? '[' doubleElement  (',' doubleElement)* ']'      # doubleArray
-     | '<LONG>'? '[' longElement (',' longElement)* ']'             # longArray
-     | '[]'                                                         # emptyArray
-     | '<STRING>[]'                                                 # emptyStringArray
-     | '<DOUBLE>[]'                                                 # emptyDoubleArray
-     | '<LONG>[]'                                                   # emptyLongArray
+     | '<STRING>'? '[' stringArrayBody? ']'                         # stringArray
+     | '<DOUBLE>'? '[' doubleArrayBody? ']'                         # doubleArray
+     | '<LONG>'? '[' longArrayBody? ']'                             # longArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
        ;
 
-fnArgs : expr (',' expr)*                             # functionArgs
+fnArgs : expr (',' expr)*                                           # functionArgs
        ;
+
+stringArrayBody : stringElement (',' stringElement)*;
+
+doubleArrayBody : doubleElement (',' doubleElement)*;
+
+longArrayBody : longElement (',' longElement)*;
 
 longElement : (LONG | 'null');
 

@@ -206,7 +206,7 @@ public class ParserTest extends InitializedNullHandlingTest
     validateConstantExpression("<LONG>[null, null, null]", new Long[]{null, null, null});
     validateConstantExpression("<STRING>[null, null, null]", new String[]{null, null, null});
 
-    validateConstantExpression("<DOUBLE>[1, null, 2]", new Double[]{1.0, null, 2.0});
+    validateConstantExpression("<DOUBLE>[1.0, null, 2000.0]", new Double[]{1.0, null, 2000.0});
     validateConstantExpression("<LONG>[3, null, 4]", new Long[]{3L, null, 4L});
     validateConstantExpression("<STRING>['foo', 'bar', 'baz']", new String[]{"foo", "bar", "baz"});
   }

@@ -110,12 +110,14 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitDoubleArray(ExprParser.DoubleArrayContext ctx)
   {
-    Double[] values = new Double[ctx.doubleElement().size()];
+    Double[] values = ctx.doubleArrayBody() == null
+                      ? new Double[0]
+                      : new Double[ctx.doubleArrayBody().doubleElement().size()];
     for (int i = 0; i < values.length; i++) {
-      if (ctx.doubleElement(i).getText().equalsIgnoreCase(Expr.NULL_LITERAL)) {
+      if (ctx.doubleArrayBody().doubleElement(i).getText().equalsIgnoreCase(Expr.NULL_LITERAL)) {
         values[i] = null;
       } else {
-        values[i] = Double.parseDouble(ctx.doubleElement(i).getText());
+        values[i] = Double.parseDouble(ctx.doubleArrayBody().doubleElement(i).getText());
       }
     }
     nodes.put(ctx, new DoubleArrayExpr(values));
@@ -193,12 +195,14 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitLongArray(ExprParser.LongArrayContext ctx)
   {
-    Long[] values = new Long[ctx.longElement().size()];
+    Long[] values = ctx.longArrayBody() == null
+                    ? new Long[0]
+                    : new Long[ctx.longArrayBody().longElement().size()];
     for (int i = 0; i < values.length; i++) {
-      if (ctx.longElement(i).getText().equalsIgnoreCase(Expr.NULL_LITERAL)) {
+      if (ctx.longArrayBody().longElement(i).getText().equalsIgnoreCase(Expr.NULL_LITERAL)) {
         values[i] = null;
       } else {
-        values[i] = Long.parseLong(ctx.longElement(i).getText());
+        values[i] = Long.parseLong(ctx.longArrayBody().longElement(i).getText());
       }
     }
     nodes.put(ctx, new LongArrayExpr(values));
@@ -415,35 +419,13 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitStringArray(ExprParser.StringArrayContext ctx)
   {
-    String[] values = new String[ctx.stringElement().size()];
+    String[] values = ctx.stringArrayBody() == null
+                      ? new String[0]
+                      : new String[ctx.stringArrayBody().stringElement().size()];
     for (int i = 0; i < values.length; i++) {
-      values[i] = escapeStringLiteral(ctx.stringElement(i).getText());
+      values[i] = escapeStringLiteral(ctx.stringArrayBody().stringElement(i).getText());
     }
     nodes.put(ctx, new StringArrayExpr(values));
-  }
-
-  @Override
-  public void exitEmptyArray(ExprParser.EmptyArrayContext ctx)
-  {
-    nodes.put(ctx, new StringArrayExpr(new String[0]));
-  }
-
-  @Override
-  public void exitEmptyStringArray(ExprParser.EmptyStringArrayContext ctx)
-  {
-    nodes.put(ctx, new StringArrayExpr(new String[0]));
-  }
-
-  @Override
-  public void exitEmptyDoubleArray(ExprParser.EmptyDoubleArrayContext ctx)
-  {
-    nodes.put(ctx, new DoubleArrayExpr(new Double[0]));
-  }
-
-  @Override
-  public void exitEmptyLongArray(ExprParser.EmptyLongArrayContext ctx)
-  {
-    nodes.put(ctx, new LongArrayExpr(new Long[0]));
   }
 
   /**
