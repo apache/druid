@@ -17,12 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition.extension;
+package org.apache.druid.timeline.partition;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
-import org.apache.druid.timeline.partition.PartitionChunk;
 
 public class NamedNumberedPartitionChunk<T> implements PartitionChunk<T>
 {

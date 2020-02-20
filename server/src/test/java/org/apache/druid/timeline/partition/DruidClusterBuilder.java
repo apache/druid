@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition.extension;
+package org.apache.druid.timeline.partition;
 
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;

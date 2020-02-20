@@ -33,11 +33,11 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.timeline.partition.NamedNumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
-import org.apache.druid.timeline.partition.extension.NamedNumberedPartitionChunk;
 
 import javax.annotation.Nullable;
 import java.util.List;

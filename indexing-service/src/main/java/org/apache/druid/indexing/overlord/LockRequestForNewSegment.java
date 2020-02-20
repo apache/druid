@@ -43,6 +43,8 @@ public class LockRequestForNewSegment implements LockRequest
   @Nullable
   private final String previsousSegmentId;
   private final boolean skipSegmentLineageCheck;
+  @Nullable
+  private final String nameSpace;
 
   private String version;
 
@@ -56,7 +58,8 @@ public class LockRequestForNewSegment implements LockRequest
       int priority,
       String sequenceName,
       @Nullable String previsousSegmentId,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      @Nullable String nameSpace
   )
   {
     this.lockGranularity = lockGranularity;
@@ -69,6 +72,7 @@ public class LockRequestForNewSegment implements LockRequest
     this.sequenceName = sequenceName;
     this.previsousSegmentId = previsousSegmentId;
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
+    this.nameSpace = nameSpace;
   }
 
   @VisibleForTesting
@@ -80,7 +84,8 @@ public class LockRequestForNewSegment implements LockRequest
       PartialShardSpec partialShardSpec,
       String sequenceName,
       @Nullable String previsousSegmentId,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      @Nullable String nameSpace
   )
   {
     this(
@@ -93,7 +98,8 @@ public class LockRequestForNewSegment implements LockRequest
         task.getPriority(),
         sequenceName,
         previsousSegmentId,
-        skipSegmentLineageCheck
+        skipSegmentLineageCheck,
+        nameSpace
     );
   }
 
@@ -178,6 +184,11 @@ public class LockRequestForNewSegment implements LockRequest
     return skipSegmentLineageCheck;
   }
 
+  public String getNameSpace()
+  {
+    return nameSpace;
+  }
+
   @Override
   public String toString()
   {
@@ -192,6 +203,7 @@ public class LockRequestForNewSegment implements LockRequest
            ", sequenceName='" + sequenceName + '\'' +
            ", previsousSegmentId='" + previsousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
+           ", nameSpace='" + nameSpace + '\'' +
            '}';
   }
 }
