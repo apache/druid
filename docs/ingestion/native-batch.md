@@ -42,10 +42,10 @@ demonstrates the "simple" (single-task) mode.
 ## Parallel task
 
 The Parallel task (type `index_parallel`) is a task for parallel batch indexing. This task only uses Druid's resource and
-doesn't depend on other external systems like Hadoop. The `index_parallel` task is a supervisor task which orchestrates
-the whole indexing process. It splits the input data and issues worker tasks
-to the Overlord which actually process the assigned input split and create segments.
-Once a worker task successfully processes all assigned input split, it reports the generated segment list to the supervisor task. 
+doesn't depend on other external systems like Hadoop. The `index_parallel` task is a supervisor task that orchestrates
+the whole indexing process. The supervisor task splits the input data and creates worker tasks to process those splits.
+The created worker tasks are issued to the Overlord so that they can be scheduled and run on MiddleManagers or Indexers.
+Once a worker task successfully processes the assigned input split, it reports the generated segment list to the supervisor task.
 The supervisor task periodically checks the status of worker tasks. If one of them fails, it retries the failed task
 until the number of retries reaches the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalizes ingestion.
 
@@ -231,7 +231,7 @@ Note that each worker task processes a single input split. You can control the a
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `maxSize`.|none|yes|
-|maxSplitSize|Maximum number of bytes of input files to process in a single task. If a single file is larger than this number, it will be processed by itself in a single task (splitting a large file is not supported yet).|500MB|no|
+|maxSplitSize|Maximum number of bytes of input files to process in a single task. If a single file is larger than this number, it will be processed by itself in a single task (Files are never split across tasks yet).|500MB|no|
 
 #### `SegmentsSplitHintSpec`
 

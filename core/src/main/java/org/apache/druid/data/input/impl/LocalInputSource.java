@@ -72,7 +72,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     this.files = files;
 
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
-      throw new IAE("Either one of baseDir or files should be specified");
+      throw new IAE("At least one of baseDir or files should be specified");
     }
   }
 
