@@ -43,7 +43,7 @@ demonstrates the "simple" (single-task) mode.
 
 The Parallel task (type `index_parallel`) is a task for parallel batch indexing. This task only uses Druid's resource and
 doesn't depend on other external systems like Hadoop. The `index_parallel` task is a supervisor task which orchestrates
-the whole indexing process. It splits the input data and and issues worker tasks
+the whole indexing process. It splits the input data and issues worker tasks
 to the Overlord which actually process the assigned input split and create segments.
 Once a worker task successfully processes all assigned input split, it reports the generated segment list to the supervisor task. 
 The supervisor task periodically checks the status of worker tasks. If one of them fails, it retries the failed task
