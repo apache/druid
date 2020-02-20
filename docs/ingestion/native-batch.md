@@ -47,7 +47,7 @@ the whole indexing process. It splits the input data and issues worker tasks
 to the Overlord which actually process the assigned input split and create segments.
 Once a worker task successfully processes all assigned input split, it reports the generated segment list to the supervisor task. 
 The supervisor task periodically checks the status of worker tasks. If one of them fails, it retries the failed task
-until the number of retries reaches to the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalize the ingestion.
+until the number of retries reaches the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalizes ingestion.
 
 The detailed behavior of the Parallel task is different depending on the [`partitionsSpec`](#partitionsspec).
 See each `partitionsSpec` for more details.
