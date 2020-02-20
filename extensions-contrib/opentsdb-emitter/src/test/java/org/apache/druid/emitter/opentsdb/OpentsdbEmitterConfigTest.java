@@ -47,7 +47,7 @@ public class OpentsdbEmitterConfigTest
   }
 
   @Test
-  public void testSerDeserOpentsdbEmitterConfigWithSpaceNamespace() throws Exception
+  public void testSerDeserOpentsdbEmitterConfigWithNamespacePrefixContainingSpace() throws Exception
   {
     OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, "legendary druid");
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
@@ -57,7 +57,7 @@ public class OpentsdbEmitterConfigTest
   }
 
   @Test
-  public void testSerDeserOpentsdbEmitterConfigWithNullNamespace() throws Exception
+  public void testSerDeserOpentsdbEmitterConfigWithNullNamespacePrefix() throws Exception
   {
     OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, null);
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
@@ -67,7 +67,7 @@ public class OpentsdbEmitterConfigTest
   }
 
   @Test
-  public void testSerDeserOpentsdbEmitterConfigWithoutNamespace() throws Exception
+  public void testSerDeserOpentsdbEmitterConfigWithEmptyNamespacePrefix() throws Exception
   {
     OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null, "");
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);

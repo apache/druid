@@ -58,7 +58,7 @@ public class EventConverter
   private String buildMetric(String metric)
   {
     final String sanitized = sanitize(metric);
-    if (Strings.isNullOrEmpty(namespacePrefix)) {
+    if (namespacePrefix == null) {
       return sanitized;
     } else {
       return StringUtils.format("%s.%s", sanitize(namespacePrefix), sanitized);
