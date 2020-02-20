@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
@@ -58,9 +59,13 @@ public class CloudConfigProperties
     return secretAccessKey;
   }
 
+  @JsonIgnore
   public boolean isCredentialsConfigured()
   {
-    return accessKeyId != null && secretAccessKey != null;
+    return accessKeyId != null &&
+           accessKeyId.getPassword() != null &&
+           secretAccessKey != null &&
+           secretAccessKey.getPassword() != null;
   }
 
   @Override

@@ -203,7 +203,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     String actualToString = azureInputSource.toString();
-    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[]}", actualToString);
+    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], cloudConfigProperties=null}", actualToString);
   }
 
   @Test

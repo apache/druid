@@ -22,8 +22,10 @@ package org.apache.druid.data.input.azure;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -55,10 +57,23 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
                                                   + "          { \"bucket\": \"conatiner2\", \"path\": \"foo/file2.json\"}\n"
                                                   + "        ]\n"
                                                   + "      }";
+  private static final String JSON_WITH_CLOUD_CONFIG_PROPERTIES = "{\n"
+                                                                  + "        \"type\": \"azure\",\n"
+                                                                  + "        \"properties\": {\n"
+                                                                  + "          \"accessKeyId\": \"myKey\",\n"
+                                                                  + "          \"secretAccessKey\": \"mySecret\"\n"
+                                                                  + "        },\n"
+                                                                  + "        \"objects\": [\n"
+                                                                  + "          { \"bucket\": \"container1\", \"path\": \"bar/file1.json\"},\n"
+                                                                  + "          { \"bucket\": \"conatiner2\", \"path\": \"foo/file2.json\"}\n"
+                                                                  + "        ]\n"
+                                                                  + "      }";
 
   private static final List<URI> EXPECTED_URIS;
   private static final List<URI> EXPECTED_PREFIXES;
   private static final List<CloudObjectLocation> EXPECTED_CLOUD_OBJECTS;
+  private static final CloudConfigProperties CLOUD_CONFIG_PROPERTIES = new CloudConfigProperties(
+      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
 
   private AzureStorage azureStorage;
   private AzureEntityFactory entityFactory;
@@ -164,6 +179,32 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
 
   }
 
+  @Test
+  public void test_cloudCongifPropertiesSerde_constructsProperAzureInputSource() throws Exception
+  {
+    final InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(AzureStorage.class, azureStorage);
+    injectableValues.addValue(AzureEntityFactory.class, entityFactory);
+    injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
+    injectableValues.addValue(
+        AzureCloudBlobHolderToCloudObjectLocationConverter.class,
+        azureCloudBlobToLocationConverter
+    );
+    final ObjectMapper objectMapper = new DefaultObjectMapper()
+        .registerModules(new AzureStorageDruidModule().getJacksonModules());
+    objectMapper.setInjectableValues(injectableValues);
+
+    final AzureInputSource inputSource = objectMapper.readValue(JSON_WITH_CLOUD_CONFIG_PROPERTIES, AzureInputSource.class);
+    verifyInputSourceWithCloudConfigProperties(inputSource);
+
+    final AzureInputSource roundTripInputSource = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(inputSource),
+        AzureInputSource.class);
+    verifyInputSourceWithCloudConfigProperties(roundTripInputSource);
+
+  }
+
+
   private static void verifyInputSourceWithUris(final AzureInputSource inputSource)
   {
 
@@ -185,5 +226,11 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     Assert.assertNull(inputSource.getUris());
     Assert.assertNull(inputSource.getPrefixes());
     Assert.assertEquals(EXPECTED_CLOUD_OBJECTS, inputSource.getObjects());
+  }
+
+  private static void verifyInputSourceWithCloudConfigProperties(final AzureInputSource inputSource)
+  {
+    Assert.assertNotNull(inputSource.getCloudConfigProperties());
+    Assert.assertEquals(CLOUD_CONFIG_PROPERTIES, inputSource.getCloudConfigProperties());
   }
 }

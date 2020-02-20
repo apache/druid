@@ -195,7 +195,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testS3InputSourceUseDefaultPasswordWhenCloudConfigPropertiesWithoutCrediential() throws Exception
+  public void testS3InputSourceUseDefaultPasswordWhenCloudConfigPropertiesWithoutCrediential()
   {
     CloudConfigProperties mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(CloudConfigProperties.class);
     EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
@@ -215,6 +215,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_LOCATION,
         mockConfigPropertiesWithoutKeyAndSecret
     );
+    Assert.assertNotNull(withPrefixes);
     EasyMock.verify(S3_STORAGE_CONFIG);
     EasyMock.verify(mockConfigPropertiesWithoutKeyAndSecret);
   }
