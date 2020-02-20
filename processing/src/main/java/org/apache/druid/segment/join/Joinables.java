@@ -27,6 +27,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -100,6 +101,9 @@ public class Joinables
       final JoinableFactory joinableFactory
   )
   {
+    // Since building a JoinableClause can be expensive, check for prefix conflicts before building
+    checkPreJoinableClausesForDuplicatesAndShadowing(clauses);
+
     return clauses.stream().map(preJoinableClause -> {
       final Optional<Joinable> joinable = joinableFactory.build(
           preJoinableClause.getDataSource(),
@@ -113,5 +117,38 @@ public class Joinables
           preJoinableClause.getCondition()
       );
     }).collect(Collectors.toList());
+  }
+
+  public static void checkPreJoinableClausesForDuplicatesAndShadowing(
+      final List<PreJoinableClause> preJoinableClauses
+  )
+  {
+    List<String> prefixes = new ArrayList<>();
+    for (PreJoinableClause clause : preJoinableClauses) {
+      prefixes.add(clause.getPrefix());
+    }
+
+    checkPrefixesForDuplicatesAndShadowing(prefixes);
+  }
+
+  public static void checkPrefixesForDuplicatesAndShadowing(
+      final List<String> prefixes
+  )
+  {
+    for (int i = 0; i < prefixes.size(); i++) {
+      String prefix1 = prefixes.get(i);
+      for (int k = 0; k < prefixes.size(); k++) {
+        if (i != k) {
+          String otherPrefix = prefixes.get(k);
+          if (prefix1.equals(otherPrefix)) {
+            throw new IAE("Detected duplicate prefix in join clauses: [%]", prefix1);
+          }
+
+          if (isPrefixedBy(prefix1, otherPrefix)) {
+            throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix1, otherPrefix);
+          }
+        }
+      }
+    }
   }
 }

@@ -42,6 +42,12 @@ public class HashJoinSegment extends AbstractSegment
   private final List<JoinableClause> clauses;
   private final boolean enableFilterPushDown;
 
+  /**
+   * @param baseSegment The left-hand side base segment
+   * @param clauses The right-hand side clauses. The caller is responsible for ensuring that there are no
+   *                duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param enableFilterPushDown Whether to enable filter push down optimizations to the base segment
+   */
   public HashJoinSegment(
       Segment baseSegment,
       List<JoinableClause> clauses,

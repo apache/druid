@@ -56,16 +56,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   private final List<JoinableClause> clauses;
   private final boolean enableFilterPushDown;
 
-  HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses
-  )
-  {
-    this.baseAdapter = baseAdapter;
-    this.clauses = clauses;
-    this.enableFilterPushDown = QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN;
-  }
-
+  /**
+   * @param baseAdapter A StorageAdapter for the left-hand side base segment
+   * @param clauses The right-hand side clauses. The caller is responsible for ensuring that there are no
+   *                duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param enableFilterPushDown Whether to enable filter push down optimizations to the base segment
+   */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
@@ -75,6 +71,14 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
     this.enableFilterPushDown = enableFilterPushDown;
+  }
+
+  HashJoinSegmentStorageAdapter(
+      StorageAdapter baseAdapter,
+      List<JoinableClause> clauses
+  )
+  {
+    this(baseAdapter, clauses, QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
   }
 
   @Override
