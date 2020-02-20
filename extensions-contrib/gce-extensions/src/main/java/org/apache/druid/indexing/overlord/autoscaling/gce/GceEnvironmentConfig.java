@@ -52,7 +52,7 @@ public class GceEnvironmentConfig
   )
   {
     Preconditions.checkArgument(numInstances > 0,
-                                "numIntances must be greater than 0");
+                                "numInstances must be greater than 0");
     this.numInstances = numInstances;
     this.projectId = Preconditions.checkNotNull(projectId,
                                                 "projectId must be not null");

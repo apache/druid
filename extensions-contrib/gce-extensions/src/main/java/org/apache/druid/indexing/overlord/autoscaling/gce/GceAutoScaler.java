@@ -73,6 +73,8 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   private Compute cachedComputeService = null;
 
   private static final long POLL_INTERVAL_MS = 5 * 1000;  // 5 sec
+  private static final int RUNNING_INSTANCES_MAX_RETRIES = 10;
+  private static final int OPERATION_END_MAX_RETRIES = 10;
 
   @JsonCreator
   public GceAutoScaler(
@@ -183,7 +185,11 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   {
     String status = operation.getStatus();
     String opId = operation.getName();
-    while (operation != null && !"DONE".equals(status)) {
+    for (int i = 0; i < OPERATION_END_MAX_RETRIES; i++) {
+      if (operation == null || "DONE".equals(status)) {
+        return operation == null ? null : operation.getError();
+      }
+      log.info("Waiting for operation %s to end", opId);
       Thread.sleep(POLL_INTERVAL_MS);
       Compute.ZoneOperations.Get get = compute.zoneOperations().get(
           envConfig.getProjectId(),
@@ -195,7 +201,9 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
         status = operation.getStatus();
       }
     }
-    return operation == null ? null : operation.getError();
+    throw new InterruptedException(
+        StringUtils.format("Timed out waiting for operation %s to complete", opId)
+    );
   }
 
   /**
@@ -230,9 +238,20 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
       Operation response = request.execute();
       Operation.Error err = waitForOperationEnd(computeService, response);
       if (err == null || err.isEmpty()) {
-        List<String> after = getRunningInstances();
+        List<String> after = null;
+        // as the waitForOperationEnd only waits for the operation to be scheduled
+        // this loop waits until the requested machines actually go up (or up to a
+        // certain amount of retries in checking)
+        for (int i = 0; i < RUNNING_INSTANCES_MAX_RETRIES; i++) {
+          after = getRunningInstances();
+          if (after.size() == toSize) {
+            break;
+          }
+          log.info("Machines not up yet, waiting");
+          Thread.sleep(POLL_INTERVAL_MS);
+        }
         after.removeAll(before); // these should be the new ones
-        log.debug("Added instances [%s]", String.join(",", after));
+        log.info("Added instances [%s]", String.join(",", after));
         return new AutoScalingData(after);
       } else {
         log.error("Unable to provision instances: %s", err.toPrettyString());
@@ -314,7 +333,18 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
       Operation response = request.execute();
       Operation.Error err = waitForOperationEnd(computeService, response);
       if (err == null || err.isEmpty()) {
-        List<String> after = getRunningInstances();
+        List<String> after = null;
+        // as the waitForOperationEnd only waits for the operation to be scheduled
+        // this loop waits until the requested machines actually go down (or up to a
+        // certain amount of retries in checking)
+        for (int i = 0; i < RUNNING_INSTANCES_MAX_RETRIES; i++) {
+          after = getRunningInstances();
+          if (after.size() == (before.size() - ids.size())) {
+            break;
+          }
+          log.info("Machines not down yet, waiting");
+          Thread.sleep(POLL_INTERVAL_MS);
+        }
         before.removeAll(after); // keep only the ones no more present
         return new AutoScalingData(before);
       } else {
@@ -365,7 +395,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   @Override
   public List<String> ipToIdLookup(List<String> ips)
   {
-    log.debug("Asked IPs -> IDs for: [%s]", String.join(",", ips));
+    log.info("Asked IPs -> IDs for: [%s]", String.join(",", ips));
 
     if (ips.isEmpty()) {
       return new ArrayList<>();
@@ -423,7 +453,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   @Override
   public List<String> idToIpLookup(List<String> nodeIds)
   {
-    log.debug("Asked IDs -> IPs for: [%s]", String.join(",", nodeIds));
+    log.info("Asked IDs -> IPs for: [%s]", String.join(",", nodeIds));
 
     if (nodeIds.isEmpty()) {
       return new ArrayList<>();

@@ -355,6 +355,93 @@ public class GceAutoScalerTest
   }
 
   @Test
+  public void testTerminateWithIdsWithMissingRemoval() throws IOException // for the mock calls, not really throwing
+  {
+    GceAutoScaler autoScaler = new GceAutoScaler(
+        2,
+        4,
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+        null,
+        mockCompute // <-- I pretend to be Google
+    );
+
+    // set up getRunningInstances results
+    InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar",
+            "http://xyz/baz"
+        ));
+    InstanceGroupManagersListManagedInstancesResponse after1RunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar",
+            "http://xyz/baz"
+        )); // not changing anything, will trigger the loop around getRunningInstances
+    InstanceGroupManagersListManagedInstancesResponse after2RunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar"
+        )); // now the machine got dropped!
+
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(beforeRunningInstance); // 1st call
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(after1RunningInstance); // 2nd call, the next is needed
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(after2RunningInstance); // 3rd call, this unblocks
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.replay(mockInstancesRequest);
+
+
+    EasyMock.expect(mockInstanceGroupManagers.listManagedInstances(
+        "proj-x",
+        "us-central-1",
+        "druid-mig"
+    )).andReturn(mockInstancesRequest).times(3);
+
+    // set up the delete operation
+    Operation mockResponse = new Operation();
+    mockResponse.setStatus("DONE");
+    mockResponse.setError(new Operation.Error());
+
+    EasyMock.expect(mockDeleteRequest.execute()).andReturn(mockResponse);
+    EasyMock.replay(mockDeleteRequest);
+
+    InstanceGroupManagersDeleteInstancesRequest requestBody =
+        new InstanceGroupManagersDeleteInstancesRequest();
+    requestBody.setInstances(Collections.singletonList("zones/us-central-1/instances/baz"));
+
+    EasyMock.expect(mockInstanceGroupManagers.deleteInstances(
+        "proj-x",
+        "us-central-1",
+        "druid-mig",
+        requestBody
+    )).andReturn(mockDeleteRequest);
+
+    EasyMock.replay(mockInstanceGroupManagers);
+
+    // called three times in getRunningInstances...
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    // ...and once in terminateWithIds
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+
+    // and that's all folks!
+    EasyMock.replay(mockCompute);
+
+    AutoScalingData autoScalingData =
+        autoScaler.terminateWithIds(Collections.singletonList("baz"));
+    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+
+    EasyMock.verify(mockCompute);
+    EasyMock.verify(mockInstanceGroupManagers);
+    EasyMock.verify(mockDeleteRequest);
+    EasyMock.verify(mockInstancesRequest);
+  }
+
+  @Test
   public void testProvision() throws IOException // for the mock calls, not really throwing
   {
     GceAutoScaler autoScaler = new GceAutoScaler(
@@ -468,5 +555,85 @@ public class GceAutoScalerTest
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstancesRequest);
     EasyMock.verify(mockInstanceGroupManagers);
+  }
+
+  @Test
+  public void testProvisionWithMissingNewInstances() throws IOException // for the mock calls, not really throwing
+  {
+    GceAutoScaler autoScaler = new GceAutoScaler(
+        2,
+        4,
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+        null,
+        mockCompute // <-- I pretend to be Google
+    );
+
+    // set up getRunningInstances results
+    InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar"
+        ));
+    InstanceGroupManagersListManagedInstancesResponse after1RunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar"
+        )); // not changing anything, will trigger the loop around getRunningInstances
+    InstanceGroupManagersListManagedInstancesResponse after2RunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar",
+            "http://xyz/baz"
+        )); // now the new machine is here!
+
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(beforeRunningInstance); // 1st call
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(after1RunningInstance); // 2nd call, the next is needed
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(after2RunningInstance); // 3rd call, this unblocks
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.replay(mockInstancesRequest);
+
+    EasyMock.expect(mockInstanceGroupManagers.listManagedInstances(
+        "proj-x",
+        "us-central-1",
+        "druid-mig"
+    )).andReturn(mockInstancesRequest).times(3);
+
+    // set up the resize operation
+    Operation mockResponse = new Operation();
+    mockResponse.setStatus("DONE");
+    mockResponse.setError(new Operation.Error());
+
+    EasyMock.expect(mockResizeRequest.execute()).andReturn(mockResponse);
+    EasyMock.replay(mockResizeRequest);
+
+    EasyMock.expect(mockInstanceGroupManagers.resize(
+        "proj-x",
+        "us-central-1",
+        "druid-mig",
+        3
+    )).andReturn(mockResizeRequest);
+
+    EasyMock.replay(mockInstanceGroupManagers);
+
+    // called three times in getRunningInstances...
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    // ...and once in provision
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+
+    // and that's all folks!
+    EasyMock.replay(mockCompute);
+
+    AutoScalingData autoScalingData = autoScaler.provision();
+    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+
+    EasyMock.verify(mockCompute);
+    EasyMock.verify(mockInstanceGroupManagers);
+    EasyMock.verify(mockResizeRequest);
+    EasyMock.verify(mockInstancesRequest);
   }
 }
