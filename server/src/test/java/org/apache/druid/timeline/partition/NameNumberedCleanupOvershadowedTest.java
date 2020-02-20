@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition.extension;
+package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;

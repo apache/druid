@@ -175,6 +175,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
    *
+   * @param nameSpace               Namespace of allocated segment, or null if we do not use namespaced ingestion.
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
   SegmentIdWithShardSpec allocatePendingSegment(
@@ -184,8 +185,8 @@ public interface IndexerMetadataStorageCoordinator
       Interval interval,
       PartialShardSpec partialShardSpec,
       String maxVersion,
-      boolean skipSegmentLineageCheck
-  );
+      boolean skipSegmentLineageCheck,
+      @Nullable String nameSpace);
 
   /**
    * Delete pending segments created in the given interval belonging to the given data source from the pending segments

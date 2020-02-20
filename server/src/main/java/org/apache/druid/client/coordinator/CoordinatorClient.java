@@ -65,11 +65,12 @@ public class CoordinatorClient
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
-                  "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s",
+                  "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s&partitionIdentifier=%s",
                   StringUtils.urlEncode(dataSource),
                   descriptor.getInterval(),
                   descriptor.getPartitionNumber(),
-                  descriptor.getVersion()
+                  descriptor.getVersion(),
+                  descriptor.getPartitionIdentifier()
               )
           )
       );
