@@ -47,7 +47,7 @@ public class OpentsdbEmitter implements Emitter
         config.getMaxQueueSize(),
         config.getConsumeDelay()
     );
-    this.converter = new EventConverter(mapper, config.getMetricMapPath());
+    this.converter = new EventConverter(mapper, config.getMetricMapPath(), config.getNamespacePrefix());
   }
 
   @Override

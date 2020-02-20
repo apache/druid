@@ -518,6 +518,7 @@ postAggregations
 postAveragers
  - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
+namespacePrefix
 src
  - ../docs/development/extensions-contrib/redis-cache.md
 loadList
