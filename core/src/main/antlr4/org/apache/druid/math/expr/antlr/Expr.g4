@@ -15,7 +15,7 @@
 
 grammar Expr;
 
-expr : 'null'                                                       # null
+expr : NULL                                                         # null
      | ('-'|'!') expr                                               # unaryOpExpr
      |<assoc=right> expr '^' expr                                   # powOpExpr
      | expr ('*'|'/'|'%') expr                                      # mulDivModuloExpr
@@ -29,9 +29,11 @@ expr : 'null'                                                       # null
      | DOUBLE                                                       # doubleExpr
      | LONG                                                         # longExpr
      | STRING                                                       # string
-     | '<STRING>'? '[' stringArrayBody? ']'                         # stringArray
-     | '<DOUBLE>'? '[' doubleArrayBody? ']'                         # doubleArray
-     | '<LONG>'? '[' longArrayBody? ']'                             # longArray
+     | '[' (stringElement (',' stringElement)*)? ']'                # stringArray
+     | '[' longElement (',' longElement)*']'                        # longArray
+     | '<LONG>' '[' (numericElement (',' numericElement)*)? ']'     # explicitLongArray
+     | '<DOUBLE>'? '[' (numericElement (',' numericElement)*)? ']'  # doubleArray
+     | '<STRING>' '[' (literalElement (',' literalElement)*)? ']'   # explicitStringArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
@@ -40,18 +42,15 @@ lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
 fnArgs : expr (',' expr)*                                           # functionArgs
        ;
 
-stringArrayBody : stringElement (',' stringElement)*;
+stringElement : (STRING | NULL);
 
-doubleArrayBody : doubleElement (',' doubleElement)*;
+longElement : (LONG | NULL);
 
-longArrayBody : longElement (',' longElement)*;
+numericElement : (LONG | DOUBLE | NULL);
 
-longElement : (LONG | 'null');
+literalElement : (STRING | LONG | DOUBLE | NULL);
 
-doubleElement : (DOUBLE | 'null');
-
-stringElement : (STRING | 'null');
-
+NULL : 'null';
 IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ [\"\\])* '"';
 LONG : [0-9]+ ;
 DOUBLE : [0-9]+ '.' [0-9]* ;

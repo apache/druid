@@ -22,9 +22,12 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +38,9 @@ import java.util.Set;
  */
 public class ParserTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSimple()
   {
@@ -186,29 +192,96 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testLiteralArrays()
+  public void testLiteralArraysHomogeneousElements()
   {
     validateConstantExpression("[1.0, 2.345]", new Double[]{1.0, 2.345});
     validateConstantExpression("[1, 3]", new Long[]{1L, 3L});
-    validateConstantExpression("[\'hello\', \'world\']", new String[]{"hello", "world"});
+    validateConstantExpression("['hello', 'world']", new String[]{"hello", "world"});
+  }
 
+  @Test
+  public void testLiteralArraysHomogeneousOrNullElements()
+  {
     validateConstantExpression("[1.0, null, 2.345]", new Double[]{1.0, null, 2.345});
     validateConstantExpression("[null, 1, 3]", new Long[]{null, 1L, 3L});
-    validateConstantExpression("[\'hello\', \'world\', null]", new String[]{"hello", "world", null});
+    validateConstantExpression("['hello', 'world', null]", new String[]{"hello", "world", null});
+  }
 
+  @Test
+  public void testLiteralArraysEmptyAndAllNullImplicitAreString()
+  {
     validateConstantExpression("[]", new String[0]);
+    validateConstantExpression("[null, null, null]", new String[]{null, null, null});
+  }
+
+  @Test
+  public void testLiteralArraysImplicitTypedNumericMixed()
+  {
+    // implicit typed numeric arrays with mixed elements are doubles
+    validateConstantExpression("[1, null, 2000.0]", new Double[]{1.0, null, 2000.0});
+    validateConstantExpression("[1.0, null, 2000]", new Double[]{1.0, null, 2000.0});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitTypedEmpties()
+  {
     validateConstantExpression("<STRING>[]", new String[0]);
     validateConstantExpression("<DOUBLE>[]", new Double[0]);
     validateConstantExpression("<LONG>[]", new Long[0]);
+  }
 
-    validateConstantExpression("[null, null, null]", new String[]{null, null, null});
+  @Test
+  public void testLiteralArraysExplicitAllNull()
+  {
     validateConstantExpression("<DOUBLE>[null, null, null]", new Double[]{null, null, null});
     validateConstantExpression("<LONG>[null, null, null]", new Long[]{null, null, null});
     validateConstantExpression("<STRING>[null, null, null]", new String[]{null, null, null});
+  }
 
+  @Test
+  public void testLiteralArraysExplicitTypes()
+  {
     validateConstantExpression("<DOUBLE>[1.0, null, 2000.0]", new Double[]{1.0, null, 2000.0});
     validateConstantExpression("<LONG>[3, null, 4]", new Long[]{3L, null, 4L});
     validateConstantExpression("<STRING>['foo', 'bar', 'baz']", new String[]{"foo", "bar", "baz"});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitTypesMixedElements()
+  {
+    // explicit typed numeric arrays mixed numeric types should coerce to the correct explicit type
+    validateConstantExpression("<DOUBLE>[3, null, 4, 2.345]", new Double[]{3.0, null, 4.0, 2.345});
+    validateConstantExpression("<LONG>[1.0, null, 2000.0]", new Long[]{1L, null, 2000L});
+
+    // explicit typed string arrays should accept any literal and convert to string
+    validateConstantExpression("<STRING>['1', null, 2000, 1.1]", new String[]{"1", null, "2000", "1.1"});
+  }
+
+  @Test
+  public void testLiteralArrayImplicitStringParseException()
+  {
+    // implicit typed string array cannot handle literals thate are not null or string
+    expectedException.expect(RE.class);
+    expectedException.expectMessage("Failed to parse array: element 2000 is not a string");
+    validateConstantExpression("['1', null, 2000, 1.1]", new String[]{"1", null, "2000", "1.1"});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitLongParseException()
+  {
+    // explicit typed long arrays only handle numeric types
+    expectedException.expect(RE.class);
+    expectedException.expectMessage("Failed to parse array element '2000' as a long");
+    validateConstantExpression("<LONG>[1, null, '2000']", new Long[]{1L, null, 2000L});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitDoubleParseException()
+  {
+    // explicit typed double arrays only handle numeric types
+    expectedException.expect(RE.class);
+    expectedException.expectMessage("Failed to parse array element '2000.0' as a double");
+    validateConstantExpression("<DOUBLE>[1.0, null, '2000.0']", new Double[]{1.0, null, 2000.0});
   }
 
   @Test
