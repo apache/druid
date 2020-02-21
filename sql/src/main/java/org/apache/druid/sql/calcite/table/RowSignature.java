@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Type signature for a row in a Druid dataSource ("DruidTable") or query result. Rows have an ordering and every
@@ -196,10 +197,10 @@ public class RowSignature
 
     RowSignature that = (RowSignature) o;
 
-    if (columnTypes != null ? !columnTypes.equals(that.columnTypes) : that.columnTypes != null) {
+    if (!Objects.equals(columnTypes, that.columnTypes)) {
       return false;
     }
-    return columnNames != null ? columnNames.equals(that.columnNames) : that.columnNames == null;
+    return Objects.equals(columnNames, that.columnNames);
   }
 
   @Override

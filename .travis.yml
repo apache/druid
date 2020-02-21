@@ -120,6 +120,17 @@ jobs:
 
         " && false; }
 
+    - name: "intellij inspections"
+      script: >
+        docker run --rm
+        -v $(pwd):/project
+        -v ~/.m2:/home/inspect/.m2
+        ccaominh/intellij-inspect:1.0.0
+        /project/pom.xml
+        /project/.idea/inspectionProfiles/Druid.xml
+        --levels ERROR
+        --scope JavaInspectionsScope
+
     - &package
       name: "(openjdk8) packaging check"
       install: skip

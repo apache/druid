@@ -84,6 +84,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Date;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -924,6 +925,37 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     catch (SQLException e) {
     }
     Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
+  }
+
+  @Test
+  public void testParameterBinding() throws Exception
+  {
+    PreparedStatement statement = client.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");
+    statement.setString(1, "abc");
+    statement.setString(2, "def");
+    final ResultSet resultSet = statement.executeQuery();
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 2L)
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testSysTableParameterBinding() throws Exception
+  {
+    PreparedStatement statement = client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    statement.setString(1, "dummy");
+    final ResultSet resultSet = statement.executeQuery();
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 1L)
+        ),
+        rows
+    );
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException

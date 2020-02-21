@@ -105,7 +105,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
     URI currentUri = prefixesIterator.next();
     currentContainer = currentUri.getAuthority();
     currentPrefix = AzureUtils.extractAzureKey(currentUri);
-    log.debug("prepareNextRequest:\ncurrentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
+    log.debug("currentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
               currentUri, currentContainer, currentPrefix
     );
     result = null;
@@ -115,6 +115,12 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   private void fetchNextBatch()
   {
     try {
+      log.debug(
+          "fetching up to %s resources in container '%s' with prefix '%s'",
+          maxListingLength,
+          currentContainer,
+          currentPrefix
+      );
       result = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,

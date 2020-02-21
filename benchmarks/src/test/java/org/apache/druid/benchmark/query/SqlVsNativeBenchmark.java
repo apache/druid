@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
@@ -165,9 +166,9 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
-                                                                   .createEscalatedAuthenticationResult();
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null, authenticationResult)) {
+    final AuthenticationResult authResult = NoopEscalator.getInstance()
+                                                         .createEscalatedAuthenticationResult();
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null, ImmutableList.of(), authResult)) {
       final PlannerResult plannerResult = planner.plan(sqlQuery);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);

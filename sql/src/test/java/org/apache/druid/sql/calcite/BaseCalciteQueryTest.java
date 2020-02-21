@@ -78,6 +78,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
+import org.apache.druid.sql.http.SqlParameter;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -495,6 +496,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
@@ -504,14 +506,33 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final Map<String, Object> queryContext,
+      final Map<String, Object> context,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        queryContext,
+        context,
+        DEFAULT_PARAMETERS,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        expectedQueries,
+        expectedResults
+    );
+  }
+
+  public void testQuery(
+      final String sql,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults,
+      final List<SqlParameter> parameters
+  ) throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        parameters,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
@@ -527,7 +548,31 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<Object[]> expectedResults
   ) throws Exception
   {
-    testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, authenticationResult, expectedQueries, expectedResults);
+    testQuery(
+        plannerConfig,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        sql,
+        authenticationResult,
+        expectedQueries,
+        expectedResults
+    );
+  }
+
+  public void testQuery(
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
+      final String sql,
+      final AuthenticationResult authenticationResult,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults
+  ) throws Exception
+  {
+    log.info("SQL: %s", sql);
+    queryLogHook.clearRecordedQueries();
+    final List<Object[]> plannerResults =
+        getResults(plannerConfig, queryContext, DEFAULT_PARAMETERS, sql, authenticationResult);
+    verifyResults(sql, expectedQueries, expectedResults, plannerResults);
   }
 
   /**
@@ -560,6 +605,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
       final List<Query> expectedQueries,
@@ -596,7 +642,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         expectedException.expectMessage("Cannot vectorize");
       }
 
-      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, sql, authenticationResult);
+      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
       verifyResults(sql, theQueries, expectedResults, plannerResults);
     }
   }
@@ -604,6 +650,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public List<Object[]> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult
   ) throws Exception
@@ -611,6 +658,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return getResults(
         plannerConfig,
         queryContext,
+        parameters,
         sql,
         authenticationResult,
         CalciteTests.createOperatorTable(),
@@ -623,6 +671,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public List<Object[]> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
       final DruidOperatorTable operatorTable,
@@ -666,7 +715,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
     );
 
-    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, authenticationResult).toList();
+    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
   }
 
   public void verifyResults(

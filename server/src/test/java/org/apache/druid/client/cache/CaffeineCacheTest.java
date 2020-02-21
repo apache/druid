@@ -173,7 +173,7 @@ public class CaffeineCacheTest
   }
 
   @Test
-  public void testSizeEviction() throws Exception
+  public void testSizeEviction()
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
     {
