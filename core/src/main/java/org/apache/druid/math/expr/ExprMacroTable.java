@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -160,7 +159,7 @@ public class ExprMacroTable
       return StringUtils.format(
           "%s(%s)",
           name,
-          Joiner.on(", ").join(args.stream().map(Expr::stringify).iterator())
+          Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
       );
     }
 
