@@ -60,7 +60,7 @@ public class VirtualColumnRegistry
   {
     return new VirtualColumnRegistry(
         rowSignature,
-        Calcites.findUnusedPrefix("v", new TreeSet<>(rowSignature.getRowOrder())),
+        Calcites.findUnusedPrefixForDigits("v", new TreeSet<>(rowSignature.getRowOrder())),
         new HashMap<>(),
         new HashMap<>()
     );

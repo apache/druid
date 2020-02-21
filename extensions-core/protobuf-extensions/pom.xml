@@ -109,7 +109,7 @@
         <artifactId>maven-shade-plugin</artifactId>
         <version>3.2.1</version>
         <configuration>
-          <createDependencyReducedPom>false</createDependencyReducedPom>
+          <createDependencyReducedPom>true</createDependencyReducedPom>
           <relocations>
             <relocation>
               <pattern>com.google.protobuf</pattern>

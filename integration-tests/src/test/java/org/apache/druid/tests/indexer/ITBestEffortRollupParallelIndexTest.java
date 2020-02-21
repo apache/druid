@@ -89,7 +89,9 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           INDEX_TASK,
           rollupTransform,
           INDEX_QUERIES_RESOURCE,
-          false
+          false,
+          true,
+          true
       );
 
       // Index again, this time only choosing the second data file, and without explicit intervals chosen.
@@ -99,6 +101,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           REINDEX_TASK,
           rollupTransform,
           REINDEX_QUERIES_RESOURCE,
+          true,
+          true,
           true
       );
 

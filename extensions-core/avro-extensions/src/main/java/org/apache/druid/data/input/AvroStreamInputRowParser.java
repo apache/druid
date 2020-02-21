@@ -48,7 +48,7 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   {
     this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.avroBytesDecoder = Preconditions.checkNotNull(avroBytesDecoder, "avroBytesDecoder");
-    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false);
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, false);
     this.mapParser = new MapInputRowParser(parseSpec);
   }
 

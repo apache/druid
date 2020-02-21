@@ -57,6 +57,6 @@ public class RegexInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new RegexReader(inputRowSchema, source, temporaryDirectory, pattern, listDelimiter, columns);
+    return new RegexReader(inputRowSchema, source, pattern, listDelimiter, columns);
   }
 }

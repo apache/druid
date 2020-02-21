@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -47,20 +46,17 @@ import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSupervisorTaskTest
@@ -68,22 +64,10 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private ExecutorService service;
-
-  @Before
-  public void setup() throws IOException
-  {
-    indexingServiceClient = new LocalIndexingServiceClient();
-    localDeepStorage = temporaryFolder.newFolder("localStorage");
-    service = Execs.singleThreaded("ParallelIndexSupervisorTaskKillTest-%d");
-  }
-
   @After
   public void teardown()
   {
-    indexingServiceClient.shutdown();
     temporaryFolder.delete();
-    service.shutdownNow();
   }
 
   @Test(timeout = 5000L)
@@ -99,27 +83,21 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             false
         )
     );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-
-    final Future<TaskState> future = service.submit(() -> task.run(toolbox).getStatusCode());
+    getIndexingServiceClient().runTask(task);
     while (task.getCurrentRunner() == null) {
       Thread.sleep(100);
     }
     task.stopGracefully(null);
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
-    future.get();
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
+    getIndexingServiceClient().waitToFinish(task, 3000L, TimeUnit.MILLISECONDS);
 
     final TestSinglePhaseParallelIndexTaskRunner runner = (TestSinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
     // completeSubTaskSpecs should be empty because no task has reported its status to TaskMonitor
     Assert.assertTrue(runner.getCompleteSubTaskSpecs().isEmpty());
 
-    Assert.assertEquals(4, runner.getTaskMonitor().getNumKilledTasks());
+    Assert.assertEquals(4, runner.getTaskMonitor().getNumCanceledTasks());
   }
 
   @Test(timeout = 5000L)
@@ -137,8 +115,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             false
         )
     );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
+    final TaskActionClient actionClient = createActionClient(task);
+    final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
@@ -159,7 +137,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
       Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     }
 
-    Assert.assertEquals(3, runner.getTaskMonitor().getNumKilledTasks());
+    Assert.assertEquals(3, runner.getTaskMonitor().getNumCanceledTasks());
   }
 
   private ParallelIndexSupervisorTask newTask(
@@ -219,8 +197,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     // set up test tools
     return new TestSupervisorTask(
         ingestionSpec,
-        Collections.emptyMap(),
-        indexingServiceClient
+        Collections.singletonMap(AbstractParallelIndexSupervisorTaskTest.DISABLE_TASK_INJECT_CONTEXT_KEY, true),
+        getIndexingServiceClient()
     );
   }
 
@@ -282,7 +260,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
+  private class TestSupervisorTask extends TestParallelIndexSupervisorTask
   {
     private final IndexingServiceClient indexingServiceClient;
 
@@ -313,7 +291,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestRunner extends TestSinglePhaseParallelIndexTaskRunner
+  private class TestRunner extends TestSinglePhaseParallelIndexTaskRunner
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
@@ -360,10 +338,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestSinglePhaseSubTaskSpec extends SinglePhaseSubTaskSpec
+  private class TestSinglePhaseSubTaskSpec extends SinglePhaseSubTaskSpec
   {
-    private final ParallelIndexSupervisorTask supervisorTask;
-
     private TestSinglePhaseSubTaskSpec(
         String id,
         String groupId,
@@ -374,7 +350,6 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     )
     {
       super(id, groupId, supervisorTask.getId(), ingestionSpec, context, inputSplit);
-      this.supervisorTask = supervisorTask;
     }
 
     @Override
@@ -389,7 +364,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           getIngestionSpec(),
           getContext(),
           null,
-          new LocalParallelIndexTaskClientFactory(supervisorTask)
+          getParallelIndexTaskClientFactory()
       );
     }
   }

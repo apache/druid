@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,7 +33,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -58,23 +61,24 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
+import org.apache.druid.sql.http.SqlParameter;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -94,10 +98,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
-  public static final String NULL_VALUE = NullHandling.replaceWithDefault() ? "" : null;
+  public static final String NULL_STRING = NullHandling.defaultStringValue();
+  public static final Float NULL_FLOAT = NullHandling.defaultFloatValue();
+  public static final Long NULL_LONG = NullHandling.defaultLongValue();
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
@@ -231,7 +238,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public SpecificSegmentsQuerySegmentWalker walker = null;
   public QueryLogHook queryLogHook;
 
-  {
+  static {
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
@@ -329,7 +336,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         false,
         true,
         null,
-        null, 
+        null,
         StringComparators.NUMERIC
     );
   }
@@ -363,6 +370,29 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType
+  )
+  {
+    return JoinDataSource.create(
+        left,
+        right,
+        rightPrefix,
+        condition,
+        joinType,
+        CalciteTests.createExprMacroTable()
+    );
+  }
+
+  public static String equalsCondition(DruidExpression left, DruidExpression right)
+  {
+    return StringUtils.format("(%s == %s)", left.getExpression(), right.getExpression());
+  }
+
   public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression)
   {
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
@@ -371,7 +401,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
     return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                           .legacy(false);
+                                        .legacy(false);
   }
 
   @BeforeClass
@@ -466,6 +496,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
@@ -475,14 +506,33 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQuery(
       final String sql,
-      final Map<String, Object> queryContext,
+      final Map<String, Object> context,
       final List<Query> expectedQueries,
       final List<Object[]> expectedResults
   ) throws Exception
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        queryContext,
+        context,
+        DEFAULT_PARAMETERS,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        expectedQueries,
+        expectedResults
+    );
+  }
+
+  public void testQuery(
+      final String sql,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults,
+      final List<SqlParameter> parameters
+  ) throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DEFAULT,
+        parameters,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
@@ -498,25 +548,64 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<Object[]> expectedResults
   ) throws Exception
   {
-    testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, authenticationResult, expectedQueries, expectedResults);
-  }
-
-  private Query recursivelyOverrideContext(final Query q, final Map<String, Object> context)
-  {
-    final Query q2;
-    if (q.getDataSource() instanceof QueryDataSource) {
-      final Query subQuery = ((QueryDataSource) q.getDataSource()).getQuery();
-      q2 = q.withDataSource(new QueryDataSource(recursivelyOverrideContext(subQuery, context)));
-    } else {
-      q2 = q;
-    }
-
-    return q2.withOverriddenContext(context);
+    testQuery(
+        plannerConfig,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        sql,
+        authenticationResult,
+        expectedQueries,
+        expectedResults
+    );
   }
 
   public void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final String sql,
+      final AuthenticationResult authenticationResult,
+      final List<Query> expectedQueries,
+      final List<Object[]> expectedResults
+  ) throws Exception
+  {
+    log.info("SQL: %s", sql);
+    queryLogHook.clearRecordedQueries();
+    final List<Object[]> plannerResults =
+        getResults(plannerConfig, queryContext, DEFAULT_PARAMETERS, sql, authenticationResult);
+    verifyResults(sql, expectedQueries, expectedResults, plannerResults);
+  }
+
+  /**
+   * Override not just the outer query context, but also the contexts of all subqueries.
+   */
+  private <T> Query<T> recursivelyOverrideContext(final Query<T> query, final Map<String, Object> context)
+  {
+    return query.withDataSource(recursivelyOverrideContext(query.getDataSource(), context))
+                .withOverriddenContext(context);
+  }
+
+  /**
+   * Override the contexts of all subqueries of a particular datasource.
+   */
+  private DataSource recursivelyOverrideContext(final DataSource dataSource, final Map<String, Object> context)
+  {
+    if (dataSource instanceof QueryDataSource) {
+      final Query subquery = ((QueryDataSource) dataSource).getQuery();
+      return new QueryDataSource(recursivelyOverrideContext(subquery, context));
+    } else {
+      return dataSource.withChildren(
+          dataSource.getChildren()
+                    .stream()
+                    .map(ds -> recursivelyOverrideContext(ds, context))
+                    .collect(Collectors.toList())
+      );
+    }
+  }
+
+  public void testQuery(
+      final PlannerConfig plannerConfig,
+      final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
       final List<Query> expectedQueries,
@@ -553,7 +642,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         expectedException.expectMessage("Cannot vectorize");
       }
 
-      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, sql, authenticationResult);
+      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, parameters, sql, authenticationResult);
       verifyResults(sql, theQueries, expectedResults, plannerResults);
     }
   }
@@ -561,6 +650,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public List<Object[]> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult
   ) throws Exception
@@ -568,6 +658,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return getResults(
         plannerConfig,
         queryContext,
+        parameters,
         sql,
         authenticationResult,
         CalciteTests.createOperatorTable(),
@@ -580,6 +671,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public List<Object[]> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult,
       final DruidOperatorTable operatorTable,
@@ -588,20 +680,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final ObjectMapper objectMapper
   ) throws Exception
   {
-    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig, viewManager);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
-
+    final InProcessViewManager viewManager =
+        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
+    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        viewManager,
+        authorizerMapper
+    );
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
+        rootSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
         authorizerMapper,
-        objectMapper
+        objectMapper,
+        CalciteTests.DRUID_SCHEMA_NAME
     );
     final SqlLifecycleFactory sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
 
@@ -618,7 +715,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         + "WHERE __time >= CURRENT_TIMESTAMP + INTERVAL '1' DAY AND __time < TIMESTAMP '2002-01-01 00:00:00'"
     );
 
-    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, authenticationResult).toList();
+    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
   }
 
   public void verifyResults(

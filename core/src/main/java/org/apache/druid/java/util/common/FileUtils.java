@@ -227,7 +227,7 @@ public class FileUtils
         // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
         // Must do this before "out" or "fileChannel" is closed. No need to flush "out" first, since
         // Channels.newOutputStream is unbuffered.
-        // See also https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
+        // See also https://github.com/apache/druid/pull/5187#pullrequestreview-85188984
         fileChannel.force(true);
       }
 
@@ -255,7 +255,7 @@ public class FileUtils
       // Default implementation of this method in FilterOutputStream converts single write operation to
       // multiple write operations of 1 byte each, which is terribly inefficient.
       @Override
-      public void write(byte b[], int off, int len) throws IOException
+      public void write(byte[] b, int off, int len) throws IOException
       {
         out.write(b, off, len);
       }

@@ -102,7 +102,7 @@ For information how to create your own extension, please see [here](../developme
 
 ### Loading core extensions
 
-Apache Druid (incubating) bundles all [core extensions](../development/extensions.md#core-extensions) out of the box.
+Apache Druid bundles all [core extensions](../development/extensions.md#core-extensions) out of the box.
 See the [list of extensions](../development/extensions.md#core-extensions) for your options. You
 can load bundled extensions by adding their names to your common.runtime.properties
 `druid.extensions.loadList` property. For example, to load the *postgresql-metadata-storage* and

@@ -29,7 +29,7 @@ import java.util.Comparator;
  */
 public class DoubleSumAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = new Ordering()
+  public static final Comparator COMPARATOR = new Ordering()
   {
     @Override
     public int compare(Object o, Object o1)

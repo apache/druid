@@ -23,7 +23,7 @@ title: "Stats aggregator"
   -->
 
 
-This Apache Druid (incubating) extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` as an extension.
+This Apache Druid extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` as an extension.
 
 ## Variance aggregator
 
@@ -50,7 +50,7 @@ To use this feature, an "variance" aggregator must be included at indexing time.
 The ingestion aggregator can only apply to numeric values. If you use "variance"
 then any input rows missing the value will be considered to have a value of 0.
 
-User can specify expected input type as one of "float", "long", "variance" for ingestion, which is by default "float".
+User can specify expected input type as one of "float", "double", "long", "variance" for ingestion, which is by default "float".
 
 ```json
 {

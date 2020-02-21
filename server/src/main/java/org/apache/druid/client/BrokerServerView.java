@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -30,26 +29,28 @@ import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -59,6 +60,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @ManageLifecycle
 public class BrokerServerView implements TimelineServerView
@@ -288,14 +290,15 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-
-  @Nullable
   @Override
-  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
+  public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(final DataSourceAnalysis analysis)
   {
-    String table = Iterables.getOnlyElement(dataSource.getNames());
+    final TableDataSource tableDataSource =
+        analysis.getBaseTableDataSource()
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+
     synchronized (lock) {
-      return timelines.get(table);
+      return Optional.ofNullable(timelines.get(tableDataSource.getName()));
     }
   }
 
@@ -311,7 +314,7 @@ public class BrokerServerView implements TimelineServerView
     synchronized (lock) {
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        log.error("WTF?! No QueryableDruidServer found for %s", server.getName());
+        log.error("No QueryableDruidServer found for %s", server.getName());
         return null;
       }
       return queryableDruidServer.getQueryRunner();

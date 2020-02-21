@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
@@ -58,7 +57,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
@@ -172,21 +170,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public boolean doMergeResults(final GroupByQuery query)
   {
     return true;
-  }
-
-  @Override
-  public QueryRunner<ResultRow> createIntervalChunkingRunner(
-      final IntervalChunkingQueryRunnerDecorator decorator,
-      final QueryRunner<ResultRow> runner,
-      final GroupByQueryQueryToolChest toolChest
-  )
-  {
-    // No chunkPeriod-based interval chunking for groupBy v2.
-    //  1) It concats query chunks for consecutive intervals, which won't generate correct results.
-    //  2) Merging instead of concating isn't a good idea, since it requires all chunks to run simultaneously,
-    //     which may take more resources than the cluster has.
-    // See also https://github.com/apache/incubator-druid/pull/4004
-    return runner;
   }
 
   @Override

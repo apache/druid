@@ -23,15 +23,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import org.apache.curator.x.discovery.ServiceProvider;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -42,7 +45,9 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
@@ -52,6 +57,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -97,6 +104,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
@@ -118,26 +126,33 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.InformationSchema;
+import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
  * Utility functions for Calcite tests.
@@ -150,6 +165,10 @@ public class CalciteTests
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String DRUID_SCHEMA_NAME = "druid";
+  public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+  public static final String SYSTEM_SCHEMA_NAME = "sys";
+  public static final String LOOKUP_SCHEMA_NAME = "lookup";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -222,15 +241,15 @@ public class CalciteTests
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
 
-        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-            LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+        final LookupExtractorFactoryContainerProvider lookupProvider =
+            LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
                     "a", "xa",
-                    "abc", "xabc"
+                    "abc", "xabc",
+                    "nosuchkey", "mysteryvalue"
                 )
-            )
-        );
-
+            );
+        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
       }
   );
 
@@ -252,8 +271,11 @@ public class CalciteTests
               ImmutableList.<DimensionSchema>builder()
                   .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
                   .add(new DoubleDimensionSchema("d1"))
+                  .add(new DoubleDimensionSchema("d2"))
                   .add(new FloatDimensionSchema("f1"))
+                  .add(new FloatDimensionSchema("f2"))
                   .add(new LongDimensionSchema("l1"))
+                  .add(new LongDimensionSchema("l2"))
                   .build(),
               null,
               null
@@ -397,8 +419,11 @@ public class CalciteTests
               .put("m1", "2.0")
               .put("m2", "2.0")
               .put("d1", 1.7)
+              .put("d2", 1.7)
               .put("f1", 0.1f)
+              .put("f2", 0.1f)
               .put("l1", 325323L)
+              .put("l2", 325323L)
               .put("dim1", "10.1")
               .put("dim2", ImmutableList.of())
               .put("dim3", ImmutableList.of("b", "c"))
@@ -411,8 +436,11 @@ public class CalciteTests
               .put("m1", "3.0")
               .put("m2", "3.0")
               .put("d1", 0.0)
+              .put("d2", 0.0)
               .put("f1", 0.0)
+              .put("f2", 0.0)
               .put("l1", 0)
+              .put("l2", 0)
               .put("dim1", "2")
               .put("dim2", ImmutableList.of(""))
               .put("dim3", ImmutableList.of("d"))
@@ -529,6 +557,8 @@ public class CalciteTests
     // No instantiation.
   }
 
+  public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
+
   /**
    * Returns a new {@link QueryRunnerFactoryConglomerate} and a {@link Closer} which should be closed at the end of the
    * test.
@@ -610,7 +640,7 @@ public class CalciteTests
             .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+                    new TimeseriesQueryQueryToolChest(),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -619,10 +649,7 @@ public class CalciteTests
                 TopNQuery.class,
                 new TopNQueryRunnerFactory(
                     stupidPool,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
@@ -723,7 +750,11 @@ public class CalciteTests
         .buildMMappedIndex();
 
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(
+        conglomerate,
+        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
+        null
+    ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
                    .interval(index1.getDataInterval())
@@ -802,7 +833,137 @@ public class CalciteTests
     }
   }
 
-  public static DruidSchema createMockSchema(
+  public static InputRow createRow(final ImmutableMap<String, ?> map)
+  {
+    return PARSER.parseBatch((Map<String, Object>) map).get(0);
+  }
+
+  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
+  {
+    return parser.parseBatch((Map<String, Object>) map).get(0);
+  }
+
+  public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
+  {
+    return PARSER.parseBatch(
+        ImmutableMap.of(
+            "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
+            "dim1", dim1,
+            "dim2", dim2,
+            "m1", m1
+        )
+    ).get(0);
+  }
+
+  public static LookupSchema createMockLookupSchema()
+  {
+    return new LookupSchema(INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class));
+  }
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+
+    final DruidNode coordinatorNode = new DruidNode("test", "dummy", false, 8080, null, true, false);
+    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+
+    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        new FakeHttpClient(),
+        provider,
+        NodeRole.COORDINATOR,
+        "/simple/leader",
+        () -> {
+          throw new UnsupportedOperationException();
+        }
+    );
+
+    return new SystemSchema(
+        druidSchema,
+        new MetadataSegmentView(
+            druidLeaderClient,
+            getJsonMapper(),
+            new BytesAccumulatingResponseHandler(),
+            new BrokerSegmentWatcherConfig(),
+            plannerConfig
+        ),
+        new TestServerInventoryView(walker.getSegments()),
+        new FakeServerInventoryView(),
+        authorizerMapper,
+        druidLeaderClient,
+        druidLeaderClient,
+        provider,
+        getJsonMapper()
+    );
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    InformationSchema informationSchema =
+        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
+    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
+    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
+    return rootSchema;
+  }
+
+  public static SchemaPlus createMockRootSchema(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    InformationSchema informationSchema =
+        new InformationSchema(rootSchema, authorizerMapper, CalciteTests.DRUID_SCHEMA_NAME);
+    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
+    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
+    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.add(CalciteTests.SYSTEM_SCHEMA_NAME, systemSchema);
+    rootSchema.add(CalciteTests.LOOKUP_SCHEMA_NAME, lookupSchema);
+    return rootSchema;
+  }
+
+  /**
+   * Some Calcite exceptions (such as that thrown by
+   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
+   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
+   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
+   */
+  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
+  {
+    Throwable curThrowable = t;
+    while (curThrowable.getCause() instanceof InvocationTargetException) {
+      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    }
+    return curThrowable;
+  }
+
+  private static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig
@@ -811,7 +972,7 @@ public class CalciteTests
     return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
   }
 
-  public static DruidSchema createMockSchema(
+  private static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
@@ -838,76 +999,137 @@ public class CalciteTests
     return schema;
   }
 
-  public static InputRow createRow(final ImmutableMap<String, ?> map)
+  /**
+   * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeHttpClient implements HttpClient
   {
-    return PARSER.parseBatch((Map<String, Object>) map).get(0);
-  }
-
-  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
-  {
-    return parser.parseBatch((Map<String, Object>) map).get(0);
-  }
-
-  public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
-  {
-    return PARSER.parseBatch(
-        ImmutableMap.of(
-            "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
-            "dim1", dim1,
-            "dim2", dim2,
-            "m1", m1
-        )
-    ).get(0);
-  }
-
-
-  public static SystemSchema createMockSystemSchema(
-      final DruidSchema druidSchema,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
-  )
-  {
-    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        EasyMock.createMock(HttpClient.class),
-        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
-        NodeRole.COORDINATOR,
-        "/simple/leader",
-        new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler
     )
     {
-    };
-    final SystemSchema schema = new SystemSchema(
-        druidSchema,
-        new MetadataSegmentView(
-            druidLeaderClient,
-            getJsonMapper(),
-            new BytesAccumulatingResponseHandler(),
-            new BrokerSegmentWatcherConfig(),
-            plannerConfig
-        ),
-        new TestServerInventoryView(walker.getSegments()),
-        EasyMock.createMock(ServerInventoryView.class),
-        TEST_AUTHORIZER_MAPPER,
-        druidLeaderClient,
-        druidLeaderClient,
-        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
-        getJsonMapper()
-    );
-    return schema;
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration readTimeout
+    )
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 
   /**
-   * Some Calcite exceptions (such as that thrown by
-   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
-   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
-   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
+   * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
+  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
-    Throwable curThrowable = t;
-    while (curThrowable.getCause() instanceof InvocationTargetException) {
-      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
+
+    public FakeDruidNodeDiscoveryProvider(Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries)
+    {
+      this.nodeDiscoveries = nodeDiscoveries;
     }
-    return curThrowable;
+
+    @Override
+    public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
+    {
+      boolean get = nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery())
+                                   .getAllNodes()
+                                   .stream()
+                                   .anyMatch(x -> x.getDruidNode().equals(node));
+      return () -> get;
+    }
+
+    @Override
+    public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
+    {
+      return nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery());
+    }
+  }
+
+  private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+  {
+    private final Set<DiscoveryDruidNode> nodes;
+
+    FakeDruidNodeDiscovery()
+    {
+      this.nodes = new HashSet<>();
+    }
+
+    FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+    {
+      this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
+      nodes.forEach((k, v) -> {
+        addNode(v, k);
+      });
+    }
+
+    @Override
+    public Collection<DiscoveryDruidNode> getAllNodes()
+    {
+      return nodes;
+    }
+
+    void addNode(DruidNode node, NodeRole role)
+    {
+      final DiscoveryDruidNode discoveryNode = new DiscoveryDruidNode(node, role, ImmutableMap.of());
+      this.nodes.add(discoveryNode);
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+
+    }
+  }
+
+
+  /**
+   * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
+   */
+  private static class FakeServerInventoryView implements ServerInventoryView
+  {
+    @Nullable
+    @Override
+    public DruidServer getInventoryValue(String serverKey)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<DruidServer> getInventory()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isStarted()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }

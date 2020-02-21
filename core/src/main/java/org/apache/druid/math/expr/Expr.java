@@ -80,7 +80,10 @@ public interface Expr
   }
 
   /**
-   * Returns the string identifier of an {@link IdentifierExpr}, else null
+   * Returns the string identifier of an {@link IdentifierExpr}, else null. Use this method to analyze an {@link Expr}
+   * tree when trying to distinguish between different {@link IdentifierExpr} with the same
+   * {@link IdentifierExpr#binding}. Do NOT use this method to analyze the input binding (e.g. backing column name),
+   * use {@link #getBindingIfIdentifier} instead.
    */
   @Nullable
   default String getIdentifierIfIdentifier()
@@ -91,7 +94,7 @@ public interface Expr
 
   /**
    * Returns the string key to use to get a value from {@link Expr.ObjectBinding} of an {@link IdentifierExpr},
-   * else null
+   * else null. Use this method to analyze the inputs required to an {@link Expr} tree (e.g. backing column name).
    */
   @Nullable
   default String getBindingIfIdentifier()
@@ -421,7 +424,7 @@ public interface Expr
         java.util.function.Function<IdentifierExpr, String> mapper
     )
     {
-      Set<String> results = new HashSet<>(variables.size());
+      Set<String> results = Sets.newHashSetWithExpectedSize(variables.size());
       for (IdentifierExpr variable : variables) {
         results.add(mapper.apply(variable));
       }

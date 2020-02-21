@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.java.util.common.Intervals;
@@ -51,5 +52,13 @@ public class DimensionDistributionReportTest
   public void serializesDeserializes()
   {
     TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
+  }
+
+  @Test
+  public void abidesEqualsContract()
+  {
+    EqualsVerifier.forClass(DimensionDistributionReport.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

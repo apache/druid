@@ -618,7 +618,7 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<SegmentsAndMetadata> push(
+  public ListenableFuture<SegmentsAndCommitMetadata> push(
       final Collection<SegmentIdWithShardSpec> identifiers,
       @Nullable final Committer committer,
       final boolean useUniquePath
@@ -640,7 +640,7 @@ public class AppenderatorImpl implements Appenderator
         // We should always persist all segments regardless of the input because metadata should be committed for all
         // segments.
         persistAll(committer),
-        (Function<Object, SegmentsAndMetadata>) commitMetadata -> {
+        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
 
           log.debug(
@@ -666,7 +666,7 @@ public class AppenderatorImpl implements Appenderator
             }
           }
 
-          return new SegmentsAndMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
         },
         pushExecutor
     );
@@ -1315,7 +1315,8 @@ public class AppenderatorImpl implements Appenderator
       if (indexToPersist.hasSwapped()) {
         log.info(
             "Segment[%s] hydrant[%s] already swapped. Ignoring request to persist.",
-            identifier, indexToPersist
+            identifier,
+            indexToPersist
         );
         return 0;
       }

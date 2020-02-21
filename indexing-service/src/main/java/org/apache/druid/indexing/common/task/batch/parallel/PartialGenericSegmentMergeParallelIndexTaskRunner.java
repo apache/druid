@@ -35,6 +35,8 @@ import java.util.Map;
 class PartialGenericSegmentMergeParallelIndexTaskRunner
     extends ParallelIndexPhaseRunner<PartialGenericSegmentMergeTask, PushedSegmentsReport>
 {
+  private static final String PHASE_NAME = "partial segment merge";
+
   private final DataSchema dataSchema;
   private final List<PartialGenericSegmentMergeIOConfig> mergeIOConfigs;
 
@@ -58,7 +60,7 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return PartialGenericSegmentMergeTask.TYPE;
+    return PHASE_NAME;
   }
 
   @Override

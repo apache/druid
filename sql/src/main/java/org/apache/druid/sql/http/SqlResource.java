@@ -88,6 +88,8 @@ public class SqlResource
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
+      lifecycle.setParameters(sqlQuery.getParameterList());
+      
       final PlannerContext plannerContext = lifecycle.planAndAuthorize(req);
       final DateTimeZone timeZone = plannerContext.getTimeZone();
 
@@ -151,7 +153,7 @@ public class SqlResource
                   }
                   catch (Exception ex) {
                     e = ex;
-                    log.error(ex, "Unable to send sql response [%s]", sqlQueryId);
+                    log.error(ex, "Unable to send SQL response [%s]", sqlQueryId);
                     throw new RuntimeException(ex);
                   }
                   finally {

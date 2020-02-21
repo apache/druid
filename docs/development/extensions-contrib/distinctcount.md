@@ -23,7 +23,7 @@ title: "DistinctCount Aggregator"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) the `druid-distinctcount` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) the `druid-distinctcount` extension.
 
 Additionally, follow these steps:
 

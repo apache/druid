@@ -44,7 +44,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   protected int bucketSize;
 
   // The hashTable and its buffer are not final, these are set during init() for buffer management purposes
-  // See PR 3863 for details: https://github.com/apache/incubator-druid/pull/3863
+  // See PR 3863 for details: https://github.com/apache/druid/pull/3863
   protected ByteBufferHashTable hashTable;
   protected ByteBuffer hashTableBuffer; // buffer for the entire hash table (total space, not individual growth)
 

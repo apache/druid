@@ -35,10 +35,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nonnull;
-import java.util.List;
+import java.util.Set;
 
 /**
- * DruidRel that uses a "table" dataSource.
+ * DruidRel that operates on top of a {@link DruidTable} directly (no joining or subqueries).
  */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
@@ -123,9 +123,9 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
-    return druidTable.getDataSource().getNames();
+    return druidTable.getDataSource().getTableNames();
   }
 
   @Override

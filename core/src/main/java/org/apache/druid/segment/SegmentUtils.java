@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.Collections2;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -37,7 +39,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
@@ -78,19 +79,22 @@ public class SegmentUtils
   }
 
   /**
-   * Returns a String with identifiers of "segments" comma-separated. Useful for log messages. Not useful for anything
-   * else, because this doesn't take special effort to escape commas that occur in identifiers (not common, but could
-   * potentially occur in a datasource name).
+   * Returns an object whose toString() returns a String with identifiers of the given segments, comma-separated. Useful
+   * for log messages. Not useful for anything else, because this doesn't take special effort to escape commas that
+   * occur in identifiers (not common, but could potentially occur in a datasource name).
    */
-  public static String commaSeparateIdentifiers(final Collection<DataSegment> segments)
+  @Nullable
+  public static Object commaSeparatedIdentifiers(@Nullable final Collection<DataSegment> segments)
   {
-    return segments
-        .stream()
-        .map(segment -> segment.getId().toString())
-        .collect(Collectors.joining(", "));
+    if (segments == null || segments.isEmpty()) {
+      return null;
+    }
+    // Lazy, to avoid preliminary string creation if logging level is turned off
+    return Collections2.transform(segments, DataSegment::getId);
   }
 
   private SegmentUtils()
   {
+    // no instantiation
   }
 }

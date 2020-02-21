@@ -194,7 +194,7 @@ public class NumericNullColumnSelectorTest
   )
   {
     boolean encounteredNull = false;
-    boolean nullVector[];
+    boolean[] nullVector;
 
     // read it all, advancing offset
     while (!readAllVectors.isDone()) {
@@ -228,7 +228,7 @@ public class NumericNullColumnSelectorTest
   )
   {
     boolean encounteredNull = false;
-    boolean nullVector[];
+    boolean[] nullVector;
 
     // test overlapping reads (should reset iterator anyway)
     readAllVectors.mangleOffset(0);

@@ -29,7 +29,7 @@ This tutorial demonstrates how to compact existing segments into fewer but large
 Because there is some per-segment memory and processing overhead, it can sometimes be beneficial to reduce the total number of segments.
 Please check [Segment size optimization](../operations/segment-optimization.md) for details.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in
+For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
@@ -81,7 +81,7 @@ We have included a compaction task spec for this tutorial datasource at `quickst
   "dataSource": "compaction-tutorial",
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
-    "type" : "index",
+    "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000
   }
@@ -143,7 +143,7 @@ We have included a compaction task spec that will create DAY granularity segment
   "interval": "2015-09-12/2015-09-13",
   "segmentGranularity": "DAY",
   "tuningConfig" : {
-    "type" : "index",
+    "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true

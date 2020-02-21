@@ -214,7 +214,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
-    // We're not counting __time, even though that name is problematic. See: https://github.com/apache/incubator-druid/pull/3684
+    // We're not counting __time, even though that name is problematic. See: https://github.com/apache/druid/pull/3684
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();

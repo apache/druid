@@ -648,7 +648,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
             createExpected("2011-01-04/2011-01-05", "3", 3),
             createExpected("2011-01-05/2011-01-06", "4", 4)
         ),
-        timeline.lookup(Intervals.of("0000-01-01/3000-01-01"))
+        timeline.lookup(Intervals.ETERNITY)
     );
   }
 
@@ -1026,7 +1026,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
     Assert.assertTrue(timeline.lookup(Intervals.of("1970/1980")).isEmpty());
   }
 
-  /** https://github.com/apache/incubator-druid/issues/3010 */
+  /** https://github.com/apache/druid/issues/3010 */
   @Test
   public void testRemoveIncompleteKeepsComplete()
   {

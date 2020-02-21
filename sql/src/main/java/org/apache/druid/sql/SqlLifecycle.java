@@ -19,8 +19,9 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
@@ -46,11 +47,16 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.planner.PrepareResult;
+import org.apache.druid.sql.http.SqlParameter;
+import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -86,9 +92,11 @@ public class SqlLifecycle
   // init during intialize
   private String sql;
   private Map<String, Object> queryContext;
+  private List<TypedValue> parameters;
   // init during plan
   @Nullable private HttpServletRequest req;
   private PlannerContext plannerContext;
+  private PrepareResult prepareResult;
   private PlannerResult plannerResult;
 
   public SqlLifecycle(
@@ -104,6 +112,7 @@ public class SqlLifecycle
     this.requestLogger = requestLogger;
     this.startMs = startMs;
     this.startNs = startNs;
+    this.parameters = Collections.emptyList();
   }
 
   public String initialize(String sql, Map<String, Object> queryContext)
@@ -131,12 +140,30 @@ public class SqlLifecycle
     return (String) this.queryContext.get(PlannerContext.CTX_SQL_QUERY_ID);
   }
 
+  public void setParameters(List<TypedValue> parameters)
+  {
+    this.parameters = parameters;
+  }
+
+  public PrepareResult prepare(AuthenticationResult authenticationResult)
+      throws ValidationException, RelConversionException, SqlParseException
+  {
+    synchronized (lock) {
+      try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {
+        // set planner context for logs/metrics in case something explodes early
+        this.plannerContext = planner.getPlannerContext();
+        this.prepareResult = planner.prepare(sql);
+        return prepareResult;
+      }
+    }
+  }
+
   public PlannerContext plan(AuthenticationResult authenticationResult)
       throws ValidationException, RelConversionException, SqlParseException
   {
     synchronized (lock) {
       transition(State.INITIALIZED, State.PLANNED);
-      try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, authenticationResult)) {
+      try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, parameters, authenticationResult)) {
         this.plannerContext = planner.getPlannerContext();
         this.plannerResult = planner.plan(sql);
       }
@@ -156,9 +183,7 @@ public class SqlLifecycle
   public RelDataType rowType()
   {
     synchronized (lock) {
-      Preconditions.checkState(plannerResult != null,
-                               "must be called after sql has been planned");
-      return plannerResult.rowType();
+      return plannerResult != null ? plannerResult.rowType() : prepareResult.getRowType();
     }
   }
 
@@ -171,10 +196,7 @@ public class SqlLifecycle
         return doAuthorize(
             AuthorizationUtils.authorizeAllResourceActions(
                 req,
-                Iterables.transform(
-                    plannerResult.datasourceNames(),
-                    AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-                ),
+                Iterables.transform(plannerResult.datasourceNames(), AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
                 plannerFactory.getAuthorizerMapper()
             )
         );
@@ -231,9 +253,11 @@ public class SqlLifecycle
     }
   }
 
+  @VisibleForTesting
   public Sequence<Object[]> runSimple(
       String sql,
       Map<String, Object> queryContext,
+      List<SqlParameter> parameters,
       AuthenticationResult authenticationResult
   ) throws ValidationException, RelConversionException, SqlParseException
   {
@@ -241,6 +265,7 @@ public class SqlLifecycle
 
     initialize(sql, queryContext);
     try {
+      setParameters(SqlQuery.getParameterList(parameters));
       planAndAuthorize(authenticationResult);
       result = execute();
     }
@@ -332,7 +357,7 @@ public class SqlLifecycle
         );
       }
       catch (Exception ex) {
-        log.error(ex, "Unable to log sql [%s]!", sql);
+        log.error(ex, "Unable to log SQL [%s]!", sql);
       }
     }
   }

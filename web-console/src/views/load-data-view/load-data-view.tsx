@@ -2182,7 +2182,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="control">
           <Callout className="intro">
             <p>
-              Each column in Druid must have an assigned type (string, long, float, complex, etc).
+              Each column in Druid must have an assigned type (string, long, float, double, complex,
+              etc).
             </p>
             {dimensionMode === 'specific' && (
               <p>
@@ -2570,13 +2571,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       const convertToDimensionMenu = (
         <Menu>
           <MenuItem
-            text="Convert to STRING dimension"
-            onClick={() => convertToDimension('STRING')}
+            text="Convert to string dimension"
+            onClick={() => convertToDimension('string')}
           />
-          <MenuItem text="Convert to LONG dimension" onClick={() => convertToDimension('LONG')} />
+          <MenuItem text="Convert to long dimension" onClick={() => convertToDimension('long')} />
+          <MenuItem text="Convert to float dimension" onClick={() => convertToDimension('float')} />
           <MenuItem
-            text="Convert to DOUBLE dimension"
-            onClick={() => convertToDimension('DOUBLE')}
+            text="Convert to double dimension"
+            onClick={() => convertToDimension('double')}
           />
         </Menu>
       );
@@ -2994,7 +2996,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           type: spec.type,
           spec,
 
-          // A hack to let context be set from the spec can be removed when https://github.com/apache/incubator-druid/issues/8662 is resolved
+          // A hack to let context be set from the spec can be removed when https://github.com/apache/druid/issues/8662 is resolved
           context: (spec as any).context,
         });
       } catch (e) {

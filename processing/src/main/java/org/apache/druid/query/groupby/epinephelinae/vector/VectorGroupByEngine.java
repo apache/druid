@@ -20,6 +20,8 @@
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import com.google.common.base.Suppliers;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -34,11 +36,9 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.AggregateResult;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
-import org.apache.druid.query.groupby.epinephelinae.BufferHashGrouper;
-import org.apache.druid.query.groupby.epinephelinae.ByteBufferKeySerde;
 import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
-import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -149,7 +149,7 @@ public class VectorGroupByEngine
                   dimensionSpec ->
                       DimensionHandlerUtils.makeVectorProcessor(
                           dimensionSpec,
-                          GroupByVectorColumnStrategizer.instance(),
+                          GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory
                       )
               ).collect(Collectors.toList());
@@ -200,8 +200,7 @@ public class VectorGroupByEngine
     private final ByteBuffer processingBuffer;
     private final DateTime fudgeTimestamp;
     private final int keySize;
-    private final int[] keySpace;
-    private final Grouper.KeySerde<ByteBuffer> keySerde;
+    private final WritableMemory keySpace;
     private final VectorGrouper vectorGrouper;
 
     @Nullable
@@ -216,7 +215,7 @@ public class VectorGroupByEngine
     private int partiallyAggregatedRows = -1;
 
     @Nullable
-    private CloseableGrouperIterator<ByteBuffer, ResultRow> delegate = null;
+    private CloseableGrouperIterator<Memory, ResultRow> delegate = null;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
@@ -237,8 +236,7 @@ public class VectorGroupByEngine
       this.processingBuffer = processingBuffer;
       this.fudgeTimestamp = fudgeTimestamp;
       this.keySize = selectors.stream().mapToInt(GroupByVectorColumnSelector::getGroupingKeySize).sum();
-      this.keySpace = new int[keySize * cursor.getMaxVectorSize()];
-      this.keySerde = new ByteBufferKeySerde(keySize * Integer.BYTES);
+      this.keySpace = WritableMemory.allocate(keySize * cursor.getMaxVectorSize());
       this.vectorGrouper = makeGrouper();
       this.granulizer = VectorCursorGranularizer.create(storageAdapter, cursor, query.getGranularity(), queryInterval);
 
@@ -322,17 +320,16 @@ public class VectorGroupByEngine
             cardinalityForArrayAggregation
         );
       } else {
-        grouper = new BufferHashGrouper<>(
+        grouper = new HashVectorGrouper(
             Suppliers.ofInstance(processingBuffer),
-            keySerde,
+            keySize,
             AggregatorAdapters.factorizeVector(
                 cursor.getColumnSelectorFactory(),
                 query.getAggregatorSpecs()
             ),
             querySpecificConfig.getBufferGrouperMaxSize(),
             querySpecificConfig.getBufferGrouperMaxLoadFactor(),
-            querySpecificConfig.getBufferGrouperInitialBuckets(),
-            true
+            querySpecificConfig.getBufferGrouperInitialBuckets()
         );
       }
 
@@ -341,7 +338,7 @@ public class VectorGroupByEngine
       return grouper;
     }
 
-    private CloseableGrouperIterator<ByteBuffer, ResultRow> initNewDelegate()
+    private CloseableGrouperIterator<Memory, ResultRow> initNewDelegate()
     {
       // Method must not be called unless there's a current bucketInterval.
       assert bucketInterval != null;

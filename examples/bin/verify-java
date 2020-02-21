@@ -52,7 +52,7 @@ if ($skip_var && $skip_var ne "0" && $skip_var ne "false" && $skip_var ne "f") {
 }
 
 my $cwd =  dirname(__FILE__);
-my $java_bin_dir = `source $cwd/java-util && get_java_bin_dir 2>&1`;
+my $java_bin_dir = `. $cwd/java-util && get_java_bin_dir 2>&1`;
 
 # If we could not find java
 if ($java_bin_dir eq "") {

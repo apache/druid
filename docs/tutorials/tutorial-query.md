@@ -24,7 +24,7 @@ sidebar_label: "Querying data"
   -->
 
 
-This tutorial will demonstrate how to query data in Apache Druid (incubating), with examples for Druid SQL and Druid's native query format.
+This tutorial will demonstrate how to query data in Apache Druid, with examples for Druid SQL and Druid's native query format.
 
 The tutorial assumes that you've already completed one of the 4 ingestion tutorials, as we will be querying the sample Wikipedia edits data.
 

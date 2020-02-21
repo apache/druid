@@ -54,7 +54,6 @@ Available Metrics
 |`query/node/bytes`|number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|id, status, server.|< 1s|
 |`query/node/backpressure`|Milliseconds that the channel to this process has spent suspended due to backpressure.|id, status, server.| |
-|`query/intervalChunk/time`|Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk. This metric is deprecated and will be removed in the future because interval chunking is deprecated. See [Query Context](../querying/query-context.md).|id, status, chunkInterval (if interval chunking is enabled).|< 1s|
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -204,17 +203,20 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/loadQueue/failed`|Number of segments that failed to load.|server.|0|
 |`segment/loadQueue/count`|Number of segments to load.|server.|Varies.|
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
-|`segment/size`|Size in bytes of available segments.|dataSource.|Varies.|
-|`segment/count`|Number of available segments.|dataSource.|< max|
-|`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
-|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
-|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
+|`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
+|`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
+|`segment/overShadowed/count`|Number of overshadowed segments.||Varies.|
+|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
+|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|tier.|Varies.|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|tier.|Varies.|
 |`tier/total/capacity`|Total capacity in bytes available in each tier.|tier.|Varies.|
 
-If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
+If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](
+../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class
+`org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing
+decisions.
 
 ## General Health
 

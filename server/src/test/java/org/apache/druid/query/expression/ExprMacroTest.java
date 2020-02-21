@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -51,6 +52,12 @@ public class ExprMacroTest
           .build()
   );
 
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -75,7 +82,7 @@ public class ExprMacroTest
   @Test
   public void testLookupNotFound()
   {
-    expectedException.expect(NullPointerException.class);
+    expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Lookup [lookylook] not found");
     assertExpr("lookup(x, 'lookylook')", null);
   }

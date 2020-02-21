@@ -26,7 +26,7 @@ sidebar_label: "Writing an ingestion spec"
 
 This tutorial will guide the reader through the process of defining an ingestion spec, pointing out key considerations and guidelines.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in
+For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md), [Tutorial: Querying data](../tutorials/tutorial-query.md), and [Tutorial: Rollup](../tutorials/tutorial-rollup.md).
@@ -88,42 +88,18 @@ The datasource name is specified by the `dataSource` parameter in the `dataSchem
 
 Let's call the tutorial datasource `ingestion-tutorial`.
 
-### Choose a parser
-
-A `dataSchema` has a `parser` field, which defines the parser that Druid will use to interpret the input data.
-
-Since our input data is represented as JSON strings, we'll use a `string` parser with `json` format:
-
-```json
-"dataSchema" : {
-  "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json"
-    }
-  }
-}
-```
-
 ### Time column
 
-The `parser` needs to know how to extract the main timestamp field from the input data. When using a `json` type `parseSpec`, the timestamp is defined in a `timestampSpec`.
+The `dataSchema` needs to know how to extract the main timestamp field from the input data.
 
-The timestamp column in our input data is named "ts", containing ISO 8601 timestamps, so let's add a `timestampSpec` with that information to the `parseSpec`:
+The timestamp column in our input data is named "ts", containing ISO 8601 timestamps, so let's add a `timestampSpec` with that information to the `dataSchema`:
 
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
   }
 }
 ```
@@ -146,26 +122,17 @@ When ingesting data, we must consider whether we wish to use rollup or not.
 
 For this tutorial, let's enable rollup. This is specified with a `granularitySpec` on the `dataSchema`.
 
-Note that the `granularitySpec` lies outside of the `parser`. We will revisit the `parser` soon when we define our dimensions and metrics.
-
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
   },
   "granularitySpec" : {
     "rollup" : true
   }
 }
-
 ```
 
 #### Choosing dimensions and metrics
@@ -181,29 +148,23 @@ Let's look at how to define these dimensions and metrics within the ingestion sp
 
 #### Dimensions
 
-Dimensions are specified with a `dimensionsSpec` inside the `parseSpec`.
+Dimensions are specified with a `dimensionsSpec` inside the `dataSchema`.
 
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      },
-      "dimensionsSpec" : {
-        "dimensions": [
-          "srcIP",
-          { "name" : "srcPort", "type" : "long" },
-          { "name" : "dstIP", "type" : "string" },
-          { "name" : "dstPort", "type" : "long" },
-          { "name" : "protocol", "type" : "string" }
-        ]
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
+  },
+  "dimensionsSpec" : {
+    "dimensions": [
+      "srcIP",
+      { "name" : "srcPort", "type" : "long" },
+      { "name" : "dstIP", "type" : "string" },
+      { "name" : "dstPort", "type" : "long" },
+      { "name" : "protocol", "type" : "string" }
+    ]
   },
   "granularitySpec" : {
     "rollup" : true
@@ -232,24 +193,18 @@ Metrics are specified with a `metricsSpec` inside the `dataSchema`:
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      },
-      "dimensionsSpec" : {
-        "dimensions": [
-          "srcIP",
-          { "name" : "srcPort", "type" : "long" },
-          { "name" : "dstIP", "type" : "string" },
-          { "name" : "dstPort", "type" : "long" },
-          { "name" : "protocol", "type" : "string" }
-        ]
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
+  },
+  "dimensionsSpec" : {
+    "dimensions": [
+      "srcIP",
+      { "name" : "srcPort", "type" : "long" },
+      { "name" : "dstIP", "type" : "string" },
+      { "name" : "dstPort", "type" : "long" },
+      { "name" : "protocol", "type" : "string" }
+    ]
   },
   "metricsSpec" : [
     { "type" : "count", "name" : "count" },
@@ -307,24 +262,18 @@ Segment granularity is configured by the `segmentGranularity` property in the `g
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      },
-      "dimensionsSpec" : {
-        "dimensions": [
-          "srcIP",
-          { "name" : "srcPort", "type" : "long" },
-          { "name" : "dstIP", "type" : "string" },
-          { "name" : "dstPort", "type" : "long" },
-          { "name" : "protocol", "type" : "string" }
-        ]
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
+  },
+  "dimensionsSpec" : {
+    "dimensions": [
+      "srcIP",
+      { "name" : "srcPort", "type" : "long" },
+      { "name" : "dstIP", "type" : "string" },
+      { "name" : "dstPort", "type" : "long" },
+      { "name" : "protocol", "type" : "string" }
+    ]
   },
   "metricsSpec" : [
     { "type" : "count", "name" : "count" },
@@ -349,24 +298,18 @@ The query granularity is configured by the `queryGranularity` property in the `g
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      },
-      "dimensionsSpec" : {
-        "dimensions": [
-          "srcIP",
-          { "name" : "srcPort", "type" : "long" },
-          { "name" : "dstIP", "type" : "string" },
-          { "name" : "dstPort", "type" : "long" },
-          { "name" : "protocol", "type" : "string" }
-        ]
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
+  },
+  "dimensionsSpec" : {
+    "dimensions": [
+      "srcIP",
+      { "name" : "srcPort", "type" : "long" },
+      { "name" : "dstIP", "type" : "string" },
+      { "name" : "dstPort", "type" : "long" },
+      { "name" : "protocol", "type" : "string" }
+    ]
   },
   "metricsSpec" : [
     { "type" : "count", "name" : "count" },
@@ -377,7 +320,7 @@ The query granularity is configured by the `queryGranularity` property in the `g
   "granularitySpec" : {
     "type" : "uniform",
     "segmentGranularity" : "HOUR",
-    "queryGranularity" : "MINUTE"
+    "queryGranularity" : "MINUTE",
     "rollup" : true
   }
 }
@@ -404,24 +347,18 @@ The interval is also specified in the `granularitySpec`:
 ```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
-  "parser" : {
-    "type" : "string",
-    "parseSpec" : {
-      "format" : "json",
-      "timestampSpec" : {
-        "format" : "iso",
-        "column" : "ts"
-      },
-      "dimensionsSpec" : {
-        "dimensions": [
-          "srcIP",
-          { "name" : "srcPort", "type" : "long" },
-          { "name" : "dstIP", "type" : "string" },
-          { "name" : "dstPort", "type" : "long" },
-          { "name" : "protocol", "type" : "string" }
-        ]
-      }
-    }
+  "timestampSpec" : {
+    "format" : "iso",
+    "column" : "ts"
+  },
+  "dimensionsSpec" : {
+    "dimensions": [
+      "srcIP",
+      { "name" : "srcPort", "type" : "long" },
+      { "name" : "dstIP", "type" : "string" },
+      { "name" : "dstPort", "type" : "long" },
+      { "name" : "protocol", "type" : "string" }
+    ]
   },
   "metricsSpec" : [
     { "type" : "count", "name" : "count" },
@@ -447,28 +384,22 @@ The `dataSchema` is shared across all task types, but each task type has its own
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "ingestion-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "timestampSpec" : {
-            "format" : "iso",
-            "column" : "ts"
-          },
-          "dimensionsSpec" : {
-            "dimensions": [
-              "srcIP",
-              { "name" : "srcPort", "type" : "long" },
-              { "name" : "dstIP", "type" : "string" },
-              { "name" : "dstPort", "type" : "long" },
-              { "name" : "protocol", "type" : "string" }
-            ]
-          }
-        }
+      "timestampSpec" : {
+        "format" : "iso",
+        "column" : "ts"
+      },
+      "dimensionsSpec" : {
+        "dimensions": [
+          "srcIP",
+          { "name" : "srcPort", "type" : "long" },
+          { "name" : "dstIP", "type" : "string" },
+          { "name" : "dstPort", "type" : "long" },
+          { "name" : "protocol", "type" : "string" }
+        ]
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -490,13 +421,13 @@ The `dataSchema` is shared across all task types, but each task type has its own
 
 ## Define the input source
 
-Now let's define our input source, which is specified in an `ioConfig` object. Each task type has its own type of `ioConfig`. The native batch task uses "firehoses" to read input data, so let's configure a "local" firehose to read the example netflow data we saved earlier:
+Now let's define our input source, which is specified in an `ioConfig` object. Each task type has its own type of `ioConfig`. To read input data, we need to specify an `inputSource`. The example netflow data we saved earlier needs to be read from a local file, which is configured below:
 
 
 ```json
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/",
         "filter" : "ingestion-tutorial-data.json"
@@ -504,30 +435,43 @@ Now let's define our input source, which is specified in an `ioConfig` object. E
     }
 ```
 
+
+### Define the format of the data
+
+Since our input data is represented as JSON strings, we'll use a `inputFormat` to `json` format:
+
+```json
+    "ioConfig" : {
+      "type" : "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "quickstart/",
+        "filter" : "ingestion-tutorial-data.json"
+      },
+      "inputFormat" : {
+        "type" : "json"
+      }
+    }
+```
+
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "ingestion-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "timestampSpec" : {
-            "format" : "iso",
-            "column" : "ts"
-          },
-          "dimensionsSpec" : {
-            "dimensions": [
-              "srcIP",
-              { "name" : "srcPort", "type" : "long" },
-              { "name" : "dstIP", "type" : "string" },
-              { "name" : "dstPort", "type" : "long" },
-              { "name" : "protocol", "type" : "string" }
-            ]
-          }
-        }
+      "timestampSpec" : {
+        "format" : "iso",
+        "column" : "ts"
+      },
+      "dimensionsSpec" : {
+        "dimensions": [
+          "srcIP",
+          { "name" : "srcPort", "type" : "long" },
+          { "name" : "dstIP", "type" : "string" },
+          { "name" : "dstPort", "type" : "long" },
+          { "name" : "protocol", "type" : "string" }
+        ]
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -544,11 +488,14 @@ Now let's define our input source, which is specified in an `ioConfig` object. E
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/",
         "filter" : "ingestion-tutorial-data.json"
+      },
+      "inputFormat" : {
+        "type" : "json"
       }
     }
   }
@@ -563,7 +510,7 @@ As an example, let's add a `tuningConfig` that sets a target segment size for th
 
 ```json
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000
     }
 ```
@@ -576,28 +523,22 @@ We've finished defining the ingestion spec, it should now look like the followin
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "ingestion-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "timestampSpec" : {
-            "format" : "iso",
-            "column" : "ts"
-          },
-          "dimensionsSpec" : {
-            "dimensions": [
-              "srcIP",
-              { "name" : "srcPort", "type" : "long" },
-              { "name" : "dstIP", "type" : "string" },
-              { "name" : "dstPort", "type" : "long" },
-              { "name" : "protocol", "type" : "string" }
-            ]
-          }
-        }
+      "timestampSpec" : {
+        "format" : "iso",
+        "column" : "ts"
+      },
+      "dimensionsSpec" : {
+        "dimensions": [
+          "srcIP",
+          { "name" : "srcPort", "type" : "long" },
+          { "name" : "dstIP", "type" : "string" },
+          { "name" : "dstPort", "type" : "long" },
+          { "name" : "protocol", "type" : "string" }
+        ]
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -614,15 +555,18 @@ We've finished defining the ingestion spec, it should now look like the followin
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/",
         "filter" : "ingestion-tutorial-data.json"
+      },
+      "inputFormat" : {
+        "type" : "json"
       }
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000
     }
   }

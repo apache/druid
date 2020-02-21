@@ -40,6 +40,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -59,7 +60,7 @@ import java.util.List;
  *
  */
 @RunWith(Parameterized.class)
-public class OldApiSketchAggregationTest
+public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
 {
   private final AggregationTestHelper helper;
 
@@ -252,7 +253,7 @@ public class OldApiSketchAggregationTest
     );
   }
 
-  public static final String readFileFromClasspathAsString(String fileName) throws IOException
+  public static String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),
