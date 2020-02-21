@@ -69,6 +69,9 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   DateTime dtLast;             // timestamp of last event
   DateTime dtGroupBy;          // timestamp for expected response for groupBy query
 
+  static final int NUM_RETRIES = 60;
+  static final long DELAY_FOR_RETRIES_MS = 10000;
+
   @Inject
   ServerDiscoveryFactory factory;
   @Inject
@@ -112,8 +115,8 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
             return countRows == getNumExpectedRowsIngested();
           },
           true,
-          10000,
-          100,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
           "Waiting all events are ingested"
       );
 
@@ -155,8 +158,8 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       ITRetryUtil.retryUntil(
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
-          10000,
-          60,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
           "Real-time generated segments loaded"
       );
 
