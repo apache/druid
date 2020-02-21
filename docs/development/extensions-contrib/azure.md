@@ -35,9 +35,9 @@ To use this Apache Druid extension, make sure to [include](../../development/ext
 |`druid.azure.account`||Azure Storage account name.|Must be set.|
 |`druid.azure.key`||Azure Storage account key.|Must be set.|
 |`druid.azure.container`||Azure Storage container name.|Must be set.|
-|`druid.azure.prefix`|prefix to use, i.e. what directory.| |""|
+|`druid.azure.prefix`|A prefix string that will be prepended to the blob names for the segments published to Azure deep storage| |""|
 |`druid.azure.protocol`|the protocol to use|http or https|https|
-|`druid.azure.maxTries`|Number of tries before cancel an Azure operation.| |3|
+|`druid.azure.maxTries`|Number of tries before canceling an Azure operation.| |3|
 |`druid.azure.maxListingLength`|maximum number of input files matching a given prefix to retrieve at a time| |1024|
 
 See [Azure Services](http://azure.microsoft.com/en-us/pricing/free-trial/) for more information.
