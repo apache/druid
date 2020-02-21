@@ -228,18 +228,17 @@ public class CliCoordinator extends ServerRunnable
               );
             }
 
-            conditionalMultibind
-                .addConditionBinding(
-                    "druid.coordinator.kill.on",
-                    Predicates.equalTo("true"),
-                    KillUnusedSegments.class
-                )
-                .addConditionBinding(
-                    "druid.coordinator.kill.pendingSegments.on",
-                    "true",
-                    Predicates.equalTo("true"),
-                    KillStalePendingSegments.class
-                );
+            conditionalMultibind.addConditionBinding(
+                "druid.coordinator.kill.on",
+                Predicates.equalTo("true"),
+                KillUnusedSegments.class
+            );
+            conditionalMultibind.addConditionBinding(
+                "druid.coordinator.kill.pendingSegments.on",
+                "true",
+                Predicates.equalTo("true"),
+                KillStalePendingSegments.class
+            );
 
             bindNodeRoleAndAnnouncer(
                 binder,
