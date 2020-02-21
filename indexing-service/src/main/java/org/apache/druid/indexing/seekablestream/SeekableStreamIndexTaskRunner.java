@@ -1229,8 +1229,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
-    Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
-    return sequences.get(sequences.size() - 1);
+    final CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new CopyOnWriteArrayList<>(sequences);
+    Preconditions.checkState(!sequencesSnapshot.isEmpty(), "Empty sequences");
+    return sequencesSnapshot.get(sequencesSnapshot.size() - 1);
   }
 
   /**
