@@ -41,6 +41,7 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -173,7 +174,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         joinableFactory,
-        cpuTimeAccumulator
+        cpuTimeAccumulator,
+        QueryContexts.getEnableJoinFilterPushDown(query)
     );
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(

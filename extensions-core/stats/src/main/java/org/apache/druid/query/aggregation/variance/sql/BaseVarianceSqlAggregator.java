@@ -100,13 +100,16 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
       virtualColumns.add(virtualColumn);
     }
 
-    if (inputType == ValueType.LONG) {
-      inputTypeName = "long";
-    } else if (inputType == ValueType.FLOAT || inputType == ValueType.DOUBLE) {
-      inputTypeName = "float";
-    } else {
-      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
+    switch (inputType) {
+      case LONG:
+      case DOUBLE:
+      case FLOAT:
+        inputTypeName = StringUtils.toLowerCase(inputType.name());
+        break;
+      default:
+        throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
     }
+
 
     if (func == SqlStdOperatorTable.VAR_POP || func == SqlStdOperatorTable.STDDEV_POP) {
       estimator = "population";

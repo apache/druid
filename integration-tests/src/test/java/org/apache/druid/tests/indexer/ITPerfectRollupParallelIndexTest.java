@@ -89,7 +89,9 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
           INDEX_TASK,
           rollupTransform,
           INDEX_QUERIES_RESOURCE,
-          false
+          false,
+          true,
+          true
       );
 
       doReindexTest(

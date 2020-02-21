@@ -27,14 +27,15 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
-import org.apache.druid.indexing.common.task.SegmentLockHelper;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -238,8 +239,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     final Map<Interval, List<DataSegment>> oldSegmentsMap = groupSegmentsByIntervalAndSort(segmentsToBeOverwritten);
     final Map<Interval, List<DataSegment>> newSegmentsMap = groupSegmentsByIntervalAndSort(segments);
 
-    oldSegmentsMap.values().forEach(SegmentLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
-    newSegmentsMap.values().forEach(SegmentLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
+    oldSegmentsMap.values().forEach(TaskLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
+    newSegmentsMap.values().forEach(TaskLockHelper::verifyRootPartitionIsAdjacentAndAtomicUpdateGroupIsFull);
 
     oldSegmentsMap.forEach((interval, oldSegmentsPerInterval) -> {
       final List<DataSegment> newSegmentsPerInterval = Preconditions.checkNotNull(
@@ -304,8 +305,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +
-           "segmentsToBeOverwritten=" + segmentsToBeOverwritten +
-           ", segments=" + segments +
+           "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
            ", dataSource=" + dataSource +

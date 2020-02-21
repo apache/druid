@@ -26,19 +26,26 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
+import org.apache.druid.data.input.azure.AzureEntityFactory;
+import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.firehose.azure.StaticAzureBlobStoreFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.util.List;
 
+/**
+ * Binds objects related to dealing with the Azure file system.
+ */
 public class AzureStorageDruidModule implements DruidModule
 {
 
@@ -71,13 +78,17 @@ public class AzureStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(StaticAzureBlobStoreFirehoseFactory.class, "static-azure-blobstore"))
+            new NamedType(StaticAzureBlobStoreFirehoseFactory.class, "static-azure-blobstore"),
+            new NamedType(AzureInputSource.class, SCHEME)
+        )
     );
   }
 
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.azure", AzureInputDataConfig.class);
+    JsonConfigProvider.bind(binder, "druid.azure", AzureDataSegmentConfig.class);
     JsonConfigProvider.bind(binder, "druid.azure", AzureAccountConfig.class);
 
     Binders.dataSegmentPusherBinder(binder)
@@ -91,6 +102,17 @@ public class AzureStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
     binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
+    binder.bind(AzureCloudBlobHolderToCloudObjectLocationConverter.class).in(LazySingleton.class);
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureByteSourceFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureEntityFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureCloudBlobIteratorFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(AzureCloudBlobIterableFactory.class));
+    binder.install(new FactoryModuleBuilder()
+                       .build(ListBlobItemHolderFactory.class));
   }
 
   @Provides

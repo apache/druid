@@ -264,12 +264,7 @@ public class Expressions
           rexNode,
           postAggregatorVisitor
       );
-
-      if (expression == null) {
-        return null;
-      } else {
-        return expression;
-      }
+      return expression;
     }
   }
 
@@ -703,7 +698,7 @@ public class Expressions
     final Expr arg = expr.getArg();
     final Granularity granularity = expr.getGranularity();
 
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getIdentifierIfIdentifier())) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getBindingIfIdentifier())) {
       return granularity;
     } else {
       return null;

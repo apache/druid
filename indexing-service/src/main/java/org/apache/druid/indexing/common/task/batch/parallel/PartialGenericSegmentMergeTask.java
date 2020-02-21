@@ -26,11 +26,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
@@ -60,7 +58,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Shar
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
       @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      @JacksonInject @EscalatedClient HttpClient shuffleClient
+      @JacksonInject ShuffleClient shuffleClient
   )
   {
     super(

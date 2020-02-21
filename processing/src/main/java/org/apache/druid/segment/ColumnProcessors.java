@@ -79,9 +79,9 @@ public class ColumnProcessors
       final ColumnSelectorFactory selectorFactory
   )
   {
-    if (expr.getIdentifierIfIdentifier() != null) {
+    if (expr.getBindingIfIdentifier() != null) {
       // If expr is an identifier, treat this the same way as a direct column reference.
-      return makeProcessor(expr.getIdentifierIfIdentifier(), processorFactory, selectorFactory);
+      return makeProcessor(expr.getBindingIfIdentifier(), processorFactory, selectorFactory);
     } else {
       return makeProcessorInternal(
           factory -> exprTypeHint,

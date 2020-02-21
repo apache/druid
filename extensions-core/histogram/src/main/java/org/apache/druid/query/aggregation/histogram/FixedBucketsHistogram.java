@@ -962,7 +962,7 @@ public class FixedBucketsHistogram
     double max = buf.getDouble();
     double min = buf.getDouble();
 
-    long histogram[] = new long[numBuckets];
+    long[] histogram = new long[numBuckets];
     buf.asLongBuffer().get(histogram);
     buf.position(buf.position() + Long.BYTES * histogram.length);
 
@@ -1004,7 +1004,7 @@ public class FixedBucketsHistogram
     double min = buf.getDouble();
 
     int nonEmptyBuckets = buf.getInt();
-    long histogram[] = new long[numBuckets];
+    long[] histogram = new long[numBuckets];
     for (int i = 0; i < nonEmptyBuckets; i++) {
       int bucket = buf.getInt();
       long bucketCount = buf.getLong();

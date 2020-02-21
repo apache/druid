@@ -19,11 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import com.microsoft.azure.storage.StorageException;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,7 +49,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private static final String ACCOUNT = "account";
   private static final String CONTAINER_NAME = "container";
+  private static final String PREFIX = "prefix";
   private static final String BLOB_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final DataSegment DATA_SEGMENT = new DataSegment(
       "test",
@@ -65,8 +65,10 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
       1
   );
   private static final byte[] DATA = new byte[]{0x0, 0x0, 0x0, 0x1};
-  private static final String UNIQUE_MATCHER = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip";
-  private static final String NON_UNIQUE_MATCHER = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
+  private static final String UNIQUE_MATCHER_NO_PREFIX = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip";
+  private static final String UNIQUE_MATCHER_PREFIX = PREFIX + "/" + UNIQUE_MATCHER_NO_PREFIX;
+  private static final String NON_UNIQUE_NO_PREFIX_MATCHER = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
+  private static final String NON_UNIQUE_WITH_PREFIX_MATCHER = PREFIX + "/" + "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
 
   private static final DataSegment SEGMENT_TO_PUSH = new DataSegment(
       "foo",
@@ -82,24 +84,30 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
   private AzureStorage azureStorage;
   private AzureAccountConfig azureAccountConfig;
-  private ObjectMapper jsonMapper;
+  private AzureDataSegmentConfig segmentConfigWithPrefix;
+  private AzureDataSegmentConfig segmentConfigWithoutPrefix;
 
   @Before
   public void before()
   {
     azureStorage = createMock(AzureStorage.class);
     azureAccountConfig = new AzureAccountConfig();
-    azureAccountConfig.setAccount("account");
-    azureAccountConfig.setContainer("container");
+    azureAccountConfig.setAccount(ACCOUNT);
 
-    jsonMapper = new DefaultObjectMapper();
+    segmentConfigWithPrefix = new AzureDataSegmentConfig();
+    segmentConfigWithPrefix.setContainer(CONTAINER_NAME);
+    segmentConfigWithPrefix.setPrefix(PREFIX + "/");
+
+    segmentConfigWithoutPrefix = new AzureDataSegmentConfig();
+    segmentConfigWithoutPrefix.setContainer(CONTAINER_NAME);
   }
 
   @Test
-  public void test_push_nonUniquePath_succeeds() throws Exception
+  public void test_push_nonUniquePathNoPrefix_succeeds() throws Exception
   {
     boolean useUniquePath = false;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix
+    );
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
@@ -116,7 +124,70 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     Assert.assertTrue(
         segment.getLoadSpec().get("blobPath").toString(),
-        Pattern.compile(NON_UNIQUE_MATCHER).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
+        Pattern.compile(NON_UNIQUE_NO_PREFIX_MATCHER).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
+    );
+
+    Assert.assertEquals(SEGMENT_TO_PUSH.getSize(), segment.getSize());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_push_nonUniquePathWithPrefix_succeeds() throws Exception
+  {
+    boolean useUniquePath = false;
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix
+    );
+
+    // Create a mock segment on disk
+    File tmp = tempFolder.newFile("version.bin");
+
+    Files.write(DATA, tmp);
+
+    String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
+    azureStorage.uploadBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.eq(azurePath));
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    DataSegment segment = pusher.push(tempFolder.getRoot(), SEGMENT_TO_PUSH, useUniquePath);
+
+    Assert.assertTrue(
+        segment.getLoadSpec().get("blobPath").toString(),
+        Pattern.compile(NON_UNIQUE_WITH_PREFIX_MATCHER).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
+    );
+
+    Assert.assertEquals(SEGMENT_TO_PUSH.getSize(), segment.getSize());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_push_uniquePathNoPrefix_succeeds() throws Exception
+  {
+    boolean useUniquePath = true;
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix);
+
+    // Create a mock segment on disk
+    File tmp = tempFolder.newFile("version.bin");
+
+    Files.write(DATA, tmp);
+
+    String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
+    azureStorage.uploadBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.matches(UNIQUE_MATCHER_NO_PREFIX)
+    );
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    DataSegment segment = pusher.push(tempFolder.getRoot(), SEGMENT_TO_PUSH, useUniquePath);
+
+    Assert.assertTrue(
+        segment.getLoadSpec().get("blobPath").toString(),
+        Pattern.compile(UNIQUE_MATCHER_NO_PREFIX).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
     );
 
     Assert.assertEquals(SEGMENT_TO_PUSH.getSize(), segment.getSize());
@@ -128,7 +199,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_push_uniquePath_succeeds() throws Exception
   {
     boolean useUniquePath = true;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
@@ -136,7 +207,11 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     Files.write(DATA, tmp);
 
     String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
-    azureStorage.uploadBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.matches(UNIQUE_MATCHER));
+    azureStorage.uploadBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.matches(UNIQUE_MATCHER_PREFIX)
+    );
     EasyMock.expectLastCall();
 
     replayAll();
@@ -145,7 +220,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     Assert.assertTrue(
         segment.getLoadSpec().get("blobPath").toString(),
-        Pattern.compile(UNIQUE_MATCHER).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
+        Pattern.compile(UNIQUE_MATCHER_PREFIX).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
     );
 
     Assert.assertEquals(SEGMENT_TO_PUSH.getSize(), segment.getSize());
@@ -157,7 +232,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_push_exception_throwsException() throws Exception
   {
     boolean useUniquePath = true;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
@@ -175,7 +250,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     Assert.assertTrue(
         segment.getLoadSpec().get("blobPath").toString(),
-        Pattern.compile(UNIQUE_MATCHER).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
+        Pattern.compile(UNIQUE_MATCHER_NO_PREFIX).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
     );
 
     Assert.assertEquals(SEGMENT_TO_PUSH.getSize(), segment.getSize());
@@ -187,7 +262,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void getAzurePathsTest()
   {
 
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
     final String storageDir = pusher.getStorageDir(DATA_SEGMENT, false);
     final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
@@ -200,7 +275,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void uploadDataSegmentTest() throws StorageException, IOException, URISyntaxException
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
     final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
     final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
@@ -228,25 +303,41 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   }
 
   @Test
-  public void getPathForHadoopTest()
+  public void getPathForHadoopWithPrefixTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    String hadoopPath = pusher.getPathForHadoop();
+    Assert.assertEquals("wasbs://container@account.blob.core.windows.net/prefix/", hadoopPath);
+  }
+
+  @Test
+  public void getPathForHadoopWithoutPrefixTest()
+  {
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix);
     String hadoopPath = pusher.getPathForHadoop();
     Assert.assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
   }
 
   @Test
-  public void test_getPathForHadoop_noArgs_succeeds()
+  public void test_getPathForHadoop_noArgsWithoutPrefix_succeeds()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix);
     String hadoopPath = pusher.getPathForHadoop("");
     Assert.assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
   }
 
   @Test
+  public void test_getPathForHadoop_noArgsWithPrefix_succeeds()
+  {
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    String hadoopPath = pusher.getPathForHadoop("");
+    Assert.assertEquals("wasbs://container@account.blob.core.windows.net/prefix/", hadoopPath);
+  }
+
+  @Test
   public void test_getAllowedPropertyPrefixesForHadoop_returnsExpcetedPropertyPrefixes()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
     List<String> actualPropertyPrefixes = pusher.getAllowedPropertyPrefixesForHadoop();
     Assert.assertEquals(AzureDataSegmentPusher.ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP, actualPropertyPrefixes);
   }
@@ -254,7 +345,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void storageDirContainsNoColonsTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
     DataSegment withColons = DATA_SEGMENT.withVersion("2018-01-05T14:54:09.295Z");
     String segmentPath = pusher.getStorageDir(withColons, false);
     Assert.assertFalse("Path should not contain any columns", segmentPath.contains(":"));

@@ -185,7 +185,7 @@ public class InfluxdbEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
     if (started.get()) {
       transformAndSendToInfluxdb(eventsQueue);
@@ -193,7 +193,7 @@ public class InfluxdbEmitter implements Emitter
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     flush();
     log.info("Closing [%s]", this.getClass().getName());

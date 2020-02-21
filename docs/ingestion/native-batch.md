@@ -57,6 +57,7 @@ The supported splittable input formats for now are:
 
 - [`s3`](#s3-input-source) reads data from AWS S3 storage.
 - [`gs`](#google-cloud-storage-input-source) reads data from Google Cloud Storage.
+- [`azure`](#azure-input-source) reads data from Azure Blob Storage.
 - [`hdfs`](#hdfs-input-source) reads data from HDFS storage.
 - [`http`](#http-input-source) reads data from HTTP servers.
 - [`local`](#local-input-source) reads data from local storage.
@@ -66,7 +67,6 @@ Some other cloud storage types are supported with the legacy [`firehose`](#fireh
 The below `firehose` types are also splittable. Note that only text formats are supported
 with the `firehose`.
 
-- [`static-azure-blobstore`](../development/extensions-contrib/azure.md#firehose)
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
 The splittable `inputSource` (and `firehose`) types are responsible for generating _splits_.
@@ -921,6 +921,83 @@ Google Cloud Storage object:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |bucket|Name of the Google Cloud Storage bucket|None|yes|
+|path|The path where data is located.|None|yes|
+
+### Azure Input Source
+
+> You need to include the [`druid-azure-extensions`](../development/extensions-contrib/azure.md) as an extension to use the Azure input source.
+
+The Azure input source is to support reading objects directly from Azure Blob store. Objects can be
+specified as list of Azure Blob store URI strings. The Azure input source is splittable and can be used
+by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read
+a single object.
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azure",
+        "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azure",
+        "prefixes": ["azure://container/prefix1", "azure://container/prefix2"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azure",
+        "objects": [
+          { "bucket": "container", "path": "prefix1/file1.json"},
+          { "bucket": "container", "path": "prefix2/file2.json"}
+        ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be `google`.|None|yes|
+|uris|JSON array of URIs where Azure Blob objects to be ingested are located. Should be in form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure Blob objects to be ingested. Should be in the form "azure://\<container>/\<prefix\>"|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Azure Blob objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+
+Azure Blob object:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|bucket|Name of the Azure Blob Storage container|None|yes|
 |path|The path where data is located.|None|yes|
 
 ### HDFS Input Source

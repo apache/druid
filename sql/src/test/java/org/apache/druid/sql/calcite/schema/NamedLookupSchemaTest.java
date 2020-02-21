@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
@@ -27,7 +28,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(EasyMockRunner.class)
-public class NamedLookupSchemaTest
+public class NamedLookupSchemaTest extends CalciteTestBase
 {
   private static final String SCHEMA_NAME = "lookup";
 

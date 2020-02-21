@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -41,7 +40,6 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
@@ -470,7 +468,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
       final boolean useUniquePath
   )
   {
-    log.info("Pushing segments in background: [%s]", Joiner.on(", ").join(segmentIdentifiers));
+    log.info("Pushing [%s] segments in background", segmentIdentifiers.size());
+    log.infoSegmentIds(
+        segmentIdentifiers.stream().map(SegmentIdWithShardSpec::asSegmentId),
+        "Pushing segments"
+    );
 
     return Futures.transform(
         appenderator.push(segmentIdentifiers, wrappedCommitter, useUniquePath),
@@ -484,14 +486,18 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
           if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
             log.warn(
-                "Removing segments from deep storage because sanity check failed: %s",
-                SegmentUtils.commaSeparatedIdentifiers(segmentsAndMetadata.getSegments())
+                "Removing [%s] segments from deep storage because sanity check failed",
+                segmentsAndMetadata.getSegments().size()
+            );
+            log.warnSegments(
+                segmentsAndMetadata.getSegments(),
+                "Removing segments due to failed sanity check"
             );
 
             segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
             throw new ISE(
-                "WTF?! Pushed different segments than requested. Pushed[%s], requested[%s].",
+                "Pushed different segments than requested. Pushed[%s], requested[%s].",
                 pushedSegments,
                 segmentIdentifiers
             );
@@ -513,7 +519,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    */
   ListenableFuture<SegmentsAndCommitMetadata> dropInBackground(SegmentsAndCommitMetadata segmentsAndCommitMetadata)
   {
-    log.debug("Dropping segments: %s", SegmentUtils.commaSeparatedIdentifiers(segmentsAndCommitMetadata.getSegments()));
+    log.debugSegments(segmentsAndCommitMetadata.getSegments(), "Dropping segments");
 
     final ListenableFuture<?> dropFuture = Futures.allAsList(
         segmentsAndCommitMetadata
@@ -586,10 +592,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
             if (publishResult.isSuccess()) {
               log.info(
-                  "Published segments with commit metadata [%s]: %s",
-                  callerMetadata,
-                  SegmentUtils.commaSeparatedIdentifiers(segmentsAndCommitMetadata.getSegments())
+                  "Published [%s] segments with commit metadata [%s]",
+                  segmentsAndCommitMetadata.getSegments().size(),
+                  callerMetadata
               );
+              log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
             } else {
               // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
               // now after all, for two possible reasons:
@@ -610,8 +617,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
               if (activeSegments.equals(ourSegments)) {
                 log.info(
-                    "Could not publish segments, but checked and found them already published; continuing: %s",
-                    SegmentUtils.commaSeparatedIdentifiers(ourSegments)
+                    "Could not publish [%s] segments, but checked and found them already published; continuing.",
+                    ourSegments.size()
+                );
+                log.infoSegments(
+                    segmentsAndCommitMetadata.getSegments(),
+                    "Could not publish segments"
                 );
 
                 // Clean up pushed segments if they are physically disjoint from the published ones (this means
@@ -629,23 +640,24 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
                 if (publishResult.getErrorMsg() != null) {
+                  log.errorSegments(ourSegments, "Failed to publish segments");
                   throw new ISE(
-                      "Failed to publish segments because of [%s]: %s",
-                      publishResult.getErrorMsg(),
-                      SegmentUtils.commaSeparatedIdentifiers(ourSegments)
+                      "Failed to publish segments because of [%s]",
+                      publishResult.getErrorMsg()
                   );
                 } else {
-                  throw new ISE("Failed to publish segments: %s", SegmentUtils.commaSeparatedIdentifiers(ourSegments));
+                  log.errorSegments(ourSegments, "Failed to publish segments");
+                  throw new ISE("Failed to publish segments");
                 }
               }
             }
           }
           catch (Exception e) {
             // Must not remove segments here, we aren't sure if our transaction succeeded or not.
-            log.noStackTrace().warn(
-                e,
-                "Failed publish, not removing segments: %s",
-                SegmentUtils.commaSeparatedIdentifiers(segmentsAndCommitMetadata.getSegments())
+            log.noStackTrace().warn(e, "Failed publish");
+            log.warnSegments(
+                segmentsAndCommitMetadata.getSegments(),
+                "Failed publish, not removing segments"
             );
             Throwables.propagateIfPossible(e);
             throw new RuntimeException(e);

@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
+/**
+ * Stores the configuration for an Azure account.
+ */
 public class AzureAccountConfig
 {
   @JsonProperty
@@ -40,10 +43,6 @@ public class AzureAccountConfig
   @JsonProperty
   @NotNull
   private String key;
-
-  @JsonProperty
-  @NotNull
-  private String container;
 
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
@@ -68,11 +67,6 @@ public class AzureAccountConfig
     this.key = key;
   }
 
-  public void setContainer(String container)
-  {
-    this.container = container;
-  }
-
   public String getProtocol()
   {
     return protocol;
@@ -91,10 +85,5 @@ public class AzureAccountConfig
   public String getKey()
   {
     return key;
-  }
-
-  public String getContainer()
-  {
-    return container;
   }
 }

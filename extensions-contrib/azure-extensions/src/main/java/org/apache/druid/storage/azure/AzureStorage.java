@@ -20,7 +20,10 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.microsoft.azure.storage.ResultContinuation;
+import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -33,12 +36,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
+/**
+ * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
+ */
 public class AzureStorage
 {
+  private static final boolean USE_FLAT_BLOB_LISTING = true;
 
-  private final Logger log = new Logger(AzureStorage.class);
+  private static final Logger log = new Logger(AzureStorage.class);
 
   private final CloudBlobClient cloudBlobClient;
 
@@ -107,6 +115,29 @@ public class AzureStorage
   CloudBlobClient getCloudBlobClient()
   {
     return this.cloudBlobClient;
+  }
+
+  @VisibleForTesting
+  ResultSegment<ListBlobItem> listBlobsWithPrefixInContainerSegmented(
+      final String containerName,
+      final String prefix,
+      ResultContinuation continuationToken,
+      int maxResults
+  ) throws StorageException, URISyntaxException
+  {
+    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
+    return cloudBlobContainer
+        .listBlobsSegmented(
+            prefix,
+            /* Use flat blob listing here so that we get only blob types and not directories.*/
+            USE_FLAT_BLOB_LISTING,
+            EnumSet
+                .noneOf(BlobListingDetails.class),
+            maxResults,
+            continuationToken,
+            null,
+            null
+        );
   }
 
   private CloudBlobContainer getOrCreateCloudBlobContainer(final String containerName)

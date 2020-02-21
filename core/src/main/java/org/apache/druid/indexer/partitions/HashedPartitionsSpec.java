@@ -123,6 +123,12 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
     return null;
   }
 
+  @Override
+  public SecondaryPartitionType getType()
+  {
+    return SecondaryPartitionType.HASH;
+  }
+
   @Nullable
   @Override
   @JsonProperty

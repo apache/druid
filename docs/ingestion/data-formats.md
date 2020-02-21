@@ -308,6 +308,7 @@ See [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Reso
 |-------|------|-------------|----------|
 | type | String | This should say `avro_hadoop`. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
+| fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
 An Avro parseSpec can contain a [`flattenSpec`](#flattenspec) using either the "root" or "path"
 field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.

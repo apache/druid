@@ -686,7 +686,9 @@ public class RealtimePlumber implements Plumber
             if (timestamp > latestCommitTime) {
               log.info(
                   "Found metaData [%s] with latestCommitTime [%s] greater than previous recorded [%s]",
-                  queryableIndex.getMetadata(), timestamp, latestCommitTime
+                  queryableIndex.getMetadata(),
+                  timestamp,
+                  latestCommitTime
               );
               latestCommitTime = timestamp;
               metadata = queryableIndex.getMetadata().get(COMMIT_METADATA_KEY);

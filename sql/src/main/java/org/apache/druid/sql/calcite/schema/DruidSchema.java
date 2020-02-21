@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -147,7 +146,7 @@ public class DruidSchema extends AbstractSchema
     Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
-    this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
+    this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.tables = new ConcurrentHashMap<>();
     this.escalator = escalator;
 
