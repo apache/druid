@@ -141,7 +141,7 @@ public class Joinables
         if (i != k) {
           String otherPrefix = prefixes.get(k);
           if (prefix1.equals(otherPrefix)) {
-            throw new IAE("Detected duplicate prefix in join clauses: [%]", prefix1);
+            throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix1);
           }
 
           if (isPrefixedBy(prefix1, otherPrefix)) {
