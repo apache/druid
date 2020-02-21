@@ -106,11 +106,14 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       postEvents();
 
       // wait for a while to let the events be ingested
-      ITRetryUtil.retryUntilTrue(
+      ITRetryUtil.retryUntil(
           () -> {
             final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
             return countRows == getNumExpectedRowsIngested();
           },
+          true,
+          10000,
+          100,
           "Waiting all events are ingested"
       );
 
