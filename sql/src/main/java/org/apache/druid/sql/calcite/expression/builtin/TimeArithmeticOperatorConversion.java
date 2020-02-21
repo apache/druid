@@ -48,7 +48,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
   {
     this.operator = operator;
     this.direction = direction;
-    Preconditions.checkArgument(direction > 0 || direction < 0);
+    Preconditions.checkArgument(direction != 0);
   }
 
   @Override

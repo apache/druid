@@ -66,11 +66,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
                   SimpleExtraction.of(selector.getDimension(), selector.getExtractionFn())
               )
           );
-          List<SelectorDimFilter> filterList = selectors.get(boundRefKey);
-          if (filterList == null) {
-            filterList = new ArrayList<>();
-            selectors.put(boundRefKey, filterList);
-          }
+          List<SelectorDimFilter> filterList = selectors.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
           filterList.add(selector);
         }
       }
