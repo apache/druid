@@ -232,5 +232,13 @@ public class ExprMacroTest
   {
     final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
     Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
+
+    final Expr exprNotFlattened = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE, false);
+    final Expr roundTripNotFlattened =
+        Parser.parse(exprNotFlattened.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTripNotFlattened.eval(BINDINGS).value());
+
+    final Expr roundTrip = Parser.parse(expr.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTrip.eval(BINDINGS).value());
   }
 }
