@@ -40,7 +40,6 @@ import java.util.stream.Stream;
 public abstract class CloudObjectInputSource<T extends InputEntity> extends AbstractInputSource
     implements SplittableInputSource<CloudObjectLocation>
 {
-  protected static final int MAX_LISTING_LENGTH = 1024;
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;

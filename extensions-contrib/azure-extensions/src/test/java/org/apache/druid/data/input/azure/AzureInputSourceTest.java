@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.easymock.EasyMock;
@@ -55,11 +56,13 @@ public class AzureInputSourceTest extends EasyMockSupport
   private static final String CONTAINER = "CONTAINER";
   private static final String BLOB_PATH = "BLOB_PATH";
   private static final CloudObjectLocation CLOUD_OBJECT_LOCATION_1 = new CloudObjectLocation(CONTAINER, BLOB_PATH);
+  private static final int MAX_LISTING_LENGTH = 10;
 
   private AzureStorage storage;
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
+  private AzureInputDataConfig inputDataConfig;
 
   private InputSplit<CloudObjectLocation> inputSplit;
   private AzureEntity azureEntity1;
@@ -86,6 +89,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     azureEntity1 = createMock(AzureEntity.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
     azureCloudBlobToLocationConverter = createMock(AzureCloudBlobHolderToCloudObjectLocationConverter.class);
+    inputDataConfig = createMock(AzureInputDataConfig.class);
     cloudBlobDruid1 = createMock(CloudBlobHolder.class);
     azureCloudBlobIterable = createMock(AzureCloudBlobIterable.class);
   }
@@ -99,6 +103,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
+        inputDataConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         EMPTY_OBJECTS
@@ -118,6 +123,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
+        inputDataConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         objects
@@ -135,7 +141,8 @@ public class AzureInputSourceTest extends EasyMockSupport
     List<CloudObjectLocation> expectedCloudLocations = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, AzureInputSource.MAX_LISTING_LENGTH)).andReturn(
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
+    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH)).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.spliterator())
             .andReturn(Spliterators.spliteratorUnknownSize(expectedCloudBlobsIterator, 0));
@@ -148,6 +155,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
+        inputDataConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS
@@ -173,6 +181,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
+        inputDataConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS
@@ -192,6 +201,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         azureCloudBlobToLocationConverter,
+        inputDataConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS
@@ -211,6 +221,7 @@ public class AzureInputSourceTest extends EasyMockSupport
                   .withNonnullFields("entityFactory")
                   .withNonnullFields("azureCloudBlobIterableFactory")
                   .withNonnullFields("azureCloudBlobToLocationConverter")
+                  .withNonnullFields("inputDataConfig")
                   .verify();
   }
 

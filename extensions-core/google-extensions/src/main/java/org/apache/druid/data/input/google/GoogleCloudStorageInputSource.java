@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
 
@@ -40,13 +41,13 @@ import java.util.stream.StreamSupport;
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource<GoogleCloudStorageEntity>
 {
   static final String SCHEME = "gs";
-  private static final int MAX_LISTING_LENGTH = 1024;
-
   private final GoogleStorage storage;
+  private final GoogleInputDataConfig inputDataConfig;
 
   @JsonCreator
   public GoogleCloudStorageInputSource(
       @JacksonInject GoogleStorage storage,
+      @JacksonInject GoogleInputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
@@ -54,6 +55,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   {
     super(SCHEME, uris, prefixes, objects);
     this.storage = storage;
+    this.inputDataConfig = inputDataConfig;
   }
 
   @Override
@@ -73,7 +75,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new GoogleCloudStorageInputSource(storage, null, null, ImmutableList.of(split.get()));
+    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, ImmutableList.of(split.get()));
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
@@ -84,7 +86,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   private Iterable<StorageObject> storageObjectIterable()
   {
     return () ->
-        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), MAX_LISTING_LENGTH);
+        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), inputDataConfig.getMaxListingLength());
   }
 
   @Override

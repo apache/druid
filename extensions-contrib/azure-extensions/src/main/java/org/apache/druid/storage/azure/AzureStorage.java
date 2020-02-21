@@ -46,7 +46,7 @@ public class AzureStorage
 {
   private static final boolean USE_FLAT_BLOB_LISTING = true;
 
-  private final Logger log = new Logger(AzureStorage.class);
+  private static final Logger log = new Logger(AzureStorage.class);
 
   private final CloudBlobClient cloudBlobClient;
 

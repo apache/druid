@@ -21,69 +21,38 @@ package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 /**
- * Stores the configuration for an Azure account.
+ * Stores the configuration for segments written to Azure deep storage
  */
-public class AzureAccountConfig
+public class AzureDataSegmentConfig
 {
   @JsonProperty
-  private String protocol = "https";
-
-  @JsonProperty
-  @Min(1)
-  private int maxTries = 3;
+  @NotNull
+  private String container;
 
   @JsonProperty
   @NotNull
-  private String account;
+  private String prefix = "";
 
-  @JsonProperty
-  @NotNull
-  private String key;
-
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public void setProtocol(String protocol)
+  public void setContainer(String container)
   {
-    this.protocol = protocol;
+    this.container = container;
   }
 
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public void setMaxTries(int maxTries)
+  public void setPrefix(String prefix)
   {
-    this.maxTries = maxTries;
+    this.prefix = prefix;
   }
 
-  public void setAccount(String account)
+  public String getContainer()
   {
-    this.account = account;
+    return container;
   }
 
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public void setKey(String key)
+  public String getPrefix()
   {
-    this.key = key;
-  }
-
-  public String getProtocol()
-  {
-    return protocol;
-  }
-
-  public int getMaxTries()
-  {
-    return maxTries;
-  }
-
-  public String getAccount()
-  {
-    return account;
-  }
-
-  public String getKey()
-  {
-    return key;
+    return prefix;
   }
 }

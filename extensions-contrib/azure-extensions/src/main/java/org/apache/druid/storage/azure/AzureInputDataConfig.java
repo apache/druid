@@ -17,75 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.storage.s3;
+package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.Min;
 
 /**
+ * Stores the configuration for options related to reading
+ * input data from Azure blob store into Druid
  */
-public class S3DataSegmentPusherConfig
+public class AzureInputDataConfig
 {
-  @JsonProperty
-  private String bucket = "";
-
-  @JsonProperty
-  private String baseKey = "";
-
-  @JsonProperty
-  private boolean disableAcl = false;
-
+  /**
+   * The maximum number of input files matching a given prefix to retrieve
+   * from Azure at a time.
+   */
   @JsonProperty
   @Min(1)
   private int maxListingLength = 1024;
-  // use s3n by default for backward compatibility
-  @JsonProperty
-  private boolean useS3aSchema = false;
-
-  public void setBucket(String bucket)
-  {
-    this.bucket = bucket;
-  }
-
-  public void setBaseKey(String baseKey)
-  {
-    this.baseKey = baseKey;
-  }
-
-  public void setDisableAcl(boolean disableAcl)
-  {
-    this.disableAcl = disableAcl;
-  }
 
   public void setMaxListingLength(int maxListingLength)
   {
     this.maxListingLength = maxListingLength;
-  }
-
-  public boolean isUseS3aSchema()
-  {
-    return useS3aSchema;
-  }
-
-  public void setUseS3aSchema(boolean useS3aSchema)
-  {
-    this.useS3aSchema = useS3aSchema;
-  }
-
-  public String getBucket()
-  {
-    return bucket;
-  }
-
-  public String getBaseKey()
-  {
-    return baseKey;
-  }
-
-  public boolean getDisableAcl()
-  {
-    return disableAcl;
   }
 
   public int getMaxListingLength()

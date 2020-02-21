@@ -39,24 +39,34 @@ public class AzureUtils
   @VisibleForTesting
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
+  // The azure storage hadoop access pattern is:
+  // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
+  // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
+  static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
+
   public static final Predicate<Throwable> AZURE_RETRY = e -> {
-    if (e instanceof URISyntaxException) {
+    if (e == null) {
       return false;
     }
+    for (Throwable t = e; t != null; t = t.getCause()) {
+      if (t instanceof URISyntaxException) {
+        return false;
+      }
 
-    if (e instanceof StorageException) {
-      return true;
+      if (t instanceof StorageException) {
+        return true;
+      }
+
+      if (t instanceof IOException) {
+        return true;
+      }
     }
-
-    if (e instanceof IOException) {
-      return true;
-    }
-
     return false;
   };
 
   /**
    * extracts the path component of the supplied uri with any leading '/' characters removed.
+   *
    * @param uri the uri to extract the path for
    * @return a String representing the path component of the uri with any leading '/'
    * characters removed.
@@ -68,6 +78,7 @@ public class AzureUtils
 
   /**
    * extracts the blob path component of the supplied uri with any leading 'blob.core.windows.net/' string removed.
+   *
    * @param blobPath the path of the blob
    * @return a String representing the blob path component of the uri with any leading 'blob.core.windows.net/' string
    * removed characters removed.

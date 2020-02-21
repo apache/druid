@@ -126,6 +126,11 @@
             <artifactId>jsr305</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -175,7 +180,7 @@
                                 <limit>
                                     <counter>INSTRUCTION</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.84</minimum>
+                                    <minimum>0.85</minimum>
                                 </limit>
                                 <limit>
                                     <counter>LINE</counter>
@@ -185,17 +190,17 @@
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.86</minimum>
+                                    <minimum>0.87</minimum>
                                 </limit>
                                 <limit>
                                     <counter>COMPLEXITY</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.80</minimum>
+                                    <minimum>0.79</minimum>
                                 </limit>
                                 <limit>
                                     <counter>METHOD</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.79</minimum>
+                                    <minimum>0.78</minimum>
                                 </limit>
                                 <limit>
                                     <counter>CLASS</counter>
