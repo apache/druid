@@ -297,7 +297,7 @@ public class ExprListenerImpl extends ExprBaseListener
         );
         break;
       default:
-        throw new RE("Unrecognized binary operator ", ctx.getChild(1).getText());
+        throw new RE("Unrecognized binary operator %s", ctx.getChild(1).getText());
     }
   }
 
