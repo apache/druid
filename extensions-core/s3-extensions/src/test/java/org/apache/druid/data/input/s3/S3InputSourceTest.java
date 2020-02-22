@@ -260,7 +260,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     expectListObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
     EasyMock.replay(S3_CLIENT);
 
-    S3InputSource inputSource = new S3InputSource(SERVICE, null, PREFIXES, null);
+    S3InputSource inputSource = new S3InputSource(SERVICE, INPUT_DATA_CONFIG, null, PREFIXES, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null),
