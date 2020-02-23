@@ -2937,7 +2937,7 @@ libraries:
 ---
 
 name: Apache Velocity Engine
-version: 2.0
+version: 2.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
