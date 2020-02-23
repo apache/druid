@@ -3469,6 +3469,30 @@ libraries:
 
 name: PostgreSQL JDBC Driver
 license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-2-Clause License
+version: 42.2.8
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD2
+libraries:
+  - org.postgresql: postgresql
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/druid-lookups-cached-global
+license_name: BSD-2-Clause License
+version: 42.2.8
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD2
+libraries:
+  - org.postgresql: postgresql
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
 version: 42.2.8
