@@ -101,8 +101,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         EMPTY_PREFIXES,
-        EMPTY_OBJECTS,
-        null
+        EMPTY_OBJECTS
     );
   }
 
@@ -121,8 +120,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         EMPTY_PREFIXES,
-        objects,
-        null
+        objects
     );
 
     AzureEntity actualAzureEntity = azureInputSource.createEntity(inputSplit);
@@ -152,8 +150,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS,
-        null
+        EMPTY_OBJECTS
     );
 
     Stream<InputSplit<CloudObjectLocation>> cloudObjectStream = azureInputSource.getPrefixesSplitStream();
@@ -178,8 +175,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS,
-        null
+        EMPTY_OBJECTS
     );
 
     SplittableInputSource<CloudObjectLocation> newInputSource = azureInputSource.withSplit(inputSplit);
@@ -198,12 +194,11 @@ public class AzureInputSourceTest extends EasyMockSupport
         azureCloudBlobToLocationConverter,
         EMPTY_URIS,
         prefixes,
-        EMPTY_OBJECTS,
-        null
+        EMPTY_OBJECTS
     );
 
     String actualToString = azureInputSource.toString();
-    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], cloudConfigProperties=null}", actualToString);
+    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[]}", actualToString);
   }
 
   @Test
