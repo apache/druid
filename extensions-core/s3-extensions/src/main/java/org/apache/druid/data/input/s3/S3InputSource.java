@@ -27,6 +27,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
@@ -47,7 +49,10 @@ import java.util.stream.StreamSupport;
 
 public class S3InputSource extends CloudObjectInputSource<S3Entity>
 {
-  private final ServerSideEncryptingAmazonS3 s3Client;
+  // We lazily initialize s3Client to avoid costly s3 operation when we only need S3InputSource for stored information
+  // (such as for task logs) and not for ingestion. (This cost only applies for new s3Client created with
+  // s3ConfigProperties given).
+  private final Supplier<ServerSideEncryptingAmazonS3> s3Client;
   @JsonProperty("properties")
   private final S3ConfigProperties s3ConfigProperties;
 
@@ -64,17 +69,21 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
     this.s3ConfigProperties = s3ConfigProperties;
-    if (amazonS3ClientBuilder != null && storageConfig != null && s3ConfigProperties != null) {
-      if (s3ConfigProperties.isCredentialsConfigured()) {
-        BasicAWSCredentials creds = new BasicAWSCredentials(
-            s3ConfigProperties.getAccessKeyId().getPassword(),
-            s3ConfigProperties.getSecretAccessKey().getPassword());
-        amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
-      }
-      this.s3Client = new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
-    } else {
-      this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
-    }
+    this.s3Client = Suppliers.memoize(
+        () -> {
+          if (amazonS3ClientBuilder != null && storageConfig != null && s3ConfigProperties != null) {
+            if (s3ConfigProperties.isCredentialsConfigured()) {
+              BasicAWSCredentials creds = new BasicAWSCredentials(
+                  s3ConfigProperties.getAccessKeyId().getPassword(),
+                  s3ConfigProperties.getSecretAccessKey().getPassword());
+              amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
+            }
+            return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
+          } else {
+            return Preconditions.checkNotNull(s3Client, "s3Client");
+          }
+        }
+    );
   }
 
   @Nullable
@@ -87,7 +96,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   @Override
   protected S3Entity createEntity(InputSplit<CloudObjectLocation> split)
   {
-    return new S3Entity(s3Client, split.get());
+    return new S3Entity(s3Client.get(), split.get());
   }
 
   @Override
@@ -101,7 +110,15 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new S3InputSource(s3Client, null, null, null, null, ImmutableList.of(split.get()), getS3ConfigProperties());
+    return new S3InputSource(
+        s3Client.get(),
+       null,
+       null,
+       null,
+       null,
+       ImmutableList.of(split.get()),
+       getS3ConfigProperties()
+    );
   }
 
   @Override
@@ -142,6 +159,6 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> S3Utils.objectSummaryIterator(s3Client, getPrefixes(), MAX_LISTING_LENGTH);
+    return () -> S3Utils.objectSummaryIterator(s3Client.get(), getPrefixes(), MAX_LISTING_LENGTH);
   }
 }
