@@ -925,7 +925,7 @@ Google Cloud Storage object:
 
 ### Azure Input Source
 
-> You need to include the [`druid-azure-extensions`](../development/extensions-contrib/azure.md) as an extension to use the Azure input source.
+> You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 
 The Azure input source is to support reading objects directly from Azure Blob store. Objects can be
 specified as list of Azure Blob store URI strings. The Azure input source is splittable and can be used

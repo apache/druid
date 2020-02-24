@@ -72,7 +72,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |Name|Description|Docs|
 |----|-----------|----|
 |ambari-metrics-emitter|Ambari Metrics Emitter |[link](../development/extensions-contrib/ambari-metrics-emitter.md)|
-|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-contrib/azure.md)|
+|druid-azure-extensions|Microsoft Azure deep storage.|[link](extensions-core/azure.md)|
 |druid-cassandra-storage|Apache Cassandra deep storage.|[link](../development/extensions-contrib/cassandra.md)|
 |druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/extensions-contrib/cloudfiles.md)|
 |druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.md)|
