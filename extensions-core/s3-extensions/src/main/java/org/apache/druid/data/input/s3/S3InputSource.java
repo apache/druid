@@ -29,9 +29,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.S3ConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.S3ConfigProperties;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
@@ -101,7 +101,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new S3InputSource(s3Client, null, null, null, null, ImmutableList.of(split.get()), null);
+    return new S3InputSource(s3Client, null, null, null, null, ImmutableList.of(split.get()), getS3ConfigProperties());
   }
 
   @Override
@@ -126,7 +126,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
       return false;
     }
     S3InputSource that = (S3InputSource) o;
-    return s3ConfigProperties.equals(that.s3ConfigProperties);
+    return Objects.equals(s3ConfigProperties, that.s3ConfigProperties);
   }
 
   @Override
