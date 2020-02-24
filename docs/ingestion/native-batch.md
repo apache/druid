@@ -851,8 +851,8 @@ Properties Object:
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|accessKeyId|S3 access key for this S3 inputSource|None|yes if secretAccessKey is given|
-|secretAccessKey|S3 secret key for this S3 inputSource|None|yes if accessKeyId is given|
+|accessKeyId|S3 access key for this S3 InputSource|None|yes if secretAccessKey is given|
+|secretAccessKey|S3 secret key for this S3 InputSource|None|yes if accessKeyId is given|
 
 **Note :** *If any property is not given in the Properties Object, then the current default server value will be use.*
 
