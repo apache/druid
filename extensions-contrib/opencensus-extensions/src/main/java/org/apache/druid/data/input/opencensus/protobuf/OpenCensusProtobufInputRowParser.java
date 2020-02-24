@@ -21,7 +21,6 @@ package org.apache.druid.data.input.opencensus.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.protobuf.ByteString;
@@ -98,9 +97,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
           .map(s -> s.getKey())
           .collect(Collectors.toSet());
 
-      // Add resource map key set to record dimensions. Do not check for null behavior of
-      // getResource() and getLabelsMap() as default instance or empty map will be returned
-      // respectively. Hence it's safe to call methods directly without null check.
+      // Add resource map key set to record dimensions.
       recordDimensions.addAll(metric.getResource().getLabelsMap().keySet());
 
       // NAME, VALUE dimensions will not be present in labelKeysList or Metric.Resource map as they
@@ -114,16 +111,12 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
       );
     }
 
-    // Create immutable resourceLabels which are common to all points in timeSeries. It's safe to
-    // call getResource() and getLabelsMap() methods without null check.
-    Map<String, String> resourceLabels = ImmutableMap.copyOf(metric.getResource().getLabelsMap());
-
     // Flatten out the OpenCensus record into druid rows.
     List<InputRow> rows = new ArrayList<>();
     for (TimeSeries ts : metric.getTimeseriesList()) {
 
       // Add common resourceLabels.
-      Map<String, Object> labels = new HashMap<>(resourceLabels);
+      Map<String, Object> labels = new HashMap<>(metric.getResource().getLabelsMap());
 
       // Add labels to record.
       for (int i = 0; i < metric.getMetricDescriptor().getLabelKeysCount(); i++) {

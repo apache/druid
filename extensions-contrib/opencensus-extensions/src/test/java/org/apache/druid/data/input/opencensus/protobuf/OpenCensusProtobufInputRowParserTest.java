@@ -110,9 +110,9 @@ public class OpenCensusProtobufInputRowParserTest
 
     System.out.println(timestamp.getSeconds() * 1000);
 
-    Metric d = doubleGaugeMetric(timestamp);
+    Metric metric = doubleGaugeMetric(timestamp);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    d.writeTo(out);
+    metric.writeTo(out);
 
     InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
     Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
@@ -135,9 +135,9 @@ public class OpenCensusProtobufInputRowParserTest
     Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
         .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
 
-    Metric d = summaryMetric(timestamp);
+    Metric metric = summaryMetric(timestamp);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    d.writeTo(out);
+    metric.writeTo(out);
 
     List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
 
@@ -168,9 +168,9 @@ public class OpenCensusProtobufInputRowParserTest
     Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
         .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
 
-    Metric d = summaryMetric(timestamp);
+    Metric metric = summaryMetric(timestamp);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    d.writeTo(out);
+    metric.writeTo(out);
 
     List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
 
@@ -199,9 +199,9 @@ public class OpenCensusProtobufInputRowParserTest
     Timestamp timestamp = Timestamp.newBuilder().setSeconds(dateTime.getMillis() / 1000)
         .setNanos((int) ((dateTime.getMillis() % 1000) * 1000000)).build();
 
-    Metric d = summaryMetric(timestamp);
+    Metric metric = summaryMetric(timestamp);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    d.writeTo(out);
+    metric.writeTo(out);
 
     List<InputRow> rows = parser.parseBatch(ByteBuffer.wrap(out.toByteArray()));
 
