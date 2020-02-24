@@ -30,11 +30,13 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
 {
   private final IntSupplier currentRow;
   private final IndexedTable.Reader columnReader;
+  private final RowHolder currentRowHolder;
 
   IndexedTableColumnValueSelector(IndexedTable table, IntSupplier currentRow, int columnNumber)
   {
     this.currentRow = currentRow;
     this.columnReader = table.columnReader(columnNumber);
+    currentRowHolder = new RowHolder(columnReader);
   }
 
   @Override
@@ -42,14 +44,10 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
   {
     final int rowNum = currentRow.getAsInt();
 
-    if (rowNum != -1) {
-      final Object value = columnReader.read(currentRow.getAsInt());
-
-      if (value instanceof Number) {
-        return ((Number) value).doubleValue();
-      }
+    Object value = currentRowHolder.computeForRow(rowNum);
+    if (value instanceof Number) {
+      return ((Number) value).doubleValue();
     }
-
     // Otherwise this shouldn't have been called (due to isNull returning true).
     assert NullHandling.replaceWithDefault();
     return NullHandling.defaultDoubleValue();
@@ -60,12 +58,9 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
   {
     final int rowNum = currentRow.getAsInt();
 
-    if (rowNum != -1) {
-      final Object value = columnReader.read(currentRow.getAsInt());
-
-      if (value instanceof Number) {
-        return ((Number) value).floatValue();
-      }
+    Object value = currentRowHolder.computeForRow(rowNum);
+    if (value instanceof Number) {
+      return ((Number) value).floatValue();
     }
 
     // Otherwise this shouldn't have been called (due to isNull returning true).
@@ -78,12 +73,9 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
   {
     final int rowNum = currentRow.getAsInt();
 
-    if (rowNum != -1) {
-      final Object value = columnReader.read(currentRow.getAsInt());
-
-      if (value instanceof Number) {
-        return ((Number) value).longValue();
-      }
+    Object value = currentRowHolder.computeForRow(rowNum);
+    if (value instanceof Number) {
+      return ((Number) value).longValue();
     }
 
     // Otherwise this shouldn't have been called (due to isNull returning true).
@@ -100,7 +92,7 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
       return true;
     }
 
-    final Object value = columnReader.read(rowNum);
+    Object value = currentRowHolder.computeForRow(rowNum);
     return !(value instanceof Number);
   }
 
@@ -110,11 +102,7 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
   {
     final int rowNum = currentRow.getAsInt();
 
-    if (rowNum == -1) {
-      return null;
-    } else {
-      return columnReader.read(currentRow.getAsInt());
-    }
+    return currentRowHolder.computeForRow(rowNum);
   }
 
   @Override
@@ -128,5 +116,36 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
   {
     inspector.visit("columnReader", columnReader);
     inspector.visit("currentRow", currentRow);
+  }
+
+  private static final class RowHolder
+  {
+    private static final int NOT_INITIALIZED = -2;
+
+    private final IndexedTable.Reader columnReader;
+    private int thisRow;
+    // TODO: store primitive values instead of the raw object for perf!
+    private Object value;
+
+    private RowHolder(IndexedTable.Reader columnReader)
+    {
+      this.columnReader = columnReader;
+      thisRow = NOT_INITIALIZED;
+      value = null;
+    }
+
+    private Object computeForRow(int row)
+    {
+      if (thisRow == row) {
+        return value;
+      }
+      thisRow = row;
+      if (row != -1) {
+        value = columnReader.read(row);
+      } else {
+        value = null;
+      }
+      return value;
+    }
   }
 }
