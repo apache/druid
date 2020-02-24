@@ -28,10 +28,10 @@ import org.apache.druid.metadata.PasswordProvider;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class CloudConfigProperties
+public class S3ConfigProperties
 {
   @JsonCreator
-  public CloudConfigProperties(
+  public S3ConfigProperties(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
   )
@@ -71,7 +71,7 @@ public class CloudConfigProperties
   @Override
   public String toString()
   {
-    return "CloudConfigProperties{" +
+    return "S3ConfigProperties{" +
            "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
            '}';
@@ -86,7 +86,7 @@ public class CloudConfigProperties
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CloudConfigProperties that = (CloudConfigProperties) o;
+    S3ConfigProperties that = (S3ConfigProperties) o;
     return Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey);
   }

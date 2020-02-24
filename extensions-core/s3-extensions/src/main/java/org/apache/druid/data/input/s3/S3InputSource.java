@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.CloudConfigProperties;
+import org.apache.druid.data.input.impl.S3ConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -41,12 +41,15 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class S3InputSource extends CloudObjectInputSource<S3Entity>
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
+  @JsonProperty("properties")
+  private final S3ConfigProperties s3ConfigProperties;
 
   @JsonCreator
   public S3InputSource(
@@ -56,20 +59,29 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("properties") @Nullable CloudConfigProperties cloudConfigProperties
+      @JsonProperty("properties") @Nullable S3ConfigProperties s3ConfigProperties
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, cloudConfigProperties);
-    if (amazonS3ClientBuilder != null && storageConfig != null && cloudConfigProperties != null) {
-      if (cloudConfigProperties.isCredentialsConfigured()) {
-        BasicAWSCredentials creds = new BasicAWSCredentials(cloudConfigProperties.getAccessKeyId().getPassword(),
-                                                            cloudConfigProperties.getSecretAccessKey().getPassword());
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
+    this.s3ConfigProperties = s3ConfigProperties;
+    if (amazonS3ClientBuilder != null && storageConfig != null && s3ConfigProperties != null) {
+      if (s3ConfigProperties.isCredentialsConfigured()) {
+        BasicAWSCredentials creds = new BasicAWSCredentials(
+            s3ConfigProperties.getAccessKeyId().getPassword(),
+            s3ConfigProperties.getSecretAccessKey().getPassword());
         amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
       }
       this.s3Client = new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
     } else {
       this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
     }
+  }
+
+  @Nullable
+  @JsonProperty("properties")
+  public S3ConfigProperties getS3ConfigProperties()
+  {
+    return s3ConfigProperties;
   }
 
   @Override
@@ -93,13 +105,38 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   }
 
   @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        s3ConfigProperties
+    );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    S3InputSource that = (S3InputSource) o;
+    return s3ConfigProperties.equals(that.s3ConfigProperties);
+  }
+
+  @Override
   public String toString()
   {
     return "S3InputSource{" +
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", cloudConfigProperties=" + getCloudConfigProperties() +
+           ", s3ConfigProperties=" + getS3ConfigProperties() +
            '}';
   }
 

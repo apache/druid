@@ -44,7 +44,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.CloudConfigProperties;
+import org.apache.druid.data.input.impl.S3ConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -113,7 +113,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo")
   );
 
-  private static final CloudConfigProperties CLOUD_CONFIG_PROPERTIES = new CloudConfigProperties(
+  private static final S3ConfigProperties CLOUD_CONFIG_PROPERTIES = new S3ConfigProperties(
       new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
 
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
@@ -197,7 +197,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testS3InputSourceUseDefaultPasswordWhenCloudConfigPropertiesWithoutCrediential()
   {
-    CloudConfigProperties mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(CloudConfigProperties.class);
+    S3ConfigProperties mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(S3ConfigProperties.class);
     EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);

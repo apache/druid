@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.CloudConfigProperties;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -50,11 +49,10 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
       @JacksonInject GoogleStorage storage,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("properties") @Nullable CloudConfigProperties cloudConfigProperties
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
   )
   {
-    super(SCHEME, uris, prefixes, objects, cloudConfigProperties);
+    super(SCHEME, uris, prefixes, objects);
     this.storage = storage;
   }
 
@@ -75,13 +73,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
   @Override
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
-    return new GoogleCloudStorageInputSource(
-        storage,
-        null,
-        null,
-        ImmutableList.of(split.get()),
-        null
-    );
+    return new GoogleCloudStorageInputSource(storage, null, null, ImmutableList.of(split.get()));
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
@@ -102,7 +94,6 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource<Google
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", cloudConfigProperties=" + getCloudConfigProperties() +
            '}';
   }
 }

@@ -44,21 +44,17 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
-  @JsonProperty("properties")
-  private final CloudConfigProperties cloudConfigProperties;
 
   public CloudObjectInputSource(
       String scheme,
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
-      @Nullable List<CloudObjectLocation> objects,
-      @Nullable CloudConfigProperties cloudConfigProperties
+      @Nullable List<CloudObjectLocation> objects
   )
   {
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
-    this.cloudConfigProperties = cloudConfigProperties;
 
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
@@ -89,13 +85,6 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
   public List<CloudObjectLocation> getObjects()
   {
     return objects;
-  }
-
-  @Nullable
-  @JsonProperty("properties")
-  public CloudConfigProperties getCloudConfigProperties()
-  {
-    return cloudConfigProperties;
   }
 
   /**
@@ -175,14 +164,13 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
     CloudObjectInputSource that = (CloudObjectInputSource) o;
     return Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
-           Objects.equals(cloudConfigProperties, that.cloudConfigProperties) &&
            Objects.equals(objects, that.objects);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, objects, cloudConfigProperties);
+    return Objects.hash(uris, prefixes, objects);
   }
 
   private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException
