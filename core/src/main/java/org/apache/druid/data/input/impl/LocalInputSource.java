@@ -56,20 +56,22 @@ import java.util.stream.Stream;
 
 public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
+  @Nullable
   private final File baseDir;
+  @Nullable
   private final String filter;
   private final Set<File> files;
 
   @JsonCreator
   public LocalInputSource(
-      @JsonProperty("baseDir") File baseDir,
-      @JsonProperty("filter") String filter,
-      @JsonProperty("files") Set<File> files
+      @JsonProperty("baseDir") @Nullable File baseDir,
+      @JsonProperty("filter") @Nullable String filter,
+      @JsonProperty("files") @Nullable Set<File> files
   )
   {
     this.baseDir = baseDir;
     this.filter = baseDir != null ? Preconditions.checkNotNull(filter, "filter") : filter;
-    this.files = files;
+    this.files = files == null ? Collections.emptySet() : files;
 
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
       throw new IAE("At least one of baseDir or files should be specified");
@@ -81,12 +83,14 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     this(baseDir, filter, null);
   }
 
+  @Nullable
   @JsonProperty
   public File getBaseDir()
   {
     return baseDir;
   }
 
+  @Nullable
   @JsonProperty
   public String getFilter()
   {

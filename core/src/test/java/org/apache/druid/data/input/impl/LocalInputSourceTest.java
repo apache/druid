@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -52,6 +53,12 @@ public class LocalInputSourceTest
     final byte[] json = mapper.writeValueAsBytes(source);
     final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
     Assert.assertEquals(source, fromJson);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(LocalInputSource.class).usingGetClass().withNonnullFields("files").verify();
   }
 
   @Test

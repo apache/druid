@@ -20,6 +20,7 @@
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.compress.utils.Lists;
 import org.junit.Assert;
 import org.junit.Test;
@@ -76,5 +77,11 @@ public class MaxSizeSplitHintSpecTest
     for (List<Integer> split : splits) {
       Assert.assertEquals(1, split.size());
     }
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(MaxSizeSplitHintSpec.class).withNonnullFields("maxSplitSize").usingGetClass().verify();
   }
 }

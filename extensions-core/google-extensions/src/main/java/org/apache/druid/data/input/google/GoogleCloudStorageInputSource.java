@@ -30,6 +30,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
@@ -47,6 +48,9 @@ import java.util.stream.Stream;
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 {
   static final String SCHEME = "gs";
+
+  private static final Logger LOG = new Logger(GoogleCloudStorageInputSource.class);
+
   private final GoogleStorage storage;
   private final GoogleInputDataConfig inputDataConfig;
 
@@ -85,6 +89,14 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
               sizeInLong = sizeInBigInteger.longValueExact();
             }
             catch (ArithmeticException e) {
+              LOG.warn(
+                  e,
+                  "The object [%s, %s] has a size [%s] out of the range of the long type. "
+                  + "The max long value will be used for its size instead.",
+                  storageObject.getBucket(),
+                  storageObject.getName(),
+                  sizeInBigInteger
+              );
               sizeInLong = Long.MAX_VALUE;
             }
           }
@@ -111,7 +123,11 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
   private Iterable<StorageObject> storageObjectIterable()
   {
     return () ->
-        GoogleUtils.lazyFetchingStorageObjectsIterator(storage, getPrefixes().iterator(), inputDataConfig.getMaxListingLength());
+        GoogleUtils.lazyFetchingStorageObjectsIterator(
+            storage,
+            getPrefixes().iterator(),
+            inputDataConfig.getMaxListingLength()
+        );
   }
 
   @Override

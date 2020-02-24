@@ -48,23 +48,23 @@ public class InputEntityIteratingReader implements InputSourceReader
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      Iterator<? extends InputEntity> sourceStream,
+      Iterator<? extends InputEntity> sourceIterator,
       File temporaryDirectory
   )
   {
-    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceStream), temporaryDirectory);
+    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceIterator), temporaryDirectory);
   }
 
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      CloseableIterator<? extends InputEntity> sourceIterator,
+      CloseableIterator<? extends InputEntity> sourceCloseableIterator,
       File temporaryDirectory
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.inputFormat = inputFormat;
-    this.sourceIterator = (CloseableIterator<InputEntity>) sourceIterator;
+    this.sourceIterator = (CloseableIterator<InputEntity>) sourceCloseableIterator;
     this.temporaryDirectory = temporaryDirectory;
   }
 

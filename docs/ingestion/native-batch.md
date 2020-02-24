@@ -1208,7 +1208,8 @@ Sample spec:
       "inputSource": {
         "type": "local",
         "filter" : "*.csv",
-        "baseDir": "/data/directory"
+        "baseDir": "/data/directory",
+        "files": ["/bar/foo", "/foo/bar"]
       },
       "inputFormat": {
         "type": "csv"
@@ -1221,8 +1222,9 @@ Sample spec:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
-|baseDir|directory to search recursively for files to be ingested. |yes|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes if `baseDir` is specified|
+|baseDir|Directory to search recursively for files to be ingested. |At least one of `baseDir` or `files` should be specified|
+|files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. |At least one of `baseDir` or `files` should be specified|
 
 ### Druid Input Source
 

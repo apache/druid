@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -73,6 +74,9 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
       @Override
       public List<T> next()
       {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
         final List<T> current = new ArrayList<>();
         long splitSize = 0;
         while (splitSize < maxSplitSize && (peeking != null || inputIterator.hasNext())) {
@@ -80,11 +84,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
             peeking = inputIterator.next();
           }
           final long size = inputAttributeExtractor.apply(peeking).getSize();
-          if (current.isEmpty()) {
-            current.add(peeking);
-            splitSize += size;
-            peeking = null;
-          } else if (splitSize + size < maxSplitSize) {
+          if (current.isEmpty() || splitSize + size < maxSplitSize) {
             current.add(peeking);
             splitSize += size;
             peeking = null;

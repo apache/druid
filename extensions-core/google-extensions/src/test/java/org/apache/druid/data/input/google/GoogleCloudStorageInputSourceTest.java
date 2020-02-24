@@ -180,9 +180,12 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   public void testCreateSplitsWithSplitHintSpecRespectingHint() throws IOException
   {
     EasyMock.reset(STORAGE);
+    EasyMock.reset(INPUT_DATA_CONFIG);
     addExpectedPrefixObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)));
     addExpectedPrefixObjects(PREFIXES.get(1), ImmutableList.of(EXPECTED_URIS.get(1)));
+    EasyMock.expect(INPUT_DATA_CONFIG.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
     EasyMock.replay(STORAGE);
+    EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource =
         new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null);

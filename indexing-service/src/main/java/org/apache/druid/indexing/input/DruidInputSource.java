@@ -238,7 +238,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               retryPolicyFactory,
               dataSource,
               interval,
-              splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
+              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
           )
       );
     } else {
@@ -258,7 +258,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               retryPolicyFactory,
               dataSource,
               interval,
-              splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
+              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
           )
       );
     } else {
