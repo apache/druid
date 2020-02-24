@@ -92,9 +92,6 @@
       "development/extensions-contrib/ambari-metrics-emitter": {
         "title": "Ambari Metrics Emitter"
       },
-      "development/extensions-contrib/azure": {
-        "title": "Microsoft Azure"
-      },
       "development/extensions-contrib/cassandra": {
         "title": "Apache Cassandra"
       },
@@ -228,6 +225,9 @@
       },
       "development/extensions-core/test-stats": {
         "title": "Test Stats Aggregators"
+      },
+      "development/extensions-core/azure": {
+        "title": "Microsoft Azure"
       },
       "development/extensions": {
         "title": "Extensions"

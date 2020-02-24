@@ -442,16 +442,6 @@ Pdist
 ambari-metrics
 metricName
 trustStore
- - ../docs/development/extensions-contrib/azure.md
-StaticAzureBlobStoreFirehose
-StaticS3Firehose
-fetchTimeout
-gz
-maxCacheCapacityBytes
-maxFetchCapacityBytes
-maxFetchRetry
-prefetchTriggerBytes
-shardSpecs
  - ../docs/development/extensions-contrib/cloudfiles.md
 StaticCloudFilesFirehose
 cloudfiles
@@ -793,6 +783,16 @@ www.ucs.louisiana.edu
 zscore
 zscore2sample
 ztests
+ - ../docs/development/extensions-core/azure.md
+StaticAzureBlobStoreFirehose
+StaticS3Firehose
+fetchTimeout
+gz
+maxCacheCapacityBytes
+maxFetchCapacityBytes
+maxFetchRetry
+prefetchTriggerBytes
+shardSpecs
  - ../docs/development/extensions.md
 DistinctCount
 artifactId
