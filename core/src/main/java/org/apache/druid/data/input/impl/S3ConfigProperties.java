@@ -28,6 +28,10 @@ import org.apache.druid.metadata.PasswordProvider;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Contains properties for s3 access configuration.
+ * Properties can be specified by ingestionSpec and override system default.
+ */
 public class S3ConfigProperties
 {
   @JsonCreator
