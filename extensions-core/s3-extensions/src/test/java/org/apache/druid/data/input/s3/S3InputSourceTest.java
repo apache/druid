@@ -57,6 +57,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
+import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -94,6 +95,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       S3_CLIENT,
       new NoopServerSideEncryption()
   );
+  private static final S3InputDataConfig INPUT_DATA_CONFIG;
+  private static final int MAX_LISTING_LENGTH = 10;
 
   private static final List<URI> EXPECTED_URIS = Arrays.asList(
       URI.create("s3://foo/bar/file.csv"),
@@ -123,6 +126,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   private static final byte[] CONTENT =
       StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
 
+  static {
+    INPUT_DATA_CONFIG = new S3InputDataConfig();
+    INPUT_DATA_CONFIG.setMaxListingLength(MAX_LISTING_LENGTH);
+  }
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -132,7 +140,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithUris() throws Exception
   {
-    final S3InputSource withUris = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG, EXPECTED_URIS, null, null, null);
+    final S3InputSource withUris = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG, INPUT_DATA_CONFIG, EXPECTED_URIS, null, null, null);
     final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
@@ -144,6 +152,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         PREFIXES,
         null,
@@ -157,11 +166,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithObjects() throws Exception
   {
-
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -183,6 +192,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -210,6 +220,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         null,
         EXPECTED_LOCATION,
@@ -227,6 +238,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
@@ -246,6 +258,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
         EXPECTED_LOCATION,
@@ -262,6 +275,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
@@ -278,6 +292,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         ImmutableList.of(),
         PREFIXES,
         EXPECTED_LOCATION,
@@ -292,6 +307,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         null,
         null,
@@ -318,6 +334,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         PREFIXES,
         null,
@@ -345,6 +362,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
@@ -376,6 +394,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
@@ -420,6 +439,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         SERVICE,
         AMAZON_S3_CLIENT_BUILDER,
         S3_STORAGE_CONFIG,
+        INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
         null,

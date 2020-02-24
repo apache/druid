@@ -26,6 +26,8 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureDataSegmentConfig;
+import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
 import org.easymock.EasyMockSupport;
@@ -64,6 +66,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
+  private AzureInputDataConfig inputDataConfig;
 
   static {
     try {
@@ -86,20 +89,14 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     entityFactory = createMock(AzureEntityFactory.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
     azureCloudBlobToLocationConverter = createMock(AzureCloudBlobHolderToCloudObjectLocationConverter.class);
+    inputDataConfig = createMock(AzureInputDataConfig.class);
 
   }
 
   @Test
   public void test_uriSerde_constructsProperAzureInputSource() throws Exception
   {
-    final InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(AzureStorage.class, azureStorage);
-    injectableValues.addValue(AzureEntityFactory.class, entityFactory);
-    injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
-    injectableValues.addValue(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class,
-        azureCloudBlobToLocationConverter
-    );
+    final InjectableValues.Std injectableValues = initInjectableValues();
     final ObjectMapper objectMapper = new DefaultObjectMapper()
         .registerModules(new AzureStorageDruidModule().getJacksonModules());
     objectMapper.setInjectableValues(injectableValues);
@@ -117,14 +114,8 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   @Test
   public void test_prefixSerde_constructsProperAzureInputSource() throws Exception
   {
-    final InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(AzureStorage.class, azureStorage);
-    injectableValues.addValue(AzureEntityFactory.class, entityFactory);
-    injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
-    injectableValues.addValue(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class,
-        azureCloudBlobToLocationConverter
-    );
+    final InjectableValues.Std injectableValues = initInjectableValues();
+    injectableValues.addValue(AzureDataSegmentConfig.class, inputDataConfig);
     final ObjectMapper objectMapper = new DefaultObjectMapper()
         .registerModules(new AzureStorageDruidModule().getJacksonModules());
     objectMapper.setInjectableValues(injectableValues);
@@ -142,14 +133,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   @Test
   public void test_objectSerde_constructsProperAzureInputSource() throws Exception
   {
-    final InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(AzureStorage.class, azureStorage);
-    injectableValues.addValue(AzureEntityFactory.class, entityFactory);
-    injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
-    injectableValues.addValue(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class,
-        azureCloudBlobToLocationConverter
-    );
+    final InjectableValues.Std injectableValues = initInjectableValues();
     final ObjectMapper objectMapper = new DefaultObjectMapper()
         .registerModules(new AzureStorageDruidModule().getJacksonModules());
     objectMapper.setInjectableValues(injectableValues);
@@ -161,7 +145,20 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
         objectMapper.writeValueAsBytes(inputSource),
         AzureInputSource.class);
     verifyInputSourceWithObjects(roundTripInputSource);
+  }
 
+  private InjectableValues.Std initInjectableValues()
+  {
+    final InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(AzureStorage.class, azureStorage);
+    injectableValues.addValue(AzureEntityFactory.class, entityFactory);
+    injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
+    injectableValues.addValue(
+        AzureCloudBlobHolderToCloudObjectLocationConverter.class,
+        azureCloudBlobToLocationConverter
+    );
+    injectableValues.addValue(AzureInputDataConfig.class, inputDataConfig);
+    return injectableValues;
   }
 
   private static void verifyInputSourceWithUris(final AzureInputSource inputSource)

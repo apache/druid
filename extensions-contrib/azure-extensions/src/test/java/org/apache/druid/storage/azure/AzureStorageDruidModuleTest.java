@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
@@ -33,6 +32,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 import org.easymock.EasyMock;
@@ -53,6 +53,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_ACCOUNT_NAME;
   private static final String AZURE_ACCOUNT_KEY;
   private static final String AZURE_CONTAINER;
+  private static final String AZURE_PREFIX;
+  private static final int AZURE_MAX_LISTING_LENGTH;
   private static final String PATH = "path";
   private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
   private static final Properties PROPERTIES;
@@ -71,6 +73,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
                                 .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8.toString()));
       AZURE_CONTAINER = "azureContainer1";
+      AZURE_PREFIX = "azurePrefix1";
+      AZURE_MAX_LISTING_LENGTH = 10;
       PROPERTIES = initializePropertes();
     }
     catch (Exception e) {
@@ -88,14 +92,38 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_getBlobClient_expectedClient()
+  public void test_getAzureAccountConfig_expectedConfig()
   {
     injector = makeInjectorWithProperties(PROPERTIES);
-    AzureAccountConfig azureAccountConfig = injector.getInstance(Key.get(AzureAccountConfig.class));
+    AzureAccountConfig azureAccountConfig = injector.getInstance(AzureAccountConfig.class);
 
     Assert.assertEquals(AZURE_ACCOUNT_NAME, azureAccountConfig.getAccount());
     Assert.assertEquals(AZURE_ACCOUNT_KEY, azureAccountConfig.getKey());
-    Assert.assertEquals(AZURE_CONTAINER, azureAccountConfig.getContainer());
+  }
+
+  @Test
+  public void test_getAzureDataSegmentConfig_expectedConfig()
+  {
+    injector = makeInjectorWithProperties(PROPERTIES);
+    AzureDataSegmentConfig segmentConfig = injector.getInstance(AzureDataSegmentConfig.class);
+
+    Assert.assertEquals(AZURE_CONTAINER, segmentConfig.getContainer());
+    Assert.assertEquals(AZURE_PREFIX, segmentConfig.getPrefix());
+  }
+
+  @Test
+  public void test_getAzureInputDataConfig_expectedConfig()
+  {
+    injector = makeInjectorWithProperties(PROPERTIES);
+    AzureInputDataConfig inputDataConfig = injector.getInstance(AzureInputDataConfig.class);
+
+    Assert.assertEquals(AZURE_MAX_LISTING_LENGTH, inputDataConfig.getMaxListingLength());
+  }
+
+  @Test
+  public void test_getBlobClient_expectedClient()
+  {
+    injector = makeInjectorWithProperties(PROPERTIES);
 
     CloudBlobClient cloudBlobClient = injector.getInstance(CloudBlobClient.class);
     StorageCredentials storageCredentials = cloudBlobClient.getCredentials();
@@ -107,11 +135,6 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   public void test_getAzureStorageContainer_expectedClient()
   {
     injector = makeInjectorWithProperties(PROPERTIES);
-    AzureAccountConfig azureAccountConfig = injector.getInstance(Key.get(AzureAccountConfig.class));
-
-    Assert.assertEquals(AZURE_ACCOUNT_NAME, azureAccountConfig.getAccount());
-    Assert.assertEquals(AZURE_ACCOUNT_KEY, azureAccountConfig.getKey());
-    Assert.assertEquals(AZURE_CONTAINER, azureAccountConfig.getContainer());
 
     CloudBlobClient cloudBlobClient = injector.getInstance(CloudBlobClient.class);
     StorageCredentials storageCredentials = cloudBlobClient.getCredentials();
@@ -204,6 +227,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
+            new JacksonModule(),
             new Module()
             {
               @Override
@@ -224,6 +248,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     props.put("druid.azure.account", AZURE_ACCOUNT_NAME);
     props.put("druid.azure.key", AZURE_ACCOUNT_KEY);
     props.put("druid.azure.container", AZURE_CONTAINER);
+    props.put("druid.azure.prefix", AZURE_PREFIX);
+    props.put("druid.azure.maxListingLength", String.valueOf(AZURE_MAX_LISTING_LENGTH));
     return props;
   }
 }

@@ -51,7 +51,7 @@ import java.util.Set;
  * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
  * when we first read from the base table instead of after the join.
  *
- * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Filter, boolean)} method that
+ * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Set, Filter, boolean)} method that
  * takes a filter and splits it into a portion that should be applied to the base table prior to the join, and a
  * portion that should be applied after the join.
  *
@@ -72,8 +72,21 @@ public class JoinFilterAnalyzer
   private static final String PUSH_DOWN_VIRTUAL_COLUMN_NAME_BASE = "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-";
   private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
+  /**
+   * Analyze a filter and return a JoinFilterSplit indicating what parts of the filter should be applied pre-join
+   * and post-join.
+   *
+   * @param hashJoinSegmentStorageAdapter The storage adapter that is being queried
+   * @param baseColumnNames               Set of names of columns that belong to the base table,
+   *                                      including pre-join virtual columns
+   * @param originalFilter                Original filter from the query
+   * @param enableFilterPushDown          Whether to enable filter push down
+   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join
+   *         and post-join.
+   */
   public static JoinFilterSplit splitFilter(
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
+      Set<String> baseColumnNames,
       @Nullable Filter originalFilter,
       boolean enableFilterPushDown
   )
@@ -133,7 +146,7 @@ public class JoinFilterAnalyzer
 
     for (Filter orClause : normalizedOrClauses) {
       JoinFilterAnalysis joinFilterAnalysis = analyzeJoinFilterClause(
-          hashJoinSegmentStorageAdapter,
+          baseColumnNames,
           orClause,
           prefixes,
           equiconditions,
@@ -163,7 +176,7 @@ public class JoinFilterAnalyzer
    * Analyze a filter clause from a filter that is in conjunctive normal form (AND of ORs).
    * The clause is expected to be an OR filter or a leaf filter.
    *
-   * @param adapter          Adapter for the join
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param filterClause     Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
    * @param prefixes         Map of table prefixes
    * @param equiconditions   Equicondition map
@@ -172,7 +185,7 @@ public class JoinFilterAnalyzer
    * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
    */
   private static JoinFilterAnalysis analyzeJoinFilterClause(
-      HashJoinSegmentStorageAdapter adapter,
+      Set<String> baseColumnNames,
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
@@ -189,7 +202,7 @@ public class JoinFilterAnalyzer
     // Currently we only support rewrites of selector filters and selector filters within OR filters.
     if (filterClause instanceof SelectorFilter) {
       return rewriteSelectorFilter(
-          adapter,
+          baseColumnNames,
           (SelectorFilter) filterClause,
           prefixes,
           equiconditions,
@@ -199,7 +212,7 @@ public class JoinFilterAnalyzer
 
     if (filterClause instanceof OrFilter) {
       return rewriteOrFilter(
-          adapter,
+          baseColumnNames,
           (OrFilter) filterClause,
           prefixes,
           equiconditions,
@@ -208,7 +221,7 @@ public class JoinFilterAnalyzer
     }
 
     for (String requiredColumn : filterClause.getRequiredColumns()) {
-      if (!adapter.isBaseColumn(requiredColumn)) {
+      if (!baseColumnNames.contains(requiredColumn)) {
         return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
       }
     }
@@ -224,7 +237,7 @@ public class JoinFilterAnalyzer
    * Potentially rewrite the subfilters of an OR filter so that the whole OR filter can be pushed down to
    * the base table.
    *
-   * @param adapter          Adapter for the join
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param orFilter         OrFilter to be rewritten
    * @param prefixes         Map of table prefixes to clauses
    * @param equiconditions   Map of equiconditions
@@ -234,7 +247,7 @@ public class JoinFilterAnalyzer
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteOrFilter(
-      HashJoinSegmentStorageAdapter adapter,
+      Set<String> baseColumnNames,
       OrFilter orFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
@@ -247,7 +260,7 @@ public class JoinFilterAnalyzer
     for (Filter filter : orFilter.getFilters()) {
       boolean allBaseColumns = true;
       for (String requiredColumn : filter.getRequiredColumns()) {
-        if (!adapter.isBaseColumn(requiredColumn)) {
+        if (!baseColumnNames.contains(requiredColumn)) {
           allBaseColumns = false;
         }
       }
@@ -256,7 +269,7 @@ public class JoinFilterAnalyzer
         retainRhs = true;
         if (filter instanceof SelectorFilter) {
           JoinFilterAnalysis rewritten = rewriteSelectorFilter(
-              adapter,
+              baseColumnNames,
               (SelectorFilter) filter,
               prefixes,
               equiconditions,
@@ -286,7 +299,8 @@ public class JoinFilterAnalyzer
   /**
    * Rewrites a selector filter on a join table into an IN filter on the base table.
    *
-   * @param baseAdapter      The adapter for the join
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual
+   *                         columns
    * @param selectorFilter   SelectorFilter to be rewritten
    * @param prefixes         Map of join table prefixes to clauses
    * @param equiconditions   Map of equiconditions
@@ -296,7 +310,7 @@ public class JoinFilterAnalyzer
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteSelectorFilter(
-      HashJoinSegmentStorageAdapter baseAdapter,
+      Set<String> baseColumnNames,
       SelectorFilter selectorFilter,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
@@ -309,7 +323,7 @@ public class JoinFilterAnalyzer
         Optional<List<JoinFilterColumnCorrelationAnalysis>> correlations = correlationCache.computeIfAbsent(
             prefixAndClause.getKey(),
             p -> findCorrelatedBaseTableColumns(
-                baseAdapter,
+                baseColumnNames,
                 p,
                 prefixes.get(p),
                 equiconditions
@@ -385,12 +399,21 @@ public class JoinFilterAnalyzer
         );
       }
     }
-    return new JoinFilterAnalysis(
-        false,
-        selectorFilter,
-        selectorFilter,
-        ImmutableList.of()
-    );
+
+    // We're not filtering directly on a column from one of the join tables, but
+    // we might be filtering on a post-join virtual column (which won't have a join prefix). We cannot
+    // push down such filters, so check that the filtering column appears in the set of base column names (which
+    // includes pre-join virtual columns).
+    if (baseColumnNames.contains(filteringColumn)) {
+      return new JoinFilterAnalysis(
+          false,
+          selectorFilter,
+          selectorFilter,
+          ImmutableList.of()
+      );
+    } else {
+      return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
+    }
   }
 
   private static String getCorrelatedBaseExprVirtualColumnName(int counter)
@@ -452,7 +475,8 @@ public class JoinFilterAnalyzer
    * Because we cannot reverse the function f() applied to the second table B in all cases,
    * we cannot relate C.joinColumn to A.joinColumn, and we would not generate a correlation for C.joinColumn
    *
-   * @param adapter              The adapter for the join. Used to determine if a column is a base table column.
+   * @param baseColumnNames      Set of names of columns that belong to the base table, including pre-join virtual
+   *                             columns
    * @param tablePrefix          Prefix for a join table
    * @param clauseForTablePrefix Joinable clause for the prefix
    * @param equiConditions       Map of equiconditions, keyed by the right hand columns
@@ -461,7 +485,7 @@ public class JoinFilterAnalyzer
    * the tablePrefix
    */
   private static Optional<List<JoinFilterColumnCorrelationAnalysis>> findCorrelatedBaseTableColumns(
-      HashJoinSegmentStorageAdapter adapter,
+      Set<String> baseColumnNames,
       String tablePrefix,
       JoinableClause clauseForTablePrefix,
       Map<String, Set<Expr>> equiConditions
@@ -481,7 +505,7 @@ public class JoinFilterAnalyzer
       Set<Expr> correlatedBaseExpressions = new HashSet<>();
 
       getCorrelationForRHSColumn(
-          adapter,
+          baseColumnNames,
           equiConditions,
           rhsColumn,
           correlatedBaseColumns,
@@ -511,7 +535,7 @@ public class JoinFilterAnalyzer
    * and/or expressions for a single RHS column and adds them to the provided sets as it traverses the
    * equicondition column relationships.
    *
-   * @param adapter The adapter for the join. Used to determine if a column is a base table column.
+   * @param baseColumnNames  Set of names of columns that belong to the base table, including pre-join virtual columns
    * @param equiConditions Map of equiconditions, keyed by the right hand columns
    * @param rhsColumn RHS column to find base table correlations for
    * @param correlatedBaseColumns Set of correlated base column names for the provided RHS column. Will be modified.
@@ -519,7 +543,7 @@ public class JoinFilterAnalyzer
    *                                  modified.
    */
   private static void getCorrelationForRHSColumn(
-      HashJoinSegmentStorageAdapter adapter,
+      Set<String> baseColumnNames,
       Map<String, Set<Expr>> equiConditions,
       String rhsColumn,
       Set<String> correlatedBaseColumns,
@@ -538,18 +562,18 @@ public class JoinFilterAnalyzer
         // We push down if the function only requires base table columns
         Expr.BindingDetails bindingDetails = lhsExpr.analyzeInputs();
         Set<String> requiredBindings = bindingDetails.getRequiredBindings();
-        if (!requiredBindings.stream().allMatch(requiredBinding -> adapter.isBaseColumn(requiredBinding))) {
+        if (!baseColumnNames.containsAll(requiredBindings)) {
           break;
         }
         correlatedBaseExpressions.add(lhsExpr);
       } else {
         // simple identifier, see if we can correlate it with a column on the base table
         findMappingFor = identifier;
-        if (adapter.isBaseColumn(identifier)) {
+        if (baseColumnNames.contains(identifier)) {
           correlatedBaseColumns.add(findMappingFor);
         } else {
           getCorrelationForRHSColumn(
-              adapter,
+              baseColumnNames,
               equiConditions,
               findMappingFor,
               correlatedBaseColumns,

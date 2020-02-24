@@ -49,6 +49,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -187,13 +188,13 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    final Signature signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
-    final Frame firstFrame = druidStatement.execute()
+    druidStatement.prepare(sql, maxRowCount, authenticationResult);
+    final Frame firstFrame = druidStatement.execute(Collections.emptyList())
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
                                            );
-
+    final Signature signature = druidStatement.getSignature();
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(
@@ -256,16 +257,14 @@ public class DruidMeta extends MetaImpl
       final int maxRowsInFirstFrame
   ) throws NoSuchStatementException
   {
-    Preconditions.checkArgument(parameterValues.isEmpty(), "Expected parameterValues to be empty");
-
     final DruidStatement druidStatement = getDruidStatement(statement);
-    final Signature signature = druidStatement.getSignature();
-    final Frame firstFrame = druidStatement.execute()
+    final Frame firstFrame = druidStatement.execute(parameterValues)
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
                                            );
 
+    final Signature signature = druidStatement.getSignature();
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(

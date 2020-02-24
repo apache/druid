@@ -50,8 +50,9 @@ Deep storage can be written to Google Cloud Storage either via this extension or
 
 To configure connectivity to google cloud, run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
 
-|Property|Possible Values|Description|Default|
+|Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|google||Must be set.|
-|`druid.google.bucket`||GCS bucket name.|Must be set.|
-|`druid.google.prefix`||GCS prefix.|No-prefix|
+|`druid.google.bucket`||Google Storage bucket name.|Must be set.|
+|`druid.google.prefix`|A prefix string that will be prepended to the blob names for the segments published to Google deep storage| |""|
+|`druid.google.maxListingLength`|maximum number of input files matching a given prefix to retrieve at a time| |1024|

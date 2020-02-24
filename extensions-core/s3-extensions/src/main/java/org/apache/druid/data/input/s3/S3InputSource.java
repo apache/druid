@@ -35,6 +35,7 @@ import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.S3ConfigProperties;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
@@ -55,12 +56,14 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   private final Supplier<ServerSideEncryptingAmazonS3> s3Client;
   @JsonProperty("properties")
   private final S3ConfigProperties s3ConfigProperties;
+  private final S3InputDataConfig inputDataConfig;
 
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JacksonInject AmazonS3ClientBuilder amazonS3ClientBuilder,
       @JacksonInject S3StorageConfig storageConfig,
+      @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
@@ -68,6 +71,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
+    this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     this.s3ConfigProperties = s3ConfigProperties;
     this.s3Client = Suppliers.memoize(
         () -> {
@@ -114,6 +118,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
         s3Client.get(),
        null,
        null,
+        inputDataConfig,
        null,
        null,
        ImmutableList.of(split.get()),
@@ -159,6 +164,6 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> S3Utils.objectSummaryIterator(s3Client.get(), getPrefixes(), MAX_LISTING_LENGTH);
+    return () -> S3Utils.objectSummaryIterator(s3Client.get(), getPrefixes(), inputDataConfig.getMaxListingLength());
   }
 }

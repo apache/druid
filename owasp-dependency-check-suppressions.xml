@@ -197,5 +197,6 @@
     <cve>CVE-2019-17267</cve>
     <cve>CVE-2019-17531</cve>
     <cve>CVE-2019-20330</cve>
+    <cve>CVE-2020-8840</cve>
   </suppress>
 </suppressions>
