@@ -97,13 +97,15 @@ public class ExprMacroTable
    */
   public abstract static class BaseScalarUnivariateMacroFunctionExpr implements Expr
   {
+    protected final String name;
     protected final Expr arg;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
     private final Supplier<BindingDetails> analyzeInputsSupplier;
 
-    public BaseScalarUnivariateMacroFunctionExpr(Expr arg)
+    public BaseScalarUnivariateMacroFunctionExpr(String name, Expr arg)
     {
+      this.name = name;
       this.arg = arg;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
     }
@@ -121,6 +123,12 @@ public class ExprMacroTable
       return analyzeInputsSupplier.get();
     }
 
+    @Override
+    public String stringify()
+    {
+      return StringUtils.format("%s(%s)", name, arg.stringify());
+    }
+
     private BindingDetails supplyAnalyzeInputs()
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
@@ -132,15 +140,27 @@ public class ExprMacroTable
    */
   public abstract static class BaseScalarMacroFunctionExpr implements Expr
   {
+    protected final String name;
     protected final List<Expr> args;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
     private final Supplier<BindingDetails> analyzeInputsSupplier;
 
-    public BaseScalarMacroFunctionExpr(final List<Expr> args)
+    public BaseScalarMacroFunctionExpr(String name, final List<Expr> args)
     {
+      this.name = name;
       this.args = args;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
+    }
+
+    @Override
+    public String stringify()
+    {
+      return StringUtils.format(
+          "%s(%s)",
+          name,
+          Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
+      );
     }
 
     @Override

@@ -108,7 +108,7 @@ public class Parser
   }
 
   @VisibleForTesting
-  static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
+  public static Expr parse(String in, ExprMacroTable macroTable, boolean withFlatten)
   {
     ExprLexer lexer = new ExprLexer(new ANTLRInputStream(in));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -118,7 +118,11 @@ public class Parser
     ParseTreeWalker walker = new ParseTreeWalker();
     ExprListenerImpl listener = new ExprListenerImpl(parseTree, macroTable);
     walker.walk(listener, parseTree);
-    return withFlatten ? flatten(listener.getAST()) : listener.getAST();
+    Expr parsed = listener.getAST();
+    if (parsed == null) {
+      throw new RE("Failed to parse expression: %s", in);
+    }
+    return withFlatten ? flatten(parsed) : parsed;
   }
 
   /**
