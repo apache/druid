@@ -9654,9 +9654,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", null, 3L},
             new Object[]{"a", null, 2L},
             new Object[]{"abc", null, 1L},
-            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
-            new Object[]{NULL_VALUE, null, 6L}
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_STRING, null, 6L}
         )
     );
   }
@@ -9744,7 +9744,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", null, 3L},
             new Object[]{"a", null, 2L},
             new Object[]{"abc", null, 1L},
-            new Object[]{NULL_VALUE, null, 6L}
+            new Object[]{NULL_STRING, null, 6L}
         )
     );
   }
@@ -9803,9 +9803,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", null, 3L},
             new Object[]{"a", null, 2L},
             new Object[]{"abc", null, 1L},
-            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
-            new Object[]{NULL_VALUE, null, 6L}
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_STRING, null, 6L}
         )
     );
   }
@@ -9864,9 +9864,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", null, 3L},
             new Object[]{"a", null, 2L},
             new Object[]{"abc", null, 1L},
-            new Object[]{NULL_VALUE, null, 6L},
-            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L}
+            new Object[]{NULL_STRING, null, 6L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L}
         )
     );
   }
@@ -9920,9 +9920,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", null, 3L},
             new Object[]{"a", null, 2L},
             new Object[]{"abc", null, 1L},
-            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
-            new Object[]{NULL_VALUE, null, 6L}
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_STRING, null, 6L}
         )
     );
   }
@@ -9993,9 +9993,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"abc", null, 1L},
             new Object[]{"a", null, 2L},
             new Object[]{"", null, 3L},
-            new Object[]{NULL_VALUE, null, 6L},
-            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L}
+            new Object[]{NULL_STRING, null, 6L},
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L}
         )
     );
   }
@@ -10061,9 +10061,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"abc", null, 1L},
             new Object[]{"a", null, 2L},
             new Object[]{"", null, 3L},
-            new Object[]{NULL_VALUE, timestamp("2000-01-01"), 3L},
-            new Object[]{NULL_VALUE, timestamp("2001-01-01"), 3L},
-            new Object[]{NULL_VALUE, null, 6L}
+            new Object[]{NULL_STRING, timestamp("2000-01-01"), 3L},
+            new Object[]{NULL_STRING, timestamp("2001-01-01"), 3L},
+            new Object[]{NULL_STRING, null, 6L}
         )
     );
   }
