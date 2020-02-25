@@ -120,7 +120,7 @@ public class EventReceiverFirehoseTestClient
         if (retryCount > NUM_RETRIES) {
           throw new RuntimeException(e); //giving up now
         } else {
-          LOG.info(e,"received exception, sleeping and retrying");
+          LOG.info(e, "received exception, sleeping and retrying");
           retryCount++;
           Thread.sleep(DELAY_FOR_RETRIES_MS);
         }
