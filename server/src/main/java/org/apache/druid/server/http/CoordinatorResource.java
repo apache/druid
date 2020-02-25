@@ -87,7 +87,8 @@ public class CoordinatorResource
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
       @QueryParam("full") String full,
-      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView,
+      @QueryParam("unloaded") String unloaded
   )
   {
     if (simple != null) {
@@ -99,6 +100,11 @@ public class CoordinatorResource
              ? Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()).build() :
              Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
     }
+
+    if (unloaded != null) {
+      return Response.ok(coordinator.getUnloadedStatus()).build();
+    }
+
     return Response.ok(coordinator.getLoadStatus()).build();
   }
 
