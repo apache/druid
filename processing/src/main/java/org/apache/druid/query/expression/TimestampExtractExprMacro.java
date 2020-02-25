@@ -34,6 +34,8 @@ import java.util.List;
 
 public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_extract";
+
   public enum Unit
   {
     EPOCH,
@@ -59,7 +61,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public String name()
   {
-    return "timestamp_extract";
+    return FN_NAME;
   }
 
   @Override
@@ -93,7 +95,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     {
       private TimestampExtractExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
@@ -158,6 +160,21 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new TimestampExtractExpr(newArg));
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (args.size() > 2) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              args.get(1).stringify(),
+              args.get(2).stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
       }
     }
 

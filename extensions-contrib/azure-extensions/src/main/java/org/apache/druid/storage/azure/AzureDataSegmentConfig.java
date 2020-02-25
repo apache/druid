@@ -17,38 +17,42 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure.blob;
+package org.apache.druid.storage.azure;
 
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.net.URISyntaxException;
+import javax.validation.constraints.NotNull;
 
 /**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
- * is a final class and so is difficult to mock in unit tests.
+ * Stores the configuration for segments written to Azure deep storage
  */
-public class CloudBlobHolder
+public class AzureDataSegmentConfig
 {
-  private final CloudBlob delegate;
+  @JsonProperty
+  @NotNull
+  private String container;
 
-  public CloudBlobHolder(CloudBlob delegate)
+  @JsonProperty
+  @NotNull
+  private String prefix = "";
+
+  public void setContainer(String container)
   {
-    this.delegate = delegate;
+    this.container = container;
   }
 
-  public String getContainerName() throws URISyntaxException, StorageException
+  public void setPrefix(String prefix)
   {
-    return delegate.getContainer().getName();
+    this.prefix = prefix;
   }
 
-  public String getName()
+  public String getContainer()
   {
-    return delegate.getName();
+    return container;
   }
 
-  public long getBlobLength()
+  public String getPrefix()
   {
-    return delegate.getProperties().getLength();
+    return prefix;
   }
 }

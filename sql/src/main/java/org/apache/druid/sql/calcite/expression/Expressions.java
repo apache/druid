@@ -264,12 +264,7 @@ public class Expressions
           rexNode,
           postAggregatorVisitor
       );
-
-      if (expression == null) {
-        return null;
-      } else {
-        return expression;
-      }
+      return expression;
     }
   }
 

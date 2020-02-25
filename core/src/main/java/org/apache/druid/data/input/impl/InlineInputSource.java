@@ -69,7 +69,7 @@ public class InlineInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Stream.of(new ByteEntity(StringUtils.toUtf8(data))),
+        Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator(),
         temporaryDirectory
     );
   }
