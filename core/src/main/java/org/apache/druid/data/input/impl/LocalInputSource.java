@@ -21,81 +21,153 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOCase;
+import org.apache.commons.io.filefilter.AndFileFilter;
+import org.apache.commons.io.filefilter.IOFileFilter;
+import org.apache.commons.io.filefilter.NameFileFilter;
+import org.apache.commons.io.filefilter.NotFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.utils.CollectionUtils;
+import org.apache.druid.utils.Streams;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
-import java.util.Spliterator;
-import java.util.Spliterators;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<File>
+public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
+  @Nullable
   private final File baseDir;
+  @Nullable
   private final String filter;
+  private final Set<File> files;
 
   @JsonCreator
   public LocalInputSource(
-      @JsonProperty("baseDir") File baseDir,
-      @JsonProperty("filter") String filter
+      @JsonProperty("baseDir") @Nullable File baseDir,
+      @JsonProperty("filter") @Nullable String filter,
+      @JsonProperty("files") @Nullable Set<File> files
   )
   {
     this.baseDir = baseDir;
-    this.filter = filter;
+    this.filter = baseDir != null ? Preconditions.checkNotNull(filter, "filter") : filter;
+    this.files = files == null ? Collections.emptySet() : files;
+
+    if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
+      throw new IAE("At least one of baseDir or files should be specified");
+    }
   }
 
+  public LocalInputSource(File baseDir, String filter)
+  {
+    this(baseDir, filter, null);
+  }
+
+  @Nullable
   @JsonProperty
   public File getBaseDir()
   {
     return baseDir;
   }
 
+  @Nullable
   @JsonProperty
   public String getFilter()
   {
     return filter;
   }
 
-  @Override
-  public Stream<InputSplit<File>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  @JsonProperty
+  public Set<File> getFiles()
   {
-    return StreamSupport.stream(Spliterators.spliteratorUnknownSize(getFileIterator(), Spliterator.DISTINCT), false)
-                        .map(InputSplit::new);
+    return files;
+  }
+
+  @Override
+  public Stream<InputSplit<List<File>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  {
+    return Streams.sequentialStreamFrom(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)))
+                  .map(InputSplit::new);
   }
 
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Iterators.size(getFileIterator());
+    return Iterators.size(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)));
   }
 
-  private Iterator<File> getFileIterator()
+  private Iterator<List<File>> getSplitFileIterator(SplitHintSpec splitHintSpec)
   {
-    return FileUtils.iterateFiles(
-        Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
-        new WildcardFileFilter(filter),
-        TrueFileFilter.INSTANCE
+    final Iterator<File> fileIterator = getFileIterator();
+    return splitHintSpec.split(fileIterator, file -> new InputFileAttribute(file.length()));
+  }
+
+  @VisibleForTesting
+  Iterator<File> getFileIterator()
+  {
+    return Iterators.concat(
+        getDirectoryListingIterator(),
+        getFilesListIterator()
     );
   }
 
-  @Override
-  public SplittableInputSource<File> withSplit(InputSplit<File> split)
+  private Iterator<File> getDirectoryListingIterator()
   {
-    final File file = split.get();
-    return new LocalInputSource(file.getParentFile(), file.getName());
+    if (baseDir == null) {
+      return Collections.emptyIterator();
+    } else {
+      final IOFileFilter fileFilter;
+      if (files == null) {
+        fileFilter = new WildcardFileFilter(filter);
+      } else {
+        fileFilter = new AndFileFilter(
+            new WildcardFileFilter(filter),
+            new NotFileFilter(
+                new NameFileFilter(files.stream().map(File::getName).collect(Collectors.toList()), IOCase.SENSITIVE)
+            )
+        );
+      }
+      return FileUtils.iterateFiles(
+          baseDir.getAbsoluteFile(),
+          fileFilter,
+          TrueFileFilter.INSTANCE
+      );
+    }
+  }
+
+  private Iterator<File> getFilesListIterator()
+  {
+    if (files == null) {
+      return Collections.emptyIterator();
+    } else {
+      return files.iterator();
+    }
+  }
+
+  @Override
+  public SplittableInputSource<List<File>> withSplit(InputSplit<List<File>> split)
+  {
+    return new LocalInputSource(null, null, new HashSet<>(split.get()));
   }
 
   @Override
@@ -111,13 +183,11 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
       @Nullable File temporaryDirectory
   )
   {
+    //noinspection ConstantConditions
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        // formattableReader() is supposed to be called in each task that actually creates segments.
-        // The task should already have only one split in parallel indexing,
-        // while there's no need to make splits using splitHintSpec in sequential indexing.
-        createSplits(inputFormat, null).map(split -> new FileEntity(split.get())),
+        Iterators.transform(getFileIterator(), FileEntity::new),
         temporaryDirectory
     );
   }
@@ -131,14 +201,15 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    LocalInputSource source = (LocalInputSource) o;
-    return Objects.equals(baseDir, source.baseDir) &&
-           Objects.equals(filter, source.filter);
+    LocalInputSource that = (LocalInputSource) o;
+    return Objects.equals(baseDir, that.baseDir) &&
+           Objects.equals(filter, that.filter) &&
+           Objects.equals(files, that.files);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDir, filter);
+    return Objects.hash(baseDir, filter, files);
   }
 }

@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -103,7 +104,7 @@ class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<Single
   SubTaskSpec<SinglePhaseSubTask> newTaskSpec(InputSplit split)
   {
     final FirehoseFactory firehoseFactory;
-    final SplittableInputSource inputSource;
+    final InputSource inputSource;
     if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
       firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
       inputSource = null;

@@ -80,7 +80,7 @@
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <apache.kafka.version>2.2.2</apache.kafka.version>
         <avatica.version>1.15.0</avatica.version>
-        <avro.version>1.9.1</avro.version>
+        <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
         <datasketches.version>1.2.0-incubating</datasketches.version>
         <derby.version>10.14.2.0</derby.version>
@@ -98,6 +98,7 @@
         <netty4.version>4.1.45.Final</netty4.version>
         <node.version>v10.14.2</node.version>
         <npm.version>6.5.0</npm.version>
+        <postgresql.version>42.2.8</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
@@ -1111,6 +1112,11 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+           <dependency>
+               <groupId>org.postgresql</groupId>
+               <artifactId>postgresql</artifactId>
+               <version>${postgresql.version}</version>
+           </dependency>
 
             <!-- GCP -->
             <dependency>
