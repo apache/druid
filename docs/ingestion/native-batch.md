@@ -42,11 +42,12 @@ demonstrates the "simple" (single-task) mode.
 ## Parallel task
 
 The Parallel task (type `index_parallel`) is a task for parallel batch indexing. This task only uses Druid's resource and
-doesn't depend on other external systems like Hadoop. `index_parallel` task is a supervisor task which basically creates
-multiple worker tasks and submits them to the Overlord. Each worker task reads input data and creates segments. Once they
-successfully generate segments for all input data, they report the generated segment list to the supervisor task. 
+doesn't depend on other external systems like Hadoop. The `index_parallel` task is a supervisor task that orchestrates
+the whole indexing process. The supervisor task splits the input data and creates worker tasks to process those splits.
+The created worker tasks are issued to the Overlord so that they can be scheduled and run on MiddleManagers or Indexers.
+Once a worker task successfully processes the assigned input split, it reports the generated segment list to the supervisor task.
 The supervisor task periodically checks the status of worker tasks. If one of them fails, it retries the failed task
-until the number of retries reaches to the configured limit. If all worker tasks succeed, then it publishes the reported segments at once and finalize the ingestion.
+until the number of retries reaches the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalizes ingestion.
 
 The detailed behavior of the Parallel task is different depending on the [`partitionsSpec`](#partitionsspec).
 See each `partitionsSpec` for more details.
@@ -69,15 +70,12 @@ with the `firehose`.
 
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
-The splittable `inputSource` (and `firehose`) types are responsible for generating _splits_.
-The supervisor task generates _worker task specs_ containing a split
-and submits worker tasks using those specs. As a result, the number of worker tasks depends on
-the implementation of the splittable `inputSource`. For now, all implementations create one split per input file
-except for the Druid Input Source. Please note that multiple worker tasks can be created for the same worker task spec
-if one of them fails.
-
 You may want to consider the below things:
 
+- You may want to control the amount of input data each worker task processes. This can be
+  controlled using different configurations depending on the phase in parallel ingestion (see [`partitionsSpec`](#partitionsspec) for more details).
+  For the tasks that read data from the `inputSource`, you can set the [SplitHintSpec](#splithintspec) in the `tuningConfig`.
+  For the tasks that merge shuffled segments, you can set the `totalNumMergeTasks` in the `tuningConfig`.
 - The number of concurrent worker tasks in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
   The supervisor task checks the number of current running worker tasks and creates more if it's smaller than `maxNumConcurrentSubTasks`
   no matter how many task slots are currently available.
@@ -204,7 +202,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [SplitHintSpec](#splithintspec) for more details.|null|no|
+|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [SplitHintSpec](#splithintspec) for more details.|null|`maxSize`|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
 |indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
@@ -216,7 +214,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxNumConcurrentSubTasks|Maximum number of worker tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
-|totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
+|totalNumMergeTasks|Total number of tasks to merge segments in the merge phase when `partitionsSpec` is set to `hashed` or `single_dim`.|10|no|
 |taskStatusCheckPeriodMs|Polling period in milliseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
@@ -226,7 +224,14 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 `SplitHintSpec` is used to give a hint when the supervisor task creates input splits.
 Note that each worker task processes a single input split. You can control the amount of data each worker task will read during the first phase.
 
-Currently only one splitHintSpec, i.e., `segments`, is available.
+#### `MaxSizeSplitHintSpec`
+
+`MaxSizeSplitHintSpec` is respected by all splittable input sources except for the HTTP input source.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `maxSize`.|none|yes|
+|maxSplitSize|Maximum number of bytes of input files to process in a single task. If a single file is larger than this number, it will be processed by itself in a single task (Files are never split across tasks yet).|500MB|no|
 
 #### `SegmentsSplitHintSpec`
 
@@ -235,7 +240,7 @@ Currently only one splitHintSpec, i.e., `segments`, is available.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `segments`.|none|yes|
-|maxInputSegmentBytesPerTask|Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).|150MB|no|
+|maxInputSegmentBytesPerTask|Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).|500MB|no|
 
 ### `partitionsSpec`
 
@@ -289,8 +294,7 @@ How the worker task creates segments is:
 The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
 The task runs in 2 phases, i.e., `partial segment generation` and `partial segment merge`.
 - In the `partial segment generation` phase, just like the Map phase in MapReduce,
-the Parallel task splits the input data (currently one split for
-each input file or based on `splitHintSpec` for `DruidInputSource`)
+the Parallel task splits the input data based on `splitHintSpec`
 and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split,
 and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
@@ -322,8 +326,7 @@ The first phase is to collect some statistics to find
 the best partitioning and the other 2 phases are to create partial segments
 and to merge them, respectively, as in hash-based partitioning.
 - In the `partial dimension distribution` phase, the Parallel task splits the input data and
-assigns them to worker tasks (currently one split for
-each input file or based on `splitHintSpec` for `DruidInputSource`). Each worker task (type `partial_dimension_distribution`) reads
+assigns them to worker tasks based on `splitHintSpec`. Each worker task (type `partial_dimension_distribution`) reads
 the assigned split and builds a histogram for `partitionDimension`.
 The Parallel task collects those histograms from worker tasks and finds
 the best range partitioning based on `partitionDimension` to evenly
@@ -776,7 +779,7 @@ Objects can be specified either via a list of S3 URI strings or a list of
 S3 location prefixes, which will attempt to list the contents and ingest
 all objects contained in the locations. The S3 input source is splittable
 and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read a single object.
+where each worker task of `index_parallel` will read one or multiple objects.
 
 Sample specs:
 
@@ -853,7 +856,8 @@ S3 Object:
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
 Cloud Storage URI strings. The Google Cloud Storage input source is splittable
-and can be used by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read a single object.
+and can be used by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read
+one or multiple objects.
 
 Sample specs:
 
@@ -1007,7 +1011,7 @@ Azure Blob object:
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
 of HDFS URI strings. The HDFS input source is splittable and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read a single file.
+where each worker task of `index_parallel` will read one or multiple files.
 
 Sample specs:
 
@@ -1089,7 +1093,7 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 The HDFS input source is to support reading files directly
 from remote sites via HTTP.
 The HDFS input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read a file.
+where each worker task of `index_parallel` will read only one file.
 
 Sample specs:
 
@@ -1193,7 +1197,7 @@ Sample spec:
 The Local input source is to support reading files directly from local storage,
 and is mainly intended for proof-of-concept testing.
 The Local input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
-where each worker task of `index_parallel` will read a file.
+where each worker task of `index_parallel` will read one or multiple files.
 
 Sample spec:
 
@@ -1204,7 +1208,8 @@ Sample spec:
       "inputSource": {
         "type": "local",
         "filter" : "*.csv",
-        "baseDir": "/data/directory"
+        "baseDir": "/data/directory",
+        "files": ["/bar/foo", "/foo/bar"]
       },
       "inputFormat": {
         "type": "csv"
@@ -1217,8 +1222,9 @@ Sample spec:
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "local".|yes|
-|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
-|baseDir|directory to search recursively for files to be ingested. |yes|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes if `baseDir` is specified|
+|baseDir|Directory to search recursively for files to be ingested. |At least one of `baseDir` or `files` should be specified|
+|files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. |At least one of `baseDir` or `files` should be specified|
 
 ### Druid Input Source
 
@@ -1381,7 +1387,7 @@ Google Blobs:
 
 This firehose ingests events from a predefined list of files from the HDFS storage.
 This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
-Since each split represents an HDFS file, each worker task of `index_parallel` will read a file.
+Since each split represents an HDFS file, each worker task of `index_parallel` will read files.
 
 Sample spec:
 

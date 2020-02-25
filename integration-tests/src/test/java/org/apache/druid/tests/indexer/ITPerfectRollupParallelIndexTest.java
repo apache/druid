@@ -38,6 +38,7 @@ import java.util.function.Function;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
 {
+  // The task specs here use the MaxSizeSplitHintSpec with maxSplitSize of 1. This is to create splits per file.
   private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
