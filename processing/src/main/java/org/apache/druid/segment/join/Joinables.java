@@ -28,6 +28,7 @@ import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,6 +40,16 @@ import java.util.stream.Collectors;
  */
 public class Joinables
 {
+  private static final Comparator<String> DESCENDING_LENGTH_STRING_COMPARATOR = (s1, s2) -> {
+    if (s1.length() > s2.length()) {
+      return -1;
+    } else if (s1.length() < s2.length()) {
+      return 1;
+    } else {
+      return 0;
+    }
+  };
+
   /**
    * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
    * returns it. Otherwise, throws an exception.
@@ -60,7 +71,7 @@ public class Joinables
 
   public static boolean isPrefixedBy(final String columnName, final String prefix)
   {
-    return columnName.startsWith(prefix) && columnName.length() > prefix.length();
+    return columnName.length() > prefix.length() && columnName.startsWith(prefix);
   }
 
   /**
@@ -119,7 +130,7 @@ public class Joinables
     }).collect(Collectors.toList());
   }
 
-  public static void checkPreJoinableClausesForDuplicatesAndShadowing(
+  private static void checkPreJoinableClausesForDuplicatesAndShadowing(
       final List<PreJoinableClause> preJoinableClauses
   )
   {
@@ -131,21 +142,29 @@ public class Joinables
     checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 
+  /**
+   * Check if any prefixes in the provided list duplicate or shadow each other.
+   *
+   * @param prefixes A mutable list containing the prefixes to check. This list will be sorted by descending
+   *                 string length.
+   */
   public static void checkPrefixesForDuplicatesAndShadowing(
       final List<String> prefixes
   )
   {
+    // this is a naive approach that assumes we'll typically handle only a small number of prefixes
+    prefixes.sort(DESCENDING_LENGTH_STRING_COMPARATOR);
     for (int i = 0; i < prefixes.size(); i++) {
-      String prefix1 = prefixes.get(i);
-      for (int k = 0; k < prefixes.size(); k++) {
+      String prefix = prefixes.get(i);
+      for (int k = i; k < prefixes.size(); k++) {
         if (i != k) {
           String otherPrefix = prefixes.get(k);
-          if (prefix1.equals(otherPrefix)) {
-            throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix1);
+          if (prefix.equals(otherPrefix)) {
+            throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix);
           }
 
-          if (isPrefixedBy(prefix1, otherPrefix)) {
-            throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix1, otherPrefix);
+          if (isPrefixedBy(prefix, otherPrefix)) {
+            throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix, otherPrefix);
           }
         }
       }

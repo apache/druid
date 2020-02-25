@@ -35,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -162,7 +163,7 @@ public class JoinablesTest
   @Test
   public void test_checkClausePrefixesForDuplicatesAndShadowing_noConflicts()
   {
-    List<String> prefixes = ImmutableList.of(
+    List<String> prefixes = Arrays.asList(
         "AA",
         "AB",
         "AC",
@@ -181,7 +182,7 @@ public class JoinablesTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Detected duplicate prefix in join clauses: [AA]");
 
-    List<String> prefixes = ImmutableList.of(
+    List<String> prefixes = Arrays.asList(
         "AA",
         "AA",
         "ABCD"
@@ -196,7 +197,7 @@ public class JoinablesTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Detected conflicting prefixes in join clauses: [ABC.DEF, ABC.]");
 
-    List<String> prefixes = ImmutableList.of(
+    List<String> prefixes = Arrays.asList(
         "BASE.",
         "BASEBALL",
         "123.456",
