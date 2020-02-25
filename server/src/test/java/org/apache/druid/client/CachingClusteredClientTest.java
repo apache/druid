@@ -74,7 +74,6 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
@@ -99,7 +98,6 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
@@ -118,7 +116,9 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -2476,7 +2476,7 @@ public class CachingClusteredClientTest
           }
         },
         ForkJoinPool.commonPool(),
-        new QueryScheduler(8, NoQuerySchedulingStrategy.INSTANCE)
+        new QueryScheduler(Integer.MAX_VALUE, NoQuerySchedulingStrategy.INSTANCE)
     );
   }
 

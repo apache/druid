@@ -17,22 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.query.scheduling;
+package org.apache.druid.server.scheduling;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.druid.client.SegmentServer;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QuerySchedulingStrategy;
-import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.server.QuerySchedulingStrategy;
 
 import java.util.Set;
 
 public class HiLoQuerySchedulingStrategy implements QuerySchedulingStrategy
 {
+  public static String LOW = "low";
+
   @JsonProperty
   private int maxLowThreads;
 
@@ -48,18 +51,23 @@ public class HiLoQuerySchedulingStrategy implements QuerySchedulingStrategy
   public Object2IntMap<String> getLaneLimits()
   {
     Object2IntMap<String> onlyLow = new Object2IntArrayMap<>(1);
-    onlyLow.put("low", maxLowThreads);
+    onlyLow.put(LOW, maxLowThreads);
     return onlyLow;
   }
 
   @Override
-  public <T> Query<T> prioritizeQuery(QueryPlus<T> query, Set<SegmentDescriptor> segments)
+  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
   {
     final Query<T> theQuery = query.getQuery();
-    final Integer priority = theQuery.getContextValue("priority");
-    final String lane = theQuery.getContextValue("queryLane");
+    // QueryContexts.getPriority gives a default, since we are setting priority
+    final Integer priority = theQuery.getContextValue(QueryContexts.PRIORITY_KEY);
+    final String lane = theQuery.getContextValue(QueryContexts.LANE_KEY);
     if (lane == null && priority != null && priority < 0) {
-      return theQuery.withOverriddenContext(ImmutableMap.<String, Object>builder().putAll(theQuery.getContext()).put("queryLane", "low").build());
+      return theQuery.withOverriddenContext(
+          ImmutableMap.<String, Object>builder().putAll(theQuery.getContext())
+                                                .put(QueryContexts.LANE_KEY, LOW)
+                                                .build()
+      );
     }
     return theQuery;
   }

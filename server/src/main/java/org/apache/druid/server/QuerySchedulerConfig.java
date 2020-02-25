@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

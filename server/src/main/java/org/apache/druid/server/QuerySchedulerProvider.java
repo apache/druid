@@ -17,12 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.server;
 
-public class QueryCapacityExceededException extends RuntimeException
+import com.google.inject.Provider;
+
+
+public class QuerySchedulerProvider extends QuerySchedulerConfig implements Provider<QueryScheduler>
 {
-  public QueryCapacityExceededException()
+  @Override
+  public QueryScheduler get()
   {
-    super("too many cooks");
+    return new QueryScheduler(getNumThreads(), getStrategy());
   }
 }

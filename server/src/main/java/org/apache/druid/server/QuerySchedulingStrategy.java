@@ -17,32 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.scheduling;
+package org.apache.druid.server;
 
-import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.druid.client.SegmentServer;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QuerySchedulingStrategy;
-import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.server.scheduling.HiLoQuerySchedulingStrategy;
+import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
 
 import java.util.Set;
 
-public class NoQuerySchedulingStrategy implements QuerySchedulingStrategy
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoQuerySchedulingStrategy.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "none", value = NoQuerySchedulingStrategy.class),
+    @JsonSubTypes.Type(name = "hilo", value = HiLoQuerySchedulingStrategy.class)
+})
+public interface QuerySchedulingStrategy
 {
-  private static final Object2IntMap<String> NONE = new Object2IntArrayMap<>();
+  Object2IntMap<String> getLaneLimits();
 
-  public static NoQuerySchedulingStrategy INSTANCE = new NoQuerySchedulingStrategy();
-
-  @Override
-  public Object2IntMap<String> getLaneLimits()
-  {
-    return NONE;
-  }
-
-  @Override
-  public <T> Query<T> prioritizeQuery(QueryPlus<T> query, Set<SegmentDescriptor> segments)
-  {
-    return query.getQuery();
-  }
+  <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments);
 }

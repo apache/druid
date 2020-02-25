@@ -41,10 +41,8 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -444,7 +442,7 @@ public class QueryResource implements QueryCountStatsProvider
 
     Response gotLimited(QueryCapacityExceededException e)
     {
-      return Response.status(429).entity(e.getMessage()).build();
+      return Response.status(QueryCapacityExceededException.STATUS_CODE).entity(e.getMessage()).build();
     }
   }
 

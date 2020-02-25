@@ -53,7 +53,6 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
@@ -63,11 +62,12 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
@@ -364,7 +364,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           }
         },
         ForkJoinPool.commonPool(),
-        new QueryScheduler(8, NoQuerySchedulingStrategy.INSTANCE)
+        new QueryScheduler(Integer.MAX_VALUE, NoQuerySchedulingStrategy.INSTANCE)
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

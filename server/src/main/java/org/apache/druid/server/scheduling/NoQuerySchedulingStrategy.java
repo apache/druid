@@ -17,16 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.server.scheduling;
 
-import com.google.inject.Provider;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.druid.client.SegmentServer;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.server.QuerySchedulingStrategy;
 
+import java.util.Set;
 
-public class QuerySchedulerProvider extends QuerySchedulerConfig implements Provider<QueryScheduler>
+public class NoQuerySchedulingStrategy implements QuerySchedulingStrategy
 {
+  private static final Object2IntMap<String> NONE = new Object2IntArrayMap<>();
+
+  public static NoQuerySchedulingStrategy INSTANCE = new NoQuerySchedulingStrategy();
+
   @Override
-  public QueryScheduler get()
+  public Object2IntMap<String> getLaneLimits()
   {
-    return new QueryScheduler(getNumThreads(), getStrategy());
+    return NONE;
+  }
+
+  @Override
+  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
+  {
+    return query.getQuery();
   }
 }

@@ -71,7 +71,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.QueryScheduler;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
@@ -90,7 +89,6 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -106,7 +104,9 @@ import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
@@ -341,7 +341,7 @@ public class CachingClusteredClientBenchmark
         new DruidHttpClientConfig(),
         processingConfig,
         forkJoinPool,
-        new QueryScheduler(8, NoQuerySchedulingStrategy.INSTANCE)
+        new QueryScheduler(Integer.MAX_VALUE, NoQuerySchedulingStrategy.INSTANCE)
     );
   }
 

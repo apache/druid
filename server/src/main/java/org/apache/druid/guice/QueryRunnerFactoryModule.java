@@ -27,8 +27,6 @@ import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
-import org.apache.druid.query.QueryScheduler;
-import org.apache.druid.query.QuerySchedulerProvider;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQueryRunnerFactory;
@@ -47,6 +45,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QuerySchedulerProvider;
 
 import java.util.Map;
 
@@ -74,9 +74,6 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
     binder.bind(QueryScheduler.class)
           .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
           .in(LazySingleton.class);
-    //    binder.bind(QueryWatcher.class)
-    //          .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
-    //          .in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
 
     final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = DruidBinders.queryRunnerFactoryBinder(
