@@ -80,7 +80,6 @@ public class S3InputSource extends CloudObjectInputSource
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
-      // Use for building a new s3Client to use instead of the default injected s3Client
       @JacksonInject Provider<ServerSideEncryptingAmazonS3.Builder> s3ClientBuilderProvider,
       @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
