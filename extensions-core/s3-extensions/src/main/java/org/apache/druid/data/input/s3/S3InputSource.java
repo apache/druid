@@ -52,9 +52,9 @@ import java.util.stream.Stream;
 
 public class S3InputSource extends CloudObjectInputSource
 {
-  // We lazily initialize s3ClientSupplier to avoid costly s3 operation when we only need S3InputSource for stored information
-  // (such as for task logs) and not for ingestion. (This cost only applies for new s3ClientSupplier created with
-  // s3InputSourceProperties given).
+  // We lazily initialize ServerSideEncryptingAmazonS3 to avoid costly s3 operation when we only need S3InputSource
+  // for stored information (such as for task logs) and not for ingestion.
+  // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceProperties given).
   private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
   @JsonProperty("properties")
   private final S3InputSourceProperties s3InputSourceProperties;
