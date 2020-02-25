@@ -149,16 +149,13 @@ public class Joinables
     prefixes.sort(DESCENDING_LENGTH_STRING_COMPARATOR);
     for (int i = 0; i < prefixes.size(); i++) {
       String prefix = prefixes.get(i);
-      for (int k = i; k < prefixes.size(); k++) {
-        if (i != k) {
-          String otherPrefix = prefixes.get(k);
-          if (prefix.equals(otherPrefix)) {
-            throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix);
-          }
-
-          if (isPrefixedBy(prefix, otherPrefix)) {
-            throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix, otherPrefix);
-          }
+      for (int k = i + 1; k < prefixes.size(); k++) {
+        String otherPrefix = prefixes.get(k);
+        if (prefix.equals(otherPrefix)) {
+          throw new IAE("Detected duplicate prefix in join clauses: [%s]", prefix);
+        }
+        if (isPrefixedBy(prefix, otherPrefix)) {
+          throw new IAE("Detected conflicting prefixes in join clauses: [%s, %s]", prefix, otherPrefix);
         }
       }
     }
