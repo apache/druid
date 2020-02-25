@@ -61,10 +61,27 @@ public class S3InputSource extends CloudObjectInputSource
   private final S3InputSourceConfig s3InputSourceConfig;
   private final S3InputDataConfig inputDataConfig;
 
+  /**
+   * Constructor for S3InputSource
+   * @param s3Client                The default ServerSideEncryptingAmazonS3 client built with all default configs
+   *                                from Guice. This injected singleton client is use when {@param s3InputSourceConfig}
+   *                                is not provided and hence, we can skip building a new client from
+   *                                {@param serverSideEncryptingAmazonS3BuilderProvider}
+   * @param s3ClientBuilderProvider Use for building a new s3Client to use instead of the default injected
+   *                                {@param s3Client}. The configurations of the client can be changed
+   *                                before being built
+   * @param inputDataConfig         Stores the configuration for options related to reading input data
+   * @param uris                    User provided uris to read input data
+   * @param prefixes                User provided prefixes to read input data
+   * @param objects                 User provided cloud objects values to read input data
+   * @param s3InputSourceConfig     User provided properties for overriding the default S3 configuration
+   *
+   */
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
-      @JacksonInject Provider<ServerSideEncryptingAmazonS3.Builder> serverSideEncryptingAmazonS3BuilderProvider,
+      // Use for building a new s3Client to use instead of the default injected s3Client
+      @JacksonInject Provider<ServerSideEncryptingAmazonS3.Builder> s3ClientBuilderProvider,
       @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
@@ -78,10 +95,10 @@ public class S3InputSource extends CloudObjectInputSource
     this.s3InputSourceConfig = s3InputSourceConfig;
     this.s3ClientSupplier = Suppliers.memoize(
         () -> {
-          if (s3InputSourceConfig == null || serverSideEncryptingAmazonS3BuilderProvider == null) {
+          if (s3InputSourceConfig == null || s3ClientBuilderProvider == null) {
             return s3Client;
           } else {
-            ServerSideEncryptingAmazonS3.Builder s3ClientBuilder = serverSideEncryptingAmazonS3BuilderProvider.get();
+            ServerSideEncryptingAmazonS3.Builder s3ClientBuilder = s3ClientBuilderProvider.get();
             if (s3ClientBuilder != null) {
               if (s3InputSourceConfig.isCredentialsConfigured()) {
                 AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
