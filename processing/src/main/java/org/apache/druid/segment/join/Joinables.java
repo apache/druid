@@ -40,15 +40,8 @@ import java.util.stream.Collectors;
  */
 public class Joinables
 {
-  private static final Comparator<String> DESCENDING_LENGTH_STRING_COMPARATOR = (s1, s2) -> {
-    if (s1.length() > s2.length()) {
-      return -1;
-    } else if (s1.length() < s2.length()) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
+  private static final Comparator<String> DESCENDING_LENGTH_STRING_COMPARATOR = (s1, s2) ->
+      Integer.compare(s2.length(), s1.length());
 
   /**
    * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
