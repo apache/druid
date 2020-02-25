@@ -149,6 +149,9 @@
       "development/extensions-core/avro": {
         "title": "Apache Avro"
       },
+      "development/extensions-core/azure": {
+        "title": "Microsoft Azure"
+      },
       "development/extensions-core/bloom-filter": {
         "title": "Bloom Filter"
       },
@@ -225,9 +228,6 @@
       },
       "development/extensions-core/test-stats": {
         "title": "Test Stats Aggregators"
-      },
-      "development/extensions-core/azure": {
-        "title": "Microsoft Azure"
       },
       "development/extensions": {
         "title": "Extensions"
