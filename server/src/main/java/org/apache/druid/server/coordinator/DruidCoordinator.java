@@ -365,6 +365,36 @@ public class DruidCoordinator
     return numsUnavailableUsedSegmentsPerDataSource;
   }
 
+  public Map<String, List<String>> getUnloadedStatus()
+  {
+    Map<String, List<String>> unloadedStatus = new HashMap<>();
+    final Collection<ImmutableDruidDataSource> dataSources =
+        segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments();
+
+    for (ImmutableDruidDataSource dataSource : dataSources) {
+      final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
+
+      // remove loaded segments
+      for (DruidServer druidServer : serverInventoryView.getInventory()) {
+        final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
+        if (loadedView != null) {
+          // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
+          // Please see https://github.com/apache/incubator-druid/pull/5632 and LoadStatusBenchmark for more info.
+          for (DataSegment serverSegment : loadedView.getSegments()) {
+            segments.remove(serverSegment);
+          }
+        }
+      }
+
+      unloadedStatus.put(dataSource.getName(), segments.stream()
+          .map(segment -> segment.getId().toString())
+          .collect(Collectors.toList())
+      );
+    }
+
+    return unloadedStatus;
+  }
+
   public Map<String, Double> getLoadStatus()
   {
     final Map<String, Double> loadStatus = new HashMap<>();
