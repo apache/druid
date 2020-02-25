@@ -838,7 +838,7 @@ Sample specs:
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|properties|Properties Object for overriding default S3 configuration. See below for more information.|None|No (Default configurations will be use if not given)
+|properties|Properties Object for overriding the default S3 configuration. See below for more information.|None|No (defaults will be used if not given)
 
 S3 Object:
 
@@ -854,7 +854,7 @@ Properties Object:
 |accessKeyId|S3 access key for this S3 InputSource|None|yes if secretAccessKey is given|
 |secretAccessKey|S3 secret key for this S3 InputSource|None|yes if accessKeyId is given|
 
-**Note :** *If any property is not given in the Properties Object, then the current default server value will be use.*
+**Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
 
 ### Google Cloud Storage Input Source
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.data.input.s3;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -29,13 +29,13 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Contains properties for s3 access configuration.
- * Properties can be specified by ingestionSpec and override system default.
+ * Contains properties for s3 input source.
+ * Properties can be specified by ingestionSpec which will override system default.
  */
-public class S3ConfigProperties
+public class S3InputSourceProperties
 {
   @JsonCreator
-  public S3ConfigProperties(
+  public S3InputSourceProperties(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
   )
@@ -75,7 +75,7 @@ public class S3ConfigProperties
   @Override
   public String toString()
   {
-    return "S3ConfigProperties{" +
+    return "S3InputSourceProperties{" +
            "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
            '}';
@@ -90,7 +90,7 @@ public class S3ConfigProperties
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    S3ConfigProperties that = (S3ConfigProperties) o;
+    S3InputSourceProperties that = (S3InputSourceProperties) o;
     return Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey);
   }

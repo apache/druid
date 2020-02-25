@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.data.input.impl.S3ConfigProperties;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageConfig;
@@ -50,41 +49,41 @@ import java.util.stream.StreamSupport;
 
 public class S3InputSource extends CloudObjectInputSource<S3Entity>
 {
-  // We lazily initialize s3Client to avoid costly s3 operation when we only need S3InputSource for stored information
-  // (such as for task logs) and not for ingestion. (This cost only applies for new s3Client created with
-  // s3ConfigProperties given).
-  private final Supplier<ServerSideEncryptingAmazonS3> s3Client;
+  // We lazily initialize s3ClientSupplier to avoid costly s3 operation when we only need S3InputSource for stored information
+  // (such as for task logs) and not for ingestion. (This cost only applies for new s3ClientSupplier created with
+  // s3InputSourceProperties given).
+  private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
   @JsonProperty("properties")
-  private final S3ConfigProperties s3ConfigProperties;
+  private final S3InputSourceProperties s3InputSourceProperties;
   private final S3InputDataConfig inputDataConfig;
 
   @JsonCreator
   public S3InputSource(
-      @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject ServerSideEncryptingAmazonS3 s3ClientSupplier,
       @JacksonInject AmazonS3ClientBuilder amazonS3ClientBuilder,
       @JacksonInject S3StorageConfig storageConfig,
       @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("properties") @Nullable S3ConfigProperties s3ConfigProperties
+      @JsonProperty("properties") @Nullable S3InputSourceProperties s3InputSourceProperties
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
-    this.s3ConfigProperties = s3ConfigProperties;
-    this.s3Client = Suppliers.memoize(
+    this.s3InputSourceProperties = s3InputSourceProperties;
+    this.s3ClientSupplier = Suppliers.memoize(
         () -> {
-          if (amazonS3ClientBuilder != null && storageConfig != null && s3ConfigProperties != null) {
-            if (s3ConfigProperties.isCredentialsConfigured()) {
+          if (amazonS3ClientBuilder != null && storageConfig != null && s3InputSourceProperties != null) {
+            if (s3InputSourceProperties.isCredentialsConfigured()) {
               BasicAWSCredentials creds = new BasicAWSCredentials(
-                  s3ConfigProperties.getAccessKeyId().getPassword(),
-                  s3ConfigProperties.getSecretAccessKey().getPassword());
+                  s3InputSourceProperties.getAccessKeyId().getPassword(),
+                  s3InputSourceProperties.getSecretAccessKey().getPassword());
               amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
             }
             return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
           } else {
-            return Preconditions.checkNotNull(s3Client, "s3Client");
+            return Preconditions.checkNotNull(s3ClientSupplier, "s3ClientSupplier");
           }
         }
     );
@@ -92,15 +91,15 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
 
   @Nullable
   @JsonProperty("properties")
-  public S3ConfigProperties getS3ConfigProperties()
+  public S3InputSourceProperties getS3InputSourceProperties()
   {
-    return s3ConfigProperties;
+    return s3InputSourceProperties;
   }
 
   @Override
   protected S3Entity createEntity(InputSplit<CloudObjectLocation> split)
   {
-    return new S3Entity(s3Client.get(), split.get());
+    return new S3Entity(s3ClientSupplier.get(), split.get());
   }
 
   @Override
@@ -115,24 +114,21 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
   {
     return new S3InputSource(
-        s3Client.get(),
-       null,
-       null,
+        s3ClientSupplier.get(),
+        null,
+        null,
         inputDataConfig,
-       null,
-       null,
-       ImmutableList.of(split.get()),
-       getS3ConfigProperties()
+        null,
+        null,
+        ImmutableList.of(split.get()),
+        getS3InputSourceProperties()
     );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        super.hashCode(),
-        s3ConfigProperties
-    );
+    return Objects.hash(super.hashCode(), s3InputSourceProperties);
   }
 
   @Override
@@ -148,7 +144,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
       return false;
     }
     S3InputSource that = (S3InputSource) o;
-    return Objects.equals(s3ConfigProperties, that.s3ConfigProperties);
+    return Objects.equals(s3InputSourceProperties, that.s3InputSourceProperties);
   }
 
   @Override
@@ -158,12 +154,12 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", s3ConfigProperties=" + getS3ConfigProperties() +
+           ", s3InputSourceProperties=" + getS3InputSourceProperties() +
            '}';
   }
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> S3Utils.objectSummaryIterator(s3Client.get(), getPrefixes(), inputDataConfig.getMaxListingLength());
+    return () -> S3Utils.objectSummaryIterator(s3ClientSupplier.get(), getPrefixes(), inputDataConfig.getMaxListingLength());
   }
 }
