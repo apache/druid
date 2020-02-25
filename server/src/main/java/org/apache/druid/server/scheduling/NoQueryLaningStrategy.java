@@ -24,15 +24,15 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServer;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.QuerySchedulingStrategy;
+import org.apache.druid.server.QueryLaningStrategy;
 
 import java.util.Set;
 
-public class NoQuerySchedulingStrategy implements QuerySchedulingStrategy
+public class NoQueryLaningStrategy implements QueryLaningStrategy
 {
   private static final Object2IntMap<String> NONE = new Object2IntArrayMap<>();
 
-  public static NoQuerySchedulingStrategy INSTANCE = new NoQuerySchedulingStrategy();
+  public static NoQueryLaningStrategy INSTANCE = new NoQueryLaningStrategy();
 
   @Override
   public Object2IntMap<String> getLaneLimits()
@@ -41,7 +41,7 @@ public class NoQuerySchedulingStrategy implements QuerySchedulingStrategy
   }
 
   @Override
-  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
+  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
   {
     return query.getQuery();
   }

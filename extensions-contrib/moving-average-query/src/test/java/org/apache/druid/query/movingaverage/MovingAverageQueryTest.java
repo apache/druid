@@ -67,7 +67,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
@@ -364,7 +364,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           }
         },
         ForkJoinPool.commonPool(),
-        new QueryScheduler(Integer.MAX_VALUE, NoQuerySchedulingStrategy.INSTANCE)
+        new QueryScheduler(Integer.MAX_VALUE, NoQueryLaningStrategy.INSTANCE)
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

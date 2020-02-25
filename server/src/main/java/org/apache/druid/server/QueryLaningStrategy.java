@@ -25,20 +25,20 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServer;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.scheduling.HiLoQuerySchedulingStrategy;
-import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
+import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 
 import java.util.Set;
 
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoQuerySchedulingStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoQueryLaningStrategy.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "none", value = NoQuerySchedulingStrategy.class),
-    @JsonSubTypes.Type(name = "hilo", value = HiLoQuerySchedulingStrategy.class)
+    @JsonSubTypes.Type(name = "none", value = NoQueryLaningStrategy.class),
+    @JsonSubTypes.Type(name = "hilo", value = HiLoQueryLaningStrategy.class)
 })
-public interface QuerySchedulingStrategy
+public interface QueryLaningStrategy
 {
   Object2IntMap<String> getLaneLimits();
 
-  <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments);
+  <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments);
 }

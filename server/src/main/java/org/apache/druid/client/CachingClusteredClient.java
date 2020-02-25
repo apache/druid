@@ -226,8 +226,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
    */
   private class SpecificQueryRunnable<T>
   {
-    private final QueryPlus<T> queryPlus;
     private final ResponseContext responseContext;
+    private QueryPlus<T> queryPlus;
     private Query<T> query;
     private final QueryToolChest<T, Query<T>> toolChest;
     @Nullable
@@ -236,7 +236,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean populateCache;
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
-    private final Query<T> downstreamQuery;
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final DataSourceAnalysis dataSourceAnalysis;
     private final List<Interval> intervals;
@@ -255,7 +254,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
-      this.downstreamQuery = query.withOverriddenContext(makeDownstreamQueryContext());
       this.dataSourceAnalysis = DataSourceAnalysis.forDataSource(query.getDataSource());
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
@@ -269,6 +267,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final int priority = QueryContexts.getPriority(query);
       contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
+      contextBuilder.put(QueryContexts.LANE_KEY, QueryContexts.getLane(query));
 
       if (populateCache) {
         // prevent down-stream nodes from caching results as well if we are populating the cache
@@ -308,20 +307,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final List<Pair<Interval, byte[]>> alreadyCachedResults =
           pruneSegmentsWithCachedResults(queryCacheKey, segmentServers);
 
-      query = scheduler.prioritizeAndLaneQuery(
-          queryPlus.withQuery(query),
-          segmentServers
-      );
+      query = scheduler.laneQuery(queryPlus, segmentServers);
+      queryPlus = queryPlus.withQuery(query);
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
-      LazySequence<T> sequence = new LazySequence<>(() -> {
+      LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
         return merge(sequencesByInterval);
       });
 
-      return scheduler.run(query, sequence);
+      return scheduler.run(query, mergedResultSequence);
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
@@ -681,11 +678,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       @SuppressWarnings("unchecked")
+      final Query<T> downstreamQuery = query.withOverriddenContext(makeDownstreamQueryContext());
       final Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner.run(
           queryPlus
               .withQuery(
                   Queries.withSpecificSegments(
-                      (Query<Result<BySegmentResultValueClass<T>>>) downstreamQuery,
+                      downstreamQuery,
                       segmentsOfServer
                   )
               )

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
@@ -42,21 +43,15 @@ import java.util.concurrent.TimeUnit;
 
 
 /**
- * QueryScheduler (potentially) assigns any {@link Query} that is to be executed to a 'query lane' and potentially
- * priority using the
- * {@link QuerySchedulingStrategy} that is defined in {@link QuerySchedulerConfig}
- * The purpose of the QueryScheduler is to give overall visibility into queries running
- * or pending at the QueryRunner level. This is currently used to cancel all the
- * parts of a pending query, but may be expanded in the future to offer more direct
- * visibility into query execution and resource usage.
+ * QueryScheduler (potentially) assigns any {@link Query} that is to be executed to a 'query lane' using the
+ * {@link QueryLaningStrategy} that is defined in {@link QuerySchedulerConfig}.
  *
- * QueryRunners executing any computation asynchronously must register their queries with the QueryScheduler.
+ * As a {@link QueryWatcher}, it also provides cancellation facilities.
  *
  */
 public class QueryScheduler implements QueryWatcher
 {
-  private final QuerySchedulingStrategy strategy;
-  // maybe instead use a fancy library?
+  private final QueryLaningStrategy laningStrategy;
   private final Optional<Semaphore> totalQueryLimit;
   private final Map<String, Semaphore> laneLimits;
 
@@ -64,9 +59,9 @@ public class QueryScheduler implements QueryWatcher
   private final SetMultimap<String, String> queryDatasources;
   private final Set<Query<?>> runningQueries;
 
-  public QueryScheduler(int totalNumThreads, QuerySchedulingStrategy strategy)
+  public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
-    this.strategy = strategy;
+    this.laningStrategy = laningStrategy;
     if (totalNumThreads > 0) {
       this.totalQueryLimit = Optional.of(new Semaphore(totalNumThreads));
     } else {
@@ -74,7 +69,7 @@ public class QueryScheduler implements QueryWatcher
     }
     this.laneLimits = new HashMap<>();
 
-    for (Object2IntMap.Entry<String> entry : strategy.getLaneLimits().object2IntEntrySet()) {
+    for (Object2IntMap.Entry<String> entry : laningStrategy.getLaneLimits().object2IntEntrySet()) {
       laneLimits.put(entry.getKey(), new Semaphore(entry.getIntValue()));
     }
     this.queries = Multimaps.synchronizedSetMultimap(
@@ -86,56 +81,62 @@ public class QueryScheduler implements QueryWatcher
     this.runningQueries = Sets.newConcurrentHashSet();
   }
 
-  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
+  @Override
+  public void registerQueryFuture(Query<?> query, ListenableFuture<?> future)
   {
-    return strategy.prioritizeAndLaneQuery(query, segments);
+    final String id = query.getId();
+    final Set<String> datasources = query.getDataSource().getTableNames();
+    queries.put(id, future);
+    queryDatasources.putAll(id, datasources);
+    future.addListener(
+        () -> {
+          queries.remove(id, future);
+          for (String datasource : datasources) {
+            queryDatasources.remove(id, datasource);
+          }
+        },
+        Execs.directExecutor()
+    );
   }
 
-  public void scheduleQuery(Query<?> query)
+  /**
+   * Assign a query a lane (if not set)
+   */
+  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
   {
-    final String lane;
-    try {
-      if (!totalQueryLimit.isPresent() || totalQueryLimit.get().tryAcquire(0, TimeUnit.MILLISECONDS)) {
-        lane = QueryContexts.getLane(query);
-        if (!laneLimits.containsKey(lane)) {
-          runningQueries.add(query);
-          return;
-        }
-      } else {
-        throw new QueryCapacityExceededException();
-      }
+    if (QueryContexts.getLane(query.getQuery()) != null) {
+      return query.getQuery();
     }
-    catch (InterruptedException ex) {
-      throw new QueryCapacityExceededException();
-    }
-    try {
-      if (laneLimits.get(lane).tryAcquire(0, TimeUnit.MILLISECONDS)) {
-        runningQueries.add(query);
-        return;
-      } else {
-        throw new QueryCapacityExceededException(lane);
-      }
-    }
-    catch (InterruptedException e) {
-      throw new QueryCapacityExceededException(lane);
-    }
+    return laningStrategy.laneQuery(query, segments);
   }
 
-  public void completeQuery(Query<?> query)
-  {
-    if (runningQueries.remove(query)) {
-      String lane = QueryContexts.getLane(query);
-      if (laneLimits.containsKey(lane)) {
-        laneLimits.get(lane).release();
-      }
-      totalQueryLimit.ifPresent(Semaphore::release);
-    }
-  }
-
+  /**
+   * Run a query with the scheduler, attempting to acquire a semaphore from the total and lane specific query capacities
+   */
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
     scheduleQuery(query);
     return resultSequence.withBaggage(() -> completeQuery(query));
+  }
+
+  /**
+   * Forcibly cancel all futures that have been registered to a specific query id
+   */
+  public boolean cancelQuery(String id)
+  {
+    // if you re-use queryId and cancel queries... you are going to have a bad time
+    queryDatasources.removeAll(id);
+    Set<ListenableFuture<?>> futures = queries.removeAll(id);
+    boolean success = true;
+    for (ListenableFuture<?> future : futures) {
+      success = success && future.cancel(true);
+    }
+    return success;
+  }
+
+  public Set<String> getQueryDatasources(final String queryId)
+  {
+    return queryDatasources.get(queryId);
   }
 
   public int getTotalAvailableCapacity()
@@ -151,53 +152,52 @@ public class QueryScheduler implements QueryWatcher
     return -1;
   }
 
-
-  public boolean cancelQuery(String id)
+  /**
+   * Acquire semaphore from total capacity and lane capacity (if query is assigned a lane that exists)
+   */
+  @VisibleForTesting
+  void scheduleQuery(Query<?> query)
   {
-    queryDatasources.removeAll(id);
-    Set<ListenableFuture<?>> futures = queries.removeAll(id);
-    boolean success = true;
-    for (ListenableFuture<?> future : futures) {
-      success = success && future.cancel(true);
+    final String lane;
+    try {
+      if (!totalQueryLimit.isPresent() || totalQueryLimit.get().tryAcquire(0, TimeUnit.MILLISECONDS)) {
+        lane = QueryContexts.getLane(query);
+        // if no lane, we are done
+        if (!laneLimits.containsKey(lane)) {
+          runningQueries.add(query);
+          return;
+        }
+      } else {
+        throw new QueryCapacityExceededException();
+      }
     }
-    return success;
+    catch (InterruptedException ex) {
+      throw new QueryCapacityExceededException();
+    }
+    // if we got here, the query belongs to a lane, acquire the semaphore for it
+    try {
+      if (laneLimits.get(lane).tryAcquire(0, TimeUnit.MILLISECONDS)) {
+        runningQueries.add(query);
+      } else {
+        throw new QueryCapacityExceededException(lane);
+      }
+    }
+    catch (InterruptedException e) {
+      throw new QueryCapacityExceededException(lane);
+    }
   }
 
   /**
-   * QueryRunners must use this method to register any pending queries.
-   *
-   * The given future may have cancel(true) called at any time, if cancellation of this query has been requested.
-   *
-   * @param query a query, which may be a subset of a larger query, as long as the underlying queryId is unchanged
-   * @param future the future holding the execution status of the query
+   * Release semaphores help by query
    */
-  public void registerQueryFuture(Query<?> query, final ListenableFuture<?> future)
+  private void completeQuery(Query<?> query)
   {
-    final String id = query.getId();
-    final Set<String> datasources = query.getDataSource().getTableNames();
-    queries.put(id, future);
-    queryDatasources.putAll(id, datasources);
-    future.addListener(
-        () -> {
-          // if you re-use queryId and cancel queries... you are going to have a bad time
-          queries.remove(id, future);
-
-          for (String datasource : datasources) {
-            queryDatasources.remove(id, datasource);
-          }
-        },
-        Execs.directExecutor()
-    );
-  }
-
-  public Set<String> getQueryDatasources(final String queryId)
-  {
-    return queryDatasources.get(queryId);
-  }
-
-  @Override
-  public void registerQuery(Query<?> query, ListenableFuture<?> future)
-  {
-    registerQueryFuture(query, future);
+    if (runningQueries.remove(query)) {
+      String lane = QueryContexts.getLane(query);
+      if (laneLimits.containsKey(lane)) {
+        laneLimits.get(lane).release();
+      }
+      totalQueryLimit.ifPresent(Semaphore::release);
+    }
   }
 }

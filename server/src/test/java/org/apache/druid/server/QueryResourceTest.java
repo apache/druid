@@ -49,8 +49,8 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.scheduling.HiLoQuerySchedulingStrategy;
-import org.apache.druid.server.scheduling.NoQuerySchedulingStrategy;
+import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -135,7 +135,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-    queryScheduler = new QueryScheduler(8, NoQuerySchedulingStrategy.INSTANCE);
+    queryScheduler = new QueryScheduler(8, NoQueryLaningStrategy.INSTANCE);
     testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
@@ -679,7 +679,7 @@ public class QueryResourceTest
     final CountDownLatch waitFirstStart = new CountDownLatch(1);
     final CountDownLatch waitSecondStart = new CountDownLatch(2);
     final CountDownLatch waitFinishLatch = new CountDownLatch(3);
-    final QueryScheduler laningScheduler = new QueryScheduler(2, NoQuerySchedulingStrategy.INSTANCE);
+    final QueryScheduler laningScheduler = new QueryScheduler(2, NoQueryLaningStrategy.INSTANCE);
 
     createScheduledQueryResource(laningScheduler, ImmutableList.of(waitFirstStart, waitSecondStart));
     assertResponseAndCountdownOrBlockForever(
@@ -712,7 +712,7 @@ public class QueryResourceTest
     final CountDownLatch waitFirstStart = new CountDownLatch(1);
     final CountDownLatch waitSecondStart = new CountDownLatch(2);
     final CountDownLatch waitFinishLatch = new CountDownLatch(3);
-    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQuerySchedulingStrategy(1));
+    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQueryLaningStrategy(1));
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitFirstStart, waitSecondStart));
 
@@ -730,7 +730,7 @@ public class QueryResourceTest
           Assert.assertEquals(
               StringUtils.format(
                   QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE,
-                  HiLoQuerySchedulingStrategy.LOW
+                  HiLoQueryLaningStrategy.LOW
               ),
               response.getEntity());
         }
@@ -772,7 +772,7 @@ public class QueryResourceTest
           latches.forEach(CountDownLatch::countDown);
 
           return scheduler.run(
-              scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
+              scheduler.laneQuery(queryPlus, ImmutableSet.of()),
               new LazySequence<T>(() -> {
                 try {
                   Thread.sleep(500);

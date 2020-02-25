@@ -28,11 +28,11 @@ import org.apache.druid.client.SegmentServer;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.QuerySchedulingStrategy;
+import org.apache.druid.server.QueryLaningStrategy;
 
 import java.util.Set;
 
-public class HiLoQuerySchedulingStrategy implements QuerySchedulingStrategy
+public class HiLoQueryLaningStrategy implements QueryLaningStrategy
 {
   public static String LOW = "low";
 
@@ -40,7 +40,7 @@ public class HiLoQuerySchedulingStrategy implements QuerySchedulingStrategy
   private int maxLowThreads;
 
   @JsonCreator
-  public HiLoQuerySchedulingStrategy(
+  public HiLoQueryLaningStrategy(
       @JsonProperty("maxLowThreads") Integer maxLowThreads
   )
   {
@@ -56,7 +56,7 @@ public class HiLoQuerySchedulingStrategy implements QuerySchedulingStrategy
   }
 
   @Override
-  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
+  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
   {
     final Query<T> theQuery = query.getQuery();
     // QueryContexts.getPriority gives a default, since we are setting priority

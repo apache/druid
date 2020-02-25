@@ -26,9 +26,8 @@ public class QuerySchedulerConfig
   @JsonProperty
   private Integer numThreads;
 
-  @JsonProperty
-  private QuerySchedulingStrategy strategy;
-
+  @JsonProperty("laning")
+  private QueryLaningStrategy laningStrategy;
 
   @JsonProperty
   public int getNumThreads()
@@ -36,9 +35,9 @@ public class QuerySchedulerConfig
     return numThreads;
   }
 
-  @JsonProperty
-  public QuerySchedulingStrategy getStrategy()
+  @JsonProperty("laning")
+  public QueryLaningStrategy getLaningStrategy()
   {
-    return strategy;
+    return laningStrategy;
   }
 }

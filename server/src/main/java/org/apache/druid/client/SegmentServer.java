@@ -25,7 +25,7 @@ import org.apache.druid.query.SegmentDescriptor;
 
 public class SegmentServer extends Pair<ServerSelector, SegmentDescriptor>
 {
-  SegmentServer(ServerSelector server, SegmentDescriptor segment)
+  public SegmentServer(ServerSelector server, SegmentDescriptor segment)
   {
     super(server, segment);
   }

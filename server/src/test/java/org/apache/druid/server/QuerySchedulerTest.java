@@ -37,7 +37,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.server.scheduling.HiLoQuerySchedulingStrategy;
+import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,14 +56,14 @@ public class QuerySchedulerTest
   @Test
   public void testHiLoHi() throws ExecutionException, InterruptedException
   {
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQuerySchedulingStrategy(2));
+    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
 
     TopNQuery interactive = makeInteractiveQuery();
     ListenableFuture<?> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_scheduler_%s")
     ).submit(() -> {
       try {
-        Query<?> scheduled = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(interactive), ImmutableSet.of());
+        Query<?> scheduled = scheduler.laneQuery(QueryPlus.wrap(interactive), ImmutableSet.of());
 
         Assert.assertNotNull(scheduled);
 
@@ -74,7 +74,7 @@ public class QuerySchedulerTest
           public void before()
           {
             Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
-            Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+            Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
           }
         });
         Sequence<Integer> results = scheduler.run(scheduled, underlyingSequence);
@@ -94,15 +94,15 @@ public class QuerySchedulerTest
   @Test
   public void testHiLoLo() throws ExecutionException, InterruptedException
   {
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQuerySchedulingStrategy(2));
+    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
     TopNQuery report = makeReportQuery();
     ListenableFuture<?> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_scheduler_%s")
     ).submit(() -> {
       try {
-        Query<?> scheduledReport = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(report), ImmutableSet.of());
+        Query<?> scheduledReport = scheduler.laneQuery(QueryPlus.wrap(report), ImmutableSet.of());
         Assert.assertNotNull(scheduledReport);
-        Assert.assertEquals(HiLoQuerySchedulingStrategy.LOW, QueryContexts.getLane(scheduledReport));
+        Assert.assertEquals(HiLoQueryLaningStrategy.LOW, QueryContexts.getLane(scheduledReport));
 
         Sequence<Integer> underlyingSequence = makeSequence(10);
         underlyingSequence = Sequences.wrap(underlyingSequence, new SequenceWrapper()
@@ -111,7 +111,7 @@ public class QuerySchedulerTest
           public void before()
           {
             Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
-            Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+            Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
           }
         });
         Sequence<Integer> results = scheduler.run(scheduledReport, underlyingSequence);
@@ -126,7 +126,7 @@ public class QuerySchedulerTest
     scheduler.registerQueryFuture(report, future);
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
   }
 
 
@@ -136,14 +136,14 @@ public class QuerySchedulerTest
     expected.expectMessage("exploded");
     expected.expect(ExecutionException.class);
 
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQuerySchedulingStrategy(2));
+    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
 
     TopNQuery interactive = makeInteractiveQuery();
     ListenableFuture<?> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_scheduler_%s")
     ).submit(() -> {
       try {
-        Query<?> scheduled = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(interactive), ImmutableSet.of());
+        Query<?> scheduled = scheduler.laneQuery(QueryPlus.wrap(interactive), ImmutableSet.of());
 
         Assert.assertNotNull(scheduled);
 
@@ -173,26 +173,26 @@ public class QuerySchedulerTest
   public void testHiLoFailsWhenOutOfLaneCapacity()
   {
     expected.expectMessage(
-        StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, HiLoQuerySchedulingStrategy.LOW)
+        StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, HiLoQueryLaningStrategy.LOW)
     );
     expected.expect(QueryCapacityExceededException.class);
 
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQuerySchedulingStrategy(2));
+    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
 
-    Query<?> report1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
+    Query<?> report1 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(report1);
     Assert.assertNotNull(report1);
     Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
-    Query<?> report2 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
+    Query<?> report2 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(report2);
     Assert.assertNotNull(report2);
     Assert.assertEquals(3, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+    Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     // too many reports
-    scheduler.scheduleQuery(scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()));
+    scheduler.scheduleQuery(scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()));
   }
 
   @Test
@@ -201,37 +201,37 @@ public class QuerySchedulerTest
     expected.expectMessage(QueryCapacityExceededException.ERROR_MESSAGE);
     expected.expect(QueryCapacityExceededException.class);
 
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQuerySchedulingStrategy(2));
-    Query<?> interactive1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
+    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
+    Query<?> interactive1 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(interactive1);
     Assert.assertNotNull(interactive1);
     Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
 
-    Query<?> report1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
+    Query<?> report1 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(report1);
     Assert.assertNotNull(report1);
     Assert.assertEquals(3, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
-    Query<?> interactive2 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
+    Query<?> interactive2 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(interactive2);
     Assert.assertNotNull(interactive2);
     Assert.assertEquals(2, scheduler.getTotalAvailableCapacity());
 
-    Query<?> report2 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
+    Query<?> report2 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(report2);
     Assert.assertNotNull(report2);
     Assert.assertEquals(1, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQuerySchedulingStrategy.LOW));
+    Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
-    Query<?> interactive3 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
+    Query<?> interactive3 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
     scheduler.scheduleQuery(interactive3);
     Assert.assertNotNull(interactive3);
     Assert.assertEquals(0, scheduler.getTotalAvailableCapacity());
 
     // one too many
     scheduler.scheduleQuery(
-        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of())
+        scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of())
     );
   }
 
