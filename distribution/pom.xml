@@ -384,8 +384,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:dropwizard-emitter</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-azure-extensions</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-cassandra-storage</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-cloudfiles-extensions</argument>

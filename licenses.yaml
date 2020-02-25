@@ -4047,6 +4047,28 @@ libraries:
 
 ---
 
+name: Microsoft Azure SDK For Key Vault Core
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: MIT License
+copyright: Microsoft
+version: 1.0.0
+libraries:
+  - com.microsoft.azure: azure-keyvault-core
+
+---
+
+name: Microsoft Azure Storage Client SDK
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: Apache License version 2.0
+copyright: Microsoft
+version: 8.6.0
+libraries:
+  - com.microsoft.azure: azure-storage
+
+---
+
 # Web console modules start
 name: "@babel/runtime"
 license_category: binary
