@@ -25,13 +25,16 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
@@ -53,6 +56,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.utils.Streams;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -62,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -166,8 +171,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
 
     final List<TimelineObjectHolder<String, DataSegment>> timeline = createTimeline();
-
-    final Stream<InputEntity> entityStream = createTimeline()
+    final Stream<InputEntity> entityStream = timeline
         .stream()
         .flatMap(holder -> {
           final PartitionHolder<DataSegment> partitionHolder = holder.getObject();
@@ -205,7 +209,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        entityStream,
+        entityStream.iterator(),
         temporaryDirectory
     );
   }
@@ -228,13 +232,15 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     // segmentIds is supposed to be specified by the supervisor task during the parallel indexing.
     // If it's not null, segments are already split by the supervisor task and further split won't happen.
     if (segmentIds == null) {
-      return createSplits(
-          coordinatorClient,
-          retryPolicyFactory,
-          dataSource,
-          interval,
-          splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
-      ).stream();
+      return Streams.sequentialStreamFrom(
+          createSplits(
+              coordinatorClient,
+              retryPolicyFactory,
+              dataSource,
+              interval,
+              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
+          )
+      );
     } else {
       return Stream.of(new InputSplit<>(segmentIds));
     }
@@ -246,13 +252,15 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     // segmentIds is supposed to be specified by the supervisor task during the parallel indexing.
     // If it's not null, segments are already split by the supervisor task and further split won't happen.
     if (segmentIds == null) {
-      return createSplits(
-          coordinatorClient,
-          retryPolicyFactory,
-          dataSource,
-          interval,
-          splitHintSpec == null ? new SegmentsSplitHintSpec(null) : splitHintSpec
-      ).size();
+      return Iterators.size(
+          createSplits(
+              coordinatorClient,
+              retryPolicyFactory,
+              dataSource,
+              interval,
+              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
+          )
+      );
     } else {
       return 1;
     }
@@ -281,7 +289,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return false;
   }
 
-  public static List<InputSplit<List<WindowedSegmentId>>> createSplits(
+  public static Iterator<InputSplit<List<WindowedSegmentId>>> createSplits(
       CoordinatorClient coordinatorClient,
       RetryPolicyFactory retryPolicyFactory,
       String dataSource,
@@ -289,70 +297,52 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       SplitHintSpec splitHintSpec
   )
   {
-    final long maxInputSegmentBytesPerTask;
-    if (!(splitHintSpec instanceof SegmentsSplitHintSpec)) {
-      LOG.warn("Given splitHintSpec[%s] is not a SegmentsSplitHintSpec. Ignoring it.", splitHintSpec);
-      maxInputSegmentBytesPerTask = new SegmentsSplitHintSpec(null).getMaxInputSegmentBytesPerTask();
+    final SplitHintSpec convertedSplitHintSpec;
+    if (splitHintSpec instanceof SegmentsSplitHintSpec) {
+      convertedSplitHintSpec = new MaxSizeSplitHintSpec(
+          ((SegmentsSplitHintSpec) splitHintSpec).getMaxInputSegmentBytesPerTask()
+      );
     } else {
-      maxInputSegmentBytesPerTask = ((SegmentsSplitHintSpec) splitHintSpec).getMaxInputSegmentBytesPerTask();
+      convertedSplitHintSpec = splitHintSpec;
     }
 
-    // isSplittable() ensures this is only called when we have an interval.
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval(
         coordinatorClient,
         retryPolicyFactory,
         dataSource,
         interval
     );
+    final Map<WindowedSegmentId, Long> segmentIdToSize = createWindowedSegmentIdFromTimeline(timelineSegments);
+    //noinspection ConstantConditions
+    return Iterators.transform(
+        convertedSplitHintSpec.split(
+            segmentIdToSize.keySet().iterator(),
+            segmentId -> new InputFileAttribute(
+                Preconditions.checkNotNull(segmentIdToSize.get(segmentId), "segment size for [%s]", segmentId)
+            )
+        ),
+        InputSplit::new
+    );
+  }
 
-    // We do the simplest possible greedy algorithm here instead of anything cleverer. The general bin packing
-    // problem is NP-hard, and we'd like to get segments from the same interval into the same split so that their
-    // data can combine with each other anyway.
-
-    List<InputSplit<List<WindowedSegmentId>>> splits = new ArrayList<>();
-    List<WindowedSegmentId> currentSplit = new ArrayList<>();
+  private static Map<WindowedSegmentId, Long> createWindowedSegmentIdFromTimeline(
+      List<TimelineObjectHolder<String, DataSegment>> timelineHolders
+  )
+  {
     Map<DataSegment, WindowedSegmentId> windowedSegmentIds = new HashMap<>();
-    long bytesInCurrentSplit = 0;
-    for (TimelineObjectHolder<String, DataSegment> timelineHolder : timelineSegments) {
-      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
-        final DataSegment segment = chunk.getObject();
-        final WindowedSegmentId existingWindowedSegmentId = windowedSegmentIds.get(segment);
-        if (existingWindowedSegmentId != null) {
-          // We've already seen this segment in the timeline, so just add this interval to it. It has already
-          // been placed into a split.
-          existingWindowedSegmentId.getIntervals().add(timelineHolder.getInterval());
-        } else {
-          // It's the first time we've seen this segment, so create a new WindowedSegmentId.
-          List<Interval> intervals = new ArrayList<>();
-          // Use the interval that contributes to the timeline, not the entire segment's true interval.
-          intervals.add(timelineHolder.getInterval());
-          final WindowedSegmentId newWindowedSegmentId = new WindowedSegmentId(segment.getId().toString(), intervals);
-          windowedSegmentIds.put(segment, newWindowedSegmentId);
-
-          // Now figure out if it goes in the current split or not.
-          final long segmentBytes = segment.getSize();
-          if (bytesInCurrentSplit + segmentBytes > maxInputSegmentBytesPerTask && !currentSplit.isEmpty()) {
-            // This segment won't fit in the current non-empty split, so this split is done.
-            splits.add(new InputSplit<>(currentSplit));
-            currentSplit = new ArrayList<>();
-            bytesInCurrentSplit = 0;
-          }
-          if (segmentBytes > maxInputSegmentBytesPerTask) {
-            // If this segment is itself bigger than our max, just put it in its own split.
-            Preconditions.checkState(currentSplit.isEmpty() && bytesInCurrentSplit == 0);
-            splits.add(new InputSplit<>(Collections.singletonList(newWindowedSegmentId)));
-          } else {
-            currentSplit.add(newWindowedSegmentId);
-            bytesInCurrentSplit += segmentBytes;
-          }
-        }
+    for (TimelineObjectHolder<String, DataSegment> holder : timelineHolders) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        windowedSegmentIds.computeIfAbsent(
+            chunk.getObject(),
+            segment -> new WindowedSegmentId(segment.getId().toString(), new ArrayList<>())
+        ).addInterval(holder.getInterval());
       }
     }
-    if (!currentSplit.isEmpty()) {
-      splits.add(new InputSplit<>(currentSplit));
-    }
-
-    return splits;
+    // It is important to create this map after windowedSegmentIds is completely filled
+    // because WindowedSegmentId can be updated.
+    Map<WindowedSegmentId, Long> segmentSizeMap = new HashMap<>();
+    windowedSegmentIds.forEach((segment, segmentId) -> segmentSizeMap.put(segmentId, segment.getSize()));
+    return segmentSizeMap;
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(

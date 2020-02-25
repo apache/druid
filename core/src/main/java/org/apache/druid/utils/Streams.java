@@ -17,38 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure.blob;
+package org.apache.druid.utils;
 
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import java.net.URISyntaxException;
-
-/**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
- * is a final class and so is difficult to mock in unit tests.
- */
-public class CloudBlobHolder
+public final class Streams
 {
-  private final CloudBlob delegate;
-
-  public CloudBlobHolder(CloudBlob delegate)
+  public static <T> Stream<T> sequentialStreamFrom(Iterator<T> iterator)
   {
-    this.delegate = delegate;
+    final Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator, Spliterator.DISTINCT);
+    return StreamSupport.stream(spliterator, false);
   }
 
-  public String getContainerName() throws URISyntaxException, StorageException
+  public static <T> Stream<T> sequentialStreamFrom(Iterable<T> iterable)
   {
-    return delegate.getContainer().getName();
+    return StreamSupport.stream(iterable.spliterator(), false);
   }
 
-  public String getName()
+  private Streams()
   {
-    return delegate.getName();
-  }
-
-  public long getBlobLength()
-  {
-    return delegate.getProperties().getLength();
   }
 }

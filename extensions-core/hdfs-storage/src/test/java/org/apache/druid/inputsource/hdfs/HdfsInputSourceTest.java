@@ -27,6 +27,8 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -246,16 +248,32 @@ public class HdfsInputSourceTest
     @Test
     public void hasCorrectSplits() throws IOException
     {
-      Set<Path> actualPaths = target.createSplits(null, null)
-                                    .map(split -> Path.getPathWithoutSchemeAndAuthority(split.get()))
+      // Set maxSplitSize to 1 so that each inputSplit has only one object
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(1L))
+                                                  .collect(Collectors.toList());
+      splits.forEach(split -> Assert.assertEquals(1, split.get().size()));
+      Set<Path> actualPaths = splits.stream()
+                                    .flatMap(split -> split.get().stream())
+                                    .map(Path::getPathWithoutSchemeAndAuthority)
                                     .collect(Collectors.toSet());
       Assert.assertEquals(paths, actualPaths);
     }
 
     @Test
+    public void createSplitsRespectSplitHintSpec() throws IOException
+    {
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(7L))
+                                                  .collect(Collectors.toList());
+      Assert.assertEquals(2, splits.size());
+      Assert.assertEquals(2, splits.get(0).get().size());
+      Assert.assertEquals(1, splits.get(1).get().size());
+    }
+
+    @Test
     public void hasCorrectNumberOfSplits() throws IOException
     {
-      int numSplits = target.estimateNumSplits(null, null);
+      // Set maxSplitSize to 1 so that each inputSplit has only one object
+      int numSplits = target.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L));
       Assert.assertEquals(NUM_FILE, numSplits);
     }
   }
@@ -286,10 +304,9 @@ public class HdfsInputSourceTest
     @Test
     public void hasCorrectSplits() throws IOException
     {
-      List<Path> paths = target.createSplits(null, null)
-                               .map(split -> Path.getPathWithoutSchemeAndAuthority(split.get()))
-                               .collect(Collectors.toList());
-      Assert.assertTrue(String.valueOf(paths), paths.isEmpty());
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, null)
+                                                  .collect(Collectors.toList());
+      Assert.assertTrue(String.valueOf(splits), splits.isEmpty());
     }
 
     @Test

@@ -29,7 +29,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -37,15 +40,18 @@ import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.apache.druid.utils.Streams;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-public class S3InputSource extends CloudObjectInputSource<S3Entity>
+public class S3InputSource extends CloudObjectInputSource
 {
   // We lazily initialize s3ClientSupplier to avoid costly s3 operation when we only need S3InputSource for stored information
   // (such as for task logs) and not for ingestion. (This cost only applies for new s3ClientSupplier created with
@@ -98,21 +104,28 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   }
 
   @Override
-  protected S3Entity createEntity(InputSplit<CloudObjectLocation> split)
+  protected InputEntity createEntity(CloudObjectLocation location)
   {
-    return new S3Entity(s3ClientSupplier.get(), split.get());
+    return new S3Entity(s3ClientSupplier.get(), location);
   }
 
   @Override
-  protected Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream()
+  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
   {
-    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
-                        .map(S3Utils::summaryToCloudObjectLocation)
-                        .map(InputSplit::new);
+    final Iterator<List<S3ObjectSummary>> splitIterator = splitHintSpec.split(
+        getIterableObjectsFromPrefixes().iterator(),
+        object -> new InputFileAttribute(object.getSize())
+    );
+
+    return Streams.sequentialStreamFrom(splitIterator)
+                  .map(objects -> objects.stream()
+                                         .map(S3Utils::summaryToCloudObjectLocation)
+                                         .collect(Collectors.toList()))
+                  .map(InputSplit::new);
   }
 
   @Override
-  public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
+  public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
     return new S3InputSource(
         s3ClientSupplier.get(),
@@ -120,7 +133,7 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
         inputDataConfig,
         null,
         null,
-        ImmutableList.of(split.get()),
+        split.get(),
         getS3InputSourceProperties()
     );
   }
