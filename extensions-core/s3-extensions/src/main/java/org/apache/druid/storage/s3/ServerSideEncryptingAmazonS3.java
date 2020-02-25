@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -129,8 +130,8 @@ public class ServerSideEncryptingAmazonS3
 
   public static class Builder
   {
-    private AmazonS3ClientBuilder amazonS3ClientBuilder;
-    private S3StorageConfig s3StorageConfig;
+    private AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client.builder();
+    private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption());
 
     public Builder setAmazonS3ClientBuilder(AmazonS3ClientBuilder amazonS3ClientBuilder)
     {

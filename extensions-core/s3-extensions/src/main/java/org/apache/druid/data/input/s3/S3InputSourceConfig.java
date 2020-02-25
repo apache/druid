@@ -32,10 +32,10 @@ import java.util.Objects;
  * Contains properties for s3 input source.
  * Properties can be specified by ingestionSpec which will override system default.
  */
-public class S3InputSourceProperties
+public class S3InputSourceConfig
 {
   @JsonCreator
-  public S3InputSourceProperties(
+  public S3InputSourceConfig(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
   )
@@ -75,7 +75,7 @@ public class S3InputSourceProperties
   @Override
   public String toString()
   {
-    return "S3InputSourceProperties{" +
+    return "S3InputSourceConfig{" +
            "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
            '}';
@@ -90,7 +90,7 @@ public class S3InputSourceProperties
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    S3InputSourceProperties that = (S3InputSourceProperties) o;
+    S3InputSourceConfig that = (S3InputSourceConfig) o;
     return Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey);
   }

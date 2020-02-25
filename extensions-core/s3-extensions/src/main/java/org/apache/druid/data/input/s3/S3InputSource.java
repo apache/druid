@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.inject.Provider;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -54,42 +55,47 @@ public class S3InputSource extends CloudObjectInputSource
 {
   // We lazily initialize ServerSideEncryptingAmazonS3 to avoid costly s3 operation when we only need S3InputSource
   // for stored information (such as for task logs) and not for ingestion.
-  // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceProperties given).
+  // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceConfig given).
   private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
   @JsonProperty("properties")
-  private final S3InputSourceProperties s3InputSourceProperties;
+  private final S3InputSourceConfig s3InputSourceConfig;
   private final S3InputDataConfig inputDataConfig;
 
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
-      @JacksonInject ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder,
+      @JacksonInject Provider<ServerSideEncryptingAmazonS3.Builder> serverSideEncryptingAmazonS3BuilderProvider,
       @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("properties") @Nullable S3InputSourceProperties s3InputSourceProperties
+      @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig
   )
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
-    this.s3InputSourceProperties = s3InputSourceProperties;
+    this.s3InputSourceConfig = s3InputSourceConfig;
     this.s3ClientSupplier = Suppliers.memoize(
         () -> {
-          if (serverSideEncryptingAmazonS3Builder != null && s3InputSourceProperties != null) {
-            if (s3InputSourceProperties.isCredentialsConfigured()) {
-              AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
-                  new BasicAWSCredentials(
-                    s3InputSourceProperties.getAccessKeyId().getPassword(),
-                    s3InputSourceProperties.getSecretAccessKey().getPassword()
-                  )
-              );
-              serverSideEncryptingAmazonS3Builder.getAmazonS3ClientBuilder().withCredentials(credentials);
-            }
-            return serverSideEncryptingAmazonS3Builder.build();
-          } else {
+          if (s3InputSourceConfig == null || serverSideEncryptingAmazonS3BuilderProvider == null) {
             return s3Client;
+          } else {
+            ServerSideEncryptingAmazonS3.Builder s3ClientBuilder = serverSideEncryptingAmazonS3BuilderProvider.get();
+            if (s3ClientBuilder != null) {
+              if (s3InputSourceConfig.isCredentialsConfigured()) {
+                AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
+                    new BasicAWSCredentials(
+                        s3InputSourceConfig.getAccessKeyId().getPassword(),
+                        s3InputSourceConfig.getSecretAccessKey().getPassword()
+                    )
+                );
+                s3ClientBuilder.getAmazonS3ClientBuilder().withCredentials(credentials);
+              }
+              return s3ClientBuilder.build();
+            } else {
+              return s3Client;
+            }
           }
         }
     );
@@ -97,9 +103,9 @@ public class S3InputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("properties")
-  public S3InputSourceProperties getS3InputSourceProperties()
+  public S3InputSourceConfig getS3InputSourceConfig()
   {
-    return s3InputSourceProperties;
+    return s3InputSourceConfig;
   }
 
   @Override
@@ -133,14 +139,14 @@ public class S3InputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getS3InputSourceProperties()
+        getS3InputSourceConfig()
     );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), s3InputSourceProperties);
+    return Objects.hash(super.hashCode(), s3InputSourceConfig);
   }
 
   @Override
@@ -156,7 +162,7 @@ public class S3InputSource extends CloudObjectInputSource
       return false;
     }
     S3InputSource that = (S3InputSource) o;
-    return Objects.equals(s3InputSourceProperties, that.s3InputSourceProperties);
+    return Objects.equals(s3InputSourceConfig, that.s3InputSourceConfig);
   }
 
   @Override
@@ -166,7 +172,7 @@ public class S3InputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", s3InputSourceProperties=" + getS3InputSourceProperties() +
+           ", s3InputSourceConfig=" + getS3InputSourceConfig() +
            '}';
   }
 

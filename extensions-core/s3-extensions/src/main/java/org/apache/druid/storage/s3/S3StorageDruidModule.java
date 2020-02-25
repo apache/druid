@@ -167,7 +167,7 @@ public class S3StorageDruidModule implements DruidModule
   }
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
-  // However, this builder can then be modify and have configuration(s) inside
+  // However, this builder can then be modified and have configuration(s) inside
   // AmazonS3ClientBuilder and/or S3StorageConfig overridden before being built.
   @Provides
   public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder(

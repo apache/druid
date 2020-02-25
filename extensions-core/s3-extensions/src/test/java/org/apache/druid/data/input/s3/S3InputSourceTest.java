@@ -117,7 +117,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo")
   );
 
-  private static final S3InputSourceProperties CLOUD_CONFIG_PROPERTIES = new S3InputSourceProperties(
+  private static final S3InputSourceConfig CLOUD_CONFIG_PROPERTIES = new S3InputSourceConfig(
       new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
 
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
@@ -217,7 +217,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testS3InputSourceUseDefaultPasswordWhenCloudConfigPropertiesWithoutCrediential()
   {
-    S3InputSourceProperties mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(S3InputSourceProperties.class);
+    S3InputSourceConfig mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(S3InputSourceConfig.class);
     EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);
