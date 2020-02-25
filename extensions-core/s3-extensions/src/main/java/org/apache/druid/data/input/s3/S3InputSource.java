@@ -21,7 +21,6 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -35,7 +34,6 @@ import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.s3.S3InputDataConfig;
-import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -59,9 +57,8 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
 
   @JsonCreator
   public S3InputSource(
-      @JacksonInject ServerSideEncryptingAmazonS3 s3ClientSupplier,
-      @JacksonInject AmazonS3ClientBuilder amazonS3ClientBuilder,
-      @JacksonInject S3StorageConfig storageConfig,
+      @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder,
       @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
@@ -71,19 +68,23 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   {
     super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
+    Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceProperties = s3InputSourceProperties;
     this.s3ClientSupplier = Suppliers.memoize(
         () -> {
-          if (amazonS3ClientBuilder != null && storageConfig != null && s3InputSourceProperties != null) {
+          if (serverSideEncryptingAmazonS3Builder != null && s3InputSourceProperties != null) {
             if (s3InputSourceProperties.isCredentialsConfigured()) {
-              BasicAWSCredentials creds = new BasicAWSCredentials(
-                  s3InputSourceProperties.getAccessKeyId().getPassword(),
-                  s3InputSourceProperties.getSecretAccessKey().getPassword());
-              amazonS3ClientBuilder.withCredentials(new AWSStaticCredentialsProvider(creds));
+              AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
+                  new BasicAWSCredentials(
+                    s3InputSourceProperties.getAccessKeyId().getPassword(),
+                    s3InputSourceProperties.getSecretAccessKey().getPassword()
+                  )
+              );
+              serverSideEncryptingAmazonS3Builder.getAmazonS3ClientBuilder().withCredentials(credentials);
             }
-            return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), storageConfig.getServerSideEncryption());
+            return serverSideEncryptingAmazonS3Builder.build();
           } else {
-            return Preconditions.checkNotNull(s3ClientSupplier, "s3ClientSupplier");
+            return s3Client;
           }
         }
     );
@@ -115,7 +116,6 @@ public class S3InputSource extends CloudObjectInputSource<S3Entity>
   {
     return new S3InputSource(
         s3ClientSupplier.get(),
-        null,
         null,
         inputDataConfig,
         null,

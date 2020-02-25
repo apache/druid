@@ -57,10 +57,8 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3InputDataConfig;
-import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
-import org.apache.druid.storage.s3.ServerSideEncryption;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
@@ -87,9 +85,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
   private static final AmazonS3Client S3_CLIENT = EasyMock.createMock(AmazonS3Client.class);
+  private static final ServerSideEncryptingAmazonS3.Builder SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER =
+      EasyMock.createMock(ServerSideEncryptingAmazonS3.Builder.class);
   private static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
-  private static final S3StorageConfig S3_STORAGE_CONFIG = EasyMock.createMock(S3StorageConfig.class);
-  private static final ServerSideEncryption SERVER_SIDE_ENCRYPTION = EasyMock.createMock(ServerSideEncryption.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
       new NoopServerSideEncryption()
@@ -139,7 +137,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithUris() throws Exception
   {
-    final S3InputSource withUris = new S3InputSource(SERVICE, AMAZON_S3_CLIENT_BUILDER, S3_STORAGE_CONFIG, INPUT_DATA_CONFIG, EXPECTED_URIS, null, null, null);
+    final S3InputSource withUris = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null
+    );
     final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
   }
@@ -149,8 +155,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
@@ -167,8 +172,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         null,
@@ -183,14 +187,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithCloudConfigPropertiesWithKeyAndSecret() throws Exception
   {
-    EasyMock.reset(S3_STORAGE_CONFIG);
-    EasyMock.expect(S3_STORAGE_CONFIG.getServerSideEncryption())
-            .andStubReturn(SERVER_SIDE_ENCRYPTION);
-    EasyMock.replay(S3_STORAGE_CONFIG);
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         null,
@@ -199,8 +204,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    serdeWithPrefixes.createEntity(new InputSplit<>(new CloudObjectLocation("dummyBucket", "dummyPath")));
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
-    EasyMock.verify(S3_STORAGE_CONFIG);
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
   }
 
   @Test
@@ -211,14 +218,13 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);
     EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
-    EasyMock.reset(S3_STORAGE_CONFIG);
-    EasyMock.expect(S3_STORAGE_CONFIG.getServerSideEncryption())
-            .andStubReturn(SERVER_SIDE_ENCRYPTION);
-    EasyMock.replay(S3_STORAGE_CONFIG);
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         null,
@@ -226,8 +232,52 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         mockConfigPropertiesWithoutKeyAndSecret
     );
     Assert.assertNotNull(withPrefixes);
-    EasyMock.verify(S3_STORAGE_CONFIG);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    withPrefixes.createEntity(new InputSplit<>(new CloudObjectLocation("dummyBucket", "dummyPath")));
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.verify(mockConfigPropertiesWithoutKeyAndSecret);
+  }
+
+  @Test
+  public void testSerdeS3ClientLazyInitializedWithCrediential() throws Exception
+  {
+    // Amazon S3 builder should not build anything as we did not make any call that requires the S3 client
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        CLOUD_CONFIG_PROPERTIES
+    );
+    final S3InputSource serdeWithPrefixes =
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testSerdeS3ClientLazyInitializedWithoutCrediential() throws Exception
+  {
+    // Amazon S3 builder should not build anything as we did not make any call that requires the S3 client
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    final S3InputSource withPrefixes = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        null
+    );
+    final S3InputSource serdeWithPrefixes =
+        MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
+    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
   }
 
   @Test
@@ -235,8 +285,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         ImmutableList.of(),
         ImmutableList.of(),
@@ -255,8 +304,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // constructor will explode
     new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
@@ -272,8 +320,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // constructor will explode
     new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         PREFIXES,
@@ -289,8 +336,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // constructor will explode
     new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         ImmutableList.of(),
         PREFIXES,
@@ -304,8 +350,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
         null,
@@ -331,8 +376,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
@@ -359,8 +403,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
@@ -391,8 +434,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
@@ -436,8 +478,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
-        AMAZON_S3_CLIENT_BUILDER,
-        S3_STORAGE_CONFIG,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
@@ -585,15 +626,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
 
     @Provides
-    public S3StorageConfig getS3StorageConfig()
+    public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder()
     {
-      return S3_STORAGE_CONFIG;
-    }
-
-    @Provides
-    public AmazonS3ClientBuilder getAmazonS3ClientBuilder()
-    {
-      return AMAZON_S3_CLIENT_BUILDER;
+      return SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER;
     }
 
     @Provides
