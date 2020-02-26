@@ -60,9 +60,11 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   {
     this.table = table;
     this.rowSignature = rowSignature;
-    this.columns = rowSignature.keySet().stream().sorted().collect(Collectors.toList());
+    this.columns = rowSignature.keySet().stream().sorted().collect(Collectors.toCollection(ArrayList::new));
     this.columnTypes = new ArrayList<>(columns.size());
-    this.columnFunctions = columns.stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
+    this.columnFunctions = columns.stream()
+                                  .map(rowAdapter::columnFunction)
+                                  .collect(Collectors.toCollection(ArrayList::new));
     this.keyColumns = keyColumns;
 
     if (new HashSet<>(keyColumns).size() != keyColumns.size()) {
