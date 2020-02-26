@@ -22,7 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import org.apache.druid.client.SegmentServer;
+import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -40,5 +40,5 @@ public interface QueryLaningStrategy
 {
   Object2IntMap<String> getLaneLimits();
 
-  <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments);
+  <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServerSelector> segments);
 }

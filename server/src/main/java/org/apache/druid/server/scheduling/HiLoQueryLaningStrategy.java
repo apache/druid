@@ -21,10 +21,11 @@ package org.apache.druid.server.scheduling;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import org.apache.druid.client.SegmentServer;
+import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -44,7 +45,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
       @JsonProperty("maxLowThreads") Integer maxLowThreads
   )
   {
-    this.maxLowThreads = maxLowThreads;
+    this.maxLowThreads = Preconditions.checkNotNull(maxLowThreads, "maxLowThreads must be set");
   }
 
   @Override
@@ -56,7 +57,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   }
 
   @Override
-  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
+  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
     final Query<T> theQuery = query.getQuery();
     // QueryContexts.getPriority gives a default, since we are setting priority

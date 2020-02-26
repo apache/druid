@@ -23,9 +23,15 @@ import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.SegmentDescriptor;
 
-public class SegmentServer extends Pair<ServerSelector, SegmentDescriptor>
+/**
+ * Given a {@link SegmentDescriptor}, get a {@link ServerSelector} to use to pick a {@link DruidServer} to query the
+ * segment.
+ *
+ * Used by {@link CachingClusteredClient} on the broker to fan out queries to historical and realtime servers
+ */
+public class SegmentServerSelector extends Pair<ServerSelector, SegmentDescriptor>
 {
-  public SegmentServer(ServerSelector server, SegmentDescriptor segment)
+  public SegmentServerSelector(ServerSelector server, SegmentDescriptor segment)
   {
     super(server, segment);
   }

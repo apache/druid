@@ -20,14 +20,15 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 
 public class QuerySchedulerConfig
 {
   @JsonProperty
-  private Integer numThreads;
+  private Integer numThreads = 0;
 
   @JsonProperty("laning")
-  private QueryLaningStrategy laningStrategy;
+  private QueryLaningStrategy laningStrategy = NoQueryLaningStrategy.INSTANCE;
 
   @JsonProperty
   public int getNumThreads()

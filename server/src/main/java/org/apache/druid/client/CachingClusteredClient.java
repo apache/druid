@@ -291,7 +291,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         computeUncoveredIntervals(timeline);
       }
 
-      final Set<SegmentServer> segmentServers = computeSegmentsToQuery(timeline);
+      final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline);
       @Nullable
       final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
@@ -357,14 +357,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private Set<SegmentServer> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
+    private Set<SegmentServerSelector> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
     {
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
           query,
           intervals.stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
       );
 
-      final Set<SegmentServer> segments = new LinkedHashSet<>();
+      final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
@@ -381,7 +381,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               holder.getVersion(),
               chunk.getChunkNumber()
           );
-          segments.add(new SegmentServer(server, segment));
+          segments.add(new SegmentServerSelector(server, segment));
         }
       }
       return segments;
@@ -441,11 +441,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     @Nullable
-    private String computeCurrentEtag(final Set<SegmentServer> segments, @Nullable byte[] queryCacheKey)
+    private String computeCurrentEtag(final Set<SegmentServerSelector> segments, @Nullable byte[] queryCacheKey)
     {
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
-      for (SegmentServer p : segments) {
+      for (SegmentServerSelector p : segments) {
         if (!p.getServer().pick().getServer().segmentReplicatable()) {
           hasOnlyHistoricalSegments = false;
           break;
@@ -470,14 +470,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(
         final byte[] queryCacheKey,
-        final Set<SegmentServer> segments
+        final Set<SegmentServerSelector> segments
     )
     {
       if (queryCacheKey == null) {
         return Collections.emptyList();
       }
       final List<Pair<Interval, byte[]>> alreadyCachedResults = new ArrayList<>();
-      Map<SegmentServer, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(segments, queryCacheKey);
+      Map<SegmentServerSelector, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(segments, queryCacheKey);
       // Pull cached segments from cache and remove from set of segments to query
       final Map<Cache.NamedKey, byte[]> cachedValues = computeCachedValues(perSegmentCacheKeys);
 
@@ -498,14 +498,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return alreadyCachedResults;
     }
 
-    private Map<SegmentServer, Cache.NamedKey> computePerSegmentCacheKeys(
-        Set<SegmentServer> segments,
+    private Map<SegmentServerSelector, Cache.NamedKey> computePerSegmentCacheKeys(
+        Set<SegmentServerSelector> segments,
         byte[] queryCacheKey
     )
     {
       // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
-      Map<SegmentServer, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
-      for (SegmentServer segmentServer : segments) {
+      Map<SegmentServerSelector, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
+      for (SegmentServerSelector segmentServer : segments) {
         final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
             segmentServer.getServer().getSegment().getId().toString(),
             segmentServer.getSegmentDescriptor(),
@@ -516,7 +516,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return cacheKeys;
     }
 
-    private Map<Cache.NamedKey, byte[]> computeCachedValues(Map<SegmentServer, Cache.NamedKey> cacheKeys)
+    private Map<Cache.NamedKey, byte[]> computeCachedValues(Map<SegmentServerSelector, Cache.NamedKey> cacheKeys)
     {
       if (useCache) {
         return cache.getBulk(Iterables.limit(cacheKeys.values(), cacheConfig.getCacheBulkMergeLimit()));
@@ -540,10 +540,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return cachePopulatorKeyMap.get(StringUtils.format("%s_%s", segmentId, segmentInterval));
     }
 
-    private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<SegmentServer> segments)
+    private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<SegmentServerSelector> segments)
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
-      for (SegmentServer segmentServer : segments) {
+      for (SegmentServerSelector segmentServer : segments) {
         final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick();
 
         if (queryableDruidServer == null) {

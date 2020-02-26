@@ -26,7 +26,7 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import org.apache.druid.client.SegmentServer;
+import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
@@ -102,7 +102,7 @@ public class QueryScheduler implements QueryWatcher
   /**
    * Assign a query a lane (if not set)
    */
-  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServer> segments)
+  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
     if (QueryContexts.getLane(query.getQuery()) != null) {
       return query.getQuery();
