@@ -41,6 +41,11 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.results.format.ResultFormatType;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -266,5 +271,18 @@ public class VersionedIntervalTimelineBenchmark
         9,
         10
     );
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(VersionedIntervalTimelineBenchmark.class.getSimpleName())
+        .forks(1)
+        .syncIterations(true)
+        .resultFormat(ResultFormatType.CSV)
+        .result("versioned-interval-timeline.csv")
+        .build();
+
+    new Runner(opt).run();
   }
 }
