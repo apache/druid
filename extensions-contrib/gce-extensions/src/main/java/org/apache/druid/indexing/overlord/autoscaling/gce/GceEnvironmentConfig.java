@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import java.util.Objects;
+
 /**
  */
 public class GceEnvironmentConfig
@@ -120,9 +122,10 @@ public class GceEnvironmentConfig
   @Override
   public int hashCode()
   {
-    int result = projectId != null ? projectId.hashCode() : 0;
-    result = 31 * result + (zoneName != null ? zoneName.hashCode() : 0);
-    result = 31 * result + (managedInstanceGroupName != null ? managedInstanceGroupName.hashCode() : 0);
+    int result = 0;
+    result = 31 * result + Objects.hashCode(projectId);
+    result = 31 * result + Objects.hashCode(zoneName);
+    result = 31 * result + Objects.hashCode(managedInstanceGroupName);
     result = 31 * result + numInstances;
     return result;
   }
