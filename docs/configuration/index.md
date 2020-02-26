@@ -999,7 +999,7 @@ Gives ability for overlord to work with several autoscaler setups to run tasks o
 |--------|-----------|-------|
 |`type`|Type of the config|required; must be `categorized`|
 |`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
-|`autoScalers`|List of [Autoscaler](#autoscaler) to serve tasks of appropriate category. In the list can be one autoscaler of default category (category declaration is omit). When [Worker Category Spec](#workercategoryspec) is not in strong assignment mode the default autoscaler will be used to serve tasks with categories which not have corresponding autoscaler|required; At least one autoscaler should be declared|
+|`autoScalers`|List of [Autoscaler](#autoscaler) to serve tasks of appropriate category. In the list, there can be one autoscaler of default category (category declaration is omitted). When [Worker Category Spec](#workercategoryspec) is not in strong assignment mode then default autoscaler will be used to serve tasks with categories which do not have corresponding autoscaler|required; At least one autoscaler should be declared|
 
 ##### Worker Select Strategy
 
