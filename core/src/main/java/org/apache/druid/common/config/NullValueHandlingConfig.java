@@ -28,6 +28,9 @@ public class NullValueHandlingConfig
 
   @JsonProperty("useDefaultValueForNull")
   private final boolean useDefaultValuesForNull;
+  final Long defaultLongValue;
+  final Float defaultFloatValue;
+  final Double defaultDoubleValue;
 
   @JsonCreator
   public NullValueHandlingConfig(@JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull)
@@ -35,6 +38,9 @@ public class NullValueHandlingConfig
     this.useDefaultValuesForNull = useDefaultValuesForNull == null
                                    ? Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
                                    : useDefaultValuesForNull;
+    defaultLongValue = this.useDefaultValuesForNull ? NullHandling.ZERO_LONG : null;
+    defaultFloatValue = this.useDefaultValuesForNull ? NullHandling.ZERO_FLOAT : null;
+    defaultDoubleValue = this.useDefaultValuesForNull ? NullHandling.ZERO_DOUBLE : null;
   }
 
   public boolean isUseDefaultValuesForNull()
