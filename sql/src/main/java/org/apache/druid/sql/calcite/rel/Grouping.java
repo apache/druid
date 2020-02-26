@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -71,10 +72,10 @@ public class Grouping
   )
   {
     this.dimensions = ImmutableList.copyOf(dimensions);
-    this.subtotals = subtotals;
+    this.subtotals = Preconditions.checkNotNull(subtotals, "subtotals");
     this.aggregations = ImmutableList.copyOf(aggregations);
     this.havingFilter = havingFilter;
-    this.outputRowSignature = outputRowSignature;
+    this.outputRowSignature = Preconditions.checkNotNull(outputRowSignature, "outputRowSignature");
 
     // Verify no collisions between dimensions, aggregations, post-aggregations.
     final Set<String> seen = new HashSet<>();
@@ -106,7 +107,7 @@ public class Grouping
       final List<DimensionExpression> dimensions,
       final Subtotals subtotals,
       final List<Aggregation> aggregations,
-      final DimFilter havingFilter,
+      @Nullable final DimFilter havingFilter,
       final RowSignature outputRowSignature
   )
   {
