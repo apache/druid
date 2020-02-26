@@ -269,6 +269,7 @@ def build_compatible_license_names():
 
     compatible_licenses['The MIT License'] = 'MIT License'
     compatible_licenses['MIT License'] = 'MIT License'
+    compatible_licenses['The MIT License (MIT)'] = 'MIT License'
 
     compatible_licenses['-'] = '-'
     return compatible_licenses
