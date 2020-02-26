@@ -75,8 +75,6 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
-import org.apache.druid.indexing.overlord.autoscaling.CategorizedProvisioningConfig;
-import org.apache.druid.indexing.overlord.autoscaling.CategorizedWorkerProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
@@ -322,7 +320,6 @@ public class CliOverlord extends ServerRunnable
                 PendingTaskBasedWorkerProvisioningConfig.class
             );
             JsonConfigProvider.bind(binder, "druid.indexer.autoscale", SimpleWorkerProvisioningConfig.class);
-            JsonConfigProvider.bind(binder, "druid.indexer.autoscale", CategorizedProvisioningConfig.class);
 
             PolyBind.createChoice(
                 binder,
@@ -336,7 +333,6 @@ public class CliOverlord extends ServerRunnable
             );
             biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
-            biddy.addBinding("categorizedTaskBased").to(CategorizedWorkerProvisioningStrategy.class);
           }
 
           private void configureOverlordHelpers(Binder binder)
