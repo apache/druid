@@ -28,6 +28,7 @@ import java.util.Objects;
 
 public class DimensionExpression
 {
+  private final String inputDimension;
   private final String outputName;
   private final DruidExpression expression;
   private final ValueType outputType;
@@ -38,9 +39,25 @@ public class DimensionExpression
       final ValueType outputType
   )
   {
+    this(outputName, outputName, expression, outputType);
+  }
+
+  public DimensionExpression(
+      final String inputDimension,
+      final String outputName,
+      final DruidExpression expression,
+      final ValueType outputType
+  )
+  {
+    this.inputDimension = inputDimension;
     this.outputName = outputName;
     this.expression = expression;
     this.outputType = outputType;
+  }
+
+  public String getInputDimension()
+  {
+    return inputDimension;
   }
 
   public String getOutputName()
@@ -58,7 +75,7 @@ public class DimensionExpression
     if (expression.isSimpleExtraction()) {
       return expression.getSimpleExtraction().toDimensionSpec(outputName, outputType);
     } else {
-      return new DefaultDimensionSpec(getOutputName(), getOutputName(), outputType);
+      return new DefaultDimensionSpec(getInputDimension(), getOutputName(), outputType);
     }
   }
 
