@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.aggregation;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ValueType;
@@ -28,36 +29,53 @@ import java.util.Objects;
 
 public class DimensionExpression
 {
-  private final String inputDimension;
+  /**
+   * Create a dimension expresison for direct column access or simple extractions
+   */
+  public static DimensionExpression ofSimpleColumn(
+      final String outputName,
+      final DruidExpression expression,
+      final ValueType outputType
+  )
+  {
+    return new DimensionExpression(outputName, outputName, expression, outputType);
+  }
+
+  /**
+   * Create a dimension expression for a virtual column
+   */
+  public static DimensionExpression ofVirtualColumn(
+      final String virtualColumn,
+      final String outputName,
+      final DruidExpression expression,
+      final ValueType outputType
+  )
+  {
+    return new DimensionExpression(virtualColumn, outputName, expression, outputType);
+  }
+
+  private final String virtualColumn;
   private final String outputName;
   private final DruidExpression expression;
   private final ValueType outputType;
 
-  public DimensionExpression(
+  private DimensionExpression(
+      final String virtualColumn,
       final String outputName,
       final DruidExpression expression,
       final ValueType outputType
   )
   {
-    this(outputName, outputName, expression, outputType);
-  }
-
-  public DimensionExpression(
-      final String inputDimension,
-      final String outputName,
-      final DruidExpression expression,
-      final ValueType outputType
-  )
-  {
-    this.inputDimension = inputDimension;
+    Preconditions.checkArgument(!expression.isSimpleExtraction() || outputName.equals(virtualColumn));
+    this.virtualColumn = virtualColumn;
     this.outputName = outputName;
     this.expression = expression;
     this.outputType = outputType;
   }
 
-  public String getInputDimension()
+  public String getVirtualColumn()
   {
-    return inputDimension;
+    return virtualColumn;
   }
 
   public String getOutputName()
@@ -75,7 +93,7 @@ public class DimensionExpression
     if (expression.isSimpleExtraction()) {
       return expression.getSimpleExtraction().toDimensionSpec(outputName, outputType);
     } else {
-      return new DefaultDimensionSpec(getInputDimension(), getOutputName(), outputType);
+      return new DefaultDimensionSpec(virtualColumn, outputName, outputType);
     }
   }
 
@@ -89,7 +107,8 @@ public class DimensionExpression
       return false;
     }
     final DimensionExpression that = (DimensionExpression) o;
-    return Objects.equals(outputName, that.outputName) &&
+    return Objects.equals(virtualColumn, that.virtualColumn) &&
+           Objects.equals(outputName, that.outputName) &&
            Objects.equals(expression, that.expression) &&
            outputType == that.outputType;
   }
@@ -97,13 +116,14 @@ public class DimensionExpression
   @Override
   public int hashCode()
   {
-    return Objects.hash(outputName, expression, outputType);
+    return Objects.hash(virtualColumn, outputName, expression, outputType);
   }
 
   @Override
   public String toString()
   {
     return "DimensionExpression{" +
+           "virtualColumn='" + virtualColumn + '\'' +
            "outputName='" + outputName + '\'' +
            ", expression=" + expression +
            ", outputType=" + outputType +
