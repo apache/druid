@@ -71,10 +71,12 @@ public class Joinables
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
    *
-   * @param clauses            pre-joinable clauses
-   * @param joinableFactory    factory for joinables
-   * @param cpuTimeAccumulator an accumulator that we will add CPU nanos to; this is part of the function to encourage
-   *                           callers to remember to track metrics on CPU time required for creation of Joinables
+   * @param clauses              pre-joinable clauses
+   * @param joinableFactory      factory for joinables
+   * @param cpuTimeAccumulator   an accumulator that we will add CPU nanos to; this is part of the function to encourage
+   *                             callers to remember to track metrics on CPU time required for creation of Joinables
+   * @param enableFilterPushDown whether to enable filter push down optimizations to the base segment. In production
+   *                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
    */
   public static Function<Segment, Segment> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
