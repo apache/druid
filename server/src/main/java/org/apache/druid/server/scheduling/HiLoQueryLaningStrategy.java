@@ -35,7 +35,7 @@ import java.util.Set;
 
 public class HiLoQueryLaningStrategy implements QueryLaningStrategy
 {
-  public static String LOW = "low";
+  public static final String LOW = "low";
 
   @JsonProperty
   private int maxLowThreads;

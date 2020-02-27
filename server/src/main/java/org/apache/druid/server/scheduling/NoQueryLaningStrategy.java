@@ -32,7 +32,7 @@ public class NoQueryLaningStrategy implements QueryLaningStrategy
 {
   private static final Object2IntMap<String> NONE = new Object2IntArrayMap<>();
 
-  public static NoQueryLaningStrategy INSTANCE = new NoQueryLaningStrategy();
+  public static final NoQueryLaningStrategy INSTANCE = new NoQueryLaningStrategy();
 
   @Override
   public Object2IntMap<String> getLaneLimits()

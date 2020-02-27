@@ -23,9 +23,9 @@ import org.apache.druid.java.util.common.StringUtils;
 
 public class QueryCapacityExceededException extends RuntimeException
 {
-  public static String ERROR_MESSAGE = "Query capacity exceeded";
-  public static String ERROR_MESSAGE_TEMPLATE = "Query capacity exceeded for lane %s";
-  public static int STATUS_CODE = 429;
+  public static final String ERROR_MESSAGE = "Query capacity exceeded";
+  public static final String ERROR_MESSAGE_TEMPLATE = "Query capacity exceeded for lane %s";
+  public static final int STATUS_CODE = 429;
 
   public QueryCapacityExceededException()
   {

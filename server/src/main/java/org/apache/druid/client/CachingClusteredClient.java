@@ -267,7 +267,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final int priority = QueryContexts.getPriority(query);
       contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
-      contextBuilder.put(QueryContexts.LANE_KEY, QueryContexts.getLane(query));
+      final String lane = QueryContexts.getLane(query);
+      if (lane != null) {
+        contextBuilder.put(QueryContexts.LANE_KEY, lane);
+      }
 
       if (populateCache) {
         // prevent down-stream nodes from caching results as well if we are populating the cache
