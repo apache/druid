@@ -17,33 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure.blob;
+package org.apache.druid.indexing.firehose;
 
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import java.net.URISyntaxException;
-
-/**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
- * is a final class and so is difficult to mock in unit tests.
- */
-public class CloudBlobHolder
+public class WindowedSegmentIdTest
 {
-  private final CloudBlob delegate;
-
-  public CloudBlobHolder(CloudBlob delegate)
+  @Test
+  public void testEquals()
   {
-    this.delegate = delegate;
-  }
-
-  public String getContainerName() throws URISyntaxException, StorageException
-  {
-    return delegate.getContainer().getName();
-  }
-
-  public String getName()
-  {
-    return delegate.getName();
+    EqualsVerifier.forClass(WindowedSegmentId.class)
+                  .usingGetClass()
+                  .withNonnullFields("segmentId", "intervals")
+                  .verify();
   }
 }

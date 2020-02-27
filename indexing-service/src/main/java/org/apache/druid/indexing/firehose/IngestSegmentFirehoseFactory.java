@@ -290,12 +290,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       return;
     }
 
-    splits = DruidInputSource.createSplits(
-        coordinatorClient,
-        retryPolicyFactory,
-        dataSource,
-        interval,
-        splitHintSpec == null ? new SegmentsSplitHintSpec(maxInputSegmentBytesPerTask) : splitHintSpec
+    splits = Lists.newArrayList(
+        DruidInputSource.createSplits(
+            coordinatorClient,
+            retryPolicyFactory,
+            dataSource,
+            interval,
+            splitHintSpec == null ? new SegmentsSplitHintSpec(maxInputSegmentBytesPerTask) : splitHintSpec
+        )
     );
   }
 

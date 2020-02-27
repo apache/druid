@@ -2937,7 +2937,7 @@ libraries:
 ---
 
 name: Apache Velocity Engine
-version: 2.0
+version: 2.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2955,7 +2955,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.9.1
+version: 1.9.2
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3464,6 +3464,30 @@ copyright: The ANTLR Project
 license_file_path: licenses/bin/antlr.BSD3
 libraries:
   - antlr: antlr
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-2-Clause License
+version: 42.2.8
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD2
+libraries:
+  - org.postgresql: postgresql
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/druid-lookups-cached-global
+license_name: BSD-2-Clause License
+version: 42.2.8
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD2
+libraries:
+  - org.postgresql: postgresql
 
 ---
 
@@ -4020,6 +4044,28 @@ copyright: LAMP/EPFL and Lightbend, Inc.
 version: 2.12.7
 libraries:
   - org.scala-lang: scala-library
+
+---
+
+name: Microsoft Azure SDK For Key Vault Core
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: MIT License
+copyright: Microsoft
+version: 1.0.0
+libraries:
+  - com.microsoft.azure: azure-keyvault-core
+
+---
+
+name: Microsoft Azure Storage Client SDK
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: Apache License version 2.0
+copyright: Microsoft
+version: 8.6.0
+libraries:
+  - com.microsoft.azure: azure-storage
 
 ---
 

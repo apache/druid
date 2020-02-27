@@ -97,6 +97,14 @@
       <artifactId>guava</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <!-- Included to improve the out-of-the-box experience for supported JDBC connectors -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>

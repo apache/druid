@@ -251,6 +251,7 @@ http
 https
 i.e.
 influxdb
+ingestionSpec
 injective
 inlined
 interruptible
@@ -442,7 +443,7 @@ Pdist
 ambari-metrics
 metricName
 trustStore
- - ../docs/development/extensions-contrib/azure.md
+ - ../docs/development/extensions-core/azure.md
 StaticAzureBlobStoreFirehose
 StaticS3Firehose
 fetchTimeout
@@ -457,6 +458,13 @@ StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
+StaticAzureBlobStoreFirehose
+gz
+shardSpecs
+maxCacheCapacityBytes
+maxFetchCapacityBytes
+fetchTimeout
+maxFetchRetry
  - ../docs/development/extensions-contrib/distinctcount.md
 distinctCount
 groupBy
@@ -900,7 +908,6 @@ ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
 index_hadoop
-ingestionSpec
 inputPath
 inputSpecs
 interval1
@@ -947,6 +954,7 @@ PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
 SplitHintSpec
+accessKeyId
 appendToExisting
 baseDir
 chatHandlerNumRetries
@@ -966,6 +974,7 @@ maxNumSegmentsToMerge
 maxRetry
 pushTimeout
 reportParseExceptions
+secretAccessKey
 segmentWriteOutMediumFactory
 sql
 sqls
@@ -973,6 +982,8 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
+StaticS3Firehose
+prefetchTriggerBytes
  - ../docs/ingestion/schema-design.md
 product_category
 product_id

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -56,16 +57,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   private final List<JoinableClause> clauses;
   private final boolean enableFilterPushDown;
 
-  HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses
-  )
-  {
-    this.baseAdapter = baseAdapter;
-    this.clauses = clauses;
-    this.enableFilterPushDown = QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN;
-  }
-
+  /**
+   * @param baseAdapter          A StorageAdapter for the left-hand side base segment
+   * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
+   *                             duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param enableFilterPushDown Whether to enable filter push down optimizations to the base segment
+   */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
@@ -75,6 +72,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
     this.enableFilterPushDown = enableFilterPushDown;
+  }
+
+  @VisibleForTesting
+  HashJoinSegmentStorageAdapter(
+      StorageAdapter baseAdapter,
+      List<JoinableClause> clauses
+  )
+  {
+    this(baseAdapter, clauses, QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
   }
 
   @Override
@@ -299,9 +305,10 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    * will add each VirtualColumn in the provided virtualColumns to either preJoinVirtualColumns or
    * postJoinVirtualColumns based on whether the virtual column is pre-join or post-join.
    *
-   * @param virtualColumns List of virtual columns from the query
-   * @param preJoinVirtualColumns If provided, virtual columns determined to be pre-join will be added to this list
+   * @param virtualColumns         List of virtual columns from the query
+   * @param preJoinVirtualColumns  If provided, virtual columns determined to be pre-join will be added to this list
    * @param postJoinVirtualColumns If provided, virtual columns determined to be post-join will be added to this list
+   *
    * @return The set of base column names, including any pre-join virtual columns.
    */
   public Set<String> determineBaseColumnsWithPreAndPostJoinVirtualColumns(

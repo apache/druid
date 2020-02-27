@@ -21,23 +21,16 @@
   <suppress>
     <!-- druid-indexing-hadoop.jar is mistaken for hadoop -->
     <notes><![CDATA[
-   file name: org.apache.druid:druid-indexing-hadoop:0.17.0-incubating-SNAPSHOT
+   file name: org.apache.druid:druid-indexing-hadoop
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2012-4449</cve>
-  </suppress>
-  <suppress>
-    <!-- druid-indexing-hadoop.jar is mistaken for hadoop -->
-    <notes><![CDATA[
-   file name: druid-indexing-hadoop-0.17.0-incubating-SNAPSHOT.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2017-3162</cve>
   </suppress>
   <suppress>
     <!-- druid-processing.jar is mistaken for org.processing:processing -->
     <notes><![CDATA[
-   file name: org.apache.druid:druid-processing:0.17.0-incubating-SNAPSHOT
+   file name: org.apache.druid:druid-processing
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-processing@.*$</packageUrl>
     <cve>CVE-2018-1000840</cve>
