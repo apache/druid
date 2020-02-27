@@ -1206,6 +1206,30 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
+        {
+          name: 'inputSource.properties.accessKeyId',
+          label: 'Access key ID',
+          type: 'string',
+          placeholder: '(optional)',
+          info: (
+            <>
+              <p>S3 access key for this S3 bucket.</p>
+              <p>Setting this will override the default configuration provided in the config.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.properties.secretAccessKey',
+          label: 'Secret access key',
+          type: 'string',
+          placeholder: '(optional)',
+          info: (
+            <>
+              <p>S3 secret key for this S3 bucket.</p>
+              <p>Setting this will override the default configuration provided in the config.</p>
+            </>
+          ),
+        },
       ];
 
     case 'index_parallel:google':
