@@ -794,6 +794,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return new Builder(this).setQuerySegmentSpec(spec).build();
   }
 
+  public GroupByQuery withVirtualColumns(final VirtualColumns virtualColumns)
+  {
+    return new Builder(this).setVirtualColumns(virtualColumns).build();
+  }
+
   public GroupByQuery withDimFilter(@Nullable final DimFilter dimFilter)
   {
     return new Builder(this).setDimFilter(dimFilter).build();
@@ -1198,6 +1203,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
            ", dimensions=" + dimensions +
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
+           (subtotalsSpec != null ? (", subtotalsSpec=" + subtotalsSpec) : "") +
            ", havingSpec=" + havingSpec +
            ", context=" + getContext() +
            '}';
@@ -1222,7 +1228,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
            Objects.equals(dimFilter, that.dimFilter) &&
            Objects.equals(dimensions, that.dimensions) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
-           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
+           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs) &&
+           Objects.equals(subtotalsSpec, that.subtotalsSpec);
   }
 
   @Override
@@ -1236,7 +1243,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         dimFilter,
         dimensions,
         aggregatorSpecs,
-        postAggregatorSpecs
+        postAggregatorSpecs,
+        subtotalsSpec
     );
   }
 }

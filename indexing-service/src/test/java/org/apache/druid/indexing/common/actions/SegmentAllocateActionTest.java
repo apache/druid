@@ -34,6 +34,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -49,6 +50,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -946,6 +948,33 @@ public class SegmentAllocateActionTest
     final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) shardSpec;
     Assert.assertEquals(2, hashBasedNumberedShardSpec.getPartitions());
     Assert.assertEquals(ImmutableList.of("dim1"), hashBasedNumberedShardSpec.getPartitionDimensions());
+  }
+
+  @Test
+  public void testSameIntervalWithSegmentGranularity()
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+    Granularity segmentGranularity = new PeriodGranularity(Period.hours(1), null, DateTimes.inferTzFromString("Asia/Shanghai"));
+
+    final SegmentIdWithShardSpec id1 = allocate(
+            task,
+            PARTY_TIME,
+            Granularities.MINUTE,
+            segmentGranularity,
+            "s1",
+            null
+    );
+    final SegmentIdWithShardSpec id2 = allocate(
+            task,
+            PARTY_TIME,
+            Granularities.MINUTE,
+            segmentGranularity,
+            "s2",
+            null
+    );
+    Assert.assertNotNull(id1);
+    Assert.assertNotNull(id2);
   }
 
   private SegmentIdWithShardSpec allocate(

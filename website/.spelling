@@ -251,6 +251,7 @@ http
 https
 i.e.
 influxdb
+ingestionSpec
 injective
 inlined
 interruptible
@@ -907,7 +908,6 @@ ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
 index_hadoop
-ingestionSpec
 inputPath
 inputSpecs
 interval1
@@ -954,6 +954,7 @@ PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
 SplitHintSpec
+accessKeyId
 appendToExisting
 baseDir
 chatHandlerNumRetries
@@ -973,6 +974,7 @@ maxNumSegmentsToMerge
 maxRetry
 pushTimeout
 reportParseExceptions
+secretAccessKey
 segmentWriteOutMediumFactory
 sql
 sqls

@@ -52,6 +52,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
@@ -503,6 +504,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "version");
+    Interval allocateInterval = interval.withChronology(ISOChronology.getInstanceUTC());
 
     return connector.retryWithHandle(
         handle -> {
@@ -511,7 +513,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 handle,
                 dataSource,
                 sequenceName,
-                interval,
+                allocateInterval,
                 partialShardSpec,
                 maxVersion
             );
@@ -521,7 +523,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 dataSource,
                 sequenceName,
                 previousSegmentId,
-                interval,
+                allocateInterval,
                 partialShardSpec,
                 maxVersion
             );
