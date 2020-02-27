@@ -37,6 +37,8 @@ public class KafkaEmitterConfig
   private final String metricTopic;
   @JsonProperty("alert.topic")
   private final String alertTopic;
+  @JsonProperty("request.topic")
+  private final String requestTopic;
   @JsonProperty
   private final String clusterName;
   @JsonProperty("producer.config")
@@ -47,6 +49,7 @@ public class KafkaEmitterConfig
       @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
       @JsonProperty("metric.topic") String metricTopic,
       @JsonProperty("alert.topic") String alertTopic,
+      @JsonProperty("request.topic") String requestTopic,
       @JsonProperty("clusterName") String clusterName,
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
   )
@@ -54,6 +57,8 @@ public class KafkaEmitterConfig
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
+    // In the original pull request: https://github.com/apache/druid/pull/6493, it was requested that the request topic not be mandatory
+    this.requestTopic = (requestTopic == null) ? "druid-requests" : requestTopic;
     this.clusterName = clusterName;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }
@@ -74,6 +79,12 @@ public class KafkaEmitterConfig
   public String getAlertTopic()
   {
     return alertTopic;
+  }
+
+  @JsonProperty
+  public String getRequestTopic()
+  {
+    return requestTopic;
   }
 
   @JsonProperty
@@ -109,6 +120,9 @@ public class KafkaEmitterConfig
     if (!getAlertTopic().equals(that.getAlertTopic())) {
       return false;
     }
+    if (!getRequestTopic().equals(that.getRequestTopic())) {
+      return false;
+    }
     if (getClusterName() != null ? !getClusterName().equals(that.getClusterName()) : that.getClusterName() != null) {
       return false;
     }
@@ -133,6 +147,7 @@ public class KafkaEmitterConfig
            "bootstrap.servers='" + bootstrapServers + '\'' +
            ", metric.topic='" + metricTopic + '\'' +
            ", alert.topic='" + alertTopic + '\'' +
+           ", request.topic='" + requestTopic + '\'' +
            ", clusterName='" + clusterName + '\'' +
            ", Producer.config=" + kafkaProducerConfig +
            '}';
