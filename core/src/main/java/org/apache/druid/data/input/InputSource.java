@@ -55,7 +55,8 @@ import java.io.File;
 public interface InputSource
 {
   /**
-   * Returns true if this inputSource can be processed in parallel using ParallelIndexSupervisorTask.
+   * Returns true if this inputSource can be processed in parallel using ParallelIndexSupervisorTask. It must be
+   * castable to SplittableInputSource and the various SplittableInputSource methods must work as documented.
    */
   boolean isSplittable();
 
