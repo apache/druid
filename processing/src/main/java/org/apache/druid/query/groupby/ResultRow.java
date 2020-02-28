@@ -163,10 +163,7 @@ public final class ResultRow
 
     for (int i = query.getResultRowDimensionStart(); i < row.length; i++) {
       final String columnName = resultRowOrder.get(i);
-
-      if (row[i] != null) {
-        map.put(columnName, row[i]);
-      }
+      map.put(columnName, row[i]);
     }
 
     return map;
