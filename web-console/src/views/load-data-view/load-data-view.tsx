@@ -704,6 +704,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
           {this.renderIngestionCard('index_parallel:s3')}
+          {this.renderIngestionCard('index_parallel:azure')}
           {this.renderIngestionCard('index_parallel:google')}
           {this.renderIngestionCard('index_parallel:hdfs')}
           {this.renderIngestionCard('index_parallel:druid')}
@@ -781,6 +782,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:s3':
         return <p>Load text based, orc, or parquet data from Amazon S3.</p>;
 
+      case 'index_parallel:azure':
+        return <p>Load text based, orc, or parquet data from Azure.</p>;
+
       case 'index_parallel:google':
         return <p>Load text based, orc, or parquet data from the Google Blobstore.</p>;
 
@@ -831,6 +835,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:druid':
       case 'index_parallel:inline':
       case 'index_parallel:s3':
+      case 'index_parallel:azure':
       case 'index_parallel:google':
       case 'index_parallel:hdfs':
       case 'kafka':
