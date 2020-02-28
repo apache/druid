@@ -108,7 +108,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
 
     this.bufferSupplier = Preconditions.checkNotNull(bufferSupplier, "bufferSupplier");
     this.aggregators = aggregators;
-    this.cardinalityWithMissingValue = Ints.checkedCast((long) cardinality + 1);
+    this.cardinalityWithMissingValue = Ints.checkedCast(computeCardinalityWithMissingValue(cardinality));
     this.recordSize = aggregators.spaceNeeded();
   }
 
