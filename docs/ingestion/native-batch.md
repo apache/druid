@@ -854,8 +854,8 @@ Properties Object:
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|accessKeyId|S3 access key for this S3 InputSource|None|yes if secretAccessKey is given|
-|secretAccessKey|S3 secret key for this S3 InputSource|None|yes if accessKeyId is given|
+|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
+|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
 
 **Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
 
