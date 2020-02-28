@@ -1223,7 +1223,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.uris',
           label: 'Azure URIs',
           type: 'string-array',
-          placeholder: 'azure://your-bucket/some-file1.ext, azure://your-bucket/some-file2.ext',
+          placeholder:
+            'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -1256,7 +1257,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.objects',
           label: 'Azure objects',
           type: 'json',
-          placeholder: '{"bucket":"your-bucket", "path":"some-file.ext"}',
+          placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
           required: true,
           defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
           info: (
