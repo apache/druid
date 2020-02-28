@@ -58,6 +58,7 @@ public class QueryScheduler implements QueryWatcher
   private static final int NO_CAPACITY = -1;
   static final String TOTAL = "default";
   private final int totalCapacity;
+  private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
   /**
@@ -69,8 +70,14 @@ public class QueryScheduler implements QueryWatcher
    */
   private final SetMultimap<String, String> queryDatasources;
 
-  public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy, ServerConfig serverConfig)
+  public QueryScheduler(
+      int totalNumThreads,
+      QueryPrioritizationStrategy prioritizationStrategy,
+      QueryLaningStrategy laningStrategy,
+      ServerConfig serverConfig
+  )
   {
+    this.prioritizationStrategy = prioritizationStrategy;
     this.laningStrategy = laningStrategy;
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
@@ -105,9 +112,9 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Assign a query a lane (if not set)
+   * Assign a query a priority and lane (if not set)
    */
-  public <T> Query<T> laneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
+  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
   {
     Query<T> query = queryPlus.getQuery();
     Optional<String> lane = laningStrategy.computeLane(queryPlus, segments);

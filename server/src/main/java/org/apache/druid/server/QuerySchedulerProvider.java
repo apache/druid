@@ -44,6 +44,6 @@ public class QuerySchedulerProvider extends QuerySchedulerConfig implements Prov
   @Override
   public QueryScheduler get()
   {
-    return new QueryScheduler(getNumThreads(), getLaningStrategy(), serverConfig);
+    return new QueryScheduler(getNumThreads(), getPrioritizationStrategy(), getLaningStrategy(), serverConfig);
   }
 }

@@ -17,35 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.server.scheduling;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.server.scheduling.NoQueryPrioritizationStrategy;
+import org.apache.druid.client.SegmentServerSelector;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.server.QueryPrioritizationStrategy;
 
-public class QuerySchedulerConfig
+import java.util.Optional;
+import java.util.Set;
+
+public class NoQueryPrioritizationStrategy implements QueryPrioritizationStrategy
 {
-  @JsonProperty
-  private Integer numThreads = 0;
+  public static final QueryPrioritizationStrategy INSTANCE = new NoQueryPrioritizationStrategy();
 
-  @JsonProperty("laning")
-  private QueryLaningStrategy laningStrategy = NoQueryLaningStrategy.INSTANCE;
-
-  @JsonProperty
-  private QueryPrioritizationStrategy prioritizationStrategy = NoQueryPrioritizationStrategy.INSTANCE;
-
-  public int getNumThreads()
+  @Override
+  public <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
-    return numThreads;
-  }
-
-  public QueryLaningStrategy getLaningStrategy()
-  {
-    return laningStrategy;
-  }
-
-  public QueryPrioritizationStrategy getPrioritizationStrategy()
-  {
-    return prioritizationStrategy;
+    return Optional.empty();
   }
 }

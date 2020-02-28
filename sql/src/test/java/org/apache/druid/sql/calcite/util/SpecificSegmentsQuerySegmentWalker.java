@@ -420,7 +420,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           Set<SegmentServerSelector> segments = new HashSet<>();
           specs.forEach(spec -> segments.add(new SegmentServerSelector(null, spec)));
           return scheduler.run(
-              scheduler.laneQuery(theQuery, segments),
+              scheduler.prioritizeAndLaneQuery(theQuery, segments),
               new LazySequence<>(
                   () -> baseRunner.run(
                       theQuery.withQuery(Queries.withSpecificSegments(
