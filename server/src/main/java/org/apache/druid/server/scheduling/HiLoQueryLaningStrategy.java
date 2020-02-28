@@ -38,7 +38,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   public static final String LOW = "low";
 
   @JsonProperty
-  private int maxLowThreads;
+  private final int maxLowThreads;
 
   @JsonCreator
   public HiLoQueryLaningStrategy(
