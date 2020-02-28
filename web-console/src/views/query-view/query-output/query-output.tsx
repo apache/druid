@@ -19,10 +19,7 @@
 import { Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { HeaderRows, SqlQuery } from 'druid-query-toolkit';
-import {
-  basicIdentifierEscape,
-  basicLiteralEscape,
-} from 'druid-query-toolkit/build/ast/sql-query/helpers';
+import { basicIdentifierEscape, basicLiteralEscape } from 'druid-query-toolkit/build/sql/helpers';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
@@ -94,7 +91,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon: IconNames.CROSS,
         title: `Remove: ${trimValue(header)}`,
         onAction: () => {
-          onQueryChange(parsedQuery.excludeColumn(header), true);
+          onQueryChange(parsedQuery.removeFromSelect(header), true);
         },
       });
 
@@ -161,14 +158,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon={IconNames.FILTER_KEEP}
             text={`Filter by: ${trimValue(header)} = ${trimValue(value)}`}
             onClick={() => {
-              onQueryChange(parsedQuery.filterRow(header, value, '='), true);
+              onQueryChange(parsedQuery.addWhereFilter(header, '=', value), true);
             }}
           />
           <MenuItem
             icon={IconNames.FILTER_REMOVE}
             text={`Filter by: ${trimValue(header)} != ${trimValue(value)}`}
             onClick={() => {
-              onQueryChange(parsedQuery.filterRow(header, value, '!='), true);
+              onQueryChange(parsedQuery.addWhereFilter(header, '!=', value), true);
             }}
           />
           {!isNaN(Number(value)) && (
@@ -177,14 +174,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 icon={IconNames.FILTER_KEEP}
                 text={`Filter by: ${trimValue(header)} >= ${trimValue(value)}`}
                 onClick={() => {
-                  onQueryChange(parsedQuery.filterRow(header, value, '>='), true);
+                  onQueryChange(parsedQuery.addWhereFilter(header, '>=', value), true);
                 }}
               />
               <MenuItem
                 icon={IconNames.FILTER_KEEP}
                 text={`Filter by: ${trimValue(header)} <= ${trimValue(value)}`}
                 onClick={() => {
-                  onQueryChange(parsedQuery.filterRow(header, value, '<='), true);
+                  onQueryChange(parsedQuery.addWhereFilter(header, '<=', value), true);
                 }}
               />
             </>

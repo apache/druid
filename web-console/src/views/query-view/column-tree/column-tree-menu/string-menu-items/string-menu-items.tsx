@@ -18,15 +18,7 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  ComparisonExpression,
-  ComparisonExpressionRhs,
-  FilterClause,
-  refExpressionFactory,
-  SqlQuery,
-  WhereClause,
-} from 'druid-query-toolkit';
-import { aliasFactory, stringFactory } from 'druid-query-toolkit/build/ast/sql-query/helpers';
+import { SqlLiteral, SqlMulti, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
 export interface StringMenuItemsProps {
@@ -44,13 +36,13 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
         <MenuItem
           text={`"${columnName}" = 'xxx'`}
           onClick={() => {
-            onQueryChange(parsedQuery.filterRow(columnName, 'xxx', '='), false);
+            onQueryChange(parsedQuery.addWhereFilter(columnName, '=', 'xxx'), false);
           }}
         />
         <MenuItem
           text={`"${columnName}" LIKE '%xxx%'`}
           onClick={() => {
-            onQueryChange(parsedQuery.filterRow(columnName, '%xxx%', 'LIKE'), false);
+            onQueryChange(parsedQuery.addWhereFilter(columnName, 'LIKE', '%xxx%'), false);
           }}
         />
       </MenuItem>
@@ -59,7 +51,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
 
   function renderRemoveFilter(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasFilterForColumn(columnName)) return;
+    if (!parsedQuery.getCurrentFilters().includes(columnName)) return;
 
     return (
       <MenuItem
@@ -74,13 +66,13 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    if (!parsedQuery.hasGroupByColumn(columnName)) return;
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
         text={'Remove group by'}
         onClick={() => {
-          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+          onQueryChange(parsedQuery.removeFromGroupBy(columnName), true);
         }}
       />
     );
@@ -88,14 +80,14 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
 
   function renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasGroupBy()) return;
+    if (!parsedQuery.groupByExpression) return;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem
           text={`"${columnName}"`}
           onClick={() => {
-            onQueryChange(parsedQuery.addToGroupBy(columnName), true);
+            onQueryChange(parsedQuery.addColumnToGroupBy(columnName), true);
           }}
         />
         <MenuItem
@@ -103,11 +95,13 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
           onClick={() => {
             onQueryChange(
               parsedQuery.addFunctionToGroupBy(
+                [
+                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlLiteral.fromInput(1),
+                  SqlLiteral.fromInput(2),
+                ],
                 'SUBSTRING',
-                [' ', ' '],
-                [stringFactory(columnName, `"`), 1, 2],
-
-                aliasFactory(`${columnName}_substring`),
+                `${columnName}_substring`,
               ),
               true,
             );
@@ -119,7 +113,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
 
   function renderAggregateMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasGroupBy()) return;
+    if (!parsedQuery.groupByExpression) return;
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
@@ -128,9 +122,9 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
           onClick={() =>
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                columnName,
+                [SqlRef.fromNameWithDoubleQuotes(columnName)],
                 'COUNT',
-                aliasFactory(`dist_${columnName}`),
+                `dist_${columnName}`,
               ),
               true,
             )
@@ -141,28 +135,13 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
           onClick={() => {
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                refExpressionFactory('*'),
+                [SqlRef.fromName('*')],
                 'COUNT',
-                aliasFactory(`${columnName}_filtered_count`),
-                false,
-                new FilterClause({
-                  keyword: 'FILTER',
-                  spacing: [' '],
-                  ex: new WhereClause({
-                    keyword: 'WHERE',
-                    spacing: [' '],
-                    filter: new ComparisonExpression({
-                      parens: [],
-                      ex: stringFactory(columnName, '"'),
-                      rhs: new ComparisonExpressionRhs({
-                        parens: [],
-                        op: '=',
-                        rhs: stringFactory('xxx', `'`),
-                        spacing: [' ', ' '],
-                      }),
-                    }),
-                  }),
-                }),
+                `${columnName}_filtered_count`,
+                SqlMulti.sqlMultiFactory('=', [
+                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlLiteral.fromInput('xxx'),
+                ]),
               ),
             );
           }}
