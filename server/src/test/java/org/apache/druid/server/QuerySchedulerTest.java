@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -180,19 +181,19 @@ public class QuerySchedulerTest
     QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
 
     Query<?> report1 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(report1);
+    scheduler.run(report1, Sequences.empty());
     Assert.assertNotNull(report1);
     Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     Query<?> report2 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(report2);
+    scheduler.run(report2, Sequences.empty());
     Assert.assertNotNull(report2);
     Assert.assertEquals(3, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     // too many reports
-    scheduler.scheduleQuery(scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()));
+    scheduler.run(scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty());
   }
 
   @Test
@@ -203,36 +204,34 @@ public class QuerySchedulerTest
 
     QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
     Query<?> interactive1 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(interactive1);
+    scheduler.run(interactive1, Sequences.empty());
     Assert.assertNotNull(interactive1);
     Assert.assertEquals(4, scheduler.getTotalAvailableCapacity());
 
     Query<?> report1 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(report1);
+    scheduler.run(report1, Sequences.empty());
     Assert.assertNotNull(report1);
     Assert.assertEquals(3, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     Query<?> interactive2 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(interactive2);
+    scheduler.run(interactive2, Sequences.empty());
     Assert.assertNotNull(interactive2);
     Assert.assertEquals(2, scheduler.getTotalAvailableCapacity());
 
     Query<?> report2 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(report2);
+    scheduler.run(report2, Sequences.empty());
     Assert.assertNotNull(report2);
     Assert.assertEquals(1, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     Query<?> interactive3 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
-    scheduler.scheduleQuery(interactive3);
+    scheduler.run(interactive3, Sequences.empty());
     Assert.assertNotNull(interactive3);
     Assert.assertEquals(0, scheduler.getTotalAvailableCapacity());
 
     // one too many
-    scheduler.scheduleQuery(
-        scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of())
-    );
+    scheduler.run(scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty());
   }
 
 
@@ -275,38 +274,40 @@ public class QuerySchedulerTest
 
   private Sequence<Integer> makeSequence(int count)
   {
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
-        {
-          @Override
-          public Iterator<Integer> make()
+    return new LazySequence<>(() -> {
+      return new BaseSequence<>(
+          new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
           {
-            return new Iterator<Integer>()
+            @Override
+            public Iterator<Integer> make()
             {
-              int rowCounter = 0;
-
-              @Override
-              public boolean hasNext()
+              return new Iterator<Integer>()
               {
-                return rowCounter < count;
-              }
+                int rowCounter = 0;
 
-              @Override
-              public Integer next()
-              {
-                rowCounter++;
-                return rowCounter;
-              }
-            };
-          }
+                @Override
+                public boolean hasNext()
+                {
+                  return rowCounter < count;
+                }
 
-          @Override
-          public void cleanup(Iterator<Integer> iterFromMake)
-          {
-            // nothing to cleanup
+                @Override
+                public Integer next()
+                {
+                  rowCounter++;
+                  return rowCounter;
+                }
+              };
+            }
+
+            @Override
+            public void cleanup(Iterator<Integer> iterFromMake)
+            {
+              // nothing to cleanup
+            }
           }
-        }
-    );
+      );
+    });
   }
 
   private Sequence<Integer> makeExplodingSequence(int explodeAfter)

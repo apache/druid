@@ -94,6 +94,7 @@
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
         <netty3.version>3.10.6.Final</netty3.version>
+        <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.45.Final</netty4.version>
         <node.version>v10.14.2</node.version>
@@ -1180,6 +1181,11 @@
                         <artifactId>jackson-databind</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bulkhead</artifactId>
+                <version>${resilience4j.version}</version>
             </dependency>
 
             <dependency>

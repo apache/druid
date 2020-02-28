@@ -19,12 +19,13 @@
 
 package org.apache.druid.server;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -34,12 +35,11 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryWatcher;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -47,38 +47,22 @@ import java.util.concurrent.TimeUnit;
  * {@link QueryLaningStrategy} that is defined in {@link QuerySchedulerConfig}.
  *
  * As a {@link QueryWatcher}, it also provides cancellation facilities.
- *
  */
 public class QueryScheduler implements QueryWatcher
 {
+  private static final String TOTAL = "default";
   private final QueryLaningStrategy laningStrategy;
-  private final Optional<Semaphore> totalQueryLimit;
-  private final Map<String, Semaphore> laneLimits;
+  private final BulkheadRegistry laneRegistery;
 
-  private final SetMultimap<String, ListenableFuture<?>> queries;
+  private final SetMultimap<String, ListenableFuture<?>> queryFutures;
   private final SetMultimap<String, String> queryDatasources;
-  private final Set<Query<?>> runningQueries;
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
     this.laningStrategy = laningStrategy;
-    if (totalNumThreads > 0) {
-      this.totalQueryLimit = Optional.of(new Semaphore(totalNumThreads));
-    } else {
-      this.totalQueryLimit = Optional.empty();
-    }
-    this.laneLimits = new HashMap<>();
-
-    for (Object2IntMap.Entry<String> entry : laningStrategy.getLaneLimits().object2IntEntrySet()) {
-      laneLimits.put(entry.getKey(), new Semaphore(entry.getIntValue()));
-    }
-    this.queries = Multimaps.synchronizedSetMultimap(
-        HashMultimap.create()
-    );
-    this.queryDatasources = Multimaps.synchronizedSetMultimap(
-        HashMultimap.create()
-    );
-    this.runningQueries = Sets.newConcurrentHashSet();
+    this.laneRegistery = BulkheadRegistry.of(getLaneConfigs(totalNumThreads));
+    this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
+    this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
   }
 
   @Override
@@ -86,11 +70,11 @@ public class QueryScheduler implements QueryWatcher
   {
     final String id = query.getId();
     final Set<String> datasources = query.getDataSource().getTableNames();
-    queries.put(id, future);
+    queryFutures.put(id, future);
     queryDatasources.putAll(id, datasources);
     future.addListener(
         () -> {
-          queries.remove(id, future);
+          queryFutures.remove(id, future);
           for (String datasource : datasources) {
             queryDatasources.remove(id, datasource);
           }
@@ -115,8 +99,17 @@ public class QueryScheduler implements QueryWatcher
    */
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
-    scheduleQuery(query);
-    return resultSequence.withBaggage(() -> completeQuery(query));
+    final String lane = QueryContexts.getLane(query);
+    final Optional<BulkheadConfig> totalConfig = laneRegistery.getConfiguration(TOTAL);
+    final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistery.getConfiguration(lane);
+
+    totalConfig.ifPresent(this::acquireTotal);
+    laneConfig.ifPresent(config -> acquireLane(lane, config));
+
+    return resultSequence.withBaggage(() -> {
+      totalConfig.ifPresent(config -> laneRegistery.bulkhead(TOTAL, config).releasePermission());
+      laneConfig.ifPresent(config -> laneRegistery.bulkhead(lane, config).releasePermission());
+    });
   }
 
   /**
@@ -126,7 +119,7 @@ public class QueryScheduler implements QueryWatcher
   {
     // if you re-use queryId and cancel queries... you are going to have a bad time
     queryDatasources.removeAll(id);
-    Set<ListenableFuture<?>> futures = queries.removeAll(id);
+    Set<ListenableFuture<?>> futures = queryFutures.removeAll(id);
     boolean success = true;
     for (ListenableFuture<?> future : futures) {
       success = success && future.cancel(true);
@@ -141,63 +134,53 @@ public class QueryScheduler implements QueryWatcher
 
   public int getTotalAvailableCapacity()
   {
-    return totalQueryLimit.map(Semaphore::availablePermits).orElse(-1);
+    return laneRegistery.getConfiguration(TOTAL)
+                        .map(config -> laneRegistery.bulkhead(TOTAL, config).getMetrics().getAvailableConcurrentCalls())
+                        .orElse(-1);
   }
 
   public int getLaneAvailableCapacity(String lane)
   {
-    if (laneLimits.containsKey(lane)) {
-      return laneLimits.get(lane).availablePermits();
-    }
-    return -1;
+    return laneRegistery.getConfiguration(lane)
+                        .map(config -> laneRegistery.bulkhead(lane, config).getMetrics().getAvailableConcurrentCalls())
+                        .orElse(-1);
   }
 
-  /**
-   * Acquire semaphore from total capacity and lane capacity (if query is assigned a lane that exists)
-   */
-  @VisibleForTesting
-  void scheduleQuery(Query<?> query)
+  private void acquireTotal(BulkheadConfig config)
   {
-    final String lane;
     try {
-      if (!totalQueryLimit.isPresent() || totalQueryLimit.get().tryAcquire(0, TimeUnit.MILLISECONDS)) {
-        lane = QueryContexts.getLane(query);
-        // if no lane, we are done
-        if (!laneLimits.containsKey(lane)) {
-          runningQueries.add(query);
-          return;
-        }
-      } else {
-        throw new QueryCapacityExceededException();
-      }
+      laneRegistery.bulkhead(TOTAL, config).acquirePermission();
     }
-    catch (InterruptedException ex) {
+    catch (BulkheadFullException full) {
       throw new QueryCapacityExceededException();
     }
-    // if we got here, the query belongs to a lane, acquire the semaphore for it
+  }
+
+  private void acquireLane(String lane, BulkheadConfig config)
+  {
     try {
-      if (laneLimits.get(lane).tryAcquire(0, TimeUnit.MILLISECONDS)) {
-        runningQueries.add(query);
-      } else {
-        throw new QueryCapacityExceededException(lane);
-      }
+      laneRegistery.bulkhead(lane, config).acquirePermission();
     }
-    catch (InterruptedException e) {
+    catch (BulkheadFullException full) {
       throw new QueryCapacityExceededException(lane);
     }
   }
 
-  /**
-   * Release semaphores help by query
-   */
-  private void completeQuery(Query<?> query)
+  private Map<String, BulkheadConfig> getLaneConfigs(int totalNumThreads)
   {
-    if (runningQueries.remove(query)) {
-      String lane = QueryContexts.getLane(query);
-      if (laneLimits.containsKey(lane)) {
-        laneLimits.get(lane).release();
-      }
-      totalQueryLimit.ifPresent(Semaphore::release);
+    Map<String, BulkheadConfig> configs = new HashMap<>();
+    if (totalNumThreads > 0) {
+      configs.put(
+          TOTAL,
+          BulkheadConfig.custom().maxConcurrentCalls(totalNumThreads).maxWaitDuration(Duration.ZERO).build()
+      );
     }
+    for (Object2IntMap.Entry<String> entry : laningStrategy.getLaneLimits().object2IntEntrySet()) {
+      configs.put(
+          entry.getKey(),
+          BulkheadConfig.custom().maxConcurrentCalls(entry.getIntValue()).maxWaitDuration(Duration.ZERO).build()
+      );
+    }
+    return configs;
   }
 }

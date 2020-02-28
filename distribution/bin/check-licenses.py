@@ -214,6 +214,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache License, Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['The Apache Software License, Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Apache-2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache Software License - Version 2.0'] = 'Apache License version 2.0'
