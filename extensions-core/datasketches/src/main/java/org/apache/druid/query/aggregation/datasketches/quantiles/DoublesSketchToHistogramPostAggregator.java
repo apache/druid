@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
@@ -36,36 +37,58 @@ import java.util.Set;
 
 public class DoublesSketchToHistogramPostAggregator implements PostAggregator
 {
+  static final int DEFAULT_NUM_BINS = 10;
 
   private final String name;
   private final PostAggregator field;
   private final double[] splitPoints;
+  private final Integer numBins;
 
   @JsonCreator
   public DoublesSketchToHistogramPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("splitPoints") final double[] splitPoints)
+      @JsonProperty("splitPoints") @Nullable final double[] splitPoints,
+      @JsonProperty("numBins") @Nullable final Integer numBins)
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
-    this.splitPoints = Preconditions.checkNotNull(splitPoints, "array of split points is null");
+    this.splitPoints = splitPoints;
+    this.numBins = numBins;
   }
 
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
+    final int numBins = splitPoints != null ? splitPoints.length + 1 :
+        (this.numBins != null ? this.numBins.intValue() : DEFAULT_NUM_BINS);
+    if (numBins < 2) {
+      throw new IAE("at least 2 bins expected");
+    }
     if (sketch.isEmpty()) {
-      final double[] histogram = new double[splitPoints.length + 1];
+      final double[] histogram = new double[numBins];
       Arrays.fill(histogram, Double.NaN);
       return histogram;
     }
-    final double[] histogram = sketch.getPMF(splitPoints);
+    final double[] histogram = sketch.getPMF(splitPoints != null ? splitPoints :
+      equallySpacedPoints(numBins, sketch.getMinValue(), sketch.getMaxValue()));
     for (int i = 0; i < histogram.length; i++) {
-      histogram[i] *= sketch.getN();
+      histogram[i] *= sketch.getN(); // scale fractions to counts
     }
     return histogram;
+  }
+
+  // retuns num-1 points that split the interval [min, max] into num equally-spaced intervals
+  // num must be at least 2
+  private static double[] equallySpacedPoints(final int num, final double min, final double max)
+  {
+    final double[] points = new double[num - 1];
+    final double delta = (max - min) / num;
+    for (int i = 0; i < num - 1; i++) {
+      points[i] = min + delta * (i + 1);
+    }
+    return points;
   }
 
   @Override
@@ -87,6 +110,12 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
     return splitPoints;
   }
 
+  @JsonProperty
+  public Integer getNumBins()
+  {
+    return numBins;
+  }
+
   @Override
   public Comparator<double[]> getComparator()
   {
@@ -106,6 +135,7 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
         "name='" + name + '\'' +
         ", field=" + field +
         ", splitPoints=" + Arrays.toString(splitPoints) +
+        ", numBins=" + numBins +
         "}";
   }
 
@@ -125,7 +155,16 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
     if (!Arrays.equals(splitPoints, that.splitPoints)) {
       return false;
     }
-    return field.equals(that.field);
+    if (!field.equals(that.field)) {
+      return false;
+    }
+    if (numBins == null && that.numBins == null) {
+      return true;
+    }
+    if (numBins != null && numBins.equals(that.numBins)) {
+      return true;
+    }
+    return false;
   }
 
   @Override
@@ -133,6 +172,9 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   {
     int hashCode = name.hashCode() * 31 + field.hashCode();
     hashCode = hashCode * 31 + Arrays.hashCode(splitPoints);
+    if (numBins != null) {
+      hashCode = hashCode * 31 + numBins.hashCode();
+    }
     return hashCode;
   }
 
@@ -141,8 +183,13 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
         AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_HISTOGRAM_CACHE_TYPE_ID).appendCacheable(field);
-    for (final double value : splitPoints) {
-      builder.appendDouble(value);
+    if (splitPoints != null) {
+      for (final double value : splitPoints) {
+        builder.appendDouble(value);
+      }
+    }
+    if (numBins != null) {
+      builder.appendInt(numBins);
     }
     return builder.build();
   }

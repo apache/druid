@@ -87,14 +87,15 @@ This returns an array of quantiles corresponding to a given array of fractions
 
 #### Histogram
 
-This returns an approximation to the histogram given an array of split points that define the histogram bins. An array of <i>m</i> unique, monotonically increasing split points divide the real number line into <i>m+1</i> consecutive disjoint intervals. The definition of an interval is inclusive of the left split point and exclusive of the right split point.
+This returns an approximation to the histogram given an array of split points that define the histogram bins or a number of bins. An array of <i>m</i> unique, monotonically increasing split points divide the real number line into <i>m+1</i> consecutive disjoint intervals. The definition of an interval is inclusive of the left split point and exclusive of the right split point. If the number of bins is specified instead of split points, the interval between the minimum and maximum values is divided into the given number of equally-spaced bins.
 
 ```json
 {
   "type"  : "quantilesDoublesSketchToHistogram",
   "name": <output name>,
   "field"  : <post aggregator that refers to a DoublesSketch (fieldAccess or another post aggregator)>,
-  "splitPoints" : <array of split points>
+  "splitPoints" : <array of split points (optional)>,
+  "numBins" : <number of bins (optional, defaults to 10)>
 }
 ```
 
