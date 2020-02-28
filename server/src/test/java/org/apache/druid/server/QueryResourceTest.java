@@ -37,7 +37,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -78,7 +77,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -749,7 +747,6 @@ public class QueryResourceTest
       Collection<CountDownLatch> inScheduler
   )
   {
-    AtomicInteger counter = new AtomicInteger(0);
 
     QuerySegmentWalker texasRanger = new QuerySegmentWalker()
     {
@@ -757,12 +754,6 @@ public class QueryResourceTest
       public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
       {
         return (queryPlus, responseContext) -> {
-          int count = counter.getAndIncrement();
-          if (count < 2) {
-            queryPlus = queryPlus.withQuery(
-                queryPlus.getQuery().withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, -1))
-            );
-          }
           beforeScheduler.forEach(CountDownLatch::countDown);
 
           return scheduler.run(

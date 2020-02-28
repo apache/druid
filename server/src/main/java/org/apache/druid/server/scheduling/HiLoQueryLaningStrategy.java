@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
 
+import java.util.Optional;
 import java.util.Set;
 
 public class HiLoQueryLaningStrategy implements QueryLaningStrategy
@@ -57,19 +58,17 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   }
 
   @Override
-  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServerSelector> segments)
+  public <T> Optional<String> computeLane(
+      QueryPlus<T> query, Set<SegmentServerSelector> segments
+  )
   {
     final Query<T> theQuery = query.getQuery();
     // QueryContexts.getPriority gives a default, since we are setting priority
     final Integer priority = theQuery.getContextValue(QueryContexts.PRIORITY_KEY);
     final String lane = theQuery.getContextValue(QueryContexts.LANE_KEY);
     if (lane == null && priority != null && priority < 0) {
-      return theQuery.withOverriddenContext(
-          ImmutableMap.<String, Object>builder().putAll(theQuery.getContext())
-                                                .put(QueryContexts.LANE_KEY, LOW)
-                                                .build()
-      );
+      return Optional.of(LOW);
     }
-    return theQuery;
+    return Optional.empty();
   }
 }

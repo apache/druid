@@ -26,6 +26,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
 
+import java.util.Optional;
 import java.util.Set;
 
 public class NoQueryLaningStrategy implements QueryLaningStrategy
@@ -41,8 +42,8 @@ public class NoQueryLaningStrategy implements QueryLaningStrategy
   }
 
   @Override
-  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServerSelector> segments)
+  public <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
-    return query.getQuery();
+    return Optional.empty();
   }
 }

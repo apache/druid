@@ -86,12 +86,15 @@ public class QueryScheduler implements QueryWatcher
   /**
    * Assign a query a lane (if not set)
    */
-  public <T> Query<T> laneQuery(QueryPlus<T> query, Set<SegmentServerSelector> segments)
+  public <T> Query<T> laneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
   {
-    if (QueryContexts.getLane(query.getQuery()) != null) {
-      return query.getQuery();
+    Query<T> query = queryPlus.getQuery();
+    // man wins over machine.. for now.
+    if (QueryContexts.getLane(query) != null) {
+      return query;
     }
-    return laningStrategy.laneQuery(query, segments);
+    Optional<String> lane = laningStrategy.computeLane(queryPlus, segments);
+    return lane.map(query::withLane).orElse(query);
   }
 
   /**

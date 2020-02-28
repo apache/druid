@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -146,4 +147,10 @@ public interface Query<T>
   {
     return this;
   }
+
+  default Query<T> withLane(String lane)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+  }
+
 }
