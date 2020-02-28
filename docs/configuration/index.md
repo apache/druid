@@ -1478,7 +1478,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 
 ##### Query laning
 
-Druid provides facilities to aid in query capacity reservation for heterogenous query workloads in the form of 'laning' strategies, which provide a variety of mechanisms examine and classify a query at the broker, assigning it to a 'lane'. Lanes are defined with capacity limits which the broker will enforce, causing requests in excess of the capacity to be discarded with an HTTP 429 status code, reserving resources for other lanes or for interactive queries (with no lane). 
+The Broker provides facilities to aid in query capacity reservation for heterogeneous query workloads in the form of 'laning' strategies, which provide a variety of mechanisms to examine and classify a query, assigning it to a 'lane'. Lanes are defined with capacity limits which the broker will enforce, causing requests in excess of the capacity to be discarded with an HTTP 429 status code, reserving resources for other lanes or for interactive queries (with no lane).
 
 |Property|Description|Default|
 |--------|-----------|-------|
