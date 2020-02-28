@@ -991,7 +991,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -1242,7 +1242,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.prefixes',
           label: 'Azure prefixes',
           type: 'string-array',
-          placeholder: 'azure://your-bucket/some-path1, azure://your-bucket/some-path2',
+          placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
