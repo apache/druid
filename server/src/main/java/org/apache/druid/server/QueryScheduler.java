@@ -52,7 +52,7 @@ public class QueryScheduler implements QueryWatcher
 {
   private static final String TOTAL = "default";
   private final QueryLaningStrategy laningStrategy;
-  private final BulkheadRegistry laneRegistery;
+  private final BulkheadRegistry laneRegistry;
 
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
   private final SetMultimap<String, String> queryDatasources;
@@ -60,7 +60,7 @@ public class QueryScheduler implements QueryWatcher
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
     this.laningStrategy = laningStrategy;
-    this.laneRegistery = BulkheadRegistry.of(getLaneConfigs(totalNumThreads));
+    this.laneRegistry = BulkheadRegistry.of(getLaneConfigs(totalNumThreads));
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
   }
@@ -103,15 +103,15 @@ public class QueryScheduler implements QueryWatcher
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
     final String lane = QueryContexts.getLane(query);
-    final Optional<BulkheadConfig> totalConfig = laneRegistery.getConfiguration(TOTAL);
-    final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistery.getConfiguration(lane);
+    final Optional<BulkheadConfig> totalConfig = laneRegistry.getConfiguration(TOTAL);
+    final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
 
     totalConfig.ifPresent(this::acquireTotal);
     laneConfig.ifPresent(config -> acquireLane(lane, config));
 
     return resultSequence.withBaggage(() -> {
-      totalConfig.ifPresent(config -> laneRegistery.bulkhead(TOTAL, config).releasePermission());
-      laneConfig.ifPresent(config -> laneRegistery.bulkhead(lane, config).releasePermission());
+      totalConfig.ifPresent(config -> laneRegistry.bulkhead(TOTAL, config).releasePermission());
+      laneConfig.ifPresent(config -> laneRegistry.bulkhead(lane, config).releasePermission());
     });
   }
 
@@ -137,22 +137,22 @@ public class QueryScheduler implements QueryWatcher
 
   public int getTotalAvailableCapacity()
   {
-    return laneRegistery.getConfiguration(TOTAL)
-                        .map(config -> laneRegistery.bulkhead(TOTAL, config).getMetrics().getAvailableConcurrentCalls())
-                        .orElse(-1);
+    return laneRegistry.getConfiguration(TOTAL)
+                       .map(config -> laneRegistry.bulkhead(TOTAL, config).getMetrics().getAvailableConcurrentCalls())
+                       .orElse(-1);
   }
 
   public int getLaneAvailableCapacity(String lane)
   {
-    return laneRegistery.getConfiguration(lane)
-                        .map(config -> laneRegistery.bulkhead(lane, config).getMetrics().getAvailableConcurrentCalls())
-                        .orElse(-1);
+    return laneRegistry.getConfiguration(lane)
+                       .map(config -> laneRegistry.bulkhead(lane, config).getMetrics().getAvailableConcurrentCalls())
+                       .orElse(-1);
   }
 
   private void acquireTotal(BulkheadConfig config)
   {
     try {
-      laneRegistery.bulkhead(TOTAL, config).acquirePermission();
+      laneRegistry.bulkhead(TOTAL, config).acquirePermission();
     }
     catch (BulkheadFullException full) {
       throw new QueryCapacityExceededException();
@@ -162,7 +162,7 @@ public class QueryScheduler implements QueryWatcher
   private void acquireLane(String lane, BulkheadConfig config)
   {
     try {
-      laneRegistery.bulkhead(lane, config).acquirePermission();
+      laneRegistry.bulkhead(lane, config).acquirePermission();
     }
     catch (BulkheadFullException full) {
       throw new QueryCapacityExceededException(lane);
