@@ -22,7 +22,6 @@ package org.apache.druid.server.scheduling;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
@@ -58,9 +57,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   }
 
   @Override
-  public <T> Optional<String> computeLane(
-      QueryPlus<T> query, Set<SegmentServerSelector> segments
-  )
+  public <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
     final Query<T> theQuery = query.getQuery();
     // QueryContexts.getPriority gives a default, since we are setting priority
