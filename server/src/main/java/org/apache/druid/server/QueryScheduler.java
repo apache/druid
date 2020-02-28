@@ -51,6 +51,7 @@ import java.util.Set;
 public class QueryScheduler implements QueryWatcher
 {
   private static final String TOTAL = "default";
+  private final int numThreads;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
 
@@ -59,6 +60,7 @@ public class QueryScheduler implements QueryWatcher
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
+    this.numThreads = totalNumThreads;
     this.laningStrategy = laningStrategy;
     this.laneRegistry = BulkheadRegistry.of(getLaneConfigs(totalNumThreads));
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
@@ -107,7 +109,7 @@ public class QueryScheduler implements QueryWatcher
     final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
 
     totalConfig.ifPresent(this::acquireTotal);
-    laneConfig.ifPresent(config -> acquireLane(lane, config));
+    laneConfig.ifPresent(config -> acquireLane(lane, config, totalConfig));
 
     return resultSequence.withBaggage(() -> {
       totalConfig.ifPresent(config -> laneRegistry.bulkhead(TOTAL, config).releasePermission());
@@ -135,6 +137,11 @@ public class QueryScheduler implements QueryWatcher
     return queryDatasources.get(queryId);
   }
 
+  public int getNumThreads()
+  {
+    return numThreads;
+  }
+
   public int getTotalAvailableCapacity()
   {
     return laneRegistry.getConfiguration(TOTAL)
@@ -159,12 +166,13 @@ public class QueryScheduler implements QueryWatcher
     }
   }
 
-  private void acquireLane(String lane, BulkheadConfig config)
+  private void acquireLane(String lane, BulkheadConfig config, Optional<BulkheadConfig> totalToReleaseIfFailed)
   {
     try {
       laneRegistry.bulkhead(lane, config).acquirePermission();
     }
     catch (BulkheadFullException full) {
+      totalToReleaseIfFailed.ifPresent(c -> laneRegistry.bulkhead(TOTAL, c).releasePermission());
       throw new QueryCapacityExceededException(lane);
     }
   }
