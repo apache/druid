@@ -51,7 +51,6 @@ import java.util.Set;
 public class QueryScheduler implements QueryWatcher
 {
   private static final String TOTAL = "default";
-  private final int numThreads;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
 
@@ -60,7 +59,6 @@ public class QueryScheduler implements QueryWatcher
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
-    this.numThreads = totalNumThreads;
     this.laningStrategy = laningStrategy;
     this.laneRegistry = BulkheadRegistry.of(getLaneConfigs(totalNumThreads));
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
@@ -135,11 +133,6 @@ public class QueryScheduler implements QueryWatcher
   public Set<String> getQueryDatasources(final String queryId)
   {
     return queryDatasources.get(queryId);
-  }
-
-  public int getNumThreads()
-  {
-    return numThreads;
   }
 
   public int getTotalAvailableCapacity()
