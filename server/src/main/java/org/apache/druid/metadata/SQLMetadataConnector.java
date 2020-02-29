@@ -661,7 +661,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       if (dbcpProperties != null) {
         dataSource = BasicDataSourceFactory.createDataSource(dbcpProperties);
       } else {
-        dataSource = new BasicDataSource();
+        dataSource = new BasicDataSourceExt(connectorConfig);
       }
     }
     catch (Exception e) {
