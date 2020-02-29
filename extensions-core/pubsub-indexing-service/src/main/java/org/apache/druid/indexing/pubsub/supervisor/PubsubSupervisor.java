@@ -21,6 +21,7 @@ package org.apache.druid.indexing.pubsub.supervisor;
 
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -55,10 +57,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -66,6 +72,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Supervisor responsible for managing the PubsubIndexTasks for a single dataSource. At a high level, the class accepts a
@@ -119,6 +126,7 @@ public class PubsubSupervisor implements Supervisor
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
+  private volatile List<String> taskIds = new ArrayList<>();
 
   public PubsubSupervisor(
       final TaskStorage taskStorage,
@@ -233,30 +241,48 @@ public class PubsubSupervisor implements Supervisor
   @Override
   public void start()
   {
-    log.error("UNDER CONSTRUCTION!");
     PubsubIndexTaskIOConfig newIoConfig = createTaskIoConfig(ioConfig);
-
+    Integer taskCount = 1; // TODO: config
+    String subscriptionName = newIoConfig.getSubscription();
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      try {
-        taskQueue.get().add(new PubsubIndexTask(
-            "pubsub-task",
-            new TaskResource("pubsub-task", 1),
-            this.spec.getDataSchema(),
-            this.tuningConfig,
-            newIoConfig,
-            null,
-            null,
-            null,
-            rowIngestionMetersFactory,
-            sortingMapper,
-            null
-        ));
-      }
-      catch (Exception e) {
-        log.error(e, "failed pub sup");
-      }
-      // TODO
+      exec.submit(() -> {
+        try {
+          while (true) {
+            while (taskIds.size() < taskCount) {
+              String taskId = Joiner.on("_").join(subscriptionName, RandomIdUtils.getRandomId());
+              PubsubIndexTask pubsubIndexTask = new PubsubIndexTask(
+                  taskId,
+                  new TaskResource(subscriptionName, 1),
+                  this.spec.getDataSchema(),
+                  this.tuningConfig,
+                  newIoConfig,
+                  null,
+                  null,
+                  null,
+                  rowIngestionMetersFactory,
+                  sortingMapper,
+                  null
+              );
+              try {
+                taskQueue.get().add(pubsubIndexTask);
+              }
+              catch (EntryExistsException e) {
+                log.error("EntryExistsException");
+              }
+              taskIds.add(taskId);
+              // log.info(StringUtils.format("[Task %s] Status: %s", taskId, taskStorage.getStatus(taskId)));
+            }
+            taskIds = taskIds
+                .stream().filter(t -> taskStorage.getStatus(t).isPresent() && !taskStorage.getStatus(t).get().isComplete())
+                .collect(Collectors.toList());
+            Thread.sleep(100);
+          }
+        }
+        catch (Exception e) {
+          log.error(e, "failed pub sup");
+        }
+      });
     }
   }
 

@@ -130,7 +130,6 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
-    log.info("created pubsub task");
   }
 
   long getPollRetryMs()
