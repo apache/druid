@@ -24,7 +24,6 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
-import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
@@ -151,20 +150,14 @@ public class QueryScheduler implements QueryWatcher
 
   private void acquireTotal(BulkheadConfig config)
   {
-    try {
-      laneRegistry.bulkhead(TOTAL, config).acquirePermission();
-    }
-    catch (BulkheadFullException full) {
+    if (!laneRegistry.bulkhead(TOTAL, config).tryAcquirePermission()) {
       throw new QueryCapacityExceededException();
     }
   }
 
   private void acquireLane(String lane, BulkheadConfig config, Optional<BulkheadConfig> totalToReleaseIfFailed)
   {
-    try {
-      laneRegistry.bulkhead(lane, config).acquirePermission();
-    }
-    catch (BulkheadFullException full) {
+    if (!laneRegistry.bulkhead(lane, config).tryAcquirePermission()) {
       totalToReleaseIfFailed.ifPresent(c -> laneRegistry.bulkhead(TOTAL, c).releasePermission());
       throw new QueryCapacityExceededException(lane);
     }
