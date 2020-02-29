@@ -22,6 +22,7 @@ package org.apache.druid.timeline;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
@@ -161,11 +162,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
    */
   public Set<ObjectType> findNonOvershadowedObjectsInInterval(Interval interval, Partitions completeness)
   {
-    return lookup(interval, completeness)
-        .stream()
-        .flatMap(timelineObjectHolder -> timelineObjectHolder.getObject().stream())
-        .map(PartitionChunk::getObject)
-        .collect(Collectors.toSet());
+    return FluentIterable
+        .from(lookup(interval, completeness))
+        .transformAndConcat(TimelineObjectHolder::getObject)
+        .transform(PartitionChunk::getObject)
+        .toSet();
   }
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
@@ -482,7 +483,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (versionCompare > 0) {
           return false;
         } else if (versionCompare == 0) {
-          if (timelineEntry.partitionHolder.stream().noneMatch(chunk -> chunk.getObject().overshadows(object))) {
+          // Intentionally use the Iterators API instead of the stream API for performance.
+          //noinspection ConstantConditions
+          final boolean nonOvershadowedObject = Iterators.all(
+              timelineEntry.partitionHolder.iterator(), chunk -> !chunk.getObject().overshadows(object)
+          );
+          if (nonOvershadowedObject) {
             return false;
           }
         }

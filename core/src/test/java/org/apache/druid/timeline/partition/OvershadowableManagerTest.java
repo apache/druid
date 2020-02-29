@@ -981,7 +981,7 @@ public class OvershadowableManagerTest
     Assert.assertEquals(
         "Mismatched visible chunks",
         new HashSet<>(expectedVisibleChunks),
-        Sets.newHashSet(manager.createVisibleChunksStream().iterator())
+        Sets.newHashSet(manager.visibleChunksIterator())
     );
     Assert.assertEquals(
         "Mismatched overshadowed chunks",

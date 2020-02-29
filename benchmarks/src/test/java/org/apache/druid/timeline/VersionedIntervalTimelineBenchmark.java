@@ -67,7 +67,7 @@ public class VersionedIntervalTimelineBenchmark
   @Param({"10", "100", "1000"})
   private int numInitialRootGenSegmentsPerInterval;
 
-  @Param({"1", "5"})
+  @Param({"1", "2"})
   private int numNonRootGenerations;
 
   @Param({"false", "true"})

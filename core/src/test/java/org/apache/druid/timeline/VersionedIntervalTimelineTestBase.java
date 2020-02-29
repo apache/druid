@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -107,7 +108,10 @@ public class VersionedIntervalTimelineTestBase
   void checkRemove()
   {
     for (TimelineObjectHolder<String, OvershadowableInteger> holder : timeline.findFullyOvershadowed()) {
-      for (PartitionChunk<OvershadowableInteger> chunk : holder.getObject()) {
+      // Copy chunks to avoid the ConcurrentModificationException.
+      // Note that timeline.remove() modifies the PartitionHolder.
+      List<PartitionChunk<OvershadowableInteger>> chunks = FluentIterable.from(holder.getObject()).toList();
+      for (PartitionChunk<OvershadowableInteger> chunk : chunks) {
         timeline.remove(holder.getInterval(), holder.getVersion(), chunk);
       }
     }

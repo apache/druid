@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -54,7 +55,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * This class iterates all segments of the dataSources configured for compaction from the newest to the oldest.
@@ -119,13 +119,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
       final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(interval);
 
-      resultMap.put(
-          entry.getDataSource(),
-          holders.stream()
-                 .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-                 .mapToLong(chunk -> chunk.getObject().getSize())
-                 .sum()
-      );
+      long size = 0;
+      for (DataSegment segment : FluentIterable
+          .from(holders)
+          .transformAndConcat(TimelineObjectHolder::getObject)
+          .transform(PartitionChunk::getObject)) {
+        size += segment.getSize();
+      }
+
+      resultMap.put(entry.getDataSource(), size);
     }
     return resultMap;
   }
@@ -237,11 +239,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (holders.isEmpty()) {
         throw new NoSuchElementException();
       }
-      return holders.remove(holders.size() - 1)
-                    .getObject()
-                    .stream()
-                    .map(PartitionChunk::getObject)
-                    .collect(Collectors.toList());
+      return FluentIterable.from(holders.remove(holders.size() - 1).getObject())
+                           .transform(PartitionChunk::getObject)
+                           .toList();
     }
   }
 
