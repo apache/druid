@@ -16,21 +16,26 @@
  * limitations under the License.
  */
 
-.home-view-card {
-  .bp3-card {
-    height: 170px;
-  }
+import React from 'react';
 
-  &:hover {
-    text-decoration: none;
-  }
+import { compact, pluralIfNeeded } from '../../utils';
 
-  p {
-    padding-left: 20px;
-  }
+export interface PluralPairIfNeededProps {
+  firstCount: number;
+  firstSingular: string;
+  secondCount: number;
+  secondSingular: string;
 }
 
-.bp3-dark a.home-view-card,
-.bp3-dark a.home-view-card:hover {
-  color: inherit;
-}
+export const PluralPairIfNeeded = React.memo(function PluralPairIfNeeded(
+  props: PluralPairIfNeededProps,
+) {
+  const { firstCount, firstSingular, secondCount, secondSingular } = props;
+
+  const text = compact([
+    firstCount ? pluralIfNeeded(firstCount, firstSingular) : undefined,
+    secondCount ? pluralIfNeeded(secondCount, secondSingular) : undefined,
+  ]).join(', ');
+  if (!text) return null;
+  return <p className="plural-pair-if-needed">{text}</p>;
+});

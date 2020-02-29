@@ -20,7 +20,8 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
 
-import { compact, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
+import { lookupBy, queryDruidSql, QueryManager } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
@@ -42,20 +43,6 @@ export interface ServicesCardState {
 }
 
 export class ServicesCard extends React.PureComponent<ServicesCardProps, ServicesCardState> {
-  static renderPluralIfNeededPair(
-    count1: number,
-    singular1: string,
-    count2: number,
-    singular2: string,
-  ): JSX.Element | undefined {
-    const text = compact([
-      count1 ? pluralIfNeeded(count1, singular1) : undefined,
-      count2 ? pluralIfNeeded(count2, singular2) : undefined,
-    ]).join(', ');
-    if (!text) return;
-    return <p>{text}</p>;
-  }
-
   private serviceQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: ServicesCardProps, context: any) {
@@ -147,20 +134,30 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
         loading={serviceCountLoading}
         error={serviceCountError}
       >
-        {ServicesCard.renderPluralIfNeededPair(
-          overlordCount,
-          'overlord',
-          coordinatorCount,
-          'coordinator',
-        )}
-        {ServicesCard.renderPluralIfNeededPair(routerCount, 'router', brokerCount, 'broker')}
-        {ServicesCard.renderPluralIfNeededPair(
-          historicalCount,
-          'historical',
-          middleManagerCount,
-          'middle manager',
-        )}
-        {ServicesCard.renderPluralIfNeededPair(peonCount, 'peon', indexerCount, 'indexer')}
+        <PluralPairIfNeeded
+          firstCount={overlordCount}
+          firstSingular="overlord"
+          secondCount={coordinatorCount}
+          secondSingular="coordinator"
+        />
+        <PluralPairIfNeeded
+          firstCount={routerCount}
+          firstSingular="router"
+          secondCount={brokerCount}
+          secondSingular="broker"
+        />
+        <PluralPairIfNeeded
+          firstCount={historicalCount}
+          firstSingular="historical"
+          secondCount={middleManagerCount}
+          secondSingular="middle manager"
+        />
+        <PluralPairIfNeeded
+          firstCount={peonCount}
+          firstSingular="peon"
+          secondCount={indexerCount}
+          secondSingular="indexer"
+        />
       </HomeViewCard>
     );
   }
