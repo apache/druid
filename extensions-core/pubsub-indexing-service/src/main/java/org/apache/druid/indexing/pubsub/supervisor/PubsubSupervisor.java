@@ -126,6 +126,7 @@ public class PubsubSupervisor implements Supervisor
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
+  private volatile Integer taskCount = 1;
   private volatile List<String> taskIds = new ArrayList<>();
 
   public PubsubSupervisor(
@@ -152,6 +153,7 @@ public class PubsubSupervisor implements Supervisor
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
+    this.taskCount = ioConfig.getTaskCount();
     this.stateManager = new PubsubSupervisorStateManager(
         spec.getSupervisorStateManagerConfig(),
         spec.isSuspended()
@@ -242,7 +244,6 @@ public class PubsubSupervisor implements Supervisor
   public void start()
   {
     PubsubIndexTaskIOConfig newIoConfig = createTaskIoConfig(ioConfig);
-    Integer taskCount = 1; // TODO: config
     String subscriptionName = newIoConfig.getSubscription();
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
