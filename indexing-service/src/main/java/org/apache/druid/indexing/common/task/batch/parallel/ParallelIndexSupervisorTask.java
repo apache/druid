@@ -742,7 +742,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
   }
 
-  private static <M extends PartialSegmentMergeIOConfig, L extends PartitionLocation> List<M> createMergeIOConfigs(
+  @VisibleForTesting
+  static <M extends PartialSegmentMergeIOConfig, L extends PartitionLocation> List<M> createMergeIOConfigs(
       int totalNumMergeTasks,
       Map<Pair<Interval, Integer>, List<L>> partitionToLocations,
       Function<List<L>, M> createPartialSegmentMergeIOConfig
@@ -760,27 +761,37 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // See PartitionStat in GeneratedPartitionsReport.
     final List<Pair<Interval, Integer>> partitions = new ArrayList<>(partitionToLocations.keySet());
     Collections.shuffle(partitions, ThreadLocalRandom.current());
-    final int numPartitionsPerTask = (int) Math.round(partitions.size() / (double) numMergeTasks);
 
     final List<M> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
-    for (int i = 0; i < numMergeTasks - 1; i++) {
+    for (int i = 0; i < numMergeTasks; i++) {
+      Pair<Integer, Integer> partitionBoundaries = getPartitionBoundaries(i, partitions.size(), numMergeTasks);
       final List<L> assignedToSameTask = partitions
-          .subList(i * numPartitionsPerTask, (i + 1) * numPartitionsPerTask)
+          .subList(partitionBoundaries.lhs, partitionBoundaries.rhs)
           .stream()
           .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
           .collect(Collectors.toList());
       assignedPartitionLocations.add(createPartialSegmentMergeIOConfig.apply(assignedToSameTask));
     }
 
-    // The last task is assigned all remaining partitions.
-    final List<L> assignedToSameTask = partitions
-        .subList((numMergeTasks - 1) * numPartitionsPerTask, partitions.size())
-        .stream()
-        .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
-        .collect(Collectors.toList());
-    assignedPartitionLocations.add(createPartialSegmentMergeIOConfig.apply(assignedToSameTask));
-
     return assignedPartitionLocations;
+  }
+
+  /**
+   * Partition items into as evenly-sized splits as possible.
+   *
+   * @param index  index of partition
+   * @param total  number of items to partitions
+   * @param splits number of desired partitions
+   *
+   * @return partition range: [lhs, rhs)
+   */
+  private static Pair<Integer, Integer> getPartitionBoundaries(int index, int total, int splits)
+  {
+    int chunk = total / splits;
+    int remainder = total % splits;
+    int start = index * chunk + (index < remainder ? index : remainder);
+    int stop = start + chunk + (index < remainder ? 1 : 0);
+    return Pair.of(start, stop);
   }
 
   private static void publishSegments(TaskToolbox toolbox, Map<String, PushedSegmentsReport> reportsMap)
