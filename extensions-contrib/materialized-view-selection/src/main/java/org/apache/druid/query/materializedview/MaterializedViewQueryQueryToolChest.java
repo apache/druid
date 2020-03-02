@@ -20,6 +20,7 @@
 package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -31,6 +32,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.topn.TopNQuery;
 
 import java.util.Comparator;
 import java.util.function.BinaryOperator;
@@ -117,6 +120,32 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
         return realQueryRunner.run(queryPlus.withQuery(realQuery), responseContext);
       }
     };
+  }
+
+  @Override
+  public QueryRunner postMergeQueryDecoration(final QueryRunner runner)
+  {
+    return new QueryRunner() {
+      @Override
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
+      {
+        Query realQuery = getRealQuery(queryPlus.getQuery());
+        if (realQuery instanceof TopNQuery) {
+          return warehouse.getToolChest(realQuery).postMergeQueryDecoration(runner).run(QueryPlus.wrap(realQuery), responseContext);
+        }
+        return runner.run(queryPlus, responseContext);
+      }
+    };
+  }
+
+  @Override
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final Query query)
+  {
+    Query realQuery = getRealQuery(query);
+    if (realQuery instanceof GroupByQuery) {
+      return warehouse.getToolChest(getRealQuery(query)).decorateObjectMapper(objectMapper, getRealQuery(query));
+    }
+    return objectMapper;
   }
   
   public Query getRealQuery(Query query)
