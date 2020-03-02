@@ -2687,10 +2687,6 @@ export function upgradeSpec(spec: any): any {
         deepSet(spec, 'ioConfig.firehose.type', 's3');
         break;
 
-      case 'static-azure':
-        deepSet(spec, 'ioConfig.firehose.type', 'azure');
-        break;
-
       case 'static-google-blobstore':
         deepSet(spec, 'ioConfig.firehose.type', 'google');
         deepMove(spec, 'ioConfig.firehose.blobs', 'ioConfig.firehose.objects');
@@ -2727,10 +2723,6 @@ export function downgradeSpec(spec: any): any {
     switch (deepGet(spec, 'ioConfig.firehose.type')) {
       case 's3':
         deepSet(spec, 'ioConfig.firehose.type', 'static-s3');
-        break;
-
-      case 'azure':
-        deepSet(spec, 'ioConfig.firehose.type', 'static-azure');
         break;
 
       case 'google':
