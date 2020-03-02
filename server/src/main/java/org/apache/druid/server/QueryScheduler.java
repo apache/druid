@@ -23,6 +23,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -35,10 +36,13 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryWatcher;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -55,6 +59,9 @@ public class QueryScheduler implements QueryWatcher
 
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
   private final SetMultimap<String, String> queryDatasources;
+
+  private final AtomicLong totalAcquired = new AtomicLong();
+  private final AtomicLong totalReleased = new AtomicLong();
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
@@ -101,17 +108,8 @@ public class QueryScheduler implements QueryWatcher
    */
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
-    final String lane = QueryContexts.getLane(query);
-    final Optional<BulkheadConfig> totalConfig = laneRegistry.getConfiguration(TOTAL);
-    final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
-
-    totalConfig.ifPresent(this::acquireTotal);
-    laneConfig.ifPresent(config -> acquireLane(lane, config, totalConfig));
-
-    return resultSequence.withBaggage(() -> {
-      totalConfig.ifPresent(config -> laneRegistry.bulkhead(TOTAL, config).releasePermission());
-      laneConfig.ifPresent(config -> laneRegistry.bulkhead(lane, config).releasePermission());
-    });
+    List<Bulkhead> bulkheads = acquireLanes(query);
+    return resultSequence.withBaggage(() -> releaseLanes(bulkheads));
   }
 
   /**
@@ -148,19 +146,62 @@ public class QueryScheduler implements QueryWatcher
                        .orElse(-1);
   }
 
-  private void acquireTotal(BulkheadConfig config)
+  public long getTotalAcquired()
   {
-    if (!laneRegistry.bulkhead(TOTAL, config).tryAcquirePermission()) {
-      throw new QueryCapacityExceededException();
-    }
+    return totalAcquired.get();
   }
 
-  private void acquireLane(String lane, BulkheadConfig config, Optional<BulkheadConfig> totalToReleaseIfFailed)
+  public long getTotalReleased()
   {
-    if (!laneRegistry.bulkhead(lane, config).tryAcquirePermission()) {
-      totalToReleaseIfFailed.ifPresent(c -> laneRegistry.bulkhead(TOTAL, c).releasePermission());
+    return totalReleased.get();
+  }
+
+  private List<Bulkhead> acquireLanes(
+      Query<?> query
+  )
+  {
+    final String lane = QueryContexts.getLane(query);
+    final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
+    List<Bulkhead> hallPasses = new ArrayList<>(2);
+    // everyone needs to take one from the total lane
+    final Optional<BulkheadConfig> totalConfig = laneRegistry.getConfiguration(TOTAL);
+    totalConfig.ifPresent(config -> hallPasses.add(acquireTotal(config)));
+    // catch the 2nd so we can release the first
+    try {
+      // if we have a lane, also get it
+      laneConfig.ifPresent(config -> hallPasses.add(acquireLane(lane, config)));
+    }
+    catch (QueryCapacityExceededException ex) {
+      // release total if couldn't get lane
+      releaseLanes(hallPasses);
+      throw ex;
+    }
+    return hallPasses;
+  }
+
+  private Bulkhead acquireTotal(BulkheadConfig config)
+  {
+    Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
+    if (!totalLimiter.tryAcquirePermission()) {
+      throw new QueryCapacityExceededException();
+    }
+    totalAcquired.incrementAndGet();
+    return totalLimiter;
+  }
+
+  private Bulkhead acquireLane(String lane, BulkheadConfig config)
+  {
+    Bulkhead laneLimiter = laneRegistry.bulkhead(lane, config);
+    if (!laneLimiter.tryAcquirePermission()) {
       throw new QueryCapacityExceededException(lane);
     }
+    return laneLimiter;
+  }
+
+  private void releaseLanes(List<Bulkhead> bulkheads)
+  {
+    bulkheads.forEach(Bulkhead::releasePermission);
+    totalReleased.incrementAndGet();
   }
 
   private Map<String, BulkheadConfig> getLaneConfigs(int totalNumThreads)

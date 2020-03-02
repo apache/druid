@@ -24,10 +24,9 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.SegmentDescriptor;
 
 /**
- * Given a {@link SegmentDescriptor}, get a {@link ServerSelector} to use to pick a {@link DruidServer} to query the
- * segment.
+ * Given a {@link SegmentDescriptor}, get a {@link ServerSelector} to use to pick a {@link DruidServer} to query.
  *
- * Used by {@link CachingClusteredClient} on the broker to fan out queries to historical and realtime servers
+ * Used by {@link CachingClusteredClient} on the broker to fan out queries to historical and realtime data
  */
 public class SegmentServerSelector extends Pair<ServerSelector, SegmentDescriptor>
 {

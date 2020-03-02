@@ -2476,7 +2476,7 @@ public class CachingClusteredClientTest
           }
         },
         ForkJoinPool.commonPool(),
-        new QueryScheduler(Integer.MAX_VALUE, NoQueryLaningStrategy.INSTANCE)
+        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE)
     );
   }
 

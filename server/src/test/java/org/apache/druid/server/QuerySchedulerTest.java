@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -39,30 +40,53 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class QuerySchedulerTest
 {
+  private static final int NUM_CONCURRENT_QUERIES = 10000;
+  private static final int NUM_ROWS = 10000;
+
   @Rule
   public ExpectedException expected = ExpectedException.none();
+
+  private ListeningExecutorService executorService;
+  private QueryScheduler scheduler;
+
+  @Before
+  public void setup()
+  {
+    executorService = MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(8, "test_query_scheduler_%s")
+    );
+    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
+  }
+
+  @After
+  public void teardown()
+  {
+    executorService.shutdownNow();
+  }
 
   @Test
   public void testHiLoHi() throws ExecutionException, InterruptedException
   {
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
-
     TopNQuery interactive = makeInteractiveQuery();
-    ListenableFuture<?> future = MoreExecutors.listeningDecorator(
-        Execs.singleThreaded("test_query_scheduler_%s")
-    ).submit(() -> {
+    ListenableFuture<?> future = executorService.submit(() -> {
       try {
         Query<?> scheduled = scheduler.laneQuery(QueryPlus.wrap(interactive), ImmutableSet.of());
 
@@ -87,7 +111,6 @@ public class QuerySchedulerTest
         throw new RuntimeException(ex);
       }
     });
-    scheduler.registerQueryFuture(interactive, future);
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
@@ -95,11 +118,8 @@ public class QuerySchedulerTest
   @Test
   public void testHiLoLo() throws ExecutionException, InterruptedException
   {
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
     TopNQuery report = makeReportQuery();
-    ListenableFuture<?> future = MoreExecutors.listeningDecorator(
-        Execs.singleThreaded("test_query_scheduler_%s")
-    ).submit(() -> {
+    ListenableFuture<?> future = executorService.submit(() -> {
       try {
         Query<?> scheduledReport = scheduler.laneQuery(QueryPlus.wrap(report), ImmutableSet.of());
         Assert.assertNotNull(scheduledReport);
@@ -124,25 +144,18 @@ public class QuerySchedulerTest
         throw new RuntimeException(ex);
       }
     });
-    scheduler.registerQueryFuture(report, future);
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
   }
-
 
   @Test
   public void testHiLoReleaseSemaphoreWhenSequenceExplodes() throws Exception
   {
     expected.expectMessage("exploded");
     expected.expect(ExecutionException.class);
-
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
-
     TopNQuery interactive = makeInteractiveQuery();
-    ListenableFuture<?> future = MoreExecutors.listeningDecorator(
-        Execs.singleThreaded("test_query_scheduler_%s")
-    ).submit(() -> {
+    ListenableFuture<?> future = executorService.submit(() -> {
       try {
         Query<?> scheduled = scheduler.laneQuery(QueryPlus.wrap(interactive), ImmutableSet.of());
 
@@ -165,7 +178,6 @@ public class QuerySchedulerTest
         throw new RuntimeException(ex);
       }
     });
-    scheduler.registerQueryFuture(interactive, future);
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
@@ -177,8 +189,6 @@ public class QuerySchedulerTest
         StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, HiLoQueryLaningStrategy.LOW)
     );
     expected.expect(QueryCapacityExceededException.class);
-
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
 
     Query<?> report1 = scheduler.laneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of());
     scheduler.run(report1, Sequences.empty());
@@ -202,7 +212,6 @@ public class QuerySchedulerTest
     expected.expectMessage(QueryCapacityExceededException.ERROR_MESSAGE);
     expected.expect(QueryCapacityExceededException.class);
 
-    QueryScheduler scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
     Query<?> interactive1 = scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());
     scheduler.run(interactive1, Sequences.empty());
     Assert.assertNotNull(interactive1);
@@ -234,6 +243,50 @@ public class QuerySchedulerTest
     scheduler.run(scheduler.laneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty());
   }
 
+  @Test
+  public void testConcurrency() throws Exception
+  {
+    List<Future<?>> futures = new ArrayList<>(NUM_CONCURRENT_QUERIES);
+    for (int i = 0; i < NUM_CONCURRENT_QUERIES; i++) {
+      futures.add(makeQueryFuture(executorService, scheduler, makeRandomQuery(), NUM_ROWS));
+      maybeDelayNextIteration(i);
+    }
+    getFuturesAndAssertAftermathIsChill(futures, scheduler, false);
+  }
+
+  @Test
+  public void testConcurrencyLo() throws Exception
+  {
+    List<Future<?>> futures = new ArrayList<>(NUM_CONCURRENT_QUERIES);
+    for (int i = 0; i < NUM_CONCURRENT_QUERIES; i++) {
+      futures.add(makeQueryFuture(executorService, scheduler, makeReportQuery(), NUM_ROWS));
+      maybeDelayNextIteration(i);
+    }
+    getFuturesAndAssertAftermathIsChill(futures, scheduler, false);
+  }
+
+  @Test
+  public void testConcurrencyHi() throws Exception
+  {
+    List<Future<?>> futures = new ArrayList<>(NUM_CONCURRENT_QUERIES);
+    for (int i = 0; i < NUM_CONCURRENT_QUERIES; i++) {
+      futures.add(makeQueryFuture(executorService, scheduler, makeInteractiveQuery(), NUM_ROWS));
+      maybeDelayNextIteration(i);
+    }
+    getFuturesAndAssertAftermathIsChill(futures, scheduler, true);
+  }
+
+  private void maybeDelayNextIteration(int i) throws InterruptedException
+  {
+    if (i > 0 && i % 10 == 0) {
+      Thread.sleep(2);
+    }
+  }
+
+  private TopNQuery makeRandomQuery()
+  {
+    return ThreadLocalRandom.current().nextBoolean() ? makeInteractiveQuery() : makeReportQuery();
+  }
 
   private TopNQuery makeInteractiveQuery()
   {
@@ -349,5 +402,68 @@ public class QuerySchedulerTest
           }
         }
     );
+  }
+
+  private ListenableFuture<?> makeQueryFuture(
+      ListeningExecutorService executorService,
+      QueryScheduler scheduler,
+      Query<?> query,
+      int numRows
+  )
+  {
+    return executorService.submit(() -> {
+      try {
+        Query<?> scheduled = scheduler.laneQuery(QueryPlus.wrap(query), ImmutableSet.of());
+
+        Assert.assertNotNull(scheduled);
+
+        Sequence<Integer> underlyingSequence = makeSequence(numRows);
+        Sequence<Integer> results = scheduler.run(scheduled, underlyingSequence);
+
+        final int actualNumRows = consumeAndCloseSequence(results);
+        Assert.assertEquals(actualNumRows, numRows);
+      }
+      catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+    });
+  }
+
+
+  private void getFuturesAndAssertAftermathIsChill(
+      List<Future<?>> futures,
+      QueryScheduler scheduler,
+      boolean successEqualsTotal
+  )
+  {
+    int success = 0;
+    int denied = 0;
+    int other = 0;
+    for (Future<?> f : futures) {
+      try {
+        f.get();
+        success++;
+      }
+      catch (ExecutionException ex) {
+        if (ex.getCause() instanceof QueryCapacityExceededException) {
+          denied++;
+        } else {
+          other++;
+        }
+      }
+      catch (Exception ex) {
+        other++;
+      }
+    }
+    Assert.assertEquals(0, other);
+    if (successEqualsTotal) {
+      Assert.assertEquals(success, scheduler.getTotalAcquired());
+    } else {
+      Assert.assertTrue(success > 0 && success <= scheduler.getTotalAcquired());
+    }
+    Assert.assertTrue(denied > 0);
+    Assert.assertEquals(scheduler.getTotalAcquired(), scheduler.getTotalReleased());
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
 }

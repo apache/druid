@@ -333,8 +333,7 @@ public class CachingClusteredClientFunctionalityTest
           }
         },
         ForkJoinPool.commonPool(),
-        // need at least 9 total since runner doesn't actually run queries and release semaphores
-        new QueryScheduler(Integer.MAX_VALUE, NoQueryLaningStrategy.INSTANCE)
+        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE)
     );
   }
 

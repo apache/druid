@@ -341,7 +341,7 @@ public class CachingClusteredClientBenchmark
         new DruidHttpClientConfig(),
         processingConfig,
         forkJoinPool,
-        new QueryScheduler(Integer.MAX_VALUE, NoQueryLaningStrategy.INSTANCE)
+        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE)
     );
   }
 
