@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.metadata.input.SqlInputSource;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
@@ -58,7 +59,8 @@ public class FirehoseModule implements DruidModule
                 new NamedType(CombiningFirehoseFactory.class, "combining"),
                 new NamedType(FixedCountFirehoseFactory.class, "fixedCount"),
                 new NamedType(SqlFirehoseFactory.class, "sql"),
-                new NamedType(InlineFirehoseFactory.class, "inline")
+                new NamedType(InlineFirehoseFactory.class, "inline"),
+                new NamedType(SqlInputSource.class, "sql")
             )
     );
   }

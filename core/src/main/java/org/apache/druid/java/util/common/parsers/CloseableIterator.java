@@ -66,10 +66,10 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
 
     return new CloseableIterator<R>()
     {
-      CloseableIterator<R> iterator = findNextIeteratorIfNecessary();
+      CloseableIterator<R> iterator = findNextIteratorIfNecessary();
 
       @Nullable
-      private CloseableIterator<R> findNextIeteratorIfNecessary()
+      private CloseableIterator<R> findNextIteratorIfNecessary()
       {
         while ((iterator == null || !iterator.hasNext()) && delegate.hasNext()) {
           if (iterator != null) {
@@ -104,7 +104,7 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
           return iterator.next();
         }
         finally {
-          findNextIeteratorIfNecessary();
+          findNextIteratorIfNecessary();
         }
       }
 

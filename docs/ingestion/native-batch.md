@@ -63,6 +63,7 @@ The supported splittable input formats for now are:
 - [`http`](#http-input-source) reads data from HTTP servers.
 - [`local`](#local-input-source) reads data from local storage.
 - [`druid`](#druid-input-source) reads data from a Druid datasource.
+- [`sql`](#sql-input-source) reads data from a RDBMS source.
 
 Some other cloud storage types are supported with the legacy [`firehose`](#firehoses-deprecated).
 The below `firehose` types are also splittable. Note that only text formats are supported
@@ -1304,6 +1305,43 @@ A spec that applies a filter and reads a subset of the original datasource's col
 This spec above will only return the `page`, `user` dimensions and `added` metric.
 Only rows where `page` = `Druid` will be returned.
 
+### Sql Input Source
+
+The SQL input source is used to read data directly from RDBMS.
+The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
+Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "sql".|Yes|
+|database|Specifies the database connection details.|Yes|
+|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
+|sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
+
+An example SqlInputSource spec is shown below:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "sql",
+        "database": {
+            "type": "mysql",
+            "connectorConfig": {
+                "connectURI": "jdbc:mysql://host:port/schema",
+                "user": "user",
+                "password": "password"
+            }
+        },
+        "sqls": ["SELECT * FROM table1", "SELECT * FROM table2"]
+    },
+...
+```
+
+The spec above will read all events from two separate sqls
+within the interval `2013-01-01/2013-01-02`.
+
 ## Firehoses (Deprecated)
 
 Firehoses are deprecated in 0.17.0. It's highly recommended to use the [Input source](#input-sources) instead.
@@ -1538,6 +1576,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
 For each query, the results are fetched locally and indexed.
 If there are multiple queries from which data needs to be indexed, queries are prefetched in the background, up to `maxFetchCapacityBytes` bytes.
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
 This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification. See the extension documentation for more detailed ingestion examples.
 
 Requires one of the following extensions:
