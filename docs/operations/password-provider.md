@@ -43,6 +43,20 @@ The values are described below.
 |`type`|String|password provider type|Yes: `environment`|
 |`variable`|String|environment variable to read password from|Yes|
 
+AWS RDS token password provider provides temp token for accesing AWS RDS DB instances.
+
+```json
+{ "type": "awsrdstoken", "region": "AWS_REGION" }
+```
+
+Before using this password provider, please make sure that you have connected all dots for db user to connect using token.
+See https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html
+
+Following additional metadata storage configuration must be provided to use `awsrdstokene` password provider.
+`druid.metadata.storage.connector.user`
+`druid.metadata.storage.connector.host`
+`druid.metadata.storage.connector.port`
+
 However, many times users may want their own way to optionally securely fetch password during runtime of the Druid process.
 Druid allows this by users to implement their own `PasswordProvider` interface and create a Druid extension to register this implementation at Druid process startup.
 Please have a look at "Adding a new Password Provider implementation" on this [page](../development/modules.md) to learn more.

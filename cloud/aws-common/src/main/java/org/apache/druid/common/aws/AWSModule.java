@@ -23,6 +23,8 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -41,6 +43,8 @@ public class AWSModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.s3", AWSClientConfig.class);
     JsonConfigProvider.bind(binder, "druid.s3.proxy", AWSProxyConfig.class);
     JsonConfigProvider.bind(binder, "druid.s3.endpoint", AWSEndpointConfig.class);
+
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", AWSMetadataStorageConnectorConfig.class);
   }
 
   @Provides
@@ -60,6 +64,10 @@ public class AWSModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.emptyList();
+    return Collections.singletonList(
+        new SimpleModule("AWSModule").registerSubtypes(
+            new NamedType(AWSRDSTokenPasswordProvider.class, "awsrdstoken")
+        )
+    );
   }
 }
