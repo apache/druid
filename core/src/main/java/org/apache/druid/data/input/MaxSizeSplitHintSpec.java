@@ -22,7 +22,7 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -64,10 +64,10 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   @Override
   public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor)
   {
-    final Iterator<T> nonEmptyFileOnlyIterator = FluentIterable
-        .from(() -> inputIterator)
-        .filter(input -> inputAttributeExtractor.apply(input).getSize() > 0)
-        .iterator();
+    final Iterator<T> nonEmptyFileOnlyIterator = Iterators.filter(
+        inputIterator,
+        input -> inputAttributeExtractor.apply(input).getSize() > 0
+    );
     return new Iterator<List<T>>()
     {
       private T peeking;
