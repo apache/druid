@@ -35,8 +35,8 @@ import java.net.URI;
 
 /**
  * InputEntity abstracts an input entity and knows how to read bytes from the given entity.
- * Implementation assume that the given input entity is not empty, the InputSources creating InputEntitires should
- * filter out empty entities properly.
+ * Since the implementations of this interface assume that the given entity is not empty, the InputSources
+ * should not create InputEntities for empty entities.
  */
 @UnstableApi
 public interface InputEntity

@@ -44,7 +44,8 @@ public class ObjectSummaryIteratorTest
           makeObjectSummary("b", "foo/bar4", 10L),
           makeObjectSummary("b", "foo/bar5", 0L), // empty object
           makeObjectSummary("b", "foo/baz", 10L),
-          makeObjectSummary("bucketnotmine", "a/different/bucket", 10L)
+          makeObjectSummary("bucketnotmine", "a/different/bucket", 10L),
+          makeObjectSummary("b", "foo/bar/", 0L) // another directory at the end of list
       );
 
   @Test

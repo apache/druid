@@ -49,7 +49,8 @@ public class ObjectStorageIteratorTest
           makeStorageObject("b", "foo/bar4", 10L),
           makeStorageObject("b", "foo/bar5", 0L), // empty object
           makeStorageObject("b", "foo/baz", 10L),
-          makeStorageObject("bucketnotmine", "a/different/bucket", 10L)
+          makeStorageObject("bucketnotmine", "a/different/bucket", 10L),
+          makeStorageObject("b", "foo/bar/", 0L) // another directory at the end of list
       );
 
   @Test
