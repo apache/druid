@@ -72,7 +72,8 @@ public class WorkerBehaviorConfigTest
             null,
             null,
             DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
-        )
+        ),
+        null
     );
 
     final ObjectMapper mapper = new DefaultObjectMapper();
