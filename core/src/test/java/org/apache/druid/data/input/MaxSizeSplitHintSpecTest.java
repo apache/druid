@@ -20,8 +20,8 @@
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.commons.compress.utils.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 
