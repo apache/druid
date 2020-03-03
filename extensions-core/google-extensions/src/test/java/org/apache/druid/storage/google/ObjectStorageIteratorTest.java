@@ -147,6 +147,16 @@ public class ObjectStorageIteratorTest
     );
   }
 
+  @Test
+  public void testWithMultiplePrefixesReturningAllNonEmptyObjectsStartingWithOneOfPrefixes()
+  {
+    test(
+        ImmutableList.of("gs://b/foo/bar1", "gs://b/foo/bar2", "gs://b/foo/bar3", "gs://b/foo/bar4", "gs://b/foo/baz"),
+        ImmutableList.of("gs://b/foo/bar", "gs://b/foo/baz"),
+        10
+    );
+  }
+
   private static void test(
       final List<String> expectedUris,
       final List<String> prefixes,

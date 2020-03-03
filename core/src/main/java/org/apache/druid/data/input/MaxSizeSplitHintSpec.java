@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -42,7 +41,6 @@ import java.util.function.Function;
 public class MaxSizeSplitHintSpec implements SplitHintSpec
 {
   public static final String TYPE = "maxSize";
-  private static final Logger LOG = new Logger(MaxSizeSplitHintSpec.class);
 
   @VisibleForTesting
   static final long DEFAULT_MAX_SPLIT_SIZE = 512 * 1024 * 1024;

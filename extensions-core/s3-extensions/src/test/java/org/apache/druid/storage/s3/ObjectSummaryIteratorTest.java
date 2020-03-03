@@ -142,6 +142,16 @@ public class ObjectSummaryIteratorTest
     );
   }
 
+  @Test
+  public void testWithMultiplePrefixesReturningAllNonEmptyObjectsStartingWithOneOfPrefixes()
+  {
+    test(
+        ImmutableList.of("s3://b/foo/bar1", "s3://b/foo/bar2", "s3://b/foo/bar3", "s3://b/foo/bar4", "s3://b/foo/baz"),
+        ImmutableList.of("s3://b/foo/bar", "s3://b/foo/baz"),
+        10
+    );
+  }
+
   private static void test(
       final List<String> expectedUris,
       final List<String> prefixes,
