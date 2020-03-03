@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.autoscaling;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.CategorizedWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -35,7 +34,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -81,7 +79,7 @@ public class ProvisioningUtil
   }
 
   @Nullable
-  public static CategorizedWorkerBehaviorConfig getCategorizedWorkerBehaviorConfig(
+  public static DefaultWorkerBehaviorConfig getDefaultWorkerBehaviorConfig(
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       String action
   )
@@ -91,35 +89,24 @@ public class ProvisioningUtil
       log.error("No workerConfig available, cannot %s workers.", action);
       return null;
     }
-
-    CategorizedWorkerBehaviorConfig workerConfig;
-    if (workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig) {
-      AutoScaler autoscaler = ((DefaultWorkerBehaviorConfig) workerBehaviorConfig).getAutoScaler();
-      WorkerSelectStrategy workerSelectStrategy = workerBehaviorConfig.getSelectStrategy();
-      List<AutoScaler> autoscalers = autoscaler == null
-                                     ? Collections.emptyList()
-                                     : Collections.singletonList(autoscaler);
-      workerConfig = new CategorizedWorkerBehaviorConfig(workerSelectStrategy, autoscalers);
-    } else if (workerBehaviorConfig instanceof CategorizedWorkerBehaviorConfig) {
-      workerConfig = (CategorizedWorkerBehaviorConfig) workerBehaviorConfig;
-    } else {
+    if (!(workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig)) {
       log.error(
-          "Only DefaultWorkerBehaviorConfig or CategorizedWorkerBehaviorConfig are supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
-          workerBehaviorConfig,
-          action
+              "Only DefaultWorkerBehaviorConfig is supported as WorkerBehaviorConfig, [%s] given, cannot %s workers",
+              workerBehaviorConfig,
+              action
       );
       return null;
     }
-    if (workerConfig.getAutoScalers() == null || workerConfig.getAutoScalers().isEmpty()) {
+    final DefaultWorkerBehaviorConfig workerConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
+    if (workerConfig.getAutoScalers() == null) {
       log.error("No autoScaler available, cannot %s workers", action);
       return null;
     }
-
     return workerConfig;
   }
 
   @Nullable
-  public static WorkerCategorySpec getWorkerCategorySpec(CategorizedWorkerBehaviorConfig workerConfig)
+  public static WorkerCategorySpec getWorkerCategorySpec(DefaultWorkerBehaviorConfig workerConfig)
   {
     if (workerConfig != null && workerConfig.getSelectStrategy() != null) {
       WorkerSelectStrategy selectStrategy = workerConfig.getSelectStrategy();

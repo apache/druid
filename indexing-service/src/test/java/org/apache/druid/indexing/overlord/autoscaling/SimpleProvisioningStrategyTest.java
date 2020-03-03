@@ -87,7 +87,8 @@ public class SimpleProvisioningStrategyTest
     workerConfig = new AtomicReference<>(
         new DefaultWorkerBehaviorConfig(
             null,
-            autoScaler
+            autoScaler,
+            null
         )
     );
 

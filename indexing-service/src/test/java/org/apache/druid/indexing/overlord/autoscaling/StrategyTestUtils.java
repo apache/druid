@@ -26,7 +26,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ZkWorker;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.FillCapacityWithCategorySpecWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
@@ -139,8 +139,9 @@ public class StrategyTestUtils
   )
   {
     return new AtomicReference<>(
-        new CategorizedWorkerBehaviorConfig(
+        new DefaultWorkerBehaviorConfig(
             new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec),
+            null,
             autoScalers
         )
     );

@@ -32,7 +32,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
@@ -126,7 +125,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final CategorizedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategorizedWorkerBehaviorConfig(
+      final DefaultWorkerBehaviorConfig workerConfig = ProvisioningUtil.getDefaultWorkerBehaviorConfig(
           workerConfigRef,
           "provision"
       );
@@ -201,7 +200,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         String category,
         Collection<ImmutableWorkerInfo> workers,
         Collection<Task> pendingTasks,
-        CategorizedWorkerBehaviorConfig workerConfig,
+        DefaultWorkerBehaviorConfig workerConfig,
         Set<String> currentlyProvisioning,
         AutoScaler autoScaler
     )
@@ -278,7 +277,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
     private int getScaleUpNodeCount(
         final WorkerTaskRunnerConfig remoteTaskRunnerConfig,
-        final CategorizedWorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers,
         AutoScaler autoScaler
@@ -323,7 +322,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
     private int getWorkersNeededToAssignTasks(
         final WorkerTaskRunnerConfig workerTaskRunnerConfig,
-        final CategorizedWorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
         final Collection<ImmutableWorkerInfo> workers
     )
@@ -378,7 +377,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     {
       Collection<ImmutableWorkerInfo> zkWorkers = runner.getWorkers();
       log.debug("Workers: %d [%s]", zkWorkers.size(), zkWorkers);
-      final CategorizedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategorizedWorkerBehaviorConfig(
+      final DefaultWorkerBehaviorConfig workerConfig = ProvisioningUtil.getDefaultWorkerBehaviorConfig(
           workerConfigRef,
           "terminate"
       );
@@ -522,7 +521,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       return didTerminate;
     }
 
-    private boolean initAutoscalers(CategorizedWorkerBehaviorConfig workerConfig)
+    private boolean initAutoscalers(DefaultWorkerBehaviorConfig workerConfig)
     {
       boolean didProvision = false;
       for (AutoScaler autoScaler : workerConfig.getAutoScalers()) {
@@ -535,7 +534,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     private boolean initAutoscaler(
         AutoScaler autoScaler,
         String category,
-        CategorizedWorkerBehaviorConfig workerConfig,
+        DefaultWorkerBehaviorConfig workerConfig,
         Map<String, Set<String>> currentlyProvisioningMap
     )
     {

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -33,7 +32,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
@@ -147,7 +145,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       log.debug("Workers: %d %s", workers.size(), workers);
       boolean didProvision = false;
-      final CategorizedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategorizedWorkerBehaviorConfig(
+      final DefaultWorkerBehaviorConfig workerConfig = ProvisioningUtil.getDefaultWorkerBehaviorConfig(
           workerConfigRef,
           "provision"
       );
@@ -289,7 +287,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     {
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final CategorizedWorkerBehaviorConfig workerConfig = ProvisioningUtil.getCategorizedWorkerBehaviorConfig(
+      final DefaultWorkerBehaviorConfig workerConfig = ProvisioningUtil.getDefaultWorkerBehaviorConfig(
           workerConfigRef,
           "terminate"
       );
@@ -387,17 +385,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         if (excessWorkers > 0) {
           final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
           final Collection<String> laziestWorkerIps =
-              Collections2.transform(
-                  runner.markWorkersLazy(isLazyWorker, excessWorkers),
-                  new Function<Worker, String>()
-                  {
-                    @Override
-                    public String apply(Worker worker)
-                    {
-                      return worker.getIp();
-                    }
-                  }
-              );
+              Collections2.transform(runner.markWorkersLazy(isLazyWorker, excessWorkers), Worker::getIp);
           if (laziestWorkerIps.isEmpty()) {
             log.info("Wanted to terminate %,d workers, but couldn't find any lazy ones!", excessWorkers);
           } else {
@@ -540,7 +528,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       return scalingStats;
     }
 
-    private boolean initAutoscalers(CategorizedWorkerBehaviorConfig workerConfig)
+    private boolean initAutoscalers(DefaultWorkerBehaviorConfig workerConfig)
     {
       boolean didProvision = false;
       for (AutoScaler autoScaler : workerConfig.getAutoScalers()) {

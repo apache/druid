@@ -25,7 +25,13 @@ import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.NoopAutoScaler;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+
 /**
+ * This configuration allows overlord to work with several autoscalers to run tasks of different categories.
  */
 public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
 {
@@ -35,20 +41,24 @@ public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
 
   public static DefaultWorkerBehaviorConfig defaultConfig()
   {
-    return new DefaultWorkerBehaviorConfig(DEFAULT_STRATEGY, DEFAULT_AUTOSCALER);
+    return new DefaultWorkerBehaviorConfig(DEFAULT_STRATEGY, DEFAULT_AUTOSCALER, null);
   }
 
   private final WorkerSelectStrategy selectStrategy;
-  private final AutoScaler autoScaler;
+  private final List<AutoScaler> autoScalers;
 
   @JsonCreator
   public DefaultWorkerBehaviorConfig(
       @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
-      @JsonProperty("autoScaler") AutoScaler autoScaler
+      @JsonProperty("autoScaler") AutoScaler autoScaler,
+      @JsonProperty("autoScalers") List<AutoScaler> autoScalers
   )
   {
     this.selectStrategy = selectStrategy;
-    this.autoScaler = autoScaler;
+    this.autoScalers = (autoScaler != null) ? Collections.singletonList(autoScaler) : autoScalers;
+    if (this.autoScalers == null) {
+      throw new IllegalArgumentException("Either autoScaler or autoScalers property needs to be provided");
+    }
   }
 
   @Override
@@ -59,9 +69,9 @@ public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
   }
 
   @JsonProperty
-  public AutoScaler<?> getAutoScaler()
+  public List<AutoScaler> getAutoScalers()
   {
-    return autoScaler;
+    return autoScalers;
   }
 
   @Override
@@ -73,25 +83,15 @@ public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     DefaultWorkerBehaviorConfig that = (DefaultWorkerBehaviorConfig) o;
-
-    if (autoScaler != null ? !autoScaler.equals(that.autoScaler) : that.autoScaler != null) {
-      return false;
-    }
-    if (selectStrategy != null ? !selectStrategy.equals(that.selectStrategy) : that.selectStrategy != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(selectStrategy, that.selectStrategy) &&
+           Objects.equals(autoScalers, that.autoScalers);
   }
 
   @Override
   public int hashCode()
   {
-    int result = selectStrategy != null ? selectStrategy.hashCode() : 0;
-    result = 31 * result + (autoScaler != null ? autoScaler.hashCode() : 0);
-    return result;
+    return Objects.hash(selectStrategy, autoScalers);
   }
 
   @Override
@@ -99,7 +99,7 @@ public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
   {
     return "WorkerConfiguration{" +
            "selectStrategy=" + selectStrategy +
-           ", autoScaler=" + autoScaler +
+           ", autoScalers=" + autoScalers +
            '}';
   }
 }
