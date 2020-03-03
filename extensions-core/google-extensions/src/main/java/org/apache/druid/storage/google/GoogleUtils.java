@@ -20,18 +20,15 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpResponseException;
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Predicate;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 public class GoogleUtils
 {
@@ -46,11 +43,20 @@ public class GoogleUtils
     return t instanceof IOException;
   }
 
-  private static <T> T retryGoogleCloudStorageOperation(RetryUtils.Task<T> f) throws Exception
+  static <T> T retryGoogleCloudStorageOperation(RetryUtils.Task<T> f) throws Exception
   {
     return RetryUtils.retry(f, GOOGLE_RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
+  public static URI objectToUri(StorageObject object)
+  {
+    return objectToCloudObjectLocation(object).toUri(GoogleCloudStorageInputSource.SCHEME);
+  }
+
+  public static CloudObjectLocation objectToCloudObjectLocation(StorageObject object)
+  {
+    return new CloudObjectLocation(object.getBucket(), object.getName());
+  }
 
   public static Iterator<StorageObject> lazyFetchingStorageObjectsIterator(
       final GoogleStorage storage,
@@ -58,91 +64,6 @@ public class GoogleUtils
       final long maxListingLength
   )
   {
-    return new Iterator<StorageObject>()
-    {
-      private Storage.Objects.List listRequest;
-      private Objects results;
-      private URI currentUri;
-      private String currentBucket;
-      private String currentPrefix;
-      private String nextPageToken;
-      private Iterator<StorageObject> storageObjectsIterator;
-
-      {
-        nextPageToken = null;
-        prepareNextRequest();
-        fetchNextBatch();
-      }
-
-      private void prepareNextRequest()
-      {
-        try {
-          currentUri = uris.next();
-          currentBucket = currentUri.getAuthority();
-          currentPrefix = StringUtils.maybeRemoveLeadingSlash(currentUri.getPath());
-          nextPageToken = null;
-          listRequest = storage.list(currentBucket)
-                               .setPrefix(currentPrefix)
-                               .setMaxResults(maxListingLength);
-
-        }
-        catch (IOException io) {
-          throw new RuntimeException(io);
-        }
-      }
-
-      private void fetchNextBatch()
-      {
-        try {
-          listRequest.setPageToken(nextPageToken);
-          results = GoogleUtils.retryGoogleCloudStorageOperation(() -> listRequest.execute());
-          storageObjectsIterator = results.getItems().iterator();
-          nextPageToken = results.getNextPageToken();
-        }
-        catch (Exception ex) {
-          throw new RuntimeException(ex);
-        }
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return storageObjectsIterator.hasNext() || nextPageToken != null || uris.hasNext();
-      }
-
-      @Override
-      public StorageObject next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-
-        while (storageObjectsIterator.hasNext()) {
-          final StorageObject next = storageObjectsIterator.next();
-          // list with prefix can return directories, but they should always end with `/`, ignore them
-          if (!next.getName().endsWith("/")) {
-            return next;
-          }
-        }
-
-        if (nextPageToken != null) {
-          fetchNextBatch();
-        } else if (uris.hasNext()) {
-          prepareNextRequest();
-          fetchNextBatch();
-        }
-
-        if (!storageObjectsIterator.hasNext()) {
-          throw new ISE(
-              "Failed to further iterate on bucket[%s] and prefix[%s]. The last page token was [%s]",
-              currentBucket,
-              currentPrefix,
-              nextPageToken
-          );
-        }
-
-        return next();
-      }
-    };
+    return new ObjectStorageIterator(storage, uris, maxListingLength);
   }
 }

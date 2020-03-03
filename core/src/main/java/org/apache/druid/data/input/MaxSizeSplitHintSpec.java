@@ -22,6 +22,8 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.FluentIterable;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -40,6 +42,7 @@ import java.util.function.Function;
 public class MaxSizeSplitHintSpec implements SplitHintSpec
 {
   public static final String TYPE = "maxSize";
+  private static final Logger LOG = new Logger(MaxSizeSplitHintSpec.class);
 
   @VisibleForTesting
   static final long DEFAULT_MAX_SPLIT_SIZE = 512 * 1024 * 1024;
@@ -61,6 +64,10 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   @Override
   public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor)
   {
+    final Iterator<T> nonEmptyFileOnlyIterator = FluentIterable
+        .from(() -> inputIterator)
+        .filter(input -> inputAttributeExtractor.apply(input).getSize() > 0)
+        .iterator();
     return new Iterator<List<T>>()
     {
       private T peeking;
@@ -68,7 +75,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
       @Override
       public boolean hasNext()
       {
-        return peeking != null || inputIterator.hasNext();
+        return peeking != null || nonEmptyFileOnlyIterator.hasNext();
       }
 
       @Override
@@ -79,9 +86,9 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
         }
         final List<T> current = new ArrayList<>();
         long splitSize = 0;
-        while (splitSize < maxSplitSize && (peeking != null || inputIterator.hasNext())) {
+        while (splitSize < maxSplitSize && (peeking != null || nonEmptyFileOnlyIterator.hasNext())) {
           if (peeking == null) {
-            peeking = inputIterator.next();
+            peeking = nonEmptyFileOnlyIterator.next();
           }
           final long size = inputAttributeExtractor.apply(peeking).getSize();
           if (current.isEmpty() || splitSize + size < maxSplitSize) {

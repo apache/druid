@@ -80,6 +80,29 @@ public class MaxSizeSplitHintSpecTest
   }
 
   @Test
+  public void testSplitSkippingEmptyInputs()
+  {
+    final int nonEmptyInputSize = 3;
+    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(10L);
+    final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
+    final IntStream dataStream = IntStream.concat(
+        IntStream.concat(
+            IntStream.generate(() -> 0).limit(10),
+            IntStream.generate(() -> nonEmptyInputSize).limit(10)
+        ),
+        IntStream.generate(() -> 0).limit(10)
+    );
+    final List<List<Integer>> splits = Lists.newArrayList(
+        splitHintSpec.split(dataStream.iterator(), inputAttributeExtractor)
+    );
+    Assert.assertEquals(4, splits.size());
+    Assert.assertEquals(3, splits.get(0).size());
+    Assert.assertEquals(3, splits.get(1).size());
+    Assert.assertEquals(3, splits.get(2).size());
+    Assert.assertEquals(1, splits.get(3).size());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(MaxSizeSplitHintSpec.class).withNonnullFields("maxSplitSize").usingGetClass().verify();

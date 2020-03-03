@@ -116,6 +116,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
 
     return new HdfsFileInputFormat().getSplits(job)
                                     .stream()
+                                    .filter(split -> ((FileSplit) split).getLength() > 0)
                                     .map(split -> ((FileSplit) split).getPath())
                                     .collect(Collectors.toSet());
   }

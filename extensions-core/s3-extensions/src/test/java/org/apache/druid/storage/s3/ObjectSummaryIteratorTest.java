@@ -37,11 +37,12 @@ public class ObjectSummaryIteratorTest
   private static final ImmutableList<S3ObjectSummary> TEST_OBJECTS =
       ImmutableList.of(
           makeObjectSummary("b", "foo", 10L),
-          makeObjectSummary("b", "foo/", 0L),
+          makeObjectSummary("b", "foo/", 0L), // directory
           makeObjectSummary("b", "foo/bar1", 10L),
           makeObjectSummary("b", "foo/bar2", 10L),
           makeObjectSummary("b", "foo/bar3", 10L),
           makeObjectSummary("b", "foo/bar4", 10L),
+          makeObjectSummary("b", "foo/bar5", 0L), // empty object
           makeObjectSummary("b", "foo/baz", 10L),
           makeObjectSummary("bucketnotmine", "a/different/bucket", 10L)
       );

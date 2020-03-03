@@ -125,10 +125,14 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @VisibleForTesting
   Iterator<File> getFileIterator()
   {
-    return Iterators.concat(
-        getDirectoryListingIterator(),
-        getFilesListIterator()
-    );
+    return
+        Iterators.filter(
+            Iterators.concat(
+                getDirectoryListingIterator(),
+                getFilesListIterator()
+            ),
+            file -> file.length() > 0
+        );
   }
 
   private Iterator<File> getDirectoryListingIterator()

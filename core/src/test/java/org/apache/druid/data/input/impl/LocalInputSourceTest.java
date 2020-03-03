@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.commons.compress.utils.Lists;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -135,6 +136,16 @@ public class LocalInputSourceTest
     Iterator<File> fileIterator = new LocalInputSource(null, null, filesInBaseDir).getFileIterator();
     Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
     Assert.assertEquals(filesInBaseDir, actualFiles);
+  }
+
+  @Test
+  public void testFileIteratorWithEmptyFilesIteratingNonEmptyFilesOnly()
+  {
+    final Set<File> files = new HashSet<>(prepareFiles(10, 5));
+    files.addAll(prepareFiles(10, 0));
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
+    List<File> iteratedFiles = Lists.newArrayList(inputSource.getFileIterator());
+    Assert.assertTrue(iteratedFiles.stream().allMatch(file -> file.length() > 0));
   }
 
   private static Set<File> prepareFiles(int numFiles, long fileSize)
