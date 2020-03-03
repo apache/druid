@@ -74,7 +74,7 @@ You may want to consider the below things:
 
 - You may want to control the amount of input data each worker task processes. This can be
   controlled using different configurations depending on the phase in parallel ingestion (see [`partitionsSpec`](#partitionsspec) for more details).
-  For the tasks that read data from the `inputSource`, you can set the [SplitHintSpec](#splithintspec) in the `tuningConfig`.
+  For the tasks that read data from the `inputSource`, you can set the [Split hint spec](#split-hint-spec) in the `tuningConfig`.
   For the tasks that merge shuffled segments, you can set the `totalNumMergeTasks` in the `tuningConfig`.
 - The number of concurrent worker tasks in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
   The supervisor task checks the number of current running worker tasks and creates more if it's smaller than `maxNumConcurrentSubTasks`
@@ -202,7 +202,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [SplitHintSpec](#splithintspec) for more details.|null|`maxSize`|
+|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
 |indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
@@ -219,23 +219,23 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
 
-### `splitHintSpec`
+### Split Hint Spec
 
-`SplitHintSpec` is used to give a hint when the supervisor task creates input splits.
+The split hint spec is used to give a hint when the supervisor task creates input splits.
 Note that each worker task processes a single input split. You can control the amount of data each worker task will read during the first phase.
 
-#### `MaxSizeSplitHintSpec`
+#### Size-based Split Hint Spec
 
-`MaxSizeSplitHintSpec` is respected by all splittable input sources except for the HTTP input source.
+The size-based split hint spec is respected by all splittable input sources except for the HTTP input source.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `maxSize`.|none|yes|
 |maxSplitSize|Maximum number of bytes of input files to process in a single task. If a single file is larger than this number, it will be processed by itself in a single task (Files are never split across tasks yet).|500MB|no|
 
-#### `SegmentsSplitHintSpec`
+#### Segments Split Hint Spec
 
-`SegmentsSplitHintSpec` is used only for [`DruidInputSource`](#druid-input-source) (and legacy [`IngestSegmentFirehose`](#ingestsegmentfirehose)).
+The segments split hint spec is used only for [`DruidInputSource`](#druid-input-source) (and legacy [`IngestSegmentFirehose`](#ingestsegmentfirehose)).
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -294,7 +294,7 @@ How the worker task creates segments is:
 The Parallel task with hash-based partitioning is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
 The task runs in 2 phases, i.e., `partial segment generation` and `partial segment merge`.
 - In the `partial segment generation` phase, just like the Map phase in MapReduce,
-the Parallel task splits the input data based on `splitHintSpec`
+the Parallel task splits the input data based on the split hint spec
 and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split,
 and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
@@ -326,7 +326,7 @@ The first phase is to collect some statistics to find
 the best partitioning and the other 2 phases are to create partial segments
 and to merge them, respectively, as in hash-based partitioning.
 - In the `partial dimension distribution` phase, the Parallel task splits the input data and
-assigns them to worker tasks based on `splitHintSpec`. Each worker task (type `partial_dimension_distribution`) reads
+assigns them to worker tasks based on the split hint spec. Each worker task (type `partial_dimension_distribution`) reads
 the assigned split and builds a histogram for `partitionDimension`.
 The Parallel task collects those histograms from worker tasks and finds
 the best range partitioning based on `partitionDimension` to evenly
@@ -1529,7 +1529,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.md)|no|
-|maxInputSegmentBytesPerTask|Deprecated. Use [SegmentsSplitHintSpec](#segmentssplithintspec) instead. When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
+|maxInputSegmentBytesPerTask|Deprecated. Use [Segments Split Hint Spec](#segments-split-hint-spec) instead. When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 <a name="sql-firehose"></a>
 
