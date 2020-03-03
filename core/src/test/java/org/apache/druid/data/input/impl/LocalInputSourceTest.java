@@ -33,8 +33,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -100,7 +102,7 @@ public class LocalInputSourceTest
     List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
-      try (FileWriter writer = new FileWriter(file)) {
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write("test");
       }
       filesInBaseDir.add(file);
@@ -108,7 +110,7 @@ public class LocalInputSourceTest
     Set<File> files = new HashSet<>(filesInBaseDir.subList(0, 5));
     for (int i = 0; i < 3; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
-      try (FileWriter writer = new FileWriter(file)) {
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write("test");
       }
       files.add(file);
@@ -128,7 +130,7 @@ public class LocalInputSourceTest
     Set<File> filesInBaseDir = new HashSet<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
-      try (FileWriter writer = new FileWriter(file)) {
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write("test");
       }
       filesInBaseDir.add(file);
@@ -145,7 +147,7 @@ public class LocalInputSourceTest
     Set<File> filesInBaseDir = new HashSet<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
-      try (FileWriter writer = new FileWriter(file)) {
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write("test");
       }
       filesInBaseDir.add(file);
