@@ -440,9 +440,11 @@ public class QueryResource implements QueryCountStatsProvider
                      .build();
     }
 
-    Response gotLimited(QueryCapacityExceededException e)
+    Response gotLimited(QueryCapacityExceededException e) throws IOException
     {
-      return Response.status(QueryCapacityExceededException.STATUS_CODE).entity(e.getMessage()).build();
+      return Response.status(QueryCapacityExceededException.STATUS_CODE)
+                     .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
+                     .build();
     }
   }
 

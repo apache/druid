@@ -695,7 +695,15 @@ public class QueryResourceTest
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
-          Assert.assertEquals(QueryCapacityExceededException.ERROR_MESSAGE, response.getEntity());
+          QueryCapacityExceededException ex;
+          try {
+            ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_MESSAGE, ex.getMessage());
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
         }
     );
     waitAllFinished.await();
@@ -723,12 +731,22 @@ public class QueryResourceTest
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
+          QueryCapacityExceededException ex;
+          try {
+            ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
           Assert.assertEquals(
               StringUtils.format(
                   QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE,
                   HiLoQueryLaningStrategy.LOW
               ),
-              response.getEntity());
+              ex.getMessage()
+          );
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+
         }
     );
     waitTwoStarted.await();

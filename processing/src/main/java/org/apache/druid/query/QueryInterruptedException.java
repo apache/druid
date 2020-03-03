@@ -42,7 +42,7 @@ import java.util.concurrent.TimeoutException;
  * The QueryResource is expected to emit the JSON form of this object when errors happen, and the DirectDruidClient
  * deserializes and wraps them.
  */
-public class QueryInterruptedException extends RuntimeException
+public class QueryInterruptedException extends QueryException
 {
   public static final String QUERY_INTERRUPTED = "Query interrupted";
   public static final String QUERY_TIMEOUT = "Query timeout";
@@ -52,10 +52,6 @@ public class QueryInterruptedException extends RuntimeException
   public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
 
-  private final String errorCode;
-  private final String errorClass;
-  private final String host;
-
   @JsonCreator
   public QueryInterruptedException(
       @JsonProperty("error") @Nullable String errorCode,
@@ -64,10 +60,7 @@ public class QueryInterruptedException extends RuntimeException
       @JsonProperty("host") @Nullable String host
   )
   {
-    super(errorMessage);
-    this.errorCode = errorCode;
-    this.errorClass = errorClass;
-    this.host = host;
+    super(errorCode, errorMessage, errorClass, host);
   }
 
   /**
@@ -83,36 +76,7 @@ public class QueryInterruptedException extends RuntimeException
 
   public QueryInterruptedException(Throwable cause, String host)
   {
-    super(cause == null ? null : cause.getMessage(), cause);
-    this.errorCode = getErrorCodeFromThrowable(cause);
-    this.errorClass = getErrorClassFromThrowable(cause);
-    this.host = host;
-  }
-
-  @Nullable
-  @JsonProperty("error")
-  public String getErrorCode()
-  {
-    return errorCode;
-  }
-
-  @JsonProperty("errorMessage")
-  @Override
-  public String getMessage()
-  {
-    return super.getMessage();
-  }
-
-  @JsonProperty
-  public String getErrorClass()
-  {
-    return errorClass;
-  }
-
-  @JsonProperty
-  public String getHost()
-  {
-    return host;
+    super(cause, getErrorCodeFromThrowable(cause), getErrorClassFromThrowable(cause), host);
   }
 
   @Override
@@ -121,9 +85,9 @@ public class QueryInterruptedException extends RuntimeException
     return StringUtils.format(
         "QueryInterruptedException{msg=%s, code=%s, class=%s, host=%s}",
         getMessage(),
-        errorCode,
-        errorClass,
-        host
+        getErrorCode(),
+        getErrorClass(),
+        getHost()
     );
   }
 

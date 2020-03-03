@@ -173,7 +173,8 @@ public class SqlResource
       }
     }
     catch (QueryCapacityExceededException cap) {
-      return Response.status(429).entity(cap.getMessage()).build();
+      lifecycle.emitLogsAndMetrics(cap, remoteAddr, -1);
+      return Response.status(QueryCapacityExceededException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(cap)).build();
     }
     catch (ForbiddenException e) {
       throw e; // let ForbiddenExceptionMapper handle this
