@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 
 import java.util.List;
 import java.util.Objects;
@@ -32,8 +31,6 @@ import java.util.Objects;
  */
 public class CategorizedWorkerBehaviorConfig implements WorkerBehaviorConfig
 {
-  // Use the same category constant as for worker category to match default workers and autoscalers
-  public static final String DEFAULT_AUTOSCALER_CATEGORY = WorkerConfig.DEFAULT_CATEGORY;
 
   private final WorkerSelectStrategy selectStrategy;
   private final List<AutoScaler> autoScalers;

@@ -149,7 +149,7 @@ public class ProvisioningUtil
   public static AutoScaler getAutoscalerByCategory(String category, Map<String, AutoScaler> autoscalersByCategory)
   {
     AutoScaler autoScaler = autoscalersByCategory.get(category);
-    boolean isStrongAssignment = !autoscalersByCategory.containsKey(CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
+    boolean isStrongAssignment = !autoscalersByCategory.containsKey(DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY);
     log.debug("Found autoscaler %s for category %s in available categories %s. Is strong assignment=%b. ", autoScaler, category, autoscalersByCategory, isStrongAssignment);
     if (autoScaler == null && isStrongAssignment) {
       log.warn(
@@ -159,7 +159,7 @@ public class ProvisioningUtil
       return null;
     }
     return autoScaler == null
-           ? autoscalersByCategory.get(CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
+           ? autoscalersByCategory.get(DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY)
            : autoScaler;
   }
 
@@ -171,7 +171,7 @@ public class ProvisioningUtil
   public static String getAutoscalerCategory(AutoScaler autoScaler)
   {
     return autoScaler.getCategory() == null
-           ? CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+           ? DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
            : autoScaler.getCategory();
   }
 

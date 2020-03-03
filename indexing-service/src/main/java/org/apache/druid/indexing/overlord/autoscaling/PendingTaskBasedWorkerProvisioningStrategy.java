@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
@@ -141,7 +142,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           task -> WorkerSelectUtils.getTaskCategory(
               task,
               workerCategorySpec,
-              CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+              DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
           )
       ));
 

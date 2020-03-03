@@ -31,7 +31,6 @@ import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.ZkWorker;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -64,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class PendingTaskBasedProvisioningStrategyTest
 {
-  public static final String DEFAULT_CATEGORY = CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+  public static final String DEFAULT_CATEGORY = DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
   private AutoScaler autoScaler;
   private Task testTask;
   private PendingTaskBasedWorkerProvisioningStrategy strategy;

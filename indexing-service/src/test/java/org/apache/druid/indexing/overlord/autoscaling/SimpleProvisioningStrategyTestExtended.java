@@ -26,7 +26,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class SimpleProvisioningStrategyTestExtended
 {
-  public static final String DEFAULT_CATEGORY = CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+  public static final String DEFAULT_CATEGORY = DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
   private static final String DEFAULT_CATEGORY_1 = "default_category1";
   private static final String DEFAULT_CATEGORY_2 = "default_category2";
   private static final String CATEGORY_1 = "category1";
@@ -157,7 +157,7 @@ public class SimpleProvisioningStrategyTestExtended
     SimpleWorkerProvisioningStrategy strategy = createStrategy(workerConfig);
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         3,
         5,
         Collections.emptyList()
@@ -528,7 +528,7 @@ public class SimpleProvisioningStrategyTestExtended
     SimpleWorkerProvisioningStrategy strategy = createStrategy(workerConfig);
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         3,
         5,
         Collections.emptyList()
@@ -772,7 +772,7 @@ public class SimpleProvisioningStrategyTestExtended
 
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         1,
         3,
         Collections.emptyList()
@@ -892,7 +892,7 @@ public class SimpleProvisioningStrategyTestExtended
 
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         1,
         1,
         Collections.emptyList()

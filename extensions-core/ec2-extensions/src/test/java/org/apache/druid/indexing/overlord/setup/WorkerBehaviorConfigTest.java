@@ -71,7 +71,7 @@ public class WorkerBehaviorConfigTest
             ),
             null,
             null,
-            CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+            DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
         )
     );
 

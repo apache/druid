@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectUtils;
@@ -128,12 +129,12 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       return pendingTasks.stream().collect(Collectors.groupingBy(task -> {
         List<Task> taskPayloads = taskPayloadsById.get(task.getTaskId());
         if (taskPayloads == null || taskPayloads.isEmpty()) {
-          return CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
+          return DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY;
         }
         return WorkerSelectUtils.getTaskCategory(
             taskPayloads.get(0),
             workerCategorySpec,
-            CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+            DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
         );
       }));
     }

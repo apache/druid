@@ -26,7 +26,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.setup.CategorizedWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -156,7 +156,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
     PendingTaskBasedWorkerProvisioningStrategy strategy = createStrategy(workerConfig);
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         3,
         5,
         Collections.emptyList()
@@ -492,7 +492,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
     PendingTaskBasedWorkerProvisioningStrategy strategy = createStrategy(workerConfig);
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         3,
         5,
         Collections.emptyList()
@@ -719,7 +719,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
 
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         1,
         3,
         Collections.emptyList()
@@ -825,7 +825,7 @@ public class PendingTaskBasedProvisioningStrategyTestExtended
 
     StrategyTestUtils.setupAutoscaler(
         autoScalerDefault,
-        CategorizedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+        DefaultWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
         1,
         Collections.emptyList()
     );
