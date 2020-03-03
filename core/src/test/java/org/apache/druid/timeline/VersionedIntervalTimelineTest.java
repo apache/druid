@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
 import org.apache.druid.timeline.partition.PartitionHolder;
@@ -58,7 +57,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
     add("2011-01-02/2011-01-05", "2", 1);
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle("1", 1))),
+        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
         timeline.findEntry(Intervals.of("2011-01-02T02/2011-01-04"), "1")
     );
   }

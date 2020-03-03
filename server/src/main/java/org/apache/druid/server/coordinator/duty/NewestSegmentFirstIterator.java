@@ -509,12 +509,13 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private QueueEntry(List<DataSegment> segments)
     {
       Preconditions.checkArgument(segments != null && !segments.isEmpty());
-      Collections.sort(segments);
+      final List<DataSegment> segmentsToSort = new ArrayList<>(segments);
+      Collections.sort(segmentsToSort);
       this.interval = new Interval(
-          segments.get(0).getInterval().getStart(),
-          segments.get(segments.size() - 1).getInterval().getEnd()
+          segmentsToSort.get(0).getInterval().getStart(),
+          segmentsToSort.get(segmentsToSort.size() - 1).getInterval().getEnd()
       );
-      this.segments = segments;
+      this.segments = segmentsToSort;
     }
 
     private String getDataSource()

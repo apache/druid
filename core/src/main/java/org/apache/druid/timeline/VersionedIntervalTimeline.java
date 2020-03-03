@@ -28,7 +28,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.utils.CollectionUtils;
@@ -279,7 +278,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
           TimelineEntry foundEntry = entry.getValue().get(version);
           if (foundEntry != null) {
-            return new ImmutablePartitionHolder<>(foundEntry.getPartitionHolder());
+            return foundEntry.getPartitionHolder().asImmutable();
           }
         }
       }
@@ -363,7 +362,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         entry.getTrueInterval(),
         entry.getTrueInterval(),
         entry.getVersion(),
-        new PartitionHolder<>(entry.getPartitionHolder())
+        PartitionHolder.copyVisibleChunks(entry.getPartitionHolder())
     );
   }
 
@@ -730,7 +729,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
                 timelineInterval,
                 val.getTrueInterval(),
                 val.getVersion(),
-                new PartitionHolder<>(val.getPartitionHolder())
+                PartitionHolder.copyVisibleChunks(val.getPartitionHolder())
             )
         );
       }
