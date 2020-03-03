@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.setup;
 
 /**
  * Extended version of WorkerSelectStrategy which is suitable for categorized strategies.
- * It acts as a marker interface used by CategorizedProvisioningStrategy to distinguish between legacy and categorized worker select strategies.
  */
 public interface CategorizedWorkerSelectStrategy extends WorkerSelectStrategy
 {
