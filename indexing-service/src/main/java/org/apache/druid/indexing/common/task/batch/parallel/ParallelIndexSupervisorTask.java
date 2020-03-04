@@ -780,7 +780,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * Partition items into as evenly-sized splits as possible.
    *
    * @param index  index of partition
-   * @param total  number of items to partitions
+   * @param total  number of items to partition
    * @param splits number of desired partitions
    *
    * @return partition range: [lhs, rhs)
@@ -789,8 +789,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     int chunk = total / splits;
     int remainder = total % splits;
+
+    // Distribute the remainder across the first few partitions. For example total=8 and splits=5, will give partitions
+    // of sizes (starting from i=0): 2, 2, 2, 1, 1
     int start = index * chunk + (index < remainder ? index : remainder);
     int stop = start + chunk + (index < remainder ? 1 : 0);
+
     return Pair.of(start, stop);
   }
 

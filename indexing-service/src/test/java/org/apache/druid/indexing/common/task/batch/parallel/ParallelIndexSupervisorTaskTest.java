@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,6 +44,7 @@ public class ParallelIndexSupervisorTaskTest
   @RunWith(Parameterized.class)
   public static class CreateMergeIoConfigsTest
   {
+    private static final int TOTAL_NUM_MERGE_TASKS = 10;
     private static final Function<List<HashPartitionLocation>, PartialHashSegmentMergeIOConfig>
         CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialHashSegmentMergeIOConfig::new;
 
@@ -63,13 +66,36 @@ public class ParallelIndexSupervisorTaskTest
     @Test
     public void handlesLastPartitionCorrectly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = ParallelIndexSupervisorTask.createMergeIOConfigs(
-          10,
+      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      assertNoMissingPartitions(count, assignedPartitionLocation);
+    }
+
+    @Test
+    public void sizesPartitionsEvenly()
+    {
+      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<Integer> actualPartitionSizes = assignedPartitionLocation.stream()
+                                                                    .map(i -> i.getPartitionLocations().size())
+                                                                    .collect(Collectors.toList());
+      List<Integer> sortedPartitionSizes = Ordering.natural().sortedCopy(actualPartitionSizes);
+      int minPartitionSize = sortedPartitionSizes.get(0);
+      int maxPartitionSize = sortedPartitionSizes.get(sortedPartitionSizes.size() - 1);
+      int partitionSizeRange = maxPartitionSize - minPartitionSize;
+
+      Assert.assertThat(
+          "partition sizes = " + actualPartitionSizes,
+          partitionSizeRange,
+          Matchers.is(Matchers.both(Matchers.greaterThanOrEqualTo(0)).and(Matchers.lessThanOrEqualTo(1)))
+      );
+    }
+
+    private List<PartialHashSegmentMergeIOConfig> createMergeIOConfigs()
+    {
+      return ParallelIndexSupervisorTask.createMergeIOConfigs(
+          TOTAL_NUM_MERGE_TASKS,
           createPartitionToLocations(count),
           CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG
       );
-
-      assertNoMissingPartitions(count, assignedPartitionLocation);
     }
 
     private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> createPartitionToLocations(int count)
