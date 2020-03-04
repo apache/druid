@@ -38,7 +38,13 @@ import java.util.Set;
 })
 public interface QueryLaningStrategy
 {
+  /**
+   * Provide map of lane names to the limit on the number of concurrent queries for that lane
+   */
   Object2IntMap<String> getLaneLimits();
 
+  /**
+   * For a given {@link QueryPlus} and set of {@link SegmentServerSelector}, compute if a query belongs to a lane
+   */
   <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments);
 }

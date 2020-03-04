@@ -33,6 +33,9 @@ import org.apache.druid.server.QueryLaningStrategy;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Query laning strategy which associates all {@link Query} with priority lower than 0 into a 'low' lane
+ */
 public class HiLoQueryLaningStrategy implements QueryLaningStrategy
 {
   public static final String LOW = "low";

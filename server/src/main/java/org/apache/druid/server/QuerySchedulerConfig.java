@@ -30,13 +30,11 @@ public class QuerySchedulerConfig
   @JsonProperty("laning")
   private QueryLaningStrategy laningStrategy = NoQueryLaningStrategy.INSTANCE;
 
-  @JsonProperty
   public int getNumThreads()
   {
     return numThreads;
   }
 
-  @JsonProperty("laning")
   public QueryLaningStrategy getLaningStrategy()
   {
     return laningStrategy;

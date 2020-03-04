@@ -26,16 +26,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.name.Names;
 import io.github.resilience4j.bulkhead.Bulkhead;
-import io.github.resilience4j.bulkhead.BulkheadConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Global;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -83,6 +78,10 @@ public class QuerySchedulerTest
 
   private AtomicLong totalAcquired;
   private AtomicLong totalReleased;
+  private AtomicLong laneAcquired;
+  private AtomicLong laneNotAcquired;
+  private AtomicLong laneReleased;
+
   @Before
   public void setup()
   {
@@ -91,21 +90,36 @@ public class QuerySchedulerTest
     );
     totalAcquired = new AtomicLong();
     totalReleased = new AtomicLong();
+    laneAcquired = new AtomicLong();
+    laneNotAcquired = new AtomicLong();
+    laneReleased = new AtomicLong();
     scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2)){
       @Override
-      protected Bulkhead acquireTotal(BulkheadConfig config)
+      List<Bulkhead> acquireLanes(Query<?> query)
       {
-        Bulkhead b = super.acquireTotal(config);
-        totalAcquired.incrementAndGet();
-        return b;
+        List<Bulkhead> bulkheads = super.acquireLanes(query);
+        if (bulkheads.stream().anyMatch(b -> b.getName().equals(QueryScheduler.TOTAL))) {
+          totalAcquired.incrementAndGet();
+        }
+        if (bulkheads.stream().anyMatch(b -> !b.getName().equals(QueryScheduler.TOTAL))) {
+          laneAcquired.incrementAndGet();
+        }
+
+        return bulkheads;
       }
 
       @Override
-      protected void releaseLanes(List<Bulkhead> bulkheads)
+      void releaseLanes(List<Bulkhead> bulkheads)
       {
         super.releaseLanes(bulkheads);
-        if (bulkheads.size() > 0) {
+        if (bulkheads.stream().anyMatch(b -> b.getName().equals(QueryScheduler.TOTAL))) {
           totalReleased.incrementAndGet();
+        }
+        if (bulkheads.stream().anyMatch(b -> !b.getName().equals(QueryScheduler.TOTAL))) {
+          laneReleased.incrementAndGet();
+          if (bulkheads.size() == 1) {
+            laneNotAcquired.incrementAndGet();
+          }
         }
       }
     };
@@ -534,19 +548,16 @@ public class QuerySchedulerTest
     }
     Assert.assertTrue(denied > 0);
     Assert.assertEquals(totalReleased.get(), totalAcquired.get());
+    Assert.assertEquals(laneReleased.get(), laneAcquired.get() + laneNotAcquired.get());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
 
   private Injector createInjector()
   {
-    return Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+    return GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
             binder -> {
-              binder.bind(Key.get(String.class, Names.named("serviceName"))).toInstance("some service");
-              binder.bind(Key.get(Integer.class, Names.named("servicePort"))).toInstance(0);
-              binder.bind(Key.get(Integer.class, Names.named("tlsServicePort"))).toInstance(-1);
               JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
             }
         )

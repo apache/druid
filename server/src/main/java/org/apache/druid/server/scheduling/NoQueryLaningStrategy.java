@@ -28,6 +28,9 @@ import org.apache.druid.server.QueryLaningStrategy;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Query laning strategy that does nothing and provides the default, unlimited behavior
+ */
 public class NoQueryLaningStrategy implements QueryLaningStrategy
 {
   private static final Object2IntMap<String> NONE = new Object2IntArrayMap<>();
