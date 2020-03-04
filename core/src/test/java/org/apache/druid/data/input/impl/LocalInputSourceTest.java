@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
@@ -33,6 +34,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -66,7 +70,7 @@ public class LocalInputSourceTest
   {
     final long fileSize = 15;
     final long maxSplitSize = 50;
-    final Set<File> files = prepareFiles(10, fileSize);
+    final Set<File> files = mockFiles(10, fileSize);
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     final List<InputSplit<List<File>>> splits = inputSource
         .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))
@@ -83,7 +87,7 @@ public class LocalInputSourceTest
   {
     final long fileSize = 13;
     final long maxSplitSize = 40;
-    final Set<File> files = prepareFiles(10, fileSize);
+    final Set<File> files = mockFiles(10, fileSize);
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     Assert.assertEquals(
         4,
@@ -97,11 +101,19 @@ public class LocalInputSourceTest
     File baseDir = temporaryFolder.newFolder();
     List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
-      filesInBaseDir.add(File.createTempFile("local-input-source", ".data", baseDir));
+      final File file = File.createTempFile("local-input-source", ".data", baseDir);
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+        writer.write("test");
+      }
+      filesInBaseDir.add(file);
     }
     Set<File> files = new HashSet<>(filesInBaseDir.subList(0, 5));
     for (int i = 0; i < 3; i++) {
-      files.add(File.createTempFile("local-input-source", ".data", baseDir));
+      final File file = File.createTempFile("local-input-source", ".data", baseDir);
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+        writer.write("test");
+      }
+      files.add(file);
     }
     Set<File> expectedFiles = new HashSet<>(filesInBaseDir);
     expectedFiles.addAll(files);
@@ -117,7 +129,11 @@ public class LocalInputSourceTest
     File baseDir = temporaryFolder.newFolder();
     Set<File> filesInBaseDir = new HashSet<>();
     for (int i = 0; i < 10; i++) {
-      filesInBaseDir.add(File.createTempFile("local-input-source", ".data", baseDir));
+      final File file = File.createTempFile("local-input-source", ".data", baseDir);
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+        writer.write("test");
+      }
+      filesInBaseDir.add(file);
     }
     Iterator<File> fileIterator = new LocalInputSource(baseDir, "*", null).getFileIterator();
     Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
@@ -130,14 +146,28 @@ public class LocalInputSourceTest
     File baseDir = temporaryFolder.newFolder();
     Set<File> filesInBaseDir = new HashSet<>();
     for (int i = 0; i < 10; i++) {
-      filesInBaseDir.add(File.createTempFile("local-input-source", ".data", baseDir));
+      final File file = File.createTempFile("local-input-source", ".data", baseDir);
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+        writer.write("test");
+      }
+      filesInBaseDir.add(file);
     }
     Iterator<File> fileIterator = new LocalInputSource(null, null, filesInBaseDir).getFileIterator();
     Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
     Assert.assertEquals(filesInBaseDir, actualFiles);
   }
 
-  private static Set<File> prepareFiles(int numFiles, long fileSize)
+  @Test
+  public void testFileIteratorWithEmptyFilesIteratingNonEmptyFilesOnly()
+  {
+    final Set<File> files = new HashSet<>(mockFiles(10, 5));
+    files.addAll(mockFiles(10, 0));
+    final LocalInputSource inputSource = new LocalInputSource(null, null, files);
+    List<File> iteratedFiles = Lists.newArrayList(inputSource.getFileIterator());
+    Assert.assertTrue(iteratedFiles.stream().allMatch(file -> file.length() > 0));
+  }
+
+  private static Set<File> mockFiles(int numFiles, long fileSize)
   {
     final Set<File> files = new HashSet<>();
     for (int i = 0; i < numFiles; i++) {
