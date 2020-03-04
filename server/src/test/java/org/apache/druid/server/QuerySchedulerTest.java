@@ -399,6 +399,49 @@ public class QuerySchedulerTest
   }
 
 
+  @Test
+  public void testConfigManual()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.put(propertyPrefix + ".numThreads", "10");
+    properties.put(propertyPrefix + ".laning.strategy", "manual");
+    properties.put(propertyPrefix + ".laning.lanes.one", "1");
+    properties.put(propertyPrefix + ".laning.lanes.two", "2");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("two"));
+  }
+
+  @Test
+  public void testConfigManualPercent()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.put(propertyPrefix + ".numThreads", "10");
+    properties.put(propertyPrefix + ".laning.strategy", "manual");
+    properties.put(propertyPrefix + ".laning.isLimitPercent", "true");
+    properties.put(propertyPrefix + ".laning.lanes.one", "1");
+    properties.put(propertyPrefix + ".laning.lanes.twenty", "20");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("twenty"));
+  }
+
   private void maybeDelayNextIteration(int i) throws InterruptedException
   {
     if (i > 0 && i % 10 == 0) {
