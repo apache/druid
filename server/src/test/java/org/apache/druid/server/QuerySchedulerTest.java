@@ -93,7 +93,7 @@ public class QuerySchedulerTest
     laneAcquired = new AtomicLong();
     laneNotAcquired = new AtomicLong();
     laneReleased = new AtomicLong();
-    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2)){
+    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2)) {
       @Override
       List<Bulkhead> acquireLanes(Query<?> query)
       {
