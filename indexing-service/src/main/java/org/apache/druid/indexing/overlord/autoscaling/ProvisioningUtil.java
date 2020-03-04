@@ -97,12 +97,7 @@ public class ProvisioningUtil
       );
       return null;
     }
-    final DefaultWorkerBehaviorConfig workerConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
-    if (workerConfig.getAutoScalers() == null) {
-      log.error("No autoScaler available, cannot %s workers", action);
-      return null;
-    }
-    return workerConfig;
+    return (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
   }
 
   @Nullable
@@ -119,17 +114,10 @@ public class ProvisioningUtil
 
   public static Map<String, AutoScaler> mapAutoscalerByCategory(List<AutoScaler> autoScalers)
   {
-    Map<String, AutoScaler> result = autoScalers.stream().collect(Collectors.groupingBy(
+    return autoScalers.stream().collect(Collectors.groupingBy(
         ProvisioningUtil::getAutoscalerCategory,
         Collectors.collectingAndThen(Collectors.toList(), values -> values.get(0))
     ));
-
-    if (result.size() != autoScalers.size()) {
-      log.warn(
-          "Probably autoscalers with duplicated categories were defined. The first instance of each duplicate category will be used.");
-    }
-
-    return result;
   }
 
   @Nullable

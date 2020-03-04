@@ -990,16 +990,7 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 |Property|Description|Default|
 |--------|-----------|-------|
 |`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
-|`autoScaler`|Only used if autoscaling is enabled. See below.|null|
-
-##### Categorized Worker Config
-Gives ability for overlord to work with several autoscaler setups to run tasks of different categories on clusters with different configurations.
- 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`type`|Type of the config|required; must be `categorized`|
-|`selectStrategy`|How to assign tasks to MiddleManagers. Choices are `fillCapacity`, `equalDistribution`, and `javascript`.|equalDistribution|
-|`autoScalers`|List of [Autoscaler](#autoscaler) to serve tasks of appropriate category. In the list, there can be one autoscaler of default category (category declaration is omitted). When [Worker Category Spec](#workercategoryspec) is not in strong assignment mode then default autoscaler will be used to serve tasks with categories which do not have corresponding autoscaler|required; At least one autoscaler should be declared|
+|`autoScalers`|List of [Autoscaler](#autoscaler) to serve tasks of appropriate category. In the list, there can be one autoscaler of default category (category declaration is omitted). When [Worker Category Spec](#workercategoryspec) is not in strong assignment mode then default autoscaler will be used to serve tasks with categories which do not have corresponding autoscaler|required; At least one autoscaler should be declared and at most one autoscaler per category.|
 
 ##### Worker Select Strategy
 

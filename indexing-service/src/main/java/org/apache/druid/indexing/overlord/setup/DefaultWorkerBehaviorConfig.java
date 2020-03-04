@@ -50,14 +50,24 @@ public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
   @JsonCreator
   public DefaultWorkerBehaviorConfig(
       @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
-      @JsonProperty("autoScaler") AutoScaler autoScaler,
+      @Deprecated @JsonProperty("autoScaler") AutoScaler autoScaler,
       @JsonProperty("autoScalers") List<AutoScaler> autoScalers
   )
   {
     this.selectStrategy = selectStrategy;
-    this.autoScalers = (autoScaler != null) ? Collections.singletonList(autoScaler) : autoScalers;
-    if (this.autoScalers == null) {
-      throw new IllegalArgumentException("Either autoScaler or autoScalers property needs to be provided");
+    if (autoScaler != null && autoScalers != null) {
+      throw new IllegalArgumentException("The autoScaler and autoScalers properties are mutually exclusive");
+    }
+    if (autoScaler == null && autoScalers == null) {
+      throw new IllegalArgumentException("Either autoScaler or autoScalers property must be provided");
+    }
+    if (autoScaler != null) {
+      this.autoScalers = Collections.singletonList(autoScaler);
+    } else {
+      if (autoScalers.size() != autoScalers.stream().map(AutoScaler::getCategory).distinct().count()) {
+        throw new IllegalArgumentException("Each autoScaler element must have a different category");
+      }
+      this.autoScalers = autoScalers;
     }
   }
 
