@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
@@ -42,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.LongAdder;
 
 
 /**
@@ -59,9 +59,6 @@ public class QueryScheduler implements QueryWatcher
 
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
   private final SetMultimap<String, String> queryDatasources;
-
-  private final LongAdder totalAcquired = new LongAdder();
-  private final LongAdder totalReleased = new LongAdder();
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
@@ -146,16 +143,6 @@ public class QueryScheduler implements QueryWatcher
                        .orElse(-1);
   }
 
-  public long getTotalAcquired()
-  {
-    return totalAcquired.longValue();
-  }
-
-  public long getTotalReleased()
-  {
-    return totalReleased.longValue();
-  }
-
   private List<Bulkhead> acquireLanes(
       Query<?> query
   )
@@ -179,13 +166,13 @@ public class QueryScheduler implements QueryWatcher
     return hallPasses;
   }
 
-  private Bulkhead acquireTotal(BulkheadConfig config)
+  @VisibleForTesting
+  protected Bulkhead acquireTotal(BulkheadConfig config)
   {
     Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
     if (!totalLimiter.tryAcquirePermission()) {
       throw new QueryCapacityExceededException();
     }
-    totalAcquired.increment();
     return totalLimiter;
   }
 
@@ -198,10 +185,10 @@ public class QueryScheduler implements QueryWatcher
     return laneLimiter;
   }
 
-  private void releaseLanes(List<Bulkhead> bulkheads)
+  @VisibleForTesting
+  protected void releaseLanes(List<Bulkhead> bulkheads)
   {
     bulkheads.forEach(Bulkhead::releasePermission);
-    totalReleased.increment();
   }
 
   private Map<String, BulkheadConfig> getLaneConfigs(int totalNumThreads)

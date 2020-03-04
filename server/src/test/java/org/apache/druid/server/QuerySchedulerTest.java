@@ -29,6 +29,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -66,6 +68,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class QuerySchedulerTest
 {
@@ -78,13 +81,34 @@ public class QuerySchedulerTest
   private ListeningExecutorService executorService;
   private QueryScheduler scheduler;
 
+  private AtomicLong totalAcquired;
+  private AtomicLong totalReleased;
   @Before
   public void setup()
   {
     executorService = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(8, "test_query_scheduler_%s")
     );
-    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
+    totalAcquired = new AtomicLong();
+    totalReleased = new AtomicLong();
+    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2)){
+      @Override
+      protected Bulkhead acquireTotal(BulkheadConfig config)
+      {
+        Bulkhead b = super.acquireTotal(config);
+        totalAcquired.incrementAndGet();
+        return b;
+      }
+
+      @Override
+      protected void releaseLanes(List<Bulkhead> bulkheads)
+      {
+        super.releaseLanes(bulkheads);
+        if (bulkheads.size() > 0) {
+          totalReleased.incrementAndGet();
+        }
+      }
+    };
   }
 
   @After
@@ -504,12 +528,12 @@ public class QuerySchedulerTest
     }
     Assert.assertEquals(0, other);
     if (successEqualsTotal) {
-      Assert.assertEquals(success, scheduler.getTotalAcquired());
+      Assert.assertEquals(success, totalAcquired.get());
     } else {
-      Assert.assertTrue(success > 0 && success <= scheduler.getTotalAcquired());
+      Assert.assertTrue(success > 0 && success <= totalAcquired.get());
     }
     Assert.assertTrue(denied > 0);
-    Assert.assertEquals(scheduler.getTotalAcquired(), scheduler.getTotalReleased());
+    Assert.assertEquals(totalReleased.get(), totalAcquired.get());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
