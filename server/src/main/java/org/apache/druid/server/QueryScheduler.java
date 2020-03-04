@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 
 /**
@@ -60,8 +60,8 @@ public class QueryScheduler implements QueryWatcher
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
   private final SetMultimap<String, String> queryDatasources;
 
-  private final AtomicLong totalAcquired = new AtomicLong();
-  private final AtomicLong totalReleased = new AtomicLong();
+  private final LongAdder totalAcquired = new LongAdder();
+  private final LongAdder totalReleased = new LongAdder();
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
   {
@@ -148,12 +148,12 @@ public class QueryScheduler implements QueryWatcher
 
   public long getTotalAcquired()
   {
-    return totalAcquired.get();
+    return totalAcquired.longValue();
   }
 
   public long getTotalReleased()
   {
-    return totalReleased.get();
+    return totalReleased.longValue();
   }
 
   private List<Bulkhead> acquireLanes(
@@ -185,7 +185,7 @@ public class QueryScheduler implements QueryWatcher
     if (!totalLimiter.tryAcquirePermission()) {
       throw new QueryCapacityExceededException();
     }
-    totalAcquired.incrementAndGet();
+    totalAcquired.increment();
     return totalLimiter;
   }
 
@@ -201,7 +201,7 @@ public class QueryScheduler implements QueryWatcher
   private void releaseLanes(List<Bulkhead> bulkheads)
   {
     bulkheads.forEach(Bulkhead::releasePermission);
-    totalReleased.incrementAndGet();
+    totalReleased.increment();
   }
 
   private Map<String, BulkheadConfig> getLaneConfigs(int totalNumThreads)
