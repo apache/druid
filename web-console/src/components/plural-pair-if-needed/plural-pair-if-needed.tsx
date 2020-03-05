@@ -16,21 +16,26 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
 import React from 'react';
 
-import { TableColumnSelector } from './table-column-selector';
+import { compact, pluralIfNeeded } from '../../utils';
 
-describe('table column', () => {
-  it('matches snapshot', () => {
-    const tableColumn = (
-      <TableColumnSelector
-        columns={['a', 'b', 'c']}
-        onChange={() => {}}
-        tableColumnsHidden={['b']}
-      />
-    );
-    const { container } = render(tableColumn);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+export interface PluralPairIfNeededProps {
+  firstCount: number;
+  firstSingular: string;
+  secondCount: number;
+  secondSingular: string;
+}
+
+export const PluralPairIfNeeded = React.memo(function PluralPairIfNeeded(
+  props: PluralPairIfNeededProps,
+) {
+  const { firstCount, firstSingular, secondCount, secondSingular } = props;
+
+  const text = compact([
+    firstCount ? pluralIfNeeded(firstCount, firstSingular) : undefined,
+    secondCount ? pluralIfNeeded(secondCount, secondSingular) : undefined,
+  ]).join(', ');
+  if (!text) return null;
+  return <p className="plural-pair-if-needed">{text}</p>;
 });

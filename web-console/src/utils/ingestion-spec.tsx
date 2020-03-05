@@ -61,6 +61,7 @@ export type IngestionComboType =
   | 'index_parallel:druid'
   | 'index_parallel:inline'
   | 'index_parallel:s3'
+  | 'index_parallel:azure'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
 
@@ -102,6 +103,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'druid':
         case 'inline':
         case 's3':
+        case 'azure':
         case 'google':
         case 'hdfs':
           return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
@@ -127,6 +129,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index_parallel:s3':
       return 'Amazon S3';
+
+    case 'index_parallel:azure':
+      return 'Azure Data Lake';
 
     case 'index_parallel:google':
       return 'Google Cloud Storage';
@@ -179,6 +184,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
   switch (ingestionType) {
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
+
+    case 'index_parallel:azure':
+      return 'druid-azure-extensions';
 
     case 'index_parallel:google':
       return 'druid-google-extensions';
@@ -983,7 +991,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -1208,6 +1216,67 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
+    case 'index_parallel:azure':
+      return [
+        inputSourceType,
+        {
+          name: 'inputSource.uris',
+          label: 'Azure URIs',
+          type: 'string-array',
+          placeholder:
+            'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+          required: true,
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
+          info: (
+            <>
+              <p>
+                The full Azure URI of your file. To ingest from multiple URIs, use commas to
+                separate each individual URI.
+              </p>
+              <p>Either Azure URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.prefixes',
+          label: 'Azure prefixes',
+          type: 'string-array',
+          placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+          required: true,
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
+          info: (
+            <>
+              <p>A list of paths (with bucket) where your files are stored.</p>
+              <p>Either Azure URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.objects',
+          label: 'Azure objects',
+          type: 'json',
+          placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
+          required: true,
+          defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
+          info: (
+            <>
+              <p>
+                JSON array of{' '}
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/azure.html`}
+                >
+                  S3 Objects
+                </ExternalLink>
+                .
+              </p>
+              <p>Either Azure URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+      ];
+
     case 'index_parallel:google':
       return [
         inputSourceType,
@@ -1423,6 +1492,7 @@ function issueWithInputSource(inputSource: InputSource | undefined): string | un
       break;
 
     case 's3':
+    case 'azure':
     case 'google':
       if (
         !nonEmptyArray(inputSource.uris) &&
@@ -1478,6 +1548,7 @@ export function getIoConfigTuningFormFields(
   switch (ingestionComboType) {
     case 'index_parallel:http':
     case 'index_parallel:s3':
+    case 'index_parallel:azure':
     case 'index_parallel:google':
     case 'index_parallel:hdfs':
       return [
@@ -1815,6 +1886,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
           }
 
         case 's3':
+        case 'azure':
         case 'google':
           const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
           const uriPath =
