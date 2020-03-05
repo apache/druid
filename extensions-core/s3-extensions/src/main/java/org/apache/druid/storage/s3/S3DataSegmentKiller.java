@@ -20,6 +20,10 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -27,20 +31,32 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class S3DataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
   private final ServerSideEncryptingAmazonS3 s3Client;
+  private final S3DataSegmentPusherConfig segmentPusherConfig;
+  private final S3InputDataConfig inputDataConfig;
 
   @Inject
-  public S3DataSegmentKiller(ServerSideEncryptingAmazonS3 s3Client)
+  public S3DataSegmentKiller(
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3DataSegmentPusherConfig segmentPusherConfig,
+      S3InputDataConfig inputDataConfig
+  )
   {
     this.s3Client = s3Client;
+    this.segmentPusherConfig = segmentPusherConfig;
+    this.inputDataConfig = inputDataConfig;
   }
 
   @Override
@@ -69,8 +85,48 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killAll()
+  public void killAll() throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    try {
+      S3Utils.retryS3Operation(
+          () -> {
+            String bucketName = segmentPusherConfig.getBucket();
+            String prefix = segmentPusherConfig.getBaseKey();
+            int maxListingLength = inputDataConfig.getMaxListingLength();
+            ListObjectsV2Result result;
+            String continuationToken = null;
+            do {
+              log.info("Deleting batch of %d segment files from s3 location [bucket: %s    prefix: %s].",
+                       maxListingLength, bucketName, prefix
+              );
+              ListObjectsV2Request request = new ListObjectsV2Request()
+                  .withBucketName(bucketName)
+                  .withPrefix(prefix)
+                  .withContinuationToken(continuationToken)
+                  .withMaxKeys(maxListingLength);
+
+              result = s3Client.listObjectsV2(request);
+              List<S3ObjectSummary> objectSummaries = result.getObjectSummaries();
+
+              List<DeleteObjectsRequest.KeyVersion> keyVersionsToDelete =
+                  objectSummaries.stream()
+                                 .map(x -> new DeleteObjectsRequest.KeyVersion(x.getKey()))
+                                 .collect(Collectors.toList());
+
+              DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucketName)
+                  .withBucketName(bucketName)
+                  .withKeys(keyVersionsToDelete);
+              s3Client.deleteObjects(deleteRequest);
+
+              continuationToken = result.getContinuationToken();
+            } while (result.isTruncated());
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting segment files from s3. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
   }
 }
