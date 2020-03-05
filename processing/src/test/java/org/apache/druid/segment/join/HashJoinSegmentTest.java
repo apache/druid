@@ -78,7 +78,8 @@ public class HashJoinSegmentTest
                 JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
             )
         ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
   }
 
@@ -91,7 +92,8 @@ public class HashJoinSegmentTest
     final HashJoinSegment ignored = new HashJoinSegment(
         baseSegment,
         ImmutableList.of(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
   }
 

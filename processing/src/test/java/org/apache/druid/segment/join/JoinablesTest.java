@@ -98,7 +98,8 @@ public class JoinablesTest
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     Assert.assertSame(Function.identity(), segmentMapFn);
@@ -122,7 +123,8 @@ public class JoinablesTest
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
   }
 
@@ -154,7 +156,8 @@ public class JoinablesTest
           }
         },
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);

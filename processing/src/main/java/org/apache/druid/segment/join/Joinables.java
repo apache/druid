@@ -82,7 +82,8 @@ public class Joinables
       final List<PreJoinableClause> clauses,
       final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
-      final boolean enableFilterPushDown
+      final boolean enableFilterPushDown,
+      final boolean enableFilterRewrite
   )
   {
     return JvmUtils.safeAccumulateThreadCpuTime(
@@ -92,7 +93,7 @@ public class Joinables
             return Function.identity();
           } else {
             final List<JoinableClause> joinableClauses = createJoinableClauses(clauses, joinableFactory);
-            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, enableFilterPushDown);
+            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, enableFilterPushDown, enableFilterRewrite);
           }
         }
     );

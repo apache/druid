@@ -46,6 +46,7 @@ public class QueryContexts
   public static final String VECTORIZE_KEY = "vectorize";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
+  public static final String JOIN_FILTER_REWRITE_KEY = "enableJoinFilterRewrite";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -59,6 +60,7 @@ public class QueryContexts
   public static final long NO_TIMEOUT = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -223,6 +225,11 @@ public class QueryContexts
   public static <T> boolean getEnableJoinFilterPushDown(Query<T> query)
   {
     return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+  }
+
+  public static <T> boolean getEnableJoinFilterRewrite(Query<T> query)
+  {
+    return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

@@ -88,7 +88,8 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
       Set<String> baseColumnNames,
       @Nullable Filter originalFilter,
-      boolean enableFilterPushDown
+      boolean enableFilterPushDown,
+      boolean enableFilterRewrite
   )
   {
     if (originalFilter == null) {
@@ -150,7 +151,8 @@ public class JoinFilterAnalyzer
           orClause,
           prefixes,
           equiconditions,
-          correlationCache
+          correlationCache,
+          enableFilterRewrite
       );
       if (joinFilterAnalysis.isCanPushDown()) {
         leftFilters.add(joinFilterAnalysis.getPushDownFilter().get());
@@ -189,13 +191,36 @@ public class JoinFilterAnalyzer
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
-      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
+      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache,
+      boolean enableFilterRewrite
+
   )
   {
     // NULL matching conditions are not currently pushed down.
     // They require special consideration based on the join type, and for simplicity of the initial implementation
     // this is not currently handled.
     if (filterMatchesNull(filterClause)) {
+      return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
+    }
+
+    boolean baseTableOnly = true;
+    for (String requiredColumn : filterClause.getRequiredColumns()) {
+      if (!baseColumnNames.contains(requiredColumn)) {
+        baseTableOnly = false;
+        break;
+      }
+    }
+
+    if (baseTableOnly) {
+      return new JoinFilterAnalysis(
+          false,
+          filterClause,
+          filterClause,
+          ImmutableList.of()
+      );
+    }
+
+    if (!enableFilterRewrite) {
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
     }
 
@@ -220,17 +245,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    for (String requiredColumn : filterClause.getRequiredColumns()) {
-      if (!baseColumnNames.contains(requiredColumn)) {
-        return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
-      }
-    }
-    return new JoinFilterAnalysis(
-        false,
-        filterClause,
-        filterClause,
-        ImmutableList.of()
-    );
+    return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
   }
 
   /**

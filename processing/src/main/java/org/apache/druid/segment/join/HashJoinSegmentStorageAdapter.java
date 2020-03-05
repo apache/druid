@@ -56,6 +56,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
   private final boolean enableFilterPushDown;
+  private final boolean enableFilterRewrite;
 
   /**
    * @param baseAdapter          A StorageAdapter for the left-hand side base segment
@@ -66,12 +67,14 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
-      final boolean enableFilterPushDown
+      final boolean enableFilterPushDown,
+      final boolean enableFilterRewrite
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
     this.enableFilterPushDown = enableFilterPushDown;
+    this.enableFilterRewrite = enableFilterRewrite;
   }
 
   @VisibleForTesting
@@ -80,7 +83,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       List<JoinableClause> clauses
   )
   {
-    this(baseAdapter, clauses, QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+    this(
+        baseAdapter,
+        clauses,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
+    );
   }
 
   @Override
@@ -242,7 +250,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         this,
         baseColumns,
         filter,
-        enableFilterPushDown
+        enableFilterPushDown,
+        enableFilterRewrite
     );
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
