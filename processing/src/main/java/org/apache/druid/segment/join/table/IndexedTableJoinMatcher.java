@@ -81,6 +81,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   )
   {
     this.table = table;
+    this.currentRow = -1;
 
     if (condition.isAlwaysTrue()) {
       this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, table.numRows()));
