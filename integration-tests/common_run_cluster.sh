@@ -68,15 +68,15 @@ setup()
 
   # setup all enviornment variables to be pass to the containers
   COMMON_ENV="-e LANG=C.UTF-8 -e LANGUAGE=C.UTF-8 -e LC_ALL=C.UTF-8 --env-file=$ENVIRONMENT_CONFIGS_DIR/common"
-  BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker"
-  COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator"
-  HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical"
-  MIDDLEMANAGER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/middlemanager"
-  OVERLORD_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/overlord"
-  ROUTER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router"
-  ROUTER_CUSTOM_CHECK_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-custom-check-tls"
-  ROUTER_NO_CLIENT_AUTH_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-no-client-auth-tls"
-  ROUTER_PERMISSIVE_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-permissive-tls"
+  BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker -e DRUID_SERVICE=broker"
+  COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator -e DRUID_SERVICE=coordinator"
+  HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical -e DRUID_SERVICE=historical"
+  MIDDLEMANAGER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/middlemanager -e DRUID_SERVICE=middleManager"
+  OVERLORD_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/overlord -e DRUID_SERVICE=overlord"
+  ROUTER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router -e DRUID_SERVICE=router"
+  ROUTER_CUSTOM_CHECK_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-custom-check-tls -e DRUID_SERVICE=router"
+  ROUTER_NO_CLIENT_AUTH_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-no-client-auth-tls -e DRUID_SERVICE=router"
+  ROUTER_PERMISSIVE_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-permissive-tls -e DRUID_SERVICE=router"
 
   #TODO: Deep storage stuff
 }

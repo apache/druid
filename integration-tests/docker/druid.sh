@@ -1,11 +1,21 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 set -e
-SERVICE="$1"
-
-echo "$(date -Is) configuring service $SERVICE"
-
-# We put all the config in /tmp/conf to allow for a
-# read-only root filesystem
-mkdir -p /tmp/conf/druid
 
 getConfPath() {
     cluster_conf_base=/tmp/conf/druid/cluster
@@ -13,19 +23,12 @@ getConfPath() {
     _common) echo $cluster_conf_base/_common ;;
     historical) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
-    coordinator | overlord) echo $cluster_conf_base/master/coordinator-overlord ;;
+    coordinator) echo $cluster_conf_base/master/coordinator ;;
     broker) echo $cluster_conf_base/query/broker ;;
     router) echo $cluster_conf_base/query/router ;;
+    overlord) echo $cluster_conf_base/master/overlord ;;
     esac
 }
-
-COMMON_CONF_DIR=$(getConfPath _common)
-SERVICE_CONF_DIR=$(getConfPath ${SERVICE})
-
-mkdir -p $COMMON_CONF_DIR
-mkdir -p SERVICE_CONF_DIR
-touch $COMMON_CONF_DIR/common.runtime.properties
-touch $SERVICE_CONF_DIR/runtime.properties
 
 # Delete the old key (if existing) and append new key=value
 setKey() {
@@ -42,15 +45,30 @@ setKey() {
     echo "Setting $key=$value in $service_conf"
 }
 
-setKey $SERVICE druid.host $(resolveip -s $HOSTNAME)
+setupConfig() {
+  echo "$(date -Is) configuring service $DRUID_SERVICE"
 
-env | grep ^druid_ | while read evar;
-do
-    # Can't use IFS='=' to parse since var might have = in it (e.g. password)
-    val=$(echo "$evar" | sed -e 's?[^=]*=??')
-    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
-    setKey $SERVICE "$var" "$val"
-done
+  # We put all the config in /tmp/conf to allow for a
+  # read-only root filesystem
+  mkdir -p /tmp/conf/druid
 
-export DRUID_COMMON_CONF_DIR=$COMMON_CONF_DIR
-export DRUID_SERVICE_CONF_DIR=$SERVICE_CONF_DIR
+  COMMON_CONF_DIR=$(getConfPath _common)
+  SERVICE_CONF_DIR=$(getConfPath ${DRUID_SERVICE})
+
+  mkdir -p $COMMON_CONF_DIR
+  mkdir -p $SERVICE_CONF_DIR
+  touch $COMMON_CONF_DIR/common.runtime.properties
+  touch $SERVICE_CONF_DIR/runtime.properties
+
+  setKey $DRUID_SERVICE druid.host $(resolveip -s $HOSTNAME)
+
+  # Write out all the environment variables starting with druid_ to druid service config file
+  # This will replace _ with . in the key
+  env | grep ^druid_ | while read evar;
+  do
+      # Can't use IFS='=' to parse since var might have = in it (e.g. password)
+      val=$(echo "$evar" | sed -e 's?[^=]*=??')
+      var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
+      setKey $DRUID_SERVICE "$var" "$val"
+  done
+}
