@@ -17,8 +17,11 @@
 # under the License.
 #
 
+DRUID_SERVICE=router
+DRUID_LOG_PATH=/shared/logs/router.log
+
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS="-server -Xmx128m -XX:+UseG1GC"
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -XX:+UseG1GC
 
 # Druid configs
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/router

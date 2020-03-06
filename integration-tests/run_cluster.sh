@@ -33,7 +33,6 @@
   SERVICE_SUPERVISORDS_DIR=$DOCKERDIR/service-supervisords
   ENVIRONMENT_CONFIGS_DIR=$DOCKERDIR/environment-configs
   SHARED_DIR=${HOME}/shared
-  CONTAINER_LOG_PATH=/shared/logs
   SUPERVISORDIR=/usr/lib/druid/conf
   RESOURCEDIR=$DIR/src/test/resources
 
@@ -66,16 +65,16 @@
   cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
 
   # setup all enviornment variables to be pass to the containers
-  COMMON_ENV="-e LANG=C.UTF-8 -e LANGUAGE=C.UTF-8 -e LC_ALL=C.UTF-8 --env-file=$ENVIRONMENT_CONFIGS_DIR/common -e DRUID_DEP_LIB_DIR=/shared/docker/lib/*:/usr/local/druid/lib/mysql-connector-java.jar"
-  BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker -e DRUID_SERVICE=broker -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/broker.log"
-  COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator -e DRUID_SERVICE=coordinator -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/coordinator.log"
-  HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical -e DRUID_SERVICE=historical -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/historical.log"
-  MIDDLEMANAGER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/middlemanager -e DRUID_SERVICE=middleManager -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/middlemanager.log"
-  OVERLORD_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/overlord -e DRUID_SERVICE=overlord -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/overlord.log"
-  ROUTER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router -e DRUID_SERVICE=router -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/rrouter.log"
-  ROUTER_CUSTOM_CHECK_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-custom-check-tls -e DRUID_SERVICE=router -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/router-custom-check-tls.log"
-  ROUTER_NO_CLIENT_AUTH_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-no-client-auth-tls -e DRUID_SERVICE=router -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/router-no-client-auth-tls.log"
-  ROUTER_PERMISSIVE_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-permissive-tls -e DRUID_SERVICE=router -e DRUID_LOG_PATH=$CONTAINER_LOG_PATH/router-permissive-tls.log"
+  COMMON_ENV="=--env-file=$ENVIRONMENT_CONFIGS_DIR/common"
+  BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker"
+  COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator"
+  HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical"
+  MIDDLEMANAGER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/middlemanager"
+  OVERLORD_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/overlord"
+  ROUTER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router"
+  ROUTER_CUSTOM_CHECK_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-custom-check-tls"
+  ROUTER_NO_CLIENT_AUTH_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-no-client-auth-tls"
+  ROUTER_PERMISSIVE_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-permissive-tls"
 
   #TODO: Deep storage stuff
 }

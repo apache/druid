@@ -17,8 +17,11 @@
 # under the License.
 #
 
+DRUID_SERVICE=router
+DRUID_LOG_PATH=/shared/logs/router-permissive-tls.log
+
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS="-server -Xmx128m -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails"
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails
 
 # Druid configs
 druid_plaintextPort=8889
