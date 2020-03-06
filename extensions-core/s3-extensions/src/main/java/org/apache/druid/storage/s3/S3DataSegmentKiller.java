@@ -118,7 +118,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
                   .withKeys(keyVersionsToDelete);
               s3Client.deleteObjects(deleteRequest);
 
-              continuationToken = result.getContinuationToken();
+              continuationToken = result.getNextContinuationToken();
             } while (result.isTruncated());
             return null;
           }

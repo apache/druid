@@ -40,6 +40,7 @@ import org.apache.druid.tasklogs.TaskLogs;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -190,8 +191,8 @@ public class S3TaskLogs implements TaskLogs
             ListObjectsV2Result result;
             String continuationToken = null;
             do {
-              log.info("Deleting batch of %d task logs from s3 location [bucket: %s    prefix: %s].",
-                       maxListingLength, bucketName, prefix
+              log.info("Deleting batch of %d task logs from s3 location [bucket: %s    prefix: %s] older than %s",
+                       maxListingLength, bucketName, prefix, new Date(timestamp)
               );
               ListObjectsV2Request request = new ListObjectsV2Request()
                   .withBucketName(bucketName)
@@ -217,7 +218,7 @@ public class S3TaskLogs implements TaskLogs
                 service.deleteObjects(deleteRequest);
               }
 
-              continuationToken = result.getContinuationToken();
+              continuationToken = result.getNextContinuationToken();
             } while (result.isTruncated());
             return null;
           }

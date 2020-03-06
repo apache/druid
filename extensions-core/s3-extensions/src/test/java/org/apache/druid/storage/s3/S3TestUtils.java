@@ -150,7 +150,7 @@ public class S3TestUtils extends EasyMockSupport
   )
   {
     ListObjectsV2Result result = EasyMock.createMock(ListObjectsV2Result.class);
-    EasyMock.expect(result.getContinuationToken()).andReturn(continuationToken);
+    EasyMock.expect(result.getNextContinuationToken()).andReturn(continuationToken);
     EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(result.isTruncated()).andReturn(isTruncated);
     EasyMock.expectLastCall().anyTimes();
