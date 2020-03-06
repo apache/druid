@@ -65,7 +65,7 @@
   cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
 
   # setup all enviornment variables to be pass to the containers
-  COMMON_ENV="=--env-file=$ENVIRONMENT_CONFIGS_DIR/common"
+  COMMON_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/common"
   BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker"
   COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator"
   HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical"
