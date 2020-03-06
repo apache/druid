@@ -364,7 +364,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           }
         },
         ForkJoinPool.commonPool(),
-        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE)
+        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE, new ServerConfig())
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

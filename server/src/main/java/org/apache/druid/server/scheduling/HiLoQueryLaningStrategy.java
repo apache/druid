@@ -22,6 +22,7 @@ package org.apache.druid.server.scheduling;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
@@ -41,21 +42,25 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   public static final String LOW = "low";
 
   @JsonProperty
-  private final int maxLowThreads;
+  private final int maxLowPercentage;
 
   @JsonCreator
   public HiLoQueryLaningStrategy(
-      @JsonProperty("maxLowThreads") Integer maxLowThreads
+      @JsonProperty("maxLowPercentage") Integer maxLowPercentage
   )
   {
-    this.maxLowThreads = Preconditions.checkNotNull(maxLowThreads, "maxLowThreads must be set");
+    this.maxLowPercentage = Preconditions.checkNotNull(maxLowPercentage, "maxLowPercentage must be set");
+    Preconditions.checkArgument(
+        0 < maxLowPercentage && maxLowPercentage < 100,
+        "maxLowPercentage must be between 0 and 100"
+    );
   }
 
   @Override
-  public Object2IntMap<String> getLaneLimits()
+  public Object2IntMap<String> getLaneLimits(int totalLimit)
   {
     Object2IntMap<String> onlyLow = new Object2IntArrayMap<>(1);
-    onlyLow.put(LOW, maxLowThreads);
+    onlyLow.put(LOW, Ints.checkedCast(Math.round(totalLimit * ((double) maxLowPercentage / 100))));
     return onlyLow;
   }
 

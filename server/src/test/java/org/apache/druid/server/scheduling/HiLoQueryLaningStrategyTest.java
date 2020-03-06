@@ -54,24 +54,40 @@ public class HiLoQueryLaningStrategyTest
                               .granularity(Granularities.DAY)
                               .aggregators(new CountAggregatorFactory("count"));
 
-    this.strategy = new HiLoQueryLaningStrategy(10);
+    this.strategy = new HiLoQueryLaningStrategy(40);
   }
 
   @Test
-  public void testMaxLowThreadsRequired()
+  public void testMaxPercentageThreadsRequired()
   {
     expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("maxLowThreads must be set");
+    expectedException.expectMessage("maxLowPercentage must be set");
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(null);
+  }
+
+  @Test
+  public void testMaxLowPercentageMustBeGreaterThanZero()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("maxLowPercentage must be between 0 and 100");
+    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(-1);
+  }
+
+  @Test
+  public void testMaxLowPercentageMustBeLessThan100()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("maxLowPercentage must be between 0 and 100");
+    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(9000);
   }
 
   @Test
   public void testLaneLimits()
   {
-    Object2IntMap<String> laneConfig = strategy.getLaneLimits();
+    Object2IntMap<String> laneConfig = strategy.getLaneLimits(5);
     Assert.assertEquals(1, laneConfig.size());
     Assert.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
-    Assert.assertEquals(10, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(2, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
   }
 
   @Test

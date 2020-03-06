@@ -74,6 +74,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
     binder.bind(QueryScheduler.class)
           .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
           .in(LazySingleton.class);
+    binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
 
     final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = DruidBinders.queryRunnerFactoryBinder(

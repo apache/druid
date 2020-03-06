@@ -19,14 +19,31 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
+import org.apache.druid.server.initialization.ServerConfig;
 
 
 public class QuerySchedulerProvider extends QuerySchedulerConfig implements Provider<QueryScheduler>
 {
+  private final ServerConfig serverConfig;
+
+  /**
+   * This needs to be both marked as guice injected to be bound correctly, and also marked with json creator and
+   * jackson inject to work with {@link org.apache.druid.guice.JsonConfigProvider}
+   */
+  @Inject
+  @JsonCreator
+  public QuerySchedulerProvider(@JacksonInject ServerConfig serverConfig)
+  {
+    this.serverConfig = serverConfig;
+  }
+
   @Override
   public QueryScheduler get()
   {
-    return new QueryScheduler(getNumThreads(), getLaningStrategy());
+    return new QueryScheduler(getNumThreads(), getLaningStrategy(), serverConfig);
   }
 }

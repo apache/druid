@@ -35,6 +35,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.server.initialization.ServerConfig;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -55,17 +56,27 @@ import java.util.Set;
 public class QueryScheduler implements QueryWatcher
 {
   static final String TOTAL = "default";
+  private final int totalCapacity;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
   private final SetMultimap<String, String> queryDatasources;
 
-  public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy)
+  public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy, ServerConfig serverConfig)
   {
     this.laningStrategy = laningStrategy;
-    this.laneRegistry = BulkheadRegistry.of(getLaneConfigs(totalNumThreads));
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
+    // if totalNumThreads is above 0 and less than druid.server.http.numThreads, enforce total limit
+    final boolean limitTotal;
+    if (totalNumThreads > 0 && totalNumThreads < serverConfig.getNumThreads()) {
+      limitTotal = true;
+      this.totalCapacity = totalNumThreads;
+    } else {
+      limitTotal = false;
+      this.totalCapacity = serverConfig.getNumThreads();
+    }
+    this.laneRegistry = BulkheadRegistry.of(getLaneConfigs(limitTotal));
   }
 
   @Override
@@ -144,7 +155,8 @@ public class QueryScheduler implements QueryWatcher
   /**
    * Get the maximum number of concurrent queries that {@link #run} can support
    */
-  public int getTotalAvailableCapacity()
+  @VisibleForTesting
+  int getTotalAvailableCapacity()
   {
     return laneRegistry.getConfiguration(TOTAL)
                        .map(config -> laneRegistry.bulkhead(TOTAL, config).getMetrics().getAvailableConcurrentCalls())
@@ -154,7 +166,8 @@ public class QueryScheduler implements QueryWatcher
   /**
    * Get the maximum number of concurrent queries that {@link #run} can support for a given lane
    */
-  public int getLaneAvailableCapacity(String lane)
+  @VisibleForTesting
+  int getLaneAvailableCapacity(String lane)
   {
     return laneRegistry.getConfiguration(lane)
                        .map(config -> laneRegistry.bulkhead(lane, config).getMetrics().getAvailableConcurrentCalls())
@@ -204,18 +217,20 @@ public class QueryScheduler implements QueryWatcher
 
   /**
    * With a total thread count and {@link QueryLaningStrategy#getLaneLimits}, create a map of lane name to
-   * {@link BulkheadConfig} to be used to create the {@link #laneRegistry}
+   * {@link BulkheadConfig} to be used to create the {@link #laneRegistry}. This accepts the configured value of
+   * numThreads rather than using {@link #totalCapacity} so that we only have a total {@link Bulkhead} if
+   * {@link QuerySchedulerConfig#getNumThreads()} is set
    */
-  private Map<String, BulkheadConfig> getLaneConfigs(int totalNumThreads)
+  private Map<String, BulkheadConfig> getLaneConfigs(boolean hastotalLimit)
   {
     Map<String, BulkheadConfig> configs = new HashMap<>();
-    if (totalNumThreads > 0) {
+    if (hastotalLimit) {
       configs.put(
           TOTAL,
-          BulkheadConfig.custom().maxConcurrentCalls(totalNumThreads).maxWaitDuration(Duration.ZERO).build()
+          BulkheadConfig.custom().maxConcurrentCalls(totalCapacity).maxWaitDuration(Duration.ZERO).build()
       );
     }
-    for (Object2IntMap.Entry<String> entry : laningStrategy.getLaneLimits().object2IntEntrySet()) {
+    for (Object2IntMap.Entry<String> entry : laningStrategy.getLaneLimits(totalCapacity).object2IntEntrySet()) {
       configs.put(
           entry.getKey(),
           BulkheadConfig.custom().maxConcurrentCalls(entry.getIntValue()).maxWaitDuration(Duration.ZERO).build()

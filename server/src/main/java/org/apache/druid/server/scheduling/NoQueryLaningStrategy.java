@@ -38,7 +38,7 @@ public class NoQueryLaningStrategy implements QueryLaningStrategy
   public static final NoQueryLaningStrategy INSTANCE = new NoQueryLaningStrategy();
 
   @Override
-  public Object2IntMap<String> getLaneLimits()
+  public Object2IntMap<String> getLaneLimits(int totalLimit)
   {
     return NONE;
   }

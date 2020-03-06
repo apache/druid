@@ -19,6 +19,8 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -26,11 +28,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.ProvisionException;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -46,6 +51,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.junit.After;
 import org.junit.Assert;
@@ -93,7 +99,7 @@ public class QuerySchedulerTest
     laneAcquired = new AtomicLong();
     laneNotAcquired = new AtomicLong();
     laneReleased = new AtomicLong();
-    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2)) {
+    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(40), new ServerConfig()) {
       @Override
       List<Bulkhead> acquireLanes(Query<?> query)
       {
@@ -199,7 +205,7 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testHiLoReleaseSemaphoreWhenSequenceExplodes() throws Exception
+  public void testHiLoReleaseLaneWhenSequenceExplodes() throws Exception
   {
     expected.expectMessage("exploded");
     expected.expect(ExecutionException.class);
@@ -228,7 +234,6 @@ public class QuerySchedulerTest
       }
     });
     future.get();
-    Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
   }
 
   @Test
@@ -335,7 +340,7 @@ public class QuerySchedulerTest
         QuerySchedulerProvider.class
     );
     final Properties properties = new Properties();
-    properties.put(propertyPrefix + ".numThreads", "10");
+    properties.setProperty(propertyPrefix + ".numThreads", "10");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
@@ -352,14 +357,35 @@ public class QuerySchedulerTest
         QuerySchedulerProvider.class
     );
     final Properties properties = new Properties();
-    properties.put(propertyPrefix + ".numThreads", "10");
-    properties.put(propertyPrefix + ".laning.type", "hilo");
-    properties.put(propertyPrefix + ".laning.maxLowThreads", "2");
+    properties.setProperty(propertyPrefix + ".numThreads", "10");
+    properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
+    properties.setProperty(propertyPrefix + ".laning.maxLowPercentage", "20");
+
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
   }
+
+
+  @Test
+  public void testMisConfigHiLo()
+  {
+    expected.expect(ProvisionException.class);
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+  }
+
 
   private void maybeDelayNextIteration(int i) throws InterruptedException
   {
@@ -555,12 +581,18 @@ public class QuerySchedulerTest
 
   private Injector createInjector()
   {
-    return GuiceInjectors.makeStartupInjectorWithModules(
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             binder -> {
+              binder.bind(ServerConfig.class).toInstance(new ServerConfig());
               JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
             }
         )
     );
+    ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ServerConfig.class, injector.getInstance(ServerConfig.class))
+    );
+    return injector;
   }
 }

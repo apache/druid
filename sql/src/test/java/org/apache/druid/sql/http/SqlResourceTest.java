@@ -44,6 +44,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -121,7 +122,7 @@ public class SqlResourceTest extends CalciteTestBase
     executorService = MoreExecutors.listeningDecorator(
       Execs.multiThreaded(8, "test_sql_resource_%s")
     );
-    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(2));
+    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(40), new ServerConfig());
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
 
     final PlannerConfig plannerConfig = new PlannerConfig()

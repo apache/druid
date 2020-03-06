@@ -49,6 +49,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -333,7 +334,7 @@ public class CachingClusteredClientFunctionalityTest
           }
         },
         ForkJoinPool.commonPool(),
-        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE)
+        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE, new ServerConfig())
     );
   }
 

@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoQueryLaningStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoQueryLaningStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoQueryLaningStrategy.class),
     @JsonSubTypes.Type(name = "hilo", value = HiLoQueryLaningStrategy.class)
@@ -40,8 +40,9 @@ public interface QueryLaningStrategy
 {
   /**
    * Provide map of lane names to the limit on the number of concurrent queries for that lane
+   * @param totalLimit
    */
-  Object2IntMap<String> getLaneLimits();
+  Object2IntMap<String> getLaneLimits(int totalLimit);
 
   /**
    * For a given {@link QueryPlus} and set of {@link SegmentServerSelector}, compute if a query belongs to a lane

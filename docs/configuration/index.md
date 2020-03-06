@@ -1483,20 +1483,20 @@ The Broker provides facilities to aid in query capacity reservation for heteroge
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.scheduler.numThreads`|Maximum number of HTTP threads to dedicate to query processing. To save HTTP thread capacity, this should be lower than `druid.server.http.numThreads`.|Unbounded|
-|`druid.query.scheduler.laning.type`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
+|`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
 
 ###### No laning strategy
 
-In this mode, queries are never assigned a lane and only limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode.
+In this mode, queries are never assigned a lane and only limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode, but can be explicitly set with by configuring `druid.query.scheduler.laning.strategy=none`.
 
 ###### 'High/Low' laning strategy
-This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. The limit on `low` queries can be set to some desired fraction of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available. 
+This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available. 
 
-This strategy can be enabled by setting `druid.query.scheduler.laning.type` to `hilo`.
+This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=hilo`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.scheduler.laning.maxLowThreads`|Maximum number of HTTP threads that can be used by queries with a priority lower than 0.|No default, must be set if using this mode|
+|`druid.query.scheduler.laning.maxLowPercentage`|Maximum percentage of the smaller number of`druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, defining the number of HTTP threads that can be used by queries with a priority lower than 0. Value must be between 1 and 100, and will be rounded up|No default, must be set if using this mode|
 
 ##### Server Configuration
 

@@ -704,6 +704,7 @@ public class CalciteTests
   {
     return createMockWalker(conglomerate, tmpDir, null);
   }
+
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,

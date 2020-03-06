@@ -43,6 +43,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -158,7 +159,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-    queryScheduler = new QueryScheduler(8, NoQueryLaningStrategy.INSTANCE);
+    queryScheduler = new QueryScheduler(8, NoQueryLaningStrategy.INSTANCE, new ServerConfig());
     testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
@@ -676,7 +677,7 @@ public class QueryResourceTest
 
     final CountDownLatch waitTwoScheduled = new CountDownLatch(2);
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
-    final QueryScheduler laningScheduler = new QueryScheduler(2, NoQueryLaningStrategy.INSTANCE);
+    final QueryScheduler laningScheduler = new QueryScheduler(2, NoQueryLaningStrategy.INSTANCE, new ServerConfig());
 
     createScheduledQueryResource(laningScheduler, Collections.emptyList(), ImmutableList.of(waitTwoScheduled));
     assertResponseAndCountdownOrBlockForever(
@@ -716,7 +717,7 @@ public class QueryResourceTest
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
-    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQueryLaningStrategy(1));
+    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQueryLaningStrategy(3), new ServerConfig());
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
