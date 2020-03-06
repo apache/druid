@@ -1496,7 +1496,7 @@ This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=h
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.scheduler.laning.maxLowPercentage`|Maximum percentage of the smaller number of`druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, defining the number of HTTP threads that can be used by queries with a priority lower than 0. Value must be between 1 and 100, and will be rounded up|No default, must be set if using this mode|
+|`druid.query.scheduler.laning.maxLowPercent`|Maximum percent of the smaller number of`druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, defining the number of HTTP threads that can be used by queries with a priority lower than 0. Value must be between 1 and 100, and will be rounded up|No default, must be set if using this mode|
 
 ##### Server Configuration
 

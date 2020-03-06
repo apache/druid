@@ -61,23 +61,23 @@ public class HiLoQueryLaningStrategyTest
   public void testMaxPercentageThreadsRequired()
   {
     expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("maxLowPercentage must be set");
+    expectedException.expectMessage("maxLowPercent must be set");
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(null);
   }
 
   @Test
-  public void testMaxLowPercentageMustBeGreaterThanZero()
+  public void testmaxLowPercentMustBeGreaterThanZero()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercentage must be between 0 and 100");
+    expectedException.expectMessage("maxLowPercent must be between 0 and 100");
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(-1);
   }
 
   @Test
-  public void testMaxLowPercentageMustBeLessThan100()
+  public void testmaxLowPercentMustBeLessThan100()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercentage must be between 0 and 100");
+    expectedException.expectMessage("maxLowPercent must be between 0 and 100");
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(9000);
   }
 

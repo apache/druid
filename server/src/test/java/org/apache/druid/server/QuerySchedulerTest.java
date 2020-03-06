@@ -359,7 +359,7 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".numThreads", "10");
     properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
-    properties.setProperty(propertyPrefix + ".laning.maxLowPercentage", "20");
+    properties.setProperty(propertyPrefix + ".laning.maxLowPercent", "20");
 
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final QueryScheduler scheduler = provider.get().get().get();

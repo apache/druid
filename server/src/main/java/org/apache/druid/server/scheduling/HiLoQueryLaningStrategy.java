@@ -42,17 +42,17 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   public static final String LOW = "low";
 
   @JsonProperty
-  private final int maxLowPercentage;
+  private final int maxLowPercent;
 
   @JsonCreator
   public HiLoQueryLaningStrategy(
-      @JsonProperty("maxLowPercentage") Integer maxLowPercentage
+      @JsonProperty("maxLowPercent") Integer maxLowPercent
   )
   {
-    this.maxLowPercentage = Preconditions.checkNotNull(maxLowPercentage, "maxLowPercentage must be set");
+    this.maxLowPercent = Preconditions.checkNotNull(maxLowPercent, "maxLowPercent must be set");
     Preconditions.checkArgument(
-        0 < maxLowPercentage && maxLowPercentage < 100,
-        "maxLowPercentage must be between 0 and 100"
+        0 < maxLowPercent && maxLowPercent < 100,
+        "maxLowPercent must be between 0 and 100"
     );
   }
 
@@ -60,7 +60,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   public Object2IntMap<String> getLaneLimits(int totalLimit)
   {
     Object2IntMap<String> onlyLow = new Object2IntArrayMap<>(1);
-    onlyLow.put(LOW, Ints.checkedCast(Math.round(totalLimit * ((double) maxLowPercentage / 100))));
+    onlyLow.put(LOW, Ints.checkedCast(Math.round(totalLimit * ((double) maxLowPercent / 100))));
     return onlyLow;
   }
 
