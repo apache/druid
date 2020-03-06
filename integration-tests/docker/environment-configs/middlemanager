@@ -20,7 +20,8 @@
 druid_server_http_numThreads=100
 druid_worker_capacity=3
 druid_storage_storageDirectory=/shared/storage
-druid_indexer_runner_javaOpts="-server -Xmx256m -Xms256m -XX:NewSize=128m -XX:MaxNewSize=128m -XX:+UseG1GC -XX:+PrintGCDetails user_timezone=UTC file_encoding=UTF-8 log4j_configurationFile=/shared/docker/lib/log4j2_xml"
+druid_indexer_runner_javaOptsArray=["-server", "-Xmx256m", "-Xms256m", "-XX:NewSize=128m", "-XX:MaxNewSize=128m", "-XX:+UseG1GC", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Dlog4j.configurationFile=/shared/docker/lib/log4j2_xml"]
+
 druid_indexer_fork_property_druid_processing_buffer_sizeBytes=25000000
 druid_indexer_fork_property_druid_processing_numThreads=1
 druid_indexer_fork_server_http_numThreads=20
