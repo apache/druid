@@ -1235,8 +1235,8 @@ If the peon is running in remote mode, there must be an Overlord up and running.
 
 ##### SegmentWriteOutMediumFactory
 
-When new segments are created, Druid temporarily stores some preprocessed data in some buffers. Currently two types of
-*medium* exist for those buffers: *temporary files* and *off-heap memory*.
+When new segments are created, Druid temporarily stores some preprocessed data in some buffers. Currently three types of
+*medium* exist for those buffers: *temporary files*, *off-heap memory*, and *on-heap memory*.
 
 *Temporary files* (`tmpFile`) are stored under the task working directory (see `druid.indexer.task.baseTaskDir`
 configuration above) and thus share it's mounting properties, e. g. they could be backed by HDD, SSD or memory (tmpfs).
@@ -1248,13 +1248,18 @@ This type of medium is preferred, but it may require to allow the JVM to have mo
 to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory,
 than the configured maximum *heap* size (`-Xmx`) for the same JVM.
 
+*On-heap memory medium* (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task.
+Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is
+most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory
+effectively.
+
 For most types of tasks SegmentWriteOutMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.md)
 page, "TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type,
 then the value from the configuration below is used:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
+|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile`, `offHeapMemory`, or `onHeapMemory`, see explanation above|`tmpFile`|
 
 ### Indexer
 
