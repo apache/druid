@@ -266,7 +266,7 @@
         <profile>
             <id>integration-tests</id>
             <properties>
-                <deep.storage.config.path></deep.storage.config.path>
+                <override.config.path></override.config.path>
             </properties>
             <build>
                 <plugins>
@@ -284,7 +284,7 @@
                                     <environmentVariables>
                                     <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                     <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
-                                    <DRUID_INTEGRATION_TEST_DEEP_STORAGE_CONFIG_PATH>${deep.storage.config.path}</DRUID_INTEGRATION_TEST_DEEP_STORAGE_CONFIG_PATH>
+                                    <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
                                     </environmentVariables>
                                     <executable>${project.basedir}/run_cluster.sh</executable>
                                 </configuration>
