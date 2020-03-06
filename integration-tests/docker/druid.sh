@@ -60,7 +60,7 @@ setupConfig() {
   touch $COMMON_CONF_DIR/common.runtime.properties
   touch $SERVICE_CONF_DIR/runtime.properties
 
-  setKey $DRUID_SERVICE druid.host $(resolveip -s $HOSTNAME)
+  setKey $DRUID_SERVICE druid.host $DRUID_HOST_IP
 
   # Write out all the environment variables starting with druid_ to druid service config file
   # This will replace _ with . in the key

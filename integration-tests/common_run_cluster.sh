@@ -67,7 +67,8 @@ setup()
   cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
 
   # setup all enviornment variables to be pass to the containers
-  COMMON_ENV="-e LANG=C.UTF-8 -e LANGUAGE=C.UTF-8 -e LC_ALL=C.UTF-8 --env-file=$ENVIRONMENT_CONFIGS_DIR/common"
+  DRUID_HOST_IP="$(resolveip -s $HOSTNAME)"
+  COMMON_ENV="-e DRUID_HOST_IP=$DRUID_HOST_IP -e LANG=C.UTF-8 -e LANGUAGE=C.UTF-8 -e LC_ALL=C.UTF-8 --env-file=$ENVIRONMENT_CONFIGS_DIR/common"
   BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker -e DRUID_SERVICE=broker"
   COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator -e DRUID_SERVICE=coordinator"
   HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical -e DRUID_SERVICE=historical"
