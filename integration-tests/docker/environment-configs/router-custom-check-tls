@@ -17,6 +17,10 @@
 # under the License.
 #
 
+# JAVA OPTS
+SERVICE_DRUID_JAVA_OPTS="-server -Xmx128m -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails"
+
+# Druid configs
 druid_plaintextPort=8891
 druid_tlsPort=9091
 druid_server_http_numThreads=100

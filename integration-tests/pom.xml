@@ -286,7 +286,7 @@
                                     <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                     <DRUID_INTEGRATION_TEST_DEEP_STORAGE_CONFIG_PATH>${deep.storage.config.path}</DRUID_INTEGRATION_TEST_DEEP_STORAGE_CONFIG_PATH>
                                     </environmentVariables>
-                                    <executable>${project.basedir}/run_cluster_using_java_runtime.sh</executable>
+                                    <executable>${project.basedir}/run_cluster.sh</executable>
                                 </configuration>
                             </execution>
                             <execution>
