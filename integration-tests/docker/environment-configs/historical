@@ -1,0 +1,8 @@
+druid_s3_accessKey=AKIAJI7DG7CDECGBQ6NA
+druid_s3_secretKey=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
+druid_processing_buffer_sizeBytes=25000000
+druid_processing_numThreads=2
+druid_query_groupBy_maxOnDiskStorage=300000000
+druid_segmentCache_locations=[{"path":"/shared/druid/indexCache","maxSize":5000000000}]
+druid_server_maxSize=5000000000
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical

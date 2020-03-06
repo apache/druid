@@ -55,6 +55,9 @@ RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
 # Setup supervisord
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Add druid configuration setup script
+ADD druid.sh /druid.sh
+
 # mysql
 ADD run-mysql.sh /run-mysql.sh
 
@@ -95,4 +98,4 @@ EXPOSE 8300 8301 8302 8303 8304 8305
 EXPOSE 9092 9093
 
 WORKDIR /var/lib/druid
-ENTRYPOINT export HOST_IP="$(resolveip -s $HOSTNAME)" && /tls/generate-server-certs-and-keystores.sh && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+ENTRYPOINT /tls/generate-server-certs-and-keystores.sh && /druid.sh && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

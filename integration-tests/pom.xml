@@ -266,7 +266,7 @@
         <profile>
             <id>integration-tests</id>
             <properties>
-                <jvm.runtime>8</jvm.runtime>
+                <deep.storage.config.path></deep.storage.config.path>
             </properties>
             <build>
                 <plugins>
@@ -281,7 +281,12 @@
                                 </goals>
                                 <phase>pre-integration-test</phase>
                                 <configuration>
-                                    <executable>${project.basedir}/run_cluster_using_java_runtime_${jvm.runtime}.sh</executable>
+                                    <environmentVariables>
+                                    <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
+                                    <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
+                                    <DRUID_INTEGRATION_TEST_DEEP_STORAGE_CONFIG_PATH>${deep.storage.config.path}</DRUID_INTEGRATION_TEST_DEEP_STORAGE_CONFIG_PATH>
+                                    </environmentVariables>
+                                    <executable>${project.basedir}/run_cluster_using_java_runtime.sh</executable>
                                 </configuration>
                             </execution>
                             <execution>

@@ -1,0 +1,8 @@
+druid_plaintextPort=8891
+druid_tlsPort=9091
+druid_server_http_numThreads=100
+druid_router_managementProxy_enabled=true
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/router-custom-check-tls
+druid_sql_avatica_enable=true
+druid_client_https_validateHostnames=false
+druid_tls_certificateChecker=integration-test

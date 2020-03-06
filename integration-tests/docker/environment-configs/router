@@ -1,0 +1,2 @@
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/router
+druid_sql_avatica_enable=true

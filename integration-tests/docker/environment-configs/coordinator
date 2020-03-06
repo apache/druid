@@ -1,0 +1,10 @@
+druid_metadata_storage_type=mysql
+druid_metadata_storage_connector_connectURI=jdbc:mysql://druid-metadata-storage/druid
+druid_metadata_storage_connector_user=druid
+druid_metadata_storage_connector_password=diurd
+druid_coordinator_startDelay=PT5S
+druid_manager_lookups_hostUpdateTimeout=PT30S
+druid_manager_lookups_period=10000
+druid_manager_lookups_threadPoolSize=2
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/coordinator
+druid_auth_unsecuredPaths=["/druid/coordinator/v1/loadqueue"]

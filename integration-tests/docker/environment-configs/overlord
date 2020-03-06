@@ -1,0 +1,8 @@
+druid_metadata_storage_type=mysql
+druid_metadata_storage_connector_connectURI=jdbc:mysql://druid-metadata-storage/druid
+druid_metadata_storage_connector_user=druid
+druid_metadata_storage_connector_password=diurd
+druid_indexer_storage_type=metadata
+druid_indexer_runner_type=remote
+druid_auth_authenticatorChain=["basic"]
+druid_auth_basic_common_cacheDirectory=/tmp/authCache/overlord
