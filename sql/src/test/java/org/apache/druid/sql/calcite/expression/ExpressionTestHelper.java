@@ -132,6 +132,11 @@ class ExpressionTestHelper
     return rexBuilder.makeIntervalLiteral(v, intervalQualifier);
   }
 
+  RexNode makeLiteral(Double d)
+  {
+    return rexBuilder.makeLiteral(d, createSqlType(SqlTypeName.DOUBLE), true);
+  }
+
   RexNode makeCall(SqlOperator op, RexNode... exprs)
   {
     return rexBuilder.makeCall(op, exprs);

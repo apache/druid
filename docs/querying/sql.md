@@ -198,8 +198,6 @@ Only the COUNT aggregation can accept DISTINCT.
 |`SUM(expr)`|Sums numbers.|
 |`MIN(expr)`|Takes the minimum of numbers.|
 |`MAX(expr)`|Takes the maximum of numbers.|
-|`LEAST(expr1, [expr2, ...])`|Takes the minimum of numbers across one or more expression(s).|
-|`GREATEST(expr1, [expr2, ...])`|Takes the maximum of numbers across one or more expression(s).|
 |`AVG(expr)`|Averages numbers.|
 |`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|
 |`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.html) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
@@ -332,6 +330,22 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
 |`TIMESTAMPDIFF(<unit>, <timestamp1>, <timestamp2>)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |<code>timestamp_expr { + &#124; - } <interval_expr><code>|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
+
+
+### Reduction functions
+
+Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed
+as arguments, then the result is `NULL`. The expressions must all be convertible to a
+common data type, which will be the type of the result:
+*  If any argument is `NULL`, the result is `NULL`.
+*  If the arguments comprise a mix of numbers and strings, the arguments are interpreted as strings.
+*  If all arguments are integer numbers, the arguments are interpreted as longs.
+*  If all arguments are numbers and at least one argument is a double, the arguments are interpreted as doubles. 
+
+|Function|Notes|
+|--------|-----|
+|`GREATEST([expr1, ...])`|Returns the maximum expression across zero or more expressions.|
+|`LEAST([expr1, ...])`|Returns the minimum expression across zero or more expressions.|
 
 
 ### IP address functions
