@@ -24,6 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
 
+/**
+ * This exception is for {@link QueryResource} and SqlResource to surface when a query is cast away by
+ * {@link QueryScheduler}.
+ *
+ * As a {@link QueryException} it is expected to be serialied to a json response, but will be mapped to
+ * {@link #STATUS_CODE} instead of the default HTTP 500 status.
+ */
 public class QueryCapacityExceededException extends QueryException
 {
   private static final String ERROR_CLASS = QueryCapacityExceededException.class.getName();

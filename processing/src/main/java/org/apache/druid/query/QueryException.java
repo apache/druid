@@ -26,6 +26,8 @@ import javax.annotation.Nullable;
 
 /**
  * Base serializable error response
+ *
+ * QueryResource and SqlResource are expected to emit the JSON form of this object when errors happen.
  */
 public class QueryException extends RuntimeException
 {
