@@ -49,9 +49,9 @@ import java.util.Set;
  * QueryScheduler (potentially) assigns any {@link Query} that is to be executed to a 'query lane' using the
  * {@link QueryLaningStrategy} that is defined in {@link QuerySchedulerConfig}.
  *
- * As a {@link QueryWatcher}, it also provides cancellation facilities.
+ * As a {@link QueryWatcher}, it also provides cancellation facilities to brokers, historicals, and realtime tasks.
  *
- * This class is shared by all requests on the Jetty HTTP theadpool and must be thread safe.
+ * This class is shared by all requests on the HTTP theadpool and must be thread safe.
  */
 public class QueryScheduler implements QueryWatcher
 {
@@ -59,7 +59,13 @@ public class QueryScheduler implements QueryWatcher
   private final int totalCapacity;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
+  /**
+   * mapping of query id to set of futures associated with the query
+   */
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
+  /**
+   * mapping of query id to set of datasource names that are being queried, used for authorization
+   */
   private final SetMultimap<String, String> queryDatasources;
 
   public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy, ServerConfig serverConfig)
@@ -103,10 +109,6 @@ public class QueryScheduler implements QueryWatcher
   public <T> Query<T> laneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
   {
     Query<T> query = queryPlus.getQuery();
-    // man wins over machine.. for now.
-    if (QueryContexts.getLane(query) != null) {
-      return query;
-    }
     Optional<String> lane = laningStrategy.computeLane(queryPlus, segments);
     return lane.map(query::withLane).orElse(query);
   }
@@ -125,7 +127,7 @@ public class QueryScheduler implements QueryWatcher
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
     List<Bulkhead> bulkheads = acquireLanes(query);
-    return resultSequence.withBaggage(() -> releaseLanes(bulkheads));
+    return resultSequence.withBaggage(() -> finishLanes(bulkheads));
   }
 
   /**
@@ -133,7 +135,8 @@ public class QueryScheduler implements QueryWatcher
    */
   public boolean cancelQuery(String id)
   {
-    // if you re-use queryId and cancel queries... you are going to have a bad time
+    // if multiple independent queries from the same or different users share a query id, all will be cancelled due
+    // to the collision
     queryDatasources.removeAll(id);
     Set<ListenableFuture<?>> futures = queryFutures.removeAll(id);
     boolean success = true;
@@ -182,28 +185,35 @@ public class QueryScheduler implements QueryWatcher
   {
     final String lane = QueryContexts.getLane(query);
     final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
-    List<Bulkhead> hallPasses = new ArrayList<>(2);
     final Optional<BulkheadConfig> totalConfig = laneRegistry.getConfiguration(TOTAL);
-    // if we have a lane, get it first
-    laneConfig.ifPresent(config -> {
-      Bulkhead laneLimiter = laneRegistry.bulkhead(lane, config);
-      if (!laneLimiter.tryAcquirePermission()) {
-        throw new QueryCapacityExceededException(lane);
-      }
-      hallPasses.add(laneLimiter);
-    });
+    List<Bulkhead> hallPasses = new ArrayList<>(2);
+    try {
+      // if we have a lane, get it first
+      laneConfig.ifPresent(config -> {
+        Bulkhead laneLimiter = laneRegistry.bulkhead(lane, config);
+        if (!laneLimiter.tryAcquirePermission()) {
+          throw new QueryCapacityExceededException(lane);
+        }
+        hallPasses.add(laneLimiter);
+      });
 
-    // everyone needs to take one from the total lane; to ensure we don't acquire a lane and never release it, we want
-    // to check for total capacity exceeded and release the lane (if present) before throwing capacity exceeded
-    totalConfig.ifPresent(config -> {
-      Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
-      if (!totalLimiter.tryAcquirePermission()) {
-        releaseLanes(hallPasses);
-        throw new QueryCapacityExceededException();
-      }
-      hallPasses.add(totalLimiter);
-    });
-    return hallPasses;
+      // everyone needs to take one from the total lane; to ensure we don't acquire a lane and never release it, we want
+      // to check for total capacity exceeded and release the lane (if present) before throwing capacity exceeded
+      // note that this isn't strictly fair: the bulkhead doesn't use a fair semaphore, the first to acquire the lane
+      // might lose to one that came after it when acquiring the total, or an unlaned query might lose to a laned query
+      totalConfig.ifPresent(config -> {
+        Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
+        if (!totalLimiter.tryAcquirePermission()) {
+          throw new QueryCapacityExceededException();
+        }
+        hallPasses.add(totalLimiter);
+      });
+      return hallPasses;
+    }
+    catch (Exception ex) {
+      releaseLanes(hallPasses);
+      throw ex;
+    }
   }
 
   /**
@@ -215,16 +225,22 @@ public class QueryScheduler implements QueryWatcher
     bulkheads.forEach(Bulkhead::releasePermission);
   }
 
+  @VisibleForTesting
+  void finishLanes(List<Bulkhead> bulkheads)
+  {
+    bulkheads.forEach(Bulkhead::onComplete);
+  }
+
   /**
    * With a total thread count and {@link QueryLaningStrategy#getLaneLimits}, create a map of lane name to
    * {@link BulkheadConfig} to be used to create the {@link #laneRegistry}. This accepts the configured value of
    * numThreads rather than using {@link #totalCapacity} so that we only have a total {@link Bulkhead} if
    * {@link QuerySchedulerConfig#getNumThreads()} is set
    */
-  private Map<String, BulkheadConfig> getLaneConfigs(boolean hastotalLimit)
+  private Map<String, BulkheadConfig> getLaneConfigs(boolean hasTotalLimit)
   {
     Map<String, BulkheadConfig> configs = new HashMap<>();
-    if (hastotalLimit) {
+    if (hasTotalLimit) {
       configs.put(
           TOTAL,
           BulkheadConfig.custom().maxConcurrentCalls(totalCapacity).maxWaitDuration(Duration.ZERO).build()

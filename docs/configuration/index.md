@@ -1485,12 +1485,16 @@ The Broker provides facilities to aid in query capacity reservation for heteroge
 |`druid.query.scheduler.numThreads`|Maximum number of HTTP threads to dedicate to query processing. To save HTTP thread capacity, this should be lower than `druid.server.http.numThreads`.|Unbounded|
 |`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
 
+##### Laning strategies
+
 ###### No laning strategy
 
-In this mode, queries are never assigned a lane and only limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode, but can be explicitly set with by configuring `druid.query.scheduler.laning.strategy=none`.
+In this mode, queries are never assigned lane, and concurrent query count will only limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode. This mode can be explicitly set by setting `druid.query.scheduler.laning.strategy` to `none`.
 
 ###### 'High/Low' laning strategy
-This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available. 
+This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. Queries with priority of zero (the default) or above are considered 'interactive'. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available.
+
+If the `low` lane is specified in the [query context](../querying/query-context.md) `lane` parameter, this will override the computed lane. 
 
 This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=hilo`.
 

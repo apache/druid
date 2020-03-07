@@ -128,6 +128,18 @@ public class QuerySchedulerTest
           }
         }
       }
+
+      @Override
+      void finishLanes(List<Bulkhead> bulkheads)
+      {
+        super.finishLanes(bulkheads);
+        if (bulkheads.stream().anyMatch(b -> b.getName().equals(QueryScheduler.TOTAL))) {
+          totalReleased.incrementAndGet();
+        }
+        if (bulkheads.stream().anyMatch(b -> !b.getName().equals(QueryScheduler.TOTAL))) {
+          laneReleased.incrementAndGet();
+        }
+      }
     };
   }
 

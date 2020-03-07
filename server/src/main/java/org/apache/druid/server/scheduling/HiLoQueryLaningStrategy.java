@@ -74,6 +74,6 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
     if (lane == null && priority != null && priority < 0) {
       return Optional.of(LOW);
     }
-    return Optional.empty();
+    return Optional.ofNullable(lane);
   }
 }
