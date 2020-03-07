@@ -53,6 +53,13 @@ public class NoQueryLaningStrategyTest
   }
 
   @Test
+  public void testDoesntSetLane()
+  {
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of()).build();
+    Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+  }
+
+  @Test
   public void testPreservesManualLaneFromContext()
   {
     final String someLane = "some-lane";
