@@ -121,4 +121,16 @@ public class HiLoQueryLaningStrategyTest
         strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );
   }
+
+  @Test
+  public void testLaningPreservesManualSetLane()
+  {
+    TimeseriesQuery query = queryBuilder.context(
+        ImmutableMap.of(QueryContexts.PRIORITY_KEY, 100, QueryContexts.LANE_KEY, "low")
+    ).build();
+    Assert.assertEquals(
+        HiLoQueryLaningStrategy.LOW,
+        strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
+    );
+  }
 }
