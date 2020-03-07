@@ -36,7 +36,7 @@ public class QueryCapacityExceededException extends QueryException
   private static final String ERROR_CLASS = QueryCapacityExceededException.class.getName();
   public static final String ERROR_CODE = "Query capacity exceeded";
   public static final String ERROR_MESSAGE = "Total query capacity exceeded";
-  public static final String ERROR_MESSAGE_TEMPLATE = "Query capacity exceeded for lane %s";
+  public static final String ERROR_MESSAGE_TEMPLATE = "Query capacity exceeded for lane '%s'";
   public static final int STATUS_CODE = 429;
 
   public QueryCapacityExceededException()
