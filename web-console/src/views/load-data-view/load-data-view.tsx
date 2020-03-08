@@ -70,6 +70,7 @@ import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
   adjustIngestionSpec,
+  adjustTuningConfig,
   DimensionMode,
   DimensionSpec,
   DimensionsSpec,
@@ -2718,6 +2719,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <AutoForm
             fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index_parallel')}
             model={tuningConfig}
+            globalAdjustment={adjustTuningConfig}
             onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
           />
         </div>

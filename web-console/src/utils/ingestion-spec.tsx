@@ -1207,10 +1207,36 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'inputSource.properties.accessKeyId',
-          label: 'Access key ID',
+          name: 'inputSource.properties.accessKeyId.type',
+          label: 'Access key ID type',
           type: 'string',
-          placeholder: '(optional)',
+          suggestions: [undefined, 'environment', 'default'],
+          info: (
+            <>
+              <p>S3 access key for this S3 bucket.</p>
+              <p>Setting this will override the default configuration provided in the config.</p>
+            </>
+          ),
+          adjustment: (ioConfig: IoConfig) => {
+            return deepSet(
+              ioConfig,
+              'inputSource.properties.secretAccessKey.type',
+              deepGet(ioConfig, 'inputSource.properties.accessKeyId.type'),
+            );
+          },
+        },
+        {
+          name: 'inputSource.properties.accessKeyId.variable',
+          label: 'Access key ID value',
+          type: 'string',
+          placeholder: (ioConfig: IoConfig) =>
+            deepGet(ioConfig, 'inputSource.properties.accessKeyId.type') === 'environment'
+              ? '(environment variable)'
+              : '(access key)',
+          defined: (ioConfig: IoConfig) =>
+            ['environment', 'default'].includes(
+              deepGet(ioConfig, 'inputSource.properties.accessKeyId.type'),
+            ),
           info: (
             <>
               <p>S3 access key for this S3 bucket.</p>
@@ -1219,10 +1245,29 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
-          name: 'inputSource.properties.secretAccessKey',
-          label: 'Secret access key',
+          name: 'inputSource.properties.secretAccessKey.type',
+          label: 'Secret key type',
           type: 'string',
-          placeholder: '(optional)',
+          suggestions: [undefined, 'environment', 'default'],
+          info: (
+            <>
+              <p>S3 secret key for this S3 bucket.</p>
+              <p>Setting this will override the default configuration provided in the config.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.properties.secretAccessKey.variable',
+          label: 'Secret key value',
+          type: 'string',
+          placeholder: (ioConfig: IoConfig) =>
+            deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type') === 'environment'
+              ? '(environment variable)'
+              : '(secret key)',
+          defined: (ioConfig: IoConfig) =>
+            ['environment', 'default'].includes(
+              deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type'),
+            ),
           info: (
             <>
               <p>S3 secret key for this S3 bucket.</p>
@@ -1976,7 +2021,6 @@ export function getPartitionRelatedTuningSpecFormFields(
               optimal number of partitions per time chunk and one for generating segments.
             </p>
           ),
-          adjustment: adjustTuningConfig,
         },
         {
           name: 'partitionsSpec.type',
