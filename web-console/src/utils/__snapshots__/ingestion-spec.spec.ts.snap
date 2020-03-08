@@ -4,13 +4,6 @@ exports[`ingestion-spec upgrades 1`] = `
 Object {
   "dataSchema": Object {
     "dataSource": "wikipedia",
-    "dimensionsSpec": Object {
-      "dimensions": Array [
-        "channel",
-        "cityName",
-        "comment",
-      ],
-    },
     "granularitySpec": Object {
       "queryGranularity": "HOUR",
       "rollup": true,
@@ -28,9 +21,31 @@ Object {
         "type": "longSum",
       },
     ],
-    "timestampSpec": Object {
-      "column": "timestamp",
-      "format": "iso",
+    "parser": Object {
+      "parseSpec": Object {
+        "dimensionsSpec": Object {
+          "dimensions": Array [
+            "channel",
+            "cityName",
+            "comment",
+          ],
+        },
+        "flattenSpec": Object {
+          "fields": Array [
+            Object {
+              "expr": "$.cityName",
+              "name": "cityNameAlt",
+              "type": "path",
+            },
+          ],
+        },
+        "format": "json",
+        "timestampSpec": Object {
+          "column": "timestamp",
+          "format": "iso",
+        },
+      },
+      "type": "string",
     },
     "transformSpec": Object {
       "filter": Object {
@@ -48,19 +63,7 @@ Object {
     },
   },
   "ioConfig": Object {
-    "inputFormat": Object {
-      "flattenSpec": Object {
-        "fields": Array [
-          Object {
-            "expr": "$.cityName",
-            "name": "cityNameAlt",
-            "type": "path",
-          },
-        ],
-      },
-      "type": "json",
-    },
-    "inputSource": Object {
+    "firehose": Object {
       "type": "http",
       "uris": Array [
         "https://static.imply.io/data/wikipedia.json.gz",
