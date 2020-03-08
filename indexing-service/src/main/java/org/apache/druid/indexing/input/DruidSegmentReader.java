@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.input;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputEntity;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -147,13 +149,14 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   }
 
   /**
-   * @param sequence A sequence of intermediate rows generated from a sequence of
-   *                 cursors in {@link #intermediateRowIterator()}
+   * @param sequence    A sequence of intermediate rows generated from a sequence of
+   *                    cursors in {@link #intermediateRowIterator()}
    * @param segmentFile The underlying segment file containing the row data
    * @return A CloseableIterator from a sequence of intermediate rows, closing the underlying segment file
    *         when the iterator is closed.
    */
-  private static CloseableIterator<Map<String, Object>> makeCloseableIteratorFromSequenceAndSegmentFile(
+  @VisibleForTesting
+  static CloseableIterator<Map<String, Object>> makeCloseableIteratorFromSequenceAndSegmentFile(
       final Sequence<Map<String, Object>> sequence,
       final CleanableFile segmentFile
   )
@@ -179,7 +182,10 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       @Override
       public void close() throws IOException
       {
-        segmentFile.close();
+        Closer closer = Closer.create();
+        closer.register(rowYielder);
+        closer.register(segmentFile);
+        closer.close();
       }
     };
   }
