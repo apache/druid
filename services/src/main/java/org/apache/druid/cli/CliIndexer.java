@@ -28,6 +28,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
@@ -85,12 +86,19 @@ public class CliIndexer extends ServerRunnable
 {
   private static final Logger log = new Logger(CliIndexer.class);
 
-  @Inject
   private Properties properties;
+  private boolean isZkEnabled = true;
 
   public CliIndexer()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
+    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -128,7 +136,7 @@ public class CliIndexer extends ServerRunnable
             CliPeon.bindPeonDataSegmentHandlers(binder);
             CliPeon.bindRealtimeCache(binder);
             CliPeon.bindCoordinatorHandoffNotiferAndClient(binder);
-            CliMiddleManager.bindWorkerManagementClasses(binder);
+            CliMiddleManager.bindWorkerManagementClasses(binder, isZkEnabled);
 
             binder.bind(AppenderatorsManager.class)
                   .to(UnifiedIndexerAppenderatorsManager.class)

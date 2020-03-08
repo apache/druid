@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -41,6 +42,7 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -132,7 +134,10 @@ public class DruidCoordinator
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
+
+  @Nullable // Null if zk is disabled
   private final CuratorFramework curator;
+
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
@@ -158,7 +163,7 @@ public class DruidCoordinator
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      CuratorFramework curator,
+      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -169,7 +174,8 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments
+      CompactSegments compactSegments,
+      ZkEnablementConfig zkEnablementConfig
   )
   {
     this(
@@ -179,7 +185,7 @@ public class DruidCoordinator
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curator,
+        curatorProvider,
         emitter,
         scheduledExecutorFactory,
         indexingServiceClient,
@@ -191,7 +197,8 @@ public class DruidCoordinator
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        compactSegments
+        compactSegments,
+        zkEnablementConfig
     );
   }
 
@@ -202,7 +209,7 @@ public class DruidCoordinator
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      CuratorFramework curator,
+      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -214,7 +221,8 @@ public class DruidCoordinator
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments
+      CompactSegments compactSegments,
+      ZkEnablementConfig zkEnablementConfig
   )
   {
     this.config = config;
@@ -224,7 +232,11 @@ public class DruidCoordinator
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
-    this.curator = curator;
+    if (zkEnablementConfig.isEnabled()) {
+      this.curator = curatorProvider.get();
+    } else {
+      this.curator = null;
+    }
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
@@ -443,7 +455,7 @@ public class DruidCoordinator
             () -> {
               try {
                 if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
-                    curator.checkExists().forPath(toLoadQueueSegPath) == null &&
+                    (curator == null || curator.checkExists().forPath(toLoadQueueSegPath) == null) &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {

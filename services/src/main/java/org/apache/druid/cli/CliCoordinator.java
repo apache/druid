@@ -25,6 +25,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -253,7 +254,7 @@ public class CliCoordinator extends ServerRunnable
           @Provides
           @LazySingleton
           public LoadQueueTaskMaster getLoadQueueTaskMaster(
-              CuratorFramework curator,
+              Provider<CuratorFramework> curatorFrameworkProvider,
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
@@ -274,7 +275,7 @@ public class CliCoordinator extends ServerRunnable
             }
             ExecutorServices.manageLifecycle(lifecycle, callBackExec);
             return new LoadQueueTaskMaster(
-                curator,
+                curatorFrameworkProvider,
                 jsonMapper,
                 factory.create(1, "Master-PeonExec--%d"),
                 callBackExec,
