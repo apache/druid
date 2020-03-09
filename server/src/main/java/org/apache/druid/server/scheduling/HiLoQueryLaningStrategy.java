@@ -51,8 +51,8 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   {
     this.maxLowPercent = Preconditions.checkNotNull(maxLowPercent, "maxLowPercent must be set");
     Preconditions.checkArgument(
-        0 < maxLowPercent && maxLowPercent < 100,
-        "maxLowPercent must be between 0 and 100"
+        0 < maxLowPercent && maxLowPercent <= 100,
+        "maxLowPercent must be in the range 1 to 100"
     );
   }
 
@@ -60,7 +60,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   public Object2IntMap<String> getLaneLimits(int totalLimit)
   {
     Object2IntMap<String> onlyLow = new Object2IntArrayMap<>(1);
-    onlyLow.put(LOW, Ints.checkedCast(Math.round(totalLimit * ((double) maxLowPercent / 100))));
+    onlyLow.put(LOW, Ints.checkedCast((long) Math.ceil(totalLimit * ((double) maxLowPercent / 100))));
     return onlyLow;
   }
 

@@ -66,19 +66,63 @@ public class HiLoQueryLaningStrategyTest
   }
 
   @Test
-  public void testmaxLowPercentMustBeGreaterThanZero()
+  public void testMaxLowPercentMustBeGreaterThanZero()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercent must be between 0 and 100");
+    expectedException.expectMessage("maxLowPercent must be in the range 1 to 100");
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(-1);
   }
 
+
   @Test
-  public void testmaxLowPercentMustBeLessThan100()
+  public void testMaxLowPercentMustBeLessThanOrEqual100()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercent must be between 0 and 100");
+    expectedException.expectMessage("maxLowPercent must be in the range 1 to 100");
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(9000);
+  }
+
+  @Test
+  public void testMaxLowPercentZero()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("maxLowPercent must be in the range 1 to 100");
+    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(0);
+  }
+
+  @Test
+  public void testMaxLowPercent100()
+  {
+    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(100);
+    Object2IntMap<String> laneConfig = strategy.getLaneLimits(25);
+    Assert.assertEquals(1, laneConfig.size());
+    Assert.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(25, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
+  }
+
+  @Test
+  public void testMaxLowPercentRoundsUp()
+  {
+    // will round up to 1
+    QueryLaningStrategy strategyRoundLow = new HiLoQueryLaningStrategy(1);
+    Object2IntMap<String> laneConfigRoundLow = strategyRoundLow.getLaneLimits(25);
+    Assert.assertEquals(1, laneConfigRoundLow.size());
+    Assert.assertTrue(laneConfigRoundLow.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(1, laneConfigRoundLow.getInt(HiLoQueryLaningStrategy.LOW));
+
+    // will not round, evenly divides
+    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(96);
+    Object2IntMap<String> laneConfig = strategy.getLaneLimits(25);
+    Assert.assertEquals(1, laneConfig.size());
+    Assert.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(24, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
+
+    // will round up
+    QueryLaningStrategy strategyRounded = new HiLoQueryLaningStrategy(97);
+    Object2IntMap<String> laneConfigRounded = strategyRounded.getLaneLimits(25);
+    Assert.assertEquals(1, laneConfigRounded.size());
+    Assert.assertTrue(laneConfigRounded.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(25, laneConfigRounded.getInt(HiLoQueryLaningStrategy.LOW));
   }
 
   @Test
