@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.timeline.partition.OvershadowableManager.RootPartitionRange;
 import org.apache.druid.timeline.partition.OvershadowableManager.State;
 import org.junit.Assert;
@@ -113,6 +114,12 @@ public class OvershadowableManagerTest
 
     OvershadowableManager<OvershadowableInteger> copy = OvershadowableManager.deepCopy(manager);
     Assert.assertEquals(manager, copy);
+  }
+
+  @Test
+  public void testEqualAndHashCodeContract()
+  {
+    EqualsVerifier.forClass(OvershadowableManager.class).usingGetClass().verify();
   }
 
   @Test

@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.timeline.VersionedIntervalTimelineTestBase;
 import org.junit.Assert;
 import org.junit.Test;
@@ -56,5 +57,11 @@ public class AtomicUpdateGroupTest
     );
 
     Assert.assertEquals(AtomicUpdateGroup.copy(original), original);
+  }
+
+  @Test
+  public void testEqualAndHashCodeContract()
+  {
+    EqualsVerifier.forClass(AtomicUpdateGroup.class).usingGetClass().verify();
   }
 }
