@@ -170,9 +170,14 @@ public class VersionedIntervalTimelineTestBase
 
   PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int val)
   {
+    return makeNumbered(majorVersion, partitionNum, 0, val);
+  }
+
+  PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int chunks, int val)
+  {
     return new NumberedPartitionChunk<>(
         partitionNum,
-        0,
+        chunks,
         new OvershadowableInteger(majorVersion, partitionNum, val)
     );
   }
