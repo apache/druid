@@ -134,7 +134,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
         RowAdapters.standardRow(),
         in::get,
-        null
+        null,
+        true
     );
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory

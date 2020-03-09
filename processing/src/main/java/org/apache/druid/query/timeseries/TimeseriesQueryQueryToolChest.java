@@ -219,7 +219,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                              RowBasedColumnSelectorFactory.create(
                                  RowAdapters.standardRow(),
                                  () -> new MapBasedRow(null, null),
-                                 null
+                                 null,
+                                 false
                              )
                          );
       aggregatorNames[i] = aggregatorSpecs.get(i).getName();

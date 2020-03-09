@@ -201,7 +201,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
       RowAdapters.standardRow(),
       CURRENT_ROW::get,
-      null
+      null,
+      false
   );
 
   @Test
@@ -741,7 +742,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.LONG)
+            ImmutableMap.of("x", ValueType.LONG),
+            false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
     );
@@ -763,7 +765,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.DOUBLE)
+            ImmutableMap.of("x", ValueType.DOUBLE),
+            false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
     );
@@ -785,7 +788,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.FLOAT)
+            ImmutableMap.of("x", ValueType.FLOAT),
+            false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
     );

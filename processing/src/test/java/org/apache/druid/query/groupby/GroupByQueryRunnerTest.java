@@ -5357,7 +5357,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
               {
                 final String field = "idx_subpostagg";
                 final int p = query.getResultRowPositionLookup().getInt(field);
-                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
+                return (Rows.objectToNumber(field, row.get(p), true).floatValue() < 3800);
               }
             }
         )
@@ -5651,7 +5651,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
               {
                 final String field = "idx_subpostagg";
                 final int p = query.getResultRowPositionLookup().getInt(field);
-                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
+                return (Rows.objectToNumber(field, row.get(p), true).floatValue() < 3800);
               }
             }
         )

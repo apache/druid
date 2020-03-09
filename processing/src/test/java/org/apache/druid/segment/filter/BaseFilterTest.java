@@ -644,7 +644,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             RowBasedColumnSelectorFactory.create(
                 RowAdapters.standardRow(),
                 rowSupplier::get,
-                rowSignature
+                rowSignature,
+                false
             )
         )
     );
