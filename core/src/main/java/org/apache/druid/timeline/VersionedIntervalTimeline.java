@@ -362,7 +362,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         entry.getTrueInterval(),
         entry.getTrueInterval(),
         entry.getVersion(),
-        PartitionHolder.copyVisibleChunks(entry.getPartitionHolder())
+        PartitionHolder.copyWithOnlyVisibleChunks(entry.getPartitionHolder())
     );
   }
 
@@ -381,9 +381,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       final Set<TimelineObjectHolder<VersionType, ObjectType>> overshadowedObjects = overshadowedPartitionsTimeline
           .values()
           .stream()
-          .flatMap(
-              (Map<VersionType, TimelineEntry> entry) -> entry.values().stream().map(this::timelineEntryToObjectHolder)
-          )
+          .flatMap((Map<VersionType, TimelineEntry> entry) -> entry.values().stream())
+          .map(entry -> new TimelineObjectHolder<>(
+              entry.getTrueInterval(),
+              entry.getTrueInterval(),
+              entry.getVersion(),
+              PartitionHolder.deepCopy(entry.getPartitionHolder())
+          ))
           .collect(Collectors.toSet());
 
       // 2. Visible timelineEntries can also have overshadowed objects. Add them to the result too.
@@ -729,7 +733,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
                 timelineInterval,
                 val.getTrueInterval(),
                 val.getVersion(),
-                PartitionHolder.copyVisibleChunks(val.getPartitionHolder())
+                PartitionHolder.copyWithOnlyVisibleChunks(val.getPartitionHolder())
             )
         );
       }

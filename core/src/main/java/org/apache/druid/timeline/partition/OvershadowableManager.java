@@ -105,14 +105,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
     this.overshadowedGroups = new TreeMap<>();
   }
 
-  OvershadowableManager(OvershadowableManager<T> other)
-  {
-    this.knownPartitionChunks = new HashMap<>(other.knownPartitionChunks);
-    this.standbyGroups = new TreeMap<>(other.standbyGroups);
-    this.visibleGroupPerRange = new TreeMap<>(other.visibleGroupPerRange);
-    this.overshadowedGroups = new TreeMap<>(other.overshadowedGroups);
-  }
-
   public OvershadowableManager<T> copyVisible()
   {
     final OvershadowableManager<T> copy = new OvershadowableManager<>();
@@ -122,6 +114,32 @@ class OvershadowableManager<T extends Overshadowable<T>>
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
 
       copy.visibleGroupPerRange.put(
+          partitionRange,
+          new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
+      );
+    });
+    return copy;
+  }
+
+  public OvershadowableManager<T> deepCopy()
+  {
+    final OvershadowableManager<T> copy = copyVisible();
+    overshadowedGroups.forEach((partitionRange, versionToGroups) -> {
+      // There should be only one group per partition range
+      final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
+      group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
+
+      copy.overshadowedGroups.put(
+          partitionRange,
+          new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
+      );
+    });
+    standbyGroups.forEach((partitionRange, versionToGroups) -> {
+      // There should be only one group per partition range
+      final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
+      group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
+
+      copy.standbyGroups.put(
           partitionRange,
           new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
       );

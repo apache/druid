@@ -1406,9 +1406,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
                 new PartitionHolder<>(
                     ImmutableList.of(
                         makeNumbered("1", 0, 0),
-                        makeNumbered("1", 1, 0),
-                        makeNumberedOverwriting("1", 0, 1, 0, 2, 1, 3),
-                        makeNumberedOverwriting("1", 1, 1, 0, 2, 1, 3)
+                        makeNumbered("1", 1, 0)
                     )
                 )
             )

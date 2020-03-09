@@ -34,9 +34,16 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
 {
   private final OvershadowableManager<T> overshadowableManager;
 
-  public static <T extends Overshadowable<T>> PartitionHolder<T> copyVisibleChunks(PartitionHolder<T> partitionHolder)
+  public static <T extends Overshadowable<T>> PartitionHolder<T> copyWithOnlyVisibleChunks(
+      PartitionHolder<T> partitionHolder
+  )
   {
     return new PartitionHolder<>(partitionHolder.overshadowableManager.copyVisible());
+  }
+
+  public static <T extends Overshadowable<T>> PartitionHolder<T> deepCopy(PartitionHolder<T> partitionHolder)
+  {
+    return new PartitionHolder<>(partitionHolder.overshadowableManager.deepCopy());
   }
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
