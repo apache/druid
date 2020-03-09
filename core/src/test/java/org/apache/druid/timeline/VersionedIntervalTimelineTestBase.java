@@ -158,22 +158,27 @@ public class VersionedIntervalTimelineTestBase
     );
   }
 
-  PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int value)
+  public static PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int value)
   {
     return makeSingle(majorVersion, 0, value);
   }
 
-  private PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int partitionNum, int val)
+  public static PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int partitionNum, int val)
   {
     return new SingleElementPartitionChunk<>(new OvershadowableInteger(majorVersion, partitionNum, val));
   }
 
-  PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int val)
+  public static PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int val)
   {
     return makeNumbered(majorVersion, partitionNum, 0, val);
   }
 
-  PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int chunks, int val)
+  public static PartitionChunk<OvershadowableInteger> makeNumbered(
+      String majorVersion,
+      int partitionNum,
+      int chunks,
+      int val
+  )
   {
     return new NumberedPartitionChunk<>(
         partitionNum,
@@ -182,7 +187,7 @@ public class VersionedIntervalTimelineTestBase
     );
   }
 
-  PartitionChunk<OvershadowableInteger> makeNumberedOverwriting(
+  public static PartitionChunk<OvershadowableInteger> makeNumberedOverwriting(
       String majorVersion,
       int partitionNumOrdinal,
       int val,

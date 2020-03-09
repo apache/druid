@@ -38,12 +38,12 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
       PartitionHolder<T> partitionHolder
   )
   {
-    return new PartitionHolder<>(partitionHolder.overshadowableManager.copyVisible());
+    return new PartitionHolder<>(OvershadowableManager.copyVisible(partitionHolder.overshadowableManager));
   }
 
   public static <T extends Overshadowable<T>> PartitionHolder<T> deepCopy(PartitionHolder<T> partitionHolder)
   {
-    return new PartitionHolder<>(partitionHolder.overshadowableManager.deepCopy());
+    return new PartitionHolder<>(OvershadowableManager.deepCopy(partitionHolder.overshadowableManager));
   }
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
@@ -67,7 +67,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
 
   public ImmutablePartitionHolder<T> asImmutable()
   {
-    return new ImmutablePartitionHolder<>(overshadowableManager.copyVisible());
+    return new ImmutablePartitionHolder<>(OvershadowableManager.copyVisible(overshadowableManager));
   }
 
   public boolean add(PartitionChunk<T> chunk)

@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -509,13 +510,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private QueueEntry(List<DataSegment> segments)
     {
       Preconditions.checkArgument(segments != null && !segments.isEmpty());
-      final List<DataSegment> segmentsToSort = new ArrayList<>(segments);
-      Collections.sort(segmentsToSort);
-      this.interval = new Interval(
-          segmentsToSort.get(0).getInterval().getStart(),
-          segmentsToSort.get(segmentsToSort.size() - 1).getInterval().getEnd()
-      );
-      this.segments = segmentsToSort;
+      DateTime minStart = DateTimes.MAX, maxEnd = DateTimes.MIN;
+      for (DataSegment segment : segments) {
+        if (segment.getInterval().getStart().compareTo(minStart) < 0) {
+          minStart = segment.getInterval().getStart();
+        }
+        if (segment.getInterval().getEnd().compareTo(maxEnd) > 0) {
+          maxEnd = segment.getInterval().getEnd();
+        }
+      }
+      this.interval = new Interval(minStart, maxEnd);
+      this.segments = segments;
     }
 
     private String getDataSource()

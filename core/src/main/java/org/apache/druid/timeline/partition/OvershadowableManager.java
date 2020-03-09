@@ -105,10 +105,10 @@ class OvershadowableManager<T extends Overshadowable<T>>
     this.overshadowedGroups = new TreeMap<>();
   }
 
-  public OvershadowableManager<T> copyVisible()
+  public static <T extends Overshadowable<T>> OvershadowableManager<T> copyVisible(OvershadowableManager<T> original)
   {
     final OvershadowableManager<T> copy = new OvershadowableManager<>();
-    visibleGroupPerRange.forEach((partitionRange, versionToGroups) -> {
+    original.visibleGroupPerRange.forEach((partitionRange, versionToGroups) -> {
       // There should be only one group per partition range
       final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
@@ -121,10 +121,10 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return copy;
   }
 
-  public OvershadowableManager<T> deepCopy()
+  public static <T extends Overshadowable<T>> OvershadowableManager<T> deepCopy(OvershadowableManager<T> original)
   {
-    final OvershadowableManager<T> copy = copyVisible();
-    overshadowedGroups.forEach((partitionRange, versionToGroups) -> {
+    final OvershadowableManager<T> copy = copyVisible(original);
+    original.overshadowedGroups.forEach((partitionRange, versionToGroups) -> {
       // There should be only one group per partition range
       final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
@@ -134,7 +134,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
           new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
       );
     });
-    standbyGroups.forEach((partitionRange, versionToGroups) -> {
+    original.standbyGroups.forEach((partitionRange, versionToGroups) -> {
       // There should be only one group per partition range
       final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
