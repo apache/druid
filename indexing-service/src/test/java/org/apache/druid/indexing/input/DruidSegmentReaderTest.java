@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.input;
 
-import com.google.common.collect.Iterators;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -31,6 +30,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -47,7 +47,7 @@ public class DruidSegmentReaderTest
           @Override
           public Iterator<Map<String, Object>> make()
           {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
           }
 
           @Override
