@@ -158,6 +158,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   /**
    * Computes a set with all objects falling within the specified interval which are at least partially "visible" in
    * this interval (that is, are not fully overshadowed within this interval).
+   *
+   * Note that this method returns a set of {@link ObjectType}. Duplicate objects in different time chunks will be
+   * removed in the result.
    */
   public Set<ObjectType> findNonOvershadowedObjectsInInterval(Interval interval, Partitions completeness)
   {
