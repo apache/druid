@@ -229,7 +229,7 @@ public class QueryContexts
 
   public static <T> boolean getEnableJoinFilterRewrite(Query<T> query)
   {
-    return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
+    return parseBoolean(query, JOIN_FILTER_REWRITE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

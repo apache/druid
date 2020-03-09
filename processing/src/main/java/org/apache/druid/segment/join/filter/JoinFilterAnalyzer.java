@@ -51,7 +51,7 @@ import java.util.Set;
  * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
  * when we first read from the base table instead of after the join.
  *
- * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Set, Filter, boolean)} method that
+ * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Set, Filter, boolean, boolean)} method that
  * takes a filter and splits it into a portion that should be applied to the base table prior to the join, and a
  * portion that should be applied after the join.
  *
