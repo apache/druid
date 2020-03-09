@@ -33,8 +33,4 @@ public class TestNGGroup
   public static final String QUERY = "query";
   public static final String REALTIME_INDEX = "realtime-index";
   public static final String SECURITY = "security";
-  public static final String S3_DEEP_STORAGE = "s3-deep-storage";
-  public static final String GCS_DEEP_STORAGE = "gcs-deep-storage";
-  public static final String HDFS_DEEP_STORAGE = "hdfs-deep-storage";
-  public static final String AZURE_DEEP_STORAGE = "azure-deep-storage";
 }

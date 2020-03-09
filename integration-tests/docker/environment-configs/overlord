@@ -32,3 +32,4 @@ druid_indexer_storage_type=metadata
 druid_indexer_runner_type=remote
 druid_auth_authenticatorChain=["basic"]
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/overlord
+druid_server_https_crlPath=/tls/revocations.crl

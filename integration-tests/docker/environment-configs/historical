@@ -32,3 +32,4 @@ druid_query_groupBy_maxOnDiskStorage=300000000
 druid_segmentCache_locations=[{"path":"/shared/druid/indexCache","maxSize":5000000000}]
 druid_server_maxSize=5000000000
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical
+druid_server_https_crlPath=/tls/revocations.crl
