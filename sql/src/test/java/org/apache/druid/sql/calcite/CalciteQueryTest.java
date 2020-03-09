@@ -11747,7 +11747,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{""}
+            new Object[]{useDefault ? "" : null}
         )
     );
   }
@@ -11819,7 +11819,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{""}
+            new Object[]{useDefault ? "" : null}
         )
     );
   }

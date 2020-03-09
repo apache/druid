@@ -100,8 +100,8 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
       // different package.
       if (expr.isLiteral()) {
         // Evaluate the expression to get out the array elements.
-        // We can safely pass null if the expression is literal.
-        ExprEval<?> exprEval = expr.eval(null);
+        // We can safely pass a noop ObjectBinding if the expression is literal.
+        ExprEval<?> exprEval = expr.eval(name -> null);
         String[] arrayElements = exprEval.asStringArray();
         if (arrayElements == null || arrayElements.length == 0) {
           // If arrayElements is empty which means rightExpr is an empty array,

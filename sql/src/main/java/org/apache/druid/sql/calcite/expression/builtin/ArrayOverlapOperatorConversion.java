@@ -109,7 +109,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     if (expr.isLiteral()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
-      ExprEval<?> exprEval = expr.eval(null);
+      ExprEval<?> exprEval = expr.eval(name -> null);
       String[] arrayElements = exprEval.asStringArray();
       if (arrayElements == null || arrayElements.length == 0) {
         // If arrayElements is empty which means complexExpr is an empty array,
