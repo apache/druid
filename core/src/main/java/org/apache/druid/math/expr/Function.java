@@ -1780,8 +1780,7 @@ interface Function
 
       ExprType elementType = null;
       for (int i = 0; i < length; i++) {
-
-        ExprEval evaluated = args.get(i).eval(bindings);
+        ExprEval<?> evaluated = args.get(i).eval(bindings);
         if (elementType == null) {
           elementType = evaluated.type();
           switch (elementType) {
@@ -1802,6 +1801,9 @@ interface Function
         setArrayOutputElement(stringsOut, longsOut, doublesOut, elementType, i, evaluated);
       }
 
+      // There should be always at least one argument and thus elementType is never null.
+      // See validateArguments().
+      //noinspection ConstantConditions
       switch (elementType) {
         case STRING:
           return ExprEval.ofStringArray(stringsOut);
