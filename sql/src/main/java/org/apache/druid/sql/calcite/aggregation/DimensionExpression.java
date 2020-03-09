@@ -30,7 +30,7 @@ import java.util.Objects;
 public class DimensionExpression
 {
   /**
-   * Create a dimension expresison for direct column access or simple extractions
+   * Create a dimension expression for direct column access or simple extractions
    */
   public static DimensionExpression ofSimpleColumn(
       final String outputName,
@@ -124,7 +124,7 @@ public class DimensionExpression
   {
     return "DimensionExpression{" +
            "virtualColumn='" + virtualColumn + '\'' +
-           "outputName='" + outputName + '\'' +
+           ", outputName='" + outputName + '\'' +
            ", expression=" + expression +
            ", outputType=" + outputType +
            '}';
