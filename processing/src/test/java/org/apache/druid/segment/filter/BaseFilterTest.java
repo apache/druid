@@ -65,6 +65,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -154,7 +155,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       @Nullable String timeDim,
       @Nullable Double d0,
       @Nullable Float f0,
-      @Nullable Long l0)
+      @Nullable Long l0
+  )
   {
     // for row selector to work correctly as part of the test matrix, default value coercion needs to happen to columns
     Map<String, Object> mapRow = Maps.newHashMapWithExpectedSize(6);
@@ -638,7 +640,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
-        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier::get, rowSignature))
+        VIRTUAL_COLUMNS.wrap(
+            RowBasedColumnSelectorFactory.create(
+                RowAdapters.standardRow(),
+                rowSupplier::get,
+                rowSignature
+            )
+        )
     );
     final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {

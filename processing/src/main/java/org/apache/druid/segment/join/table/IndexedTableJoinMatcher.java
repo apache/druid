@@ -298,7 +298,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     @Override
-    public Supplier<IntIterator> makeDimensionProcessor(DimensionSelector selector)
+    public Supplier<IntIterator> makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
       // NOTE: The slow (cardinality unknown) and fast (cardinality known) code paths below only differ in the calls to
       // getRowNumbers() and getAndCacheRowNumbers(), respectively. The majority of the code path is duplicated to avoid

@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -43,23 +42,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
+/**
+ * A {@link ColumnSelectorFactory} that is based on an object supplier and a {@link RowAdapter} for that type of object.
+ */
 public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
-  private static final RowAdapter<? extends Row> STANDARD_ROW_ADAPTER = new RowAdapter<Row>()
-  {
-    @Override
-    public ToLongFunction<Row> timestampFunction()
-    {
-      return Row::getTimestampFromEpoch;
-    }
-
-    @Override
-    public Function<Row, Object> columnFunction(String columnName)
-    {
-      return r -> r.getRaw(columnName);
-    }
-  };
-
   private final Supplier<T> supplier;
   private final RowAdapter<T> adapter;
   private final Map<String, ValueType> rowSignature;
@@ -75,16 +62,16 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.of();
   }
 
-  public static <RowType extends Row> RowBasedColumnSelectorFactory create(
-      final Supplier<RowType> supplier,
-      @Nullable final Map<String, ValueType> signature
-  )
-  {
-    //noinspection unchecked
-    return new RowBasedColumnSelectorFactory<>(supplier, (RowAdapter<RowType>) STANDARD_ROW_ADAPTER, signature);
-  }
-
-  public static <RowType> RowBasedColumnSelectorFactory create(
+  /**
+   * Create an instance based on any object, along with a {@link RowAdapter} for that object.
+   *
+   * @param adapter   adapter for these row objects
+   * @param supplier  supplier of row objects
+   * @param signature will be used for reporting available columns and their capabilities. Note that the this factory
+   *                  will still allow creation of selectors on any field in the rows, even if it doesn't appear in
+   *                  "rowSignature".
+   */
+  public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
       @Nullable final Map<String, ValueType> signature
@@ -106,7 +93,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       final ValueType valueType = rowSignature.get(columnName);
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType) : null;
+      // Do set hasMultipleValues, because we might return multiple values.
+      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType).setHasMultipleValues(true) : null;
     }
   }
 
@@ -122,6 +110,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   {
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+    final ValueType columnType = rowSignature.get(dimension);
 
     if (ColumnHolder.TIME_COLUMN_NAME.equals(dimensionSpec.getDimension())) {
       if (extractionFn == null) {
@@ -365,7 +354,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     } else {
       final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
 
-      return new ColumnValueSelector()
+      return new ColumnValueSelector<Object>()
       {
         @Override
         public boolean isNull()
@@ -376,25 +365,31 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public double getDouble()
         {
-          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
-          assert NullHandling.replaceWithDefault() || metric != null;
-          return DimensionHandlerUtils.nullToZero(metric).doubleValue();
+          final Double value = DimensionHandlerUtils.convertObjectToDouble(columnFunction.apply(supplier.get()));
+          assert NullHandling.replaceWithDefault() || value != null;
+          return DimensionHandlerUtils.nullToZero(value);
         }
 
         @Override
         public float getFloat()
         {
-          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
-          assert NullHandling.replaceWithDefault() || metric != null;
-          return DimensionHandlerUtils.nullToZero(metric).floatValue();
+          final Float value = DimensionHandlerUtils.convertObjectToFloat(columnFunction.apply(supplier.get()));
+          assert NullHandling.replaceWithDefault() || value != null;
+          return DimensionHandlerUtils.nullToZero(value);
         }
 
         @Override
         public long getLong()
         {
-          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
-          assert NullHandling.replaceWithDefault() || metric != null;
-          return DimensionHandlerUtils.nullToZero(metric).longValue();
+          final Object rawValue = columnFunction.apply(supplier.get());
+
+          Number numericValue = DimensionHandlerUtils.convertObjectToLong(rawValue);
+          if (numericValue == null) {
+            // Try parsing as Double instead, then cast to Long later.
+            numericValue = DimensionHandlerUtils.convertObjectToDouble(rawValue);
+          }
+          assert NullHandling.replaceWithDefault() || numericValue != null;
+          return DimensionHandlerUtils.nullToZero(numericValue != null ? numericValue.longValue() : null);
         }
 
         @Nullable
@@ -405,7 +400,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
 
         @Override
-        public Class classOfObject()
+        public Class<Object> classOfObject()
         {
           return Object.class;
         }

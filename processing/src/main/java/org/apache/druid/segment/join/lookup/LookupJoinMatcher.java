@@ -64,7 +64,7 @@ public class LookupJoinMatcher implements JoinMatcher
         }
 
         @Override
-        public Supplier<String> makeDimensionProcessor(DimensionSelector selector)
+        public Supplier<String> makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
         {
           return () -> {
             final IndexedInts row = selector.getRow();
