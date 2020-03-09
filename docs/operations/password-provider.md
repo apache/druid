@@ -33,7 +33,10 @@ Environment variable password provider provides password by looking at specified
 e.g
 
 ```json
-{ "type": "environment", "variable": "METADATA_STORAGE_PASSWORD" }
+druid.metadata.storage.type=mysql
+druid.metadata.storage.connector.connectURI=jdbc:mysql://db.example.com:3306/druid
+druid.metadata.storage.connector.user=<usr_name>
+druid.metadata.storage.connector.password={ "type": "environment", "variable": "METADATA_STORAGE_PASSWORD" }
 ```
 
 The values are described below.
