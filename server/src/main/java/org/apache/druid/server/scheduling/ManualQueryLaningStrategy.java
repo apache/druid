@@ -22,7 +22,6 @@ package org.apache.druid.server.scheduling;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
@@ -63,10 +62,8 @@ public class ManualQueryLaningStrategy implements QueryLaningStrategy
   {
 
     if (isLimitPercent) {
-      Object2IntMap<String> laneLimits = new Object2IntArrayMap(lanes.size());
-      lanes.forEach((key, value) ->
-                        laneLimits.put(key, Ints.checkedCast((long) Math.ceil(totalLimit * ((double) value / 100))))
-      );
+      Object2IntMap<String> laneLimits = new Object2IntArrayMap<>(lanes.size());
+      lanes.forEach((key, value) -> laneLimits.put(key, computeLimitFromPercent(totalLimit, value)));
       return laneLimits;
     }
     return new Object2IntArrayMap<>(lanes);
