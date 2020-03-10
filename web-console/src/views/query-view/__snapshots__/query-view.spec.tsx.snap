@@ -35,6 +35,7 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          loading={false}
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
