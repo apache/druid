@@ -1483,7 +1483,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 
 ##### Query laning
 
-The Broker provides facilities to aid in query capacity reservation for heterogeneous query workloads in the form of 'laning' strategies, which provide a variety of mechanisms to examine and classify a query, assigning it to a 'lane'. Lanes are defined with capacity limits which the broker will enforce, causing requests in excess of the capacity to be discarded with an HTTP 429 status code, reserving resources for other lanes or for interactive queries (with no lane).
+*Laning strategies* allow you to control capacity utilization for heterogeneous query workloads. With laning, the broker examines and classifies a query for the purpose of assigning it to a 'lane'. Lanes have capacity limits, enforced by the broker, that can be used to ensure sufficient resources are available for other lanes or for interactive queries (with no lane), or to limit overall throughput for queries within the lane. Requests in excess of the capacity are discarded with an HTTP 429 status code.
 
 |Property|Description|Default|
 |--------|-----------|-------|
