@@ -125,8 +125,8 @@ public class ObjectSummaryIterator implements Iterator<S3ObjectSummary>
     while (objectSummaryIterator.hasNext() || result.isTruncated() || prefixesIterator.hasNext()) {
       while (objectSummaryIterator.hasNext()) {
         currentObjectSummary = objectSummaryIterator.next();
-
-        if (!isDirectoryPlaceholder(currentObjectSummary)) {
+        // skips directories and empty objects
+        if (!isDirectoryPlaceholder(currentObjectSummary) && currentObjectSummary.getSize() > 0) {
           return;
         }
       }

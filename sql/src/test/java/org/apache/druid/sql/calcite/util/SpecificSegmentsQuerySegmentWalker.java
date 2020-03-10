@@ -396,7 +396,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           analysis.getPreJoinableClauses(),
           joinableFactory,
           new AtomicLong(),
-          QueryContexts.getEnableJoinFilterPushDown(query)
+          QueryContexts.getEnableJoinFilterPushDown(query),
+          QueryContexts.getEnableJoinFilterRewrite(query)
       );
 
       final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(

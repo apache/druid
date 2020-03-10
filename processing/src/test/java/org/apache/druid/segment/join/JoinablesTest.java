@@ -21,6 +21,7 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
@@ -34,6 +35,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -95,7 +98,8 @@ public class JoinablesTest
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     Assert.assertSame(Function.identity(), segmentMapFn);
@@ -119,7 +123,8 @@ public class JoinablesTest
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
   }
 
@@ -151,9 +156,59 @@ public class JoinablesTest
           }
         },
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);
+  }
+
+  @Test
+  public void test_checkClausePrefixesForDuplicatesAndShadowing_noConflicts()
+  {
+    List<String> prefixes = Arrays.asList(
+        "AA",
+        "AB",
+        "AC",
+        "aa",
+        "ab",
+        "ac",
+        "BA"
+    );
+
+    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+  }
+
+  @Test
+  public void test_checkClausePrefixesForDuplicatesAndShadowing_duplicate()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Detected duplicate prefix in join clauses: [AA]");
+
+    List<String> prefixes = Arrays.asList(
+        "AA",
+        "AA",
+        "ABCD"
+    );
+
+    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+  }
+
+  @Test
+  public void test_checkClausePrefixesForDuplicatesAndShadowing_shadowing()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Detected conflicting prefixes in join clauses: [ABC.DEF, ABC.]");
+
+    List<String> prefixes = Arrays.asList(
+        "BASE.",
+        "BASEBALL",
+        "123.456",
+        "23.45",
+        "ABC.",
+        "ABC.DEF"
+    );
+
+    Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 }

@@ -27,7 +27,7 @@ describe('table column', () => {
       <TableColumnSelector
         columns={['a', 'b', 'c']}
         onChange={() => {}}
-        tableColumnsHidden={['a', 'b', 'c']}
+        tableColumnsHidden={['b']}
       />
     );
     const { container } = render(tableColumn);

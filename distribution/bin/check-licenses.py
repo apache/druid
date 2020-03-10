@@ -270,6 +270,7 @@ def build_compatible_license_names():
 
     compatible_licenses['The MIT License'] = 'MIT License'
     compatible_licenses['MIT License'] = 'MIT License'
+    compatible_licenses['The MIT License (MIT)'] = 'MIT License'
 
     compatible_licenses['-'] = '-'
     return compatible_licenses
@@ -323,8 +324,8 @@ def check_licenses(license_yaml, dependency_reports_root):
     # Build registered license dictionary.
     registered_dep_to_licenses = {}
     skipping_licenses = {}
-    with open(license_yaml) as registry_file:
-        licenses_list = list(yaml.load_all(registry_file))
+    with open(license_yaml, encoding='utf-8') as registry_file:
+        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
     for license in licenses_list:
         if 'libraries' in license:
             for library in license['libraries']:

@@ -39,6 +39,9 @@ public class HttpUtil
   private static final Logger LOG = new Logger(AbstractQueryResourceTestClient.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
 
+  static final int NUM_RETRIES = 30;
+  static final long DELAY_FOR_RETRIES_MS = 10000;
+
   public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
   {
     return makeRequestWithExpectedStatus(
@@ -78,13 +81,13 @@ public class HttpUtil
               response.getContent()
           );
           // it can take time for the auth config to propagate, so we retry
-          if (retryCount > 10) {
+          if (retryCount > NUM_RETRIES) {
             throw new ISE(errMsg);
           } else {
             LOG.error(errMsg);
             LOG.error("retrying in 3000ms, retryCount: " + retryCount);
             retryCount++;
-            Thread.sleep(3000);
+            Thread.sleep(DELAY_FOR_RETRIES_MS);
           }
         } else {
           break;
