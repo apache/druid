@@ -19,28 +19,33 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * Helps tests make segments.
@@ -63,7 +68,7 @@ public class IndexBuilder
 
   private IndexBuilder()
   {
-
+    // Callers must use "create".
   }
 
   public static IndexBuilder create()
@@ -163,27 +168,13 @@ public class IndexBuilder
           indexMerger.merge(
               Lists.transform(
                   persisted,
-                  new Function<QueryableIndex, IndexableAdapter>()
-                  {
-                    @Override
-                    public IndexableAdapter apply(QueryableIndex input)
-                    {
-                      return new QueryableIndexIndexableAdapter(input);
-                    }
-                  }
+                  QueryableIndexIndexableAdapter::new
               ),
               true,
               Iterables.toArray(
                   Iterables.transform(
                       Arrays.asList(schema.getMetrics()),
-                      new Function<AggregatorFactory, AggregatorFactory>()
-                      {
-                        @Override
-                        public AggregatorFactory apply(AggregatorFactory input)
-                        {
-                          return input.getCombiningFactory();
-                        }
-                      }
+                      AggregatorFactory::getCombiningFactory
                   ),
                   AggregatorFactory.class
               ),
@@ -198,6 +189,40 @@ public class IndexBuilder
     }
     catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  public RowBasedSegment<InputRow> buildRowBasedSegmentWithoutTypeSignature()
+  {
+    return new RowBasedSegment<>(
+        SegmentId.dummy("IndexBuilder"),
+        rows,
+        RowAdapters.standardRow(),
+        ImmutableMap.of()
+    );
+  }
+
+  public RowBasedSegment<InputRow> buildRowBasedSegmentWithTypeSignature()
+  {
+    // Determine row signature by building an mmapped index first.
+    try (final QueryableIndex index = buildMMappedIndex()) {
+      final Map<String, ValueType> rowSignature =
+          index.getColumnNames().stream().collect(
+              Collectors.toMap(
+                  column -> column,
+                  column -> {
+                    final ColumnCapabilities capabilities = index.getColumnHolder(column).getCapabilities();
+                    return capabilities.getType();
+                  }
+              )
+          );
+
+      return new RowBasedSegment<>(
+          SegmentId.dummy("IndexBuilder"),
+          rows,
+          RowAdapters.standardRow(),
+          rowSignature
+      );
     }
   }
 
