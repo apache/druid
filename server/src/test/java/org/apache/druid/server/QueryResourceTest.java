@@ -717,7 +717,7 @@ public class QueryResourceTest
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
-    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQueryLaningStrategy(3), new ServerConfig());
+    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQueryLaningStrategy(1), new ServerConfig());
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
