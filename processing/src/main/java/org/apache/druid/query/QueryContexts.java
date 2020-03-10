@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class QueryContexts
 {
   public static final String PRIORITY_KEY = "priority";
+  public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
@@ -200,6 +201,11 @@ public class QueryContexts
   public static <T> int getPriority(Query<T> query, int defaultValue)
   {
     return parseInt(query, PRIORITY_KEY, defaultValue);
+  }
+
+  public static <T> String getLane(Query<T> query)
+  {
+    return (String) query.getContextValue(LANE_KEY);
   }
 
   public static <T> boolean getEnableParallelMerges(Query<T> query)

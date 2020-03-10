@@ -116,7 +116,10 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -2473,7 +2476,8 @@ public class CachingClusteredClientTest
             return 4;
           }
         },
-        ForkJoinPool.commonPool()
+        ForkJoinPool.commonPool(),
+        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE, new ServerConfig())
     );
   }
 
