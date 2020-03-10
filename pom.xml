@@ -1870,6 +1870,7 @@
                                 <exclude>codestyle/*-forbidden-apis.txt</exclude>
                                 <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
+                                <exclude>docker/service-supervisords/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude>
