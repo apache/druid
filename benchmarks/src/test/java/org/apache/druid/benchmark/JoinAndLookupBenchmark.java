@@ -139,7 +139,8 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     hashJoinLookupLongKeySegment = new HashJoinSegment(
@@ -156,7 +157,8 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
@@ -173,7 +175,8 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
@@ -190,7 +193,8 @@ public class JoinAndLookupBenchmark
                 )
             )
         ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
     );
 
     final Map<String, String> countryCodeToNameMap = JoinTestHelper.createCountryIsoCodeToNameLookup().getMap();

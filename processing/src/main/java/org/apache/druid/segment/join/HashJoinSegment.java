@@ -41,6 +41,7 @@ public class HashJoinSegment extends AbstractSegment
   private final Segment baseSegment;
   private final List<JoinableClause> clauses;
   private final boolean enableFilterPushDown;
+  private final boolean enableFilterRewrite;
 
   /**
    * @param baseSegment          The left-hand side base segment
@@ -52,12 +53,14 @@ public class HashJoinSegment extends AbstractSegment
   public HashJoinSegment(
       Segment baseSegment,
       List<JoinableClause> clauses,
-      boolean enableFilterPushDown
+      boolean enableFilterPushDown,
+      boolean enableFilterRewrite
   )
   {
     this.baseSegment = baseSegment;
     this.clauses = clauses;
     this.enableFilterPushDown = enableFilterPushDown;
+    this.enableFilterRewrite = enableFilterRewrite;
 
     // Verify 'clauses' is nonempty (otherwise it's a waste to create this object, and the caller should know)
     if (clauses.isEmpty()) {
@@ -90,7 +93,7 @@ public class HashJoinSegment extends AbstractSegment
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, enableFilterPushDown);
+    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, enableFilterPushDown, enableFilterRewrite);
   }
 
   @Override

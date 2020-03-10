@@ -68,6 +68,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -140,6 +141,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -195,6 +197,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -258,6 +261,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -315,6 +319,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -372,6 +377,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(virtualColumns, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -442,6 +448,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(virtualColumns, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -601,6 +608,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -672,6 +680,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
@@ -830,6 +839,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -908,6 +918,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         filter,
+        true,
         true
     );
     Assert.assertEquals(
@@ -971,6 +982,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1026,6 +1038,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1079,6 +1092,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1140,6 +1154,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1192,6 +1207,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         filter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1247,6 +1263,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1312,6 +1329,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1370,6 +1388,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
+        true,
         true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
@@ -1402,7 +1421,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             factToRegion(JoinType.LEFT),
             regionToCountry(JoinType.LEFT)
         ),
-        false
+        false,
+        true
     );
     Filter originalFilter = new SelectorFilter("page", "Peremptory norm");
 
@@ -1415,7 +1435,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         adapter,
         adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
         originalFilter,
-        adapter.isEnableFilterPushDown()
+        adapter.isEnableFilterPushDown(),
+        true
     );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
 
@@ -1435,6 +1456,101 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         ImmutableList.of(
             new Object[]{"Peremptory norm", "New South Wales", "Australia"}
+        )
+    );
+  }
+
+  @Test
+  public void test_filterPushDown_factToRegionToCountryLeftEnablePushDownDisableRewrite()
+  {
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        ImmutableList.of(
+            factToRegion(JoinType.LEFT),
+            regionToCountry(JoinType.LEFT)
+        )
+    );
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", "#en.wikipedia"),
+            new SelectorFilter("rtc.countryName", "United States"),
+            new OrFilter(
+                ImmutableList.of(
+                    new SelectorFilter("page", "DirecTV"),
+                    new SelectorFilter("rtc.countryIsoCode", "US")
+                )
+            ),
+            new BoundFilter(new BoundDimFilter(
+                "namespace",
+                "Main",
+                "Main",
+                false,
+                false,
+                null,
+                null,
+                null
+            ))
+        )
+    );
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", "#en.wikipedia"),
+                new BoundFilter(new BoundDimFilter(
+                    "namespace",
+                    "Main",
+                    "Main",
+                    false,
+                    false,
+                    null,
+                    null,
+                    null
+                ))
+            )
+        ),
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("rtc.countryName", "United States"),
+                new OrFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("page", "DirecTV"),
+                        new SelectorFilter("rtc.countryIsoCode", "US")
+                    )
+                )
+            )
+        ),
+        ImmutableList.of()
+    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+        adapter,
+        adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(VirtualColumns.EMPTY, null, null),
+        originalFilter,
+        true,
+        false
+    );
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            originalFilter,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName",
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"President of India", "California", "United States"},
+            new Object[]{"Otjiwarongo Airport", "California", "United States"},
+            new Object[]{"DirecTV", "North Carolina", "United States"},
+            new Object[]{"Carlo Curti", "California", "United States"},
+            new Object[]{"Old Anatolian Turkish", "Virginia", "United States"}
         )
     );
   }
