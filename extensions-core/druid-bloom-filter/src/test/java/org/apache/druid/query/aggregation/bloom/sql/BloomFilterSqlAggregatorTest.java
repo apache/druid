@@ -529,7 +529,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("v0", "v0"),
+                        new DefaultDimensionSpec("v0", "a0:v0"),
                         TEST_NUM_ENTRIES
                     )
                 )
@@ -597,7 +597,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("v0", "v0"),
+                        new DefaultDimensionSpec("v0", "a0:v0"),
                         TEST_NUM_ENTRIES
                     )
                 )
@@ -665,7 +665,7 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("v0", "v0"),
+                        new DefaultDimensionSpec("v0", "a0:v0"),
                         TEST_NUM_ENTRIES
                     )
                 )

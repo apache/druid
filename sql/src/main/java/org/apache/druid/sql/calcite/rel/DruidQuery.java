@@ -401,19 +401,18 @@ public class DruidQuery
 
       final VirtualColumn virtualColumn;
 
-      final String dimOutputName;
+
+      final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
         virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             druidExpression,
             sqlTypeName
         );
-        dimOutputName = virtualColumn.getOutputName();
+        dimensions.add(DimensionExpression.ofVirtualColumn(virtualColumn.getOutputName(), dimOutputName, druidExpression, outputType));
       } else {
-        dimOutputName = outputNamePrefix + outputNameCounter++;
+        dimensions.add(DimensionExpression.ofSimpleColumn(dimOutputName, druidExpression, outputType));
       }
-
-      dimensions.add(new DimensionExpression(dimOutputName, druidExpression, outputType));
     }
 
     return dimensions;
@@ -623,8 +622,8 @@ public class DruidQuery
     if (grouping != null) {
       if (includeDimensions) {
         for (DimensionExpression expression : grouping.getDimensions()) {
-          if (virtualColumnRegistry.isVirtualColumnDefined(expression.getOutputName())) {
-            virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression.getOutputName()));
+          if (virtualColumnRegistry.isVirtualColumnDefined(expression.getVirtualColumn())) {
+            virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression.getVirtualColumn()));
           }
         }
       }
