@@ -239,12 +239,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       const sorted = parsedQuery.getSorted();
       if (sorted) {
         className.push(
-          sorted.map(sorted => {
-            if (sorted.id === header) {
-              return sorted.desc ? '-sort-desc' : '-sort-asc';
-            }
-            return '';
-          })[0],
+          sorted
+            .map(sorted => {
+              if (sorted.id === header) {
+                return sorted.desc ? '-sort-desc' : '-sort-asc';
+              }
+              return '';
+            })
+            .join(''),
         );
       }
 
