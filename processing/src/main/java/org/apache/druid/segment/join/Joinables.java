@@ -21,9 +21,13 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -83,9 +87,14 @@ public class Joinables
       final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
       final boolean enableFilterPushDown,
-      final boolean enableFilterRewrite
+      final boolean enableFilterRewrite,
+      final boolean enableRewriteValueColumnFilters,
+      final long filterRewriteMaxSize,
+      final Filter originalFilter,
+      final VirtualColumns virtualColumns
   )
   {
+    // compute column correlations here and RHS correlated values
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
         () -> {
@@ -93,7 +102,16 @@ public class Joinables
             return Function.identity();
           } else {
             final List<JoinableClause> joinableClauses = createJoinableClauses(clauses, joinableFactory);
-            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, enableFilterPushDown, enableFilterRewrite);
+            JoinFilterPreAnalysis jfpa = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+                joinableClauses,
+                virtualColumns,
+                originalFilter,
+                enableFilterPushDown,
+                enableFilterRewrite,
+                enableRewriteValueColumnFilters,
+                filterRewriteMaxSize
+            );
+            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, jfpa);
           }
         }
     );

@@ -103,6 +103,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Query.TIMESERIES;
   }
 
+  @Override
   @JsonProperty
   public VirtualColumns getVirtualColumns()
   {

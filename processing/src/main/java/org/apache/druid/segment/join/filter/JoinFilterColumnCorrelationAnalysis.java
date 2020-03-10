@@ -19,10 +19,14 @@
 
 package org.apache.druid.segment.join.filter;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -37,6 +41,7 @@ public class JoinFilterColumnCorrelationAnalysis
   private final String joinColumn;
   private final List<String> baseColumns;
   private final List<Expr> baseExpressions;
+  private Map<Pair<String, String>, Optional<Set<String>>> correlatedValuesMap;
 
   public JoinFilterColumnCorrelationAnalysis(
       String joinColumn,
@@ -48,6 +53,7 @@ public class JoinFilterColumnCorrelationAnalysis
     this.baseColumns = new ArrayList<>(baseColumns);
     this.baseExpressions = new ArrayList<>(baseExpressions);
     this.baseColumns.sort(String.CASE_INSENSITIVE_ORDER);
+    this.correlatedValuesMap = new HashMap<>();
   }
 
   public String getJoinColumn()
@@ -63,6 +69,11 @@ public class JoinFilterColumnCorrelationAnalysis
   public List<Expr> getBaseExpressions()
   {
     return baseExpressions;
+  }
+
+  public Map<Pair<String, String>, Optional<Set<String>>> getCorrelatedValuesMap()
+  {
+    return correlatedValuesMap;
   }
 
   public boolean supportsPushDown()
