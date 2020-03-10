@@ -43,6 +43,8 @@ interface ConsoleConfig {
   customHeaderValue?: string;
   customHeaders?: Record<string, string>;
   exampleManifestsUrl?: string;
+  defaultQueryContext?: Record<string, any>;
+  mandatoryQueryContext?: Record<string, any>;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -64,6 +66,8 @@ if (consoleConfig.customHeaders) {
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
+    defaultQueryContext: consoleConfig.defaultQueryContext,
+    mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
   }) as any,
   container,
 );
