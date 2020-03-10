@@ -20,12 +20,12 @@
 
 package org.apache.druid.common.utils;
 
-import java.util.function.Supplier;
+import java.util.function.LongSupplier;
 
-public class TimeSupplier implements Supplier<Long>
+public class CurrentTimeMillisSupplier implements LongSupplier
 {
   @Override
-  public Long get()
+  public long getAsLong()
   {
     return System.currentTimeMillis();
   }

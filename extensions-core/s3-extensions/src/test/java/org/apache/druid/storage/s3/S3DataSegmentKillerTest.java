@@ -21,11 +21,10 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -35,6 +34,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.net.URI;
 
 @RunWith(EasyMockRunner.class)
 public class S3DataSegmentKillerTest extends EasyMockSupport
@@ -43,38 +43,32 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   private static final String KEY_2 = "key2";
   private static final String TEST_BUCKET = "test_bucket";
   private static final String TEST_PREFIX = "test_prefix";
-  private static final String CONTINUATION_STRING = "continuationToken";
+  private static final URI PREFIX_URI = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, TEST_PREFIX));
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final int MAX_KEYS = 1;
   private static final Exception RECOVERABLE_EXCEPTION = new SdkClientException(new IOException());
   private static final Exception NON_RECOVERABLE_EXCEPTION = new SdkClientException(new NullPointerException());
 
-  @Mock private ServerSideEncryptingAmazonS3 s3Client;
-  @Mock private S3DataSegmentPusherConfig segmentPusherConfig;
-  @Mock private S3InputDataConfig inputDataConfig;
+  @Mock
+  private ServerSideEncryptingAmazonS3 s3Client;
+  @Mock
+  private S3DataSegmentPusherConfig segmentPusherConfig;
+  @Mock
+  private S3InputDataConfig inputDataConfig;
 
   private S3DataSegmentKiller segmentKiller;
 
   @Test
   public void test_killAll_noException_deletesAllSegments() throws IOException
   {
-    S3ObjectSummary objectSummary1 = S3TestUtils.mockS3ObjectSummary(TIME_0, KEY_1);
-    S3ObjectSummary objectSummary2 = S3TestUtils.mockS3ObjectSummary(TIME_1, KEY_2);
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+    S3ObjectSummary objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2, TIME_1);
 
-
-    ListObjectsV2Request request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-    ListObjectsV2Result result1 = S3TestUtils.mockResult(CONTINUATION_STRING, true, ImmutableList.of(objectSummary1));
-
-    ListObjectsV2Request request2 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, CONTINUATION_STRING);
-    ListObjectsV2Result result2 = S3TestUtils.mockResult(null, false, ImmutableList.of(objectSummary2));
-
-    s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-        ImmutableMap.of(
-            request1, result1,
-            request2, result2
-        ),
-        ImmutableMap.of()
+    S3TestUtils.expectListObjects(
+        s3Client,
+        PREFIX_URI,
+        ImmutableList.of(objectSummary1, objectSummary2)
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
@@ -88,7 +82,11 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
             new DeleteObjectsRequest.KeyVersion(KEY_2)
         ));
 
-    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1, deleteRequest2), ImmutableList.of());
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1, deleteRequest2),
+        ImmutableMap.of()
+    );
 
     EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET);
     EasyMock.expectLastCall().anyTimes();
@@ -98,27 +96,22 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.replay(objectSummary1, objectSummary2, request1, request2, result1, result2, s3Client, segmentPusherConfig, inputDataConfig);
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
     segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller.killAll();
-    EasyMock.verify(objectSummary1, objectSummary2, request1, request2, result1, result2, s3Client, segmentPusherConfig, inputDataConfig);
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 
   @Test
   public void test_killAll_recoverableExceptionWhenListingObjects_deletesAllSegments() throws IOException
   {
-    S3ObjectSummary objectSummary1 = S3TestUtils.mockS3ObjectSummary(TIME_0, KEY_1);
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
 
-
-    ListObjectsV2Request request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-    ListObjectsV2Result result1 = S3TestUtils.mockResult(null, false, ImmutableList.of(objectSummary1));
-
-    s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-        ImmutableMap.of(
-            request1, result1
-        ),
-        ImmutableMap.of(request1, RECOVERABLE_EXCEPTION)
+    S3TestUtils.expectListObjects(
+        s3Client,
+        PREFIX_URI,
+        ImmutableList.of(objectSummary1)
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
@@ -127,7 +120,11 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
             new DeleteObjectsRequest.KeyVersion(KEY_1)
         ));
 
-    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1), ImmutableList.of());
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1),
+        ImmutableMap.of(deleteRequest1, RECOVERABLE_EXCEPTION)
+    );
 
     EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET);
     EasyMock.expectLastCall().anyTimes();
@@ -137,25 +134,38 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
     EasyMock.expectLastCall().anyTimes();
 
-    EasyMock.replay(objectSummary1, request1, result1, s3Client, segmentPusherConfig, inputDataConfig);
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
     segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller.killAll();
-    EasyMock.verify(objectSummary1, request1, result1, s3Client, segmentPusherConfig, inputDataConfig);
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 
   @Test
   public void test_killAll_nonrecoverableExceptionWhenListingObjects_deletesAllSegments()
   {
     boolean ioExceptionThrown = false;
-    ListObjectsV2Request request1 = null;
     try {
-      request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
+      S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
 
-      s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-          ImmutableMap.of(),
-          ImmutableMap.of(request1, NON_RECOVERABLE_EXCEPTION)
+      S3TestUtils.expectListObjects(
+          s3Client,
+          PREFIX_URI,
+          ImmutableList.of(objectSummary1)
       );
+
+      DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
+          .withBucketName(TEST_BUCKET)
+          .withKeys(ImmutableList.of(
+              new DeleteObjectsRequest.KeyVersion(KEY_1)
+          ));
+
+      S3TestUtils.mockS3ClientDeleteObjects(
+          s3Client,
+          ImmutableList.of(),
+          ImmutableMap.of(deleteRequest1, NON_RECOVERABLE_EXCEPTION)
+      );
+
 
       EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET);
       EasyMock.expectLastCall().anyTimes();
@@ -165,7 +175,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
       EasyMock.expectLastCall().anyTimes();
 
-      EasyMock.replay(request1, s3Client, segmentPusherConfig, inputDataConfig);
+      EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
       segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
       segmentKiller.killAll();
@@ -175,9 +185,6 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     }
 
     Assert.assertTrue(ioExceptionThrown);
-    EasyMock.verify(request1, s3Client, segmentPusherConfig, inputDataConfig);
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
-
-
-
 }

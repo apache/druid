@@ -23,8 +23,6 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -32,7 +30,8 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.utils.TimeSupplier;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
+import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -45,6 +44,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 @RunWith(EasyMockRunner.class)
@@ -55,7 +55,7 @@ public class S3TaskLogsTest extends EasyMockSupport
   private static final String KEY_2 = "key2";
   private static final String TEST_BUCKET = "test_bucket";
   private static final String TEST_PREFIX = "test_prefix";
-  private static final String CONTINUATION_STRING = "continuationToken";
+  private static final URI PREFIX_URI = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, TEST_PREFIX));
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final long TIME_NOW = 2L;
@@ -64,8 +64,10 @@ public class S3TaskLogsTest extends EasyMockSupport
   private static final Exception RECOVERABLE_EXCEPTION = new SdkClientException(new IOException());
   private static final Exception NON_RECOVERABLE_EXCEPTION = new SdkClientException(new NullPointerException());
 
-  @Mock private TimeSupplier timeSupplier;
-  @Mock private ServerSideEncryptingAmazonS3 s3Client;
+  @Mock
+  private CurrentTimeMillisSupplier timeSupplier;
+  @Mock
+  private ServerSideEncryptingAmazonS3 s3Client;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -104,23 +106,15 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Test
   public void test_killAll_noException_deletesAllTaskLogs() throws IOException
   {
-    S3ObjectSummary objectSummary1 = S3TestUtils.mockS3ObjectSummary(TIME_0, KEY_1);
-    S3ObjectSummary objectSummary2 = S3TestUtils.mockS3ObjectSummary(TIME_1, KEY_2);
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+    S3ObjectSummary objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2, TIME_1);
 
-    EasyMock.expect(timeSupplier.get()).andReturn(TIME_NOW);
+    EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
 
-    ListObjectsV2Request request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-    ListObjectsV2Result result1 = S3TestUtils.mockResult(CONTINUATION_STRING, true, ImmutableList.of(objectSummary1));
-
-    ListObjectsV2Request request2 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, CONTINUATION_STRING);
-    ListObjectsV2Result result2 = S3TestUtils.mockResult(null, false, ImmutableList.of(objectSummary2));
-
-    s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-        ImmutableMap.of(
-            request1, result1,
-            request2, result2
-        ),
-        ImmutableMap.of()
+    S3TestUtils.expectListObjects(
+        s3Client,
+        PREFIX_URI,
+        ImmutableList.of(objectSummary1, objectSummary2)
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
@@ -134,9 +128,13 @@ public class S3TaskLogsTest extends EasyMockSupport
             new DeleteObjectsRequest.KeyVersion(KEY_2)
         ));
 
-    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1, deleteRequest2), ImmutableList.of());
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1, deleteRequest2),
+        ImmutableMap.of()
+    );
 
-    EasyMock.replay(objectSummary1, objectSummary2, request1, request2, result1, result2, s3Client, timeSupplier);
+    EasyMock.replay(s3Client, timeSupplier);
 
     S3TaskLogsConfig config = new S3TaskLogsConfig();
     config.setS3Bucket(TEST_BUCKET);
@@ -146,24 +144,20 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
     s3TaskLogs.killAll();
 
-    EasyMock.verify(objectSummary1, objectSummary2, request1, request2, result1, result2, s3Client, timeSupplier);
+    EasyMock.verify(s3Client, timeSupplier);
   }
 
   @Test
-  public void test_killAll_recoverableExceptionWhenListingObjects_deletesAllTaskLogs() throws IOException
+  public void test_killAll_recoverableExceptionWhenDeletingObjects_deletesAllTaskLogs() throws IOException
   {
-    S3ObjectSummary objectSummary1 = S3TestUtils.mockS3ObjectSummary(TIME_0, KEY_1);
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
 
-    EasyMock.expect(timeSupplier.get()).andReturn(TIME_NOW);
+    EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
 
-    ListObjectsV2Request request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-    ListObjectsV2Result result1 = S3TestUtils.mockResult(null, false, ImmutableList.of(objectSummary1));
-
-    s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-        ImmutableMap.of(
-            request1, result1
-        ),
-        ImmutableMap.of(request1, RECOVERABLE_EXCEPTION)
+    S3TestUtils.expectListObjects(
+        s3Client,
+        PREFIX_URI,
+        ImmutableList.of(objectSummary1)
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
@@ -172,9 +166,13 @@ public class S3TaskLogsTest extends EasyMockSupport
             new DeleteObjectsRequest.KeyVersion(KEY_1)
         ));
 
-    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1), ImmutableList.of());
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1),
+        ImmutableMap.of(deleteRequest1, RECOVERABLE_EXCEPTION)
+    );
 
-    EasyMock.replay(objectSummary1, request1, result1, s3Client, timeSupplier);
+    EasyMock.replay(s3Client, timeSupplier);
 
     S3TaskLogsConfig config = new S3TaskLogsConfig();
     config.setS3Bucket(TEST_BUCKET);
@@ -184,25 +182,34 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
     s3TaskLogs.killAll();
 
-    EasyMock.verify(objectSummary1, request1, result1, s3Client, timeSupplier);
+    EasyMock.verify(s3Client, timeSupplier);
   }
 
   @Test
   public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    ListObjectsV2Request request1 = null;
     try {
-      EasyMock.expect(timeSupplier.get()).andReturn(TIME_NOW);
-
-      request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-
-      s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-          ImmutableMap.of(),
-          ImmutableMap.of(request1, NON_RECOVERABLE_EXCEPTION)
+      S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+      EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
+      S3TestUtils.expectListObjects(
+          s3Client,
+          PREFIX_URI,
+          ImmutableList.of(objectSummary1)
       );
 
-      EasyMock.replay(request1, s3Client, timeSupplier);
+      DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
+          .withBucketName(TEST_BUCKET)
+          .withKeys(ImmutableList.of(
+              new DeleteObjectsRequest.KeyVersion(KEY_1)
+          ));
+      S3TestUtils.mockS3ClientDeleteObjects(
+          s3Client,
+          ImmutableList.of(),
+          ImmutableMap.of(deleteRequest1, NON_RECOVERABLE_EXCEPTION)
+      );
+
+      EasyMock.replay(s3Client, timeSupplier);
 
       S3TaskLogsConfig config = new S3TaskLogsConfig();
       config.setS3Bucket(TEST_BUCKET);
@@ -218,27 +225,19 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     Assert.assertTrue(ioExceptionThrown);
 
-    EasyMock.verify(request1, s3Client, timeSupplier);
+    EasyMock.verify(s3Client, timeSupplier);
   }
 
   @Test
   public void test_killOlderThan_noException_deletesOnlyTaskLogsOlderThan() throws IOException
   {
-    S3ObjectSummary objectSummary1 = S3TestUtils.mockS3ObjectSummary(TIME_0, KEY_1);
-    S3ObjectSummary objectSummary2 = S3TestUtils.mockS3ObjectSummary(TIME_FUTURE, KEY_2);
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+    S3ObjectSummary objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2, TIME_FUTURE);
 
-    ListObjectsV2Request request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-    ListObjectsV2Result result1 = S3TestUtils.mockResult(CONTINUATION_STRING, true, ImmutableList.of(objectSummary1));
-
-    ListObjectsV2Request request2 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, CONTINUATION_STRING);
-    ListObjectsV2Result result2 = S3TestUtils.mockResult(null, false, ImmutableList.of(objectSummary2));
-
-    s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-        ImmutableMap.of(
-            request1, result1,
-            request2, result2
-        ),
-        ImmutableMap.of()
+    S3TestUtils.expectListObjects(
+        s3Client,
+        PREFIX_URI,
+        ImmutableList.of(objectSummary1, objectSummary2)
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
@@ -246,14 +245,10 @@ public class S3TaskLogsTest extends EasyMockSupport
         .withKeys(ImmutableList.of(
             new DeleteObjectsRequest.KeyVersion(KEY_1)
         ));
-    DeleteObjectsRequest deleteRequest2 = new DeleteObjectsRequest(TEST_BUCKET)
-        .withBucketName(TEST_BUCKET)
-        .withKeys(ImmutableList.of(
-            new DeleteObjectsRequest.KeyVersion(KEY_2)
-        ));
-    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1), ImmutableList.of(deleteRequest2));
 
-    EasyMock.replay(objectSummary1, objectSummary2, request1, request2, result1, result2, s3Client, timeSupplier);
+    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1), ImmutableMap.of());
+
+    EasyMock.replay(s3Client, timeSupplier);
 
     S3TaskLogsConfig config = new S3TaskLogsConfig();
     config.setS3Bucket(TEST_BUCKET);
@@ -263,22 +258,18 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
     s3TaskLogs.killOlderThan(TIME_NOW);
 
-    EasyMock.verify(objectSummary1, objectSummary2, request1, request2, result1, result2, s3Client, timeSupplier);
+    EasyMock.verify(s3Client, timeSupplier);
   }
 
   @Test
   public void test_killOlderThan_recoverableExceptionWhenListingObjects_deletesAllTaskLogs() throws IOException
   {
-    S3ObjectSummary objectSummary1 = S3TestUtils.mockS3ObjectSummary(TIME_0, KEY_1);
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
 
-    ListObjectsV2Request request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-    ListObjectsV2Result result1 = S3TestUtils.mockResult(null, false, ImmutableList.of(objectSummary1));
-
-    s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-        ImmutableMap.of(
-            request1, result1
-        ),
-        ImmutableMap.of(request1, RECOVERABLE_EXCEPTION)
+    S3TestUtils.expectListObjects(
+        s3Client,
+        PREFIX_URI,
+        ImmutableList.of(objectSummary1)
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
@@ -287,9 +278,13 @@ public class S3TaskLogsTest extends EasyMockSupport
             new DeleteObjectsRequest.KeyVersion(KEY_1)
         ));
 
-    S3TestUtils.mockS3ClientDeleteObjects(s3Client, ImmutableList.of(deleteRequest1), ImmutableList.of());
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1),
+        ImmutableMap.of(deleteRequest1, RECOVERABLE_EXCEPTION)
+    );
 
-    EasyMock.replay(objectSummary1, request1, result1, s3Client, timeSupplier);
+    EasyMock.replay(s3Client, timeSupplier);
 
     S3TaskLogsConfig config = new S3TaskLogsConfig();
     config.setS3Bucket(TEST_BUCKET);
@@ -299,23 +294,33 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
     s3TaskLogs.killOlderThan(TIME_NOW);
 
-    EasyMock.verify(objectSummary1, request1, result1, s3Client, timeSupplier);
+    EasyMock.verify(s3Client, timeSupplier);
   }
 
   @Test
   public void test_killOlderThan_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    ListObjectsV2Request request1 = null;
     try {
-      request1 = S3TestUtils.mockRequest(TEST_BUCKET, TEST_PREFIX, MAX_KEYS, null);
-
-      s3Client = S3TestUtils.mockS3ClientListObjectsV2(
-          ImmutableMap.of(),
-          ImmutableMap.of(request1, NON_RECOVERABLE_EXCEPTION)
+      S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+      S3TestUtils.expectListObjects(
+          s3Client,
+          PREFIX_URI,
+          ImmutableList.of(objectSummary1)
       );
 
-      EasyMock.replay(request1, s3Client, timeSupplier);
+      DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
+          .withBucketName(TEST_BUCKET)
+          .withKeys(ImmutableList.of(
+              new DeleteObjectsRequest.KeyVersion(KEY_1)
+          ));
+      S3TestUtils.mockS3ClientDeleteObjects(
+          s3Client,
+          ImmutableList.of(),
+          ImmutableMap.of(deleteRequest1, NON_RECOVERABLE_EXCEPTION)
+      );
+
+      EasyMock.replay(s3Client, timeSupplier);
 
       S3TaskLogsConfig config = new S3TaskLogsConfig();
       config.setS3Bucket(TEST_BUCKET);
@@ -331,7 +336,7 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     Assert.assertTrue(ioExceptionThrown);
 
-    EasyMock.verify(request1, s3Client, timeSupplier);
+    EasyMock.verify(s3Client, timeSupplier);
   }
 
   private List<Grant> testPushInternal(boolean disableAcl, String ownerId, String ownerDisplayName) throws Exception
@@ -356,7 +361,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogsConfig config = new S3TaskLogsConfig();
     config.setDisableAcl(disableAcl);
     config.setS3Bucket(TEST_BUCKET);
-    TimeSupplier timeSupplier = new TimeSupplier();
+    CurrentTimeMillisSupplier timeSupplier = new CurrentTimeMillisSupplier();
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
     S3TaskLogs s3TaskLogs = new S3TaskLogs(s3Client, config, inputDataConfig, timeSupplier);
 
@@ -365,8 +370,6 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     s3TaskLogs.pushTaskLog(taskId, logFile);
 
-    List<Grant> grantsAsList = aclExpected.getGrantsAsList();
-
-    return grantsAsList;
+    return aclExpected.getGrantsAsList();
   }
 }

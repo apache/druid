@@ -20,10 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,9 +29,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -87,41 +82,16 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
+    log.info("Deleting all segment files from s3 location [bucket: '%s' prefix: '%s']",
+             segmentPusherConfig.getBucket(), segmentPusherConfig.getBaseKey()
+    );
     try {
-      S3Utils.retryS3Operation(
-          () -> {
-            String bucketName = segmentPusherConfig.getBucket();
-            String prefix = segmentPusherConfig.getBaseKey();
-            int maxListingLength = inputDataConfig.getMaxListingLength();
-            ListObjectsV2Result result;
-            String continuationToken = null;
-            do {
-              log.info("Deleting batch of %d segment files from s3 location [bucket: %s    prefix: %s].",
-                       maxListingLength, bucketName, prefix
-              );
-              ListObjectsV2Request request = new ListObjectsV2Request()
-                  .withBucketName(bucketName)
-                  .withPrefix(prefix)
-                  .withContinuationToken(continuationToken)
-                  .withMaxKeys(maxListingLength);
-
-              result = s3Client.listObjectsV2(request);
-              List<S3ObjectSummary> objectSummaries = result.getObjectSummaries();
-
-              List<DeleteObjectsRequest.KeyVersion> keyVersionsToDelete =
-                  objectSummaries.stream()
-                                 .map(x -> new DeleteObjectsRequest.KeyVersion(x.getKey()))
-                                 .collect(Collectors.toList());
-
-              DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucketName)
-                  .withBucketName(bucketName)
-                  .withKeys(keyVersionsToDelete);
-              s3Client.deleteObjects(deleteRequest);
-
-              continuationToken = result.getNextContinuationToken();
-            } while (result.isTruncated());
-            return null;
-          }
+      S3Utils.deleteObjectsInPath(
+          s3Client,
+          inputDataConfig,
+          segmentPusherConfig.getBucket(),
+          segmentPusherConfig.getBaseKey(),
+          Predicates.alwaysTrue()
       );
     }
     catch (Exception e) {

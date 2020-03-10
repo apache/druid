@@ -23,13 +23,16 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import junit.framework.AssertionFailedError;
 import org.apache.commons.collections4.map.HashedMap;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.easymock.IArgumentMatcher;
 import org.easymock.IExpectationSetters;
+import org.joda.time.DateTime;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -37,41 +40,9 @@ import java.util.stream.Collectors;
 
 public class S3TestUtils extends EasyMockSupport
 {
-  public static ListObjectsV2Request listObjectsV2RequestArgumentMatcher(ListObjectsV2Request listObjectsV2Request)
-  {
-    EasyMock.reportMatcher(new IArgumentMatcher()
-    {
-      @Override
-      public boolean matches(Object argument)
-      {
-
-        return argument instanceof ListObjectsV2Request
-               && listObjectsV2Request.getBucketName().equals(((ListObjectsV2Request) argument).getBucketName())
-               && listObjectsV2Request.getPrefix().equals(((ListObjectsV2Request) argument).getPrefix())
-               && ((listObjectsV2Request.getContinuationToken() == null
-                    && ((ListObjectsV2Request) argument).getContinuationToken() == null)
-                   || (listObjectsV2Request.getContinuationToken()
-                                           .equals(((ListObjectsV2Request) argument).getContinuationToken())))
-               && listObjectsV2Request.getMaxKeys().equals(((ListObjectsV2Request) argument).getMaxKeys());
-      }
-
-      @Override
-      public void appendTo(StringBuffer buffer)
-      {
-        String str = "ListObjectsV2Request(\"bucketName:\" \""
-                     + listObjectsV2Request.getBucketName()
-                     + "\", \"prefix:\""
-                     + listObjectsV2Request.getPrefix()
-                     + "\", \"continuationToken:\""
-                     + listObjectsV2Request.getContinuationToken()
-                     + "\", \"maxKeys:\""
-                     + listObjectsV2Request.getMaxKeys()
-                     + "\")";
-        buffer.append(str);
-      }
-    });
-    return null;
-  }
+  private static final DateTime NOW = DateTimes.nowUtc();
+  private static final byte[] CONTENT =
+      StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
 
   public static DeleteObjectsRequest deleteObjectsRequestArgumentMatcher(DeleteObjectsRequest deleteObjectsRequest)
   {
@@ -114,99 +85,96 @@ public class S3TestUtils extends EasyMockSupport
     return null;
   }
 
-  public static S3ObjectSummary mockS3ObjectSummary(long lastModified, String key)
+  public static void expectListObjects(
+      ServerSideEncryptingAmazonS3 s3Client,
+      URI prefix,
+      List<S3ObjectSummary> objectSummaries)
   {
-    S3ObjectSummary objectSummary = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary.getLastModified()).andReturn(new Date(lastModified));
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(objectSummary.getKey()).andReturn(key);
-    EasyMock.expectLastCall().anyTimes();
-    return objectSummary;
+    final ListObjectsV2Result result = new ListObjectsV2Result();
+    result.setBucketName(prefix.getAuthority());
+    result.setKeyCount(objectSummaries.size());
+    for (S3ObjectSummary objectSummary : objectSummaries) {
+      result.getObjectSummaries().add(objectSummary);
+    }
+
+    EasyMock.expect(
+        s3Client.listObjectsV2(matchListObjectsRequest(prefix))
+    ).andReturn(result).once();
   }
 
-  public static ListObjectsV2Request mockRequest(
-      String bucket,
-      String prefix,
-      int maxKeys,
-      String continuationToken
+  public static void mockS3ClientDeleteObjects(
+      ServerSideEncryptingAmazonS3 s3Client,
+      List<DeleteObjectsRequest> deleteRequestsExpected,
+      Map<DeleteObjectsRequest, Exception> requestToException
   )
   {
-    ListObjectsV2Request request = EasyMock.createMock(ListObjectsV2Request.class);
-    EasyMock.expect(request.getBucketName()).andReturn(bucket);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(request.getPrefix()).andReturn(prefix);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(request.getMaxKeys()).andReturn(maxKeys);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(request.getContinuationToken()).andReturn(continuationToken);
-    EasyMock.expectLastCall().anyTimes();
-    return request;
-  }
+    Map<DeleteObjectsRequest, IExpectationSetters<DeleteObjectsRequest>> requestToResultExpectationSetter = new HashedMap<>();
 
-  public static ListObjectsV2Result mockResult(
-      String continuationToken,
-      boolean isTruncated,
-      List<S3ObjectSummary> objectSummaries
-  )
-  {
-    ListObjectsV2Result result = EasyMock.createMock(ListObjectsV2Result.class);
-    EasyMock.expect(result.getNextContinuationToken()).andReturn(continuationToken);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(result.isTruncated()).andReturn(isTruncated);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(result.getObjectSummaries()).andReturn(objectSummaries);
-    return result;
-  }
-
-  public static ServerSideEncryptingAmazonS3 mockS3ClientListObjectsV2(
-      Map<ListObjectsV2Request, ListObjectsV2Result> requestsToResults,
-      Map<ListObjectsV2Request, Exception> requestsToExceptions
-  )
-  {
-    Map<ListObjectsV2Request, IExpectationSetters<ListObjectsV2Result>> requestToResultExpectationSetter = new HashedMap<>();
-    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
-    for (Map.Entry<ListObjectsV2Request, Exception> requestsAndErrors : requestsToExceptions.entrySet()) {
-      ListObjectsV2Request request = requestsAndErrors.getKey();
+    for (Map.Entry<DeleteObjectsRequest, Exception> requestsAndErrors : requestToException.entrySet()) {
+      DeleteObjectsRequest request = requestsAndErrors.getKey();
       Exception exception = requestsAndErrors.getValue();
-      IExpectationSetters<ListObjectsV2Result> resultExpectationSetter = requestToResultExpectationSetter.get(request);
+      IExpectationSetters<DeleteObjectsRequest> resultExpectationSetter = requestToResultExpectationSetter.get(request);
       if (resultExpectationSetter == null) {
-        s3Client.listObjectsV2(
-            S3TestUtils.listObjectsV2RequestArgumentMatcher(request));
-        resultExpectationSetter = EasyMock.<ListObjectsV2Result>expectLastCall().andThrow(exception);
+        s3Client.deleteObjects(
+            S3TestUtils.deleteObjectsRequestArgumentMatcher(request));
+        resultExpectationSetter = EasyMock.<DeleteObjectsRequest>expectLastCall().andThrow(exception);
         requestToResultExpectationSetter.put(request, resultExpectationSetter);
       } else {
         resultExpectationSetter.andThrow(exception);
       }
     }
 
-    for (Map.Entry<ListObjectsV2Request, ListObjectsV2Result> requestsAndResults : requestsToResults.entrySet()) {
-      ListObjectsV2Request request = requestsAndResults.getKey();
-      ListObjectsV2Result result = requestsAndResults.getValue();
-      IExpectationSetters<ListObjectsV2Result> resultExpectationSetter = requestToResultExpectationSetter.get(request);
+    for (DeleteObjectsRequest request : deleteRequestsExpected) {
+      IExpectationSetters<DeleteObjectsRequest> resultExpectationSetter = requestToResultExpectationSetter.get(request);
       if (resultExpectationSetter == null) {
-        resultExpectationSetter = EasyMock.expect(s3Client.listObjectsV2(
-            S3TestUtils.listObjectsV2RequestArgumentMatcher(request)));
+        s3Client.deleteObjects(S3TestUtils.deleteObjectsRequestArgumentMatcher(request));
+        resultExpectationSetter = EasyMock.expectLastCall();
         requestToResultExpectationSetter.put(request, resultExpectationSetter);
       }
-      resultExpectationSetter.andReturn(result);
+      resultExpectationSetter.andVoid();
     }
-    return s3Client;
   }
 
-  public static void mockS3ClientDeleteObjects(
-      ServerSideEncryptingAmazonS3 s3Client,
-      List<DeleteObjectsRequest> deleteRequestsExpected,
-      List<DeleteObjectsRequest> deleteRequestsNotExpected
-  )
+  public static ListObjectsV2Request matchListObjectsRequest(final URI prefixUri)
   {
-    for (DeleteObjectsRequest deleteRequestExpected : deleteRequestsExpected) {
-      s3Client.deleteObjects(S3TestUtils.deleteObjectsRequestArgumentMatcher(deleteRequestExpected));
-      EasyMock.expectLastCall();
-    }
+    // Use an IArgumentMatcher to verify that the request has the correct bucket and prefix.
+    EasyMock.reportMatcher(
+        new IArgumentMatcher()
+        {
+          @Override
+          public boolean matches(Object argument)
+          {
+            if (!(argument instanceof ListObjectsV2Request)) {
+              return false;
+            }
 
-    for (DeleteObjectsRequest deleteRequestNotExpected : deleteRequestsNotExpected) {
-      s3Client.deleteObjects(S3TestUtils.deleteObjectsRequestArgumentMatcher(deleteRequestNotExpected));
-      EasyMock.expectLastCall().andThrow(new AssertionFailedError()).anyTimes();
-    }
+            final ListObjectsV2Request request = (ListObjectsV2Request) argument;
+            return prefixUri.getAuthority().equals(request.getBucketName())
+                   && S3Utils.extractS3Key(prefixUri).equals(request.getPrefix());
+          }
+
+          @Override
+          public void appendTo(StringBuffer buffer)
+          {
+            buffer.append("<request for prefix [").append(prefixUri).append("]>");
+          }
+        }
+    );
+
+    return null;
+  }
+
+  public static S3ObjectSummary newS3ObjectSummary(
+      String bucket,
+      String key,
+      long lastModifiedTimestamp)
+  {
+    S3ObjectSummary objectSummary = new S3ObjectSummary();
+    objectSummary.setBucketName(bucket);
+    objectSummary.setKey(key);
+    objectSummary.setLastModified(new Date(lastModifiedTimestamp));
+    objectSummary.setETag("etag");
+    objectSummary.setSize(CONTENT.length);
+    return objectSummary;
   }
 }

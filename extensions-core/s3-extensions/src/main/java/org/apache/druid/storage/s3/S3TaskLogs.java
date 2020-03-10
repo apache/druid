@@ -21,17 +21,13 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import org.apache.druid.common.utils.TimeSupplier;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -41,8 +37,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Provides task logs archived on S3.
@@ -54,14 +48,14 @@ public class S3TaskLogs implements TaskLogs
   private final ServerSideEncryptingAmazonS3 service;
   private final S3TaskLogsConfig config;
   private final S3InputDataConfig inputDataConfig;
-  private final TimeSupplier timeSupplier;
+  private final CurrentTimeMillisSupplier timeSupplier;
 
   @Inject
   public S3TaskLogs(
       ServerSideEncryptingAmazonS3 service,
       S3TaskLogsConfig config,
       S3InputDataConfig inputDataConfig,
-      TimeSupplier timeSupplier
+      CurrentTimeMillisSupplier timeSupplier
   )
   {
     this.service = service;
@@ -175,53 +169,23 @@ public class S3TaskLogs implements TaskLogs
              config.getS3Bucket(), config.getS3Prefix()
     );
 
-    long now = timeSupplier.get();
+    long now = timeSupplier.getAsLong();
     killOlderThan(now);
   }
 
   @Override
   public void killOlderThan(long timestamp) throws IOException
   {
+    log.info("Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'] older than %s.",
+             config.getS3Bucket(), config.getS3Prefix(), new Date(timestamp)
+    );
     try {
-      S3Utils.retryS3Operation(
-          () -> {
-            String bucketName = config.getS3Bucket();
-            String prefix = config.getS3Prefix();
-            int maxListingLength = inputDataConfig.getMaxListingLength();
-            ListObjectsV2Result result;
-            String continuationToken = null;
-            do {
-              log.info("Deleting batch of %d task logs from s3 location [bucket: %s    prefix: %s] older than %s",
-                       maxListingLength, bucketName, prefix, new Date(timestamp)
-              );
-              ListObjectsV2Request request = new ListObjectsV2Request()
-                  .withBucketName(bucketName)
-                  .withPrefix(prefix)
-                  .withContinuationToken(continuationToken)
-                  .withMaxKeys(maxListingLength);
-
-              result = service.listObjectsV2(request);
-              List<S3ObjectSummary> objectSummaries = result.getObjectSummaries();
-
-              List<DeleteObjectsRequest.KeyVersion> keyVersionsToDelete =
-                  objectSummaries.stream()
-                                 .filter(x -> x.getLastModified().getTime() < timestamp)
-                                 .map(x -> new DeleteObjectsRequest.KeyVersion(
-                                     x.getKey()))
-                                 .collect(
-                                     Collectors.toList());
-
-              DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucketName)
-                  .withBucketName(bucketName)
-                  .withKeys(keyVersionsToDelete);
-              if (!deleteRequest.getKeys().isEmpty()) {
-                service.deleteObjects(deleteRequest);
-              }
-
-              continuationToken = result.getNextContinuationToken();
-            } while (result.isTruncated());
-            return null;
-          }
+      S3Utils.deleteObjectsInPath(
+          service,
+          inputDataConfig,
+          config.getS3Bucket(),
+          config.getS3Prefix(),
+          (object) -> object.getLastModified().getTime() < timestamp
       );
     }
     catch (Exception e) {
