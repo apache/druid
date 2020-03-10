@@ -375,7 +375,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                          Collections.singletonList(
                                                              new DefaultDimensionSpec(
                                                                  "v0",
-                                                                 "v0",
+                                                                 "d0",
                                                                  ValueType.LONG
                                                              )
                                                          )

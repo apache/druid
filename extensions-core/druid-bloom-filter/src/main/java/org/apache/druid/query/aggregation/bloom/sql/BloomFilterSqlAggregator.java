@@ -174,7 +174,10 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           inputOperand.getType().getSqlTypeName()
       );
       virtualColumns.add(virtualColumn);
-      spec = new DefaultDimensionSpec(virtualColumn.getOutputName(), virtualColumn.getOutputName());
+      spec = new DefaultDimensionSpec(
+          virtualColumn.getOutputName(),
+          StringUtils.format("%s:%s", name, virtualColumn.getOutputName())
+      );
     }
 
     aggregatorFactory = new BloomFilterAggregatorFactory(

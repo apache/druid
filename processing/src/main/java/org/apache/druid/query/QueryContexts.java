@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class QueryContexts
 {
   public static final String PRIORITY_KEY = "priority";
+  public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
@@ -46,6 +47,7 @@ public class QueryContexts
   public static final String VECTORIZE_KEY = "vectorize";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
+  public static final String JOIN_FILTER_REWRITE_KEY = "enableJoinFilterRewrite";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -59,6 +61,7 @@ public class QueryContexts
   public static final long NO_TIMEOUT = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -200,6 +203,11 @@ public class QueryContexts
     return parseInt(query, PRIORITY_KEY, defaultValue);
   }
 
+  public static <T> String getLane(Query<T> query)
+  {
+    return (String) query.getContextValue(LANE_KEY);
+  }
+
   public static <T> boolean getEnableParallelMerges(Query<T> query)
   {
     return parseBoolean(query, BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
@@ -223,6 +231,11 @@ public class QueryContexts
   public static <T> boolean getEnableJoinFilterPushDown(Query<T> query)
   {
     return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+  }
+
+  public static <T> boolean getEnableJoinFilterRewrite(Query<T> query)
+  {
+    return parseBoolean(query, JOIN_FILTER_REWRITE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)

@@ -17,21 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
+package org.apache.druid.client;
 
-import javax.annotation.Nullable;
+import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.SegmentDescriptor;
 
 /**
+ * Given a {@link SegmentDescriptor}, get a {@link ServerSelector} to use to pick a {@link DruidServer} to query.
+ *
+ * Used by {@link CachingClusteredClient} on the broker to fan out queries to historical and realtime data
  */
-public interface ValueGetter
+public class SegmentServerSelector extends Pair<ServerSelector, SegmentDescriptor>
 {
-  /**
-   * It is not ideal that Long and Float values will get
-   * converted to strings. We should also add functions
-   * for these and modify ColumnComparisonFilter to handle
-   * comparing Long and Float columns to eachother.
-   * Returns null when the underlying Long/Float value is null.
-   */
-  @Nullable
-  String[] get();
+  public SegmentServerSelector(ServerSelector server, SegmentDescriptor segment)
+  {
+    super(server, segment);
+  }
+
+  public ServerSelector getServer()
+  {
+    return lhs;
+  }
+
+  public SegmentDescriptor getSegmentDescriptor()
+  {
+    return rhs;
+  }
 }

@@ -51,7 +51,7 @@ import java.util.Set;
  * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
  * when we first read from the base table instead of after the join.
  *
- * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Set, Filter, boolean)} method that
+ * This class provides a {@link #splitFilter(HashJoinSegmentStorageAdapter, Set, Filter, boolean, boolean)} method that
  * takes a filter and splits it into a portion that should be applied to the base table prior to the join, and a
  * portion that should be applied after the join.
  *
@@ -88,7 +88,8 @@ public class JoinFilterAnalyzer
       HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter,
       Set<String> baseColumnNames,
       @Nullable Filter originalFilter,
-      boolean enableFilterPushDown
+      boolean enableFilterPushDown,
+      boolean enableFilterRewrite
   )
   {
     if (originalFilter == null) {
@@ -150,7 +151,8 @@ public class JoinFilterAnalyzer
           orClause,
           prefixes,
           equiconditions,
-          correlationCache
+          correlationCache,
+          enableFilterRewrite
       );
       if (joinFilterAnalysis.isCanPushDown()) {
         leftFilters.add(joinFilterAnalysis.getPushDownFilter().get());
@@ -189,13 +191,36 @@ public class JoinFilterAnalyzer
       Filter filterClause,
       Map<String, JoinableClause> prefixes,
       Map<String, Set<Expr>> equiconditions,
-      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache
+      Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationCache,
+      boolean enableFilterRewrite
+
   )
   {
     // NULL matching conditions are not currently pushed down.
     // They require special consideration based on the join type, and for simplicity of the initial implementation
     // this is not currently handled.
     if (filterMatchesNull(filterClause)) {
+      return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
+    }
+
+    boolean baseTableOnly = true;
+    for (String requiredColumn : filterClause.getRequiredColumns()) {
+      if (!baseColumnNames.contains(requiredColumn)) {
+        baseTableOnly = false;
+        break;
+      }
+    }
+
+    if (baseTableOnly) {
+      return new JoinFilterAnalysis(
+          false,
+          filterClause,
+          filterClause,
+          ImmutableList.of()
+      );
+    }
+
+    if (!enableFilterRewrite) {
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
     }
 
@@ -220,17 +245,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    for (String requiredColumn : filterClause.getRequiredColumns()) {
-      if (!baseColumnNames.contains(requiredColumn)) {
-        return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
-      }
-    }
-    return new JoinFilterAnalysis(
-        false,
-        filterClause,
-        filterClause,
-        ImmutableList.of()
-    );
+    return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
   }
 
   /**

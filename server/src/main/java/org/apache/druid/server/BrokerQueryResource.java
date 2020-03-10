@@ -58,7 +58,7 @@ public class BrokerQueryResource extends QueryResource
       QueryLifecycleFactory queryLifecycleFactory,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      QueryManager queryManager,
+      QueryScheduler queryScheduler,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
       GenericQueryMetricsFactory queryMetricsFactory,
@@ -69,7 +69,7 @@ public class BrokerQueryResource extends QueryResource
         queryLifecycleFactory,
         jsonMapper,
         smileMapper,
-        queryManager,
+        queryScheduler,
         authConfig,
         authorizerMapper,
         queryMetricsFactory

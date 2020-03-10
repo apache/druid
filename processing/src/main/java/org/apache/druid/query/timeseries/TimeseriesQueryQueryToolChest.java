@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
@@ -212,11 +213,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     String[] aggregatorNames = new String[aggregatorSpecs.size()];
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      aggregators[i] = aggregatorSpecs.get(i)
-                                      .factorize(RowBasedColumnSelectorFactory.create(() -> new MapBasedRow(
-                                          null,
-                                          null
-                                      ), null));
+      aggregators[i] =
+          aggregatorSpecs.get(i)
+                         .factorize(
+                             RowBasedColumnSelectorFactory.create(
+                                 RowAdapters.standardRow(),
+                                 () -> new MapBasedRow(null, null),
+                                 null,
+                                 false
+                             )
+                         );
       aggregatorNames[i] = aggregatorSpecs.get(i).getName();
     }
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();

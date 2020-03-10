@@ -25,10 +25,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
+import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.InlineDataSource;
@@ -63,6 +65,7 @@ import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactoryTest;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -78,6 +81,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -98,18 +102,21 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker walker;
   private final JoinableFactory joinableFactory;
+  private final QueryScheduler scheduler;
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
   private final List<Closeable> closeables = new ArrayList<>();
   private final List<DataSegment> segments = new ArrayList<>();
 
   /**
    * Create an instance using the provided query runner factory conglomerate and lookup provider.
-   * If a JoinableFactory is provided, it will be used instead of the default.
+   * If a JoinableFactory is provided, it will be used instead of the default. If a scheduler is included,
+   * the runner will schedule queries according to the scheduling config.
    */
   public SpecificSegmentsQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final LookupExtractorFactoryContainerProvider lookupProvider,
-      @Nullable final JoinableFactory joinableFactory
+      @Nullable final JoinableFactory joinableFactory,
+      @Nullable final QueryScheduler scheduler
   )
   {
     this.conglomerate = conglomerate;
@@ -121,6 +128,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                                    .build()
                            ) : joinableFactory;
 
+    this.scheduler = scheduler;
     this.walker = new ClientQuerySegmentWalker(
         new NoopServiceEmitter(),
         new DataServerLikeWalker(),
@@ -164,6 +172,20 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         }
     );
   }
+
+  /**
+   * Create an instance using the provided query runner factory conglomerate and lookup provider.
+   * If a JoinableFactory is provided, it will be used instead of the default.
+   */
+  public SpecificSegmentsQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final LookupExtractorFactoryContainerProvider lookupProvider,
+      @Nullable final JoinableFactory joinableFactory
+  )
+  {
+    this(conglomerate, lookupProvider, joinableFactory, null);
+  }
+
 
   /**
    * Create an instance without any lookups, using the default JoinableFactory
@@ -374,7 +396,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           analysis.getPreJoinableClauses(),
           joinableFactory,
           new AtomicLong(),
-          QueryContexts.getEnableJoinFilterPushDown(query)
+          QueryContexts.getEnableJoinFilterPushDown(query),
+          QueryContexts.getEnableJoinFilterRewrite(query)
       );
 
       final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
@@ -388,13 +411,33 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           toolChest
       );
 
+
       // Wrap baseRunner in a runner that rewrites the QuerySegmentSpec to mention the specific segments.
       // This mimics what CachingClusteredClient on the Broker does, and is required for certain queries (like Scan)
       // to function properly.
-      return (theQuery, responseContext) -> baseRunner.run(
-          theQuery.withQuery(Queries.withSpecificSegments(theQuery.getQuery(), ImmutableList.copyOf(specs))),
-          responseContext
-      );
+      return (theQuery, responseContext) -> {
+        if (scheduler != null) {
+          Set<SegmentServerSelector> segments = new HashSet<>();
+          specs.forEach(spec -> segments.add(new SegmentServerSelector(null, spec)));
+          return scheduler.run(
+              scheduler.laneQuery(theQuery, segments),
+              new LazySequence<>(
+                  () -> baseRunner.run(
+                      theQuery.withQuery(Queries.withSpecificSegments(
+                          theQuery.getQuery(),
+                          ImmutableList.copyOf(specs)
+                      )),
+                      responseContext
+                  )
+              )
+          );
+        } else {
+          return baseRunner.run(
+              theQuery.withQuery(Queries.withSpecificSegments(theQuery.getQuery(), ImmutableList.copyOf(specs))),
+              responseContext
+          );
+        }
+      };
     }
 
     private <T> QueryRunner<T> makeTableRunner(

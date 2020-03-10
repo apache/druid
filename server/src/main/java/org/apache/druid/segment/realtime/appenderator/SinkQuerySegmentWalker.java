@@ -175,7 +175,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuTimeAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(query)
+        QueryContexts.getEnableJoinFilterPushDown(query),
+        QueryContexts.getEnableJoinFilterRewrite(query)
     );
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
