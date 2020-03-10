@@ -1489,7 +1489,7 @@ The Broker provides facilities to aid in query capacity reservation for heteroge
 
 ###### No laning strategy
 
-In this mode, queries are never assigned lane, and concurrent query count will only limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode. This strategy can also be explicitly enabled by setting `druid.query.scheduler.laning.strategy` to `none`.
+In this mode, queries are never assigned a lane, and the concurrent query count will only be limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode. Enable this strategy explicitly by setting `druid.query.scheduler.laning.strategy` to `none`.
 
 ###### 'High/Low' laning strategy
 This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. Queries with priority of zero (the default) or above are considered 'interactive'. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available.
