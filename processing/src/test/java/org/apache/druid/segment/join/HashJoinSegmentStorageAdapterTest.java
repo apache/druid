@@ -1266,8 +1266,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     JoinTestHelper.verifyCursors(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
-            ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
-            true
+            ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
         ).makeCursors(
             new SelectorFilter("page", "this matches nothing"),
             Intervals.ETERNITY,
