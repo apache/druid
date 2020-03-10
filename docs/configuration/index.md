@@ -1489,18 +1489,18 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |--------|-----------|-------|
 |`druid.query.scheduler.numThreads`|Maximum number of HTTP threads to dedicate to query processing. To save HTTP thread capacity, this should be lower than `druid.server.http.numThreads`.|Unbounded|
 |`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
-|`druid.query.scheduler.prioritization.type`|Query prioritization strategy to automatically assign priorities.|`none`|
+|`druid.query.scheduler.prioritization.strategy`|Query prioritization strategy to automatically assign priorities.|`none`|
 
 ##### Prioritization strategies
 
 ###### No prioritization strategy
-With this configuration, queries are never assigned a priority, but will preserve an priorities manually set on the query context. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.type` to `none`.
+With this configuration, queries are never assigned a priority, but will preserve an priorities manually set on the query context. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `none`.
 
 ###### Threshold deprioritization strategy
 
 This prioritization strategies lowers queries that cross a configurable set of thresholds, such as how far in the past the data is, how large of a timestamp it covers, and number of segments taking part in a query.
 
-This strategy can be enabled by setting `druid.query.scheduler.prioritization.type` to `threshold`.
+This strategy can be enabled by setting `druid.query.scheduler.prioritization.strategy` to `threshold`.
 
 |Property|Description|Default|
 |--------|-----------|-------|

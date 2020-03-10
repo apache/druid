@@ -21,6 +21,7 @@ package org.apache.druid.server.scheduling;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
@@ -31,6 +32,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.Set;
 
@@ -47,20 +49,24 @@ public class ThresholdBasedQueryDeprioritizationStrategy implements QueryPriorit
 
   @JsonCreator
   public ThresholdBasedQueryDeprioritizationStrategy(
-      @JsonProperty("periodThreshold") String periodThreshold,
-      @JsonProperty("durationThreshold") String durationThreshold,
-      @JsonProperty("segmentCountThreshold") Integer segmentCountThreshold,
-      @JsonProperty("adjustment") Integer adjustment
+      @JsonProperty("periodThreshold") @Nullable String periodThresholdString,
+      @JsonProperty("durationThreshold") @Nullable String durationThresholdString,
+      @JsonProperty("segmentCountThreshold") @Nullable Integer segmentCountThreshold,
+      @JsonProperty("adjustment") @Nullable Integer adjustment
   )
   {
     this.segmentCountThreshold = segmentCountThreshold == null ? DEFAULT_SEGMENT_THRESHOLD : segmentCountThreshold;
     this.adjustment = adjustment == null ? DEFAULT_ADJUSTMENT : adjustment;
-    this.periodThreshold = periodThreshold == null
+    this.periodThreshold = periodThresholdString == null
                            ? Optional.empty()
-                           : Optional.of(new Period(periodThreshold).toDurationFrom(DateTimes.nowUtc()));
-    this.durationThreshold = durationThreshold == null
+                           : Optional.of(new Period(periodThresholdString).toDurationFrom(DateTimes.nowUtc()));
+    this.durationThreshold = durationThresholdString == null
                              ? Optional.empty()
-                             : Optional.of(new Period(durationThreshold).toStandardDuration());
+                             : Optional.of(new Period(durationThresholdString).toStandardDuration());
+    Preconditions.checkArgument(
+        segmentCountThreshold != null || !periodThreshold.isPresent() || !durationThreshold.isPresent(),
+        "periodThreshold, durationThreshold, or segmentCountThreshold must be set"
+    );
   }
 
   @Override

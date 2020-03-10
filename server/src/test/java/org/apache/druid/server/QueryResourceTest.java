@@ -745,7 +745,7 @@ public class QueryResourceTest
     final QueryScheduler scheduler = new QueryScheduler(
         40,
         NoQueryPrioritizationStrategy.INSTANCE,
-        new HiLoQueryLaningStrategy(3),
+        new HiLoQueryLaningStrategy(2),
         new ServerConfig()
     );
 

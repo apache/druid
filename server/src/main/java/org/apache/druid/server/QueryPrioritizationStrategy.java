@@ -29,7 +29,7 @@ import org.apache.druid.server.scheduling.ThresholdBasedQueryDeprioritizationStr
 import java.util.Optional;
 import java.util.Set;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoQueryPrioritizationStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoQueryPrioritizationStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoQueryPrioritizationStrategy.class),
     @JsonSubTypes.Type(name = "threshold", value = ThresholdBasedQueryDeprioritizationStrategy.class)

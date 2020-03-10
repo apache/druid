@@ -22,6 +22,7 @@ package org.apache.druid.server.scheduling;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -29,6 +30,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.QueryPrioritizationStrategy;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -39,10 +41,9 @@ import org.junit.rules.ExpectedException;
 
 public class ThresholdBasedQueryDeprioritizationStrategyTest
 {
+  private final Integer adjustment = 10;
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
-  private final Integer adjustment = 10;
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
   @Before
@@ -74,7 +75,12 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationPeriodThresholdOutsidePeriod()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy("P90D", null, null, adjustment);
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+        "P90D",
+        null,
+        null,
+        adjustment
+    );
     DateTime startDate = DateTimes.nowUtc().minusDays(100);
     DateTime endDate = DateTimes.nowUtc().minusDays(80);
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
@@ -91,7 +97,12 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationDurationThresholdInsideDuration()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(null, "P7D", null, adjustment);
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+        null,
+        "P7D",
+        null,
+        adjustment
+    );
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
@@ -107,7 +118,12 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationDurationThresholdOutsideDuration()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(null, "P7D", null, adjustment);
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+        null,
+        "P7D",
+        null,
+        adjustment
+    );
     DateTime startDate = DateTimes.nowUtc().minusDays(20);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
@@ -118,6 +134,59 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
     Assert.assertEquals(
         -adjustment,
         (int) strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of()).get()
+    );
+  }
+
+  @Test
+  public void testPrioritizationSegmentCountWithinThreshold()
+  {
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+        null,
+        null,
+        2,
+        adjustment
+    );
+    DateTime startDate = DateTimes.nowUtc().minusDays(1);
+    DateTime endDate = DateTimes.nowUtc();
+    TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .granularity(Granularities.MINUTE)
+                                        .context(ImmutableMap.of())
+                                        .build();
+
+    Assert.assertFalse(
+        strategy.computePriority(
+            QueryPlus.wrap(query),
+            ImmutableSet.of(EasyMock.createMock(SegmentServerSelector.class))
+        ).isPresent()
+    );
+  }
+
+  @Test
+  public void testPrioritizationSegmentCountOverThreshold()
+  {
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+        null,
+        null,
+        2,
+        adjustment
+    );
+    DateTime startDate = DateTimes.nowUtc().minusDays(20);
+    DateTime endDate = DateTimes.nowUtc();
+    TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .granularity(Granularities.HOUR)
+                                        .context(ImmutableMap.of())
+                                        .build();
+
+    Assert.assertEquals(
+        -adjustment,
+        (int) strategy.computePriority(
+            QueryPlus.wrap(query),
+            ImmutableSet.of(
+                EasyMock.createMock(SegmentServerSelector.class),
+                EasyMock.createMock(SegmentServerSelector.class),
+                EasyMock.createMock(SegmentServerSelector.class)
+            )
+        ).get()
     );
   }
 }

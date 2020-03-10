@@ -117,7 +117,9 @@ public class QueryScheduler implements QueryWatcher
   public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
   {
     Query<T> query = queryPlus.getQuery();
-    Optional<String> lane = laningStrategy.computeLane(queryPlus, segments);
+    Optional<Integer> priority = prioritizationStrategy.computePriority(queryPlus, segments);
+    query = priority.map(query::withPriority).orElse(query);
+    Optional<String> lane = laningStrategy.computeLane(queryPlus.withQuery(query), segments);
     return lane.map(query::withLane).orElse(query);
   }
 

@@ -126,7 +126,7 @@ public class SqlResourceTest extends CalciteTestBase
     scheduler = new QueryScheduler(
         5,
         NoQueryPrioritizationStrategy.INSTANCE,
-        new HiLoQueryLaningStrategy(2),
+        new HiLoQueryLaningStrategy(40),
         new ServerConfig()
     );
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);

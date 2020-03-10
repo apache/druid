@@ -31,7 +31,7 @@ public class QuerySchedulerConfig
   @JsonProperty("laning")
   private QueryLaningStrategy laningStrategy = NoQueryLaningStrategy.INSTANCE;
 
-  @JsonProperty
+  @JsonProperty("prioritization")
   private QueryPrioritizationStrategy prioritizationStrategy = NoQueryPrioritizationStrategy.INSTANCE;
 
   public int getNumThreads()

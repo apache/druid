@@ -31,6 +31,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import io.github.resilience4j.bulkhead.Bulkhead;
+import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -54,6 +55,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.NoQueryPrioritizationStrategy;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -399,6 +401,56 @@ public class QuerySchedulerTest
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
   }
 
+  @Test
+  public void testConfigHiLoWithThreshold()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.setProperty(propertyPrefix + ".numThreads", "10");
+    properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
+    properties.setProperty(propertyPrefix + ".laning.maxLowPercent", "20");
+    properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
+    properties.setProperty(propertyPrefix + ".prioritization.adjustment", "5");
+    properties.setProperty(propertyPrefix + ".prioritization.segmentCountThreshold", "1");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+
+    Query<?> query = scheduler.prioritizeAndLaneQuery(
+        QueryPlus.wrap(makeDefaultQuery()),
+        ImmutableSet.of(
+            EasyMock.createMock(SegmentServerSelector.class),
+            EasyMock.createMock(SegmentServerSelector.class)
+        )
+    );
+    Assert.assertEquals(-5, QueryContexts.getPriority(query));
+    Assert.assertEquals(HiLoQueryLaningStrategy.LOW, QueryContexts.getLane(query));
+  }
+
+  @Test
+  public void testMisConfigThreshold()
+  {
+    expected.expect(ProvisionException.class);
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+  }
+
 
   private void maybeDelayNextIteration(int i) throws InterruptedException
   {
@@ -412,6 +464,12 @@ public class QuerySchedulerTest
     return ThreadLocalRandom.current().nextBoolean() ? makeInteractiveQuery() : makeReportQuery();
   }
 
+  private TopNQuery makeDefaultQuery()
+  {
+    return makeBaseBuilder()
+        .context(ImmutableMap.of("queryId", "default-" + UUID.randomUUID()))
+        .build();
+  }
   private TopNQuery makeInteractiveQuery()
   {
     return makeBaseBuilder()
