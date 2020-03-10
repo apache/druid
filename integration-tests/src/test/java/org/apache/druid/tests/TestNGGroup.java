@@ -35,14 +35,14 @@ public class TestNGGroup
   public static final String SECURITY = "security";
   // This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
   // The path of the file must then we pass to mvn with -Doverride.config.path=<PATH_TO_FILE>.
-  // See integration-tests/docker/environment-configs/s3-common for env var to override.
+  // See integration-tests/docker/environment-configs/override-examples/s3 for env var to provide.
   public static final String S3_DEEP_STORAGE = "s3-deep-storage";
   // This group is not part of CI. To run this group, gcs configs/credentials for your gcs must be provided in a file.
   // The path of the file must then we pass to mvn with -Doverride.config.path=<PATH_TO_FILE>.
-  // See integration-tests/docker/environment-configs/gcs-common for env var to override.
+  // See integration-tests/docker/environment-configs/override-examples/gcs for env var to provide.
   public static final String GCS_DEEP_STORAGE = "gcs-deep-storage";
   // This group is not part of CI. To run this group, azure configs/credentials for your azure must be provided in a file.
   // The path of the file must then we pass to mvn with -Doverride.config.path=<PATH_TO_FILE>.
-  // See integration-tests/docker/environment-configs/azure-common for env var to override.
+  // See integration-tests/docker/environment-configs/override-examples/azures for env var to provide.
   public static final String AZURE_DEEP_STORAGE = "azure-deep-storage";
 }

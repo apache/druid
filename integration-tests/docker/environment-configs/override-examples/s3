@@ -1,0 +1,12 @@
+#
+# Example of override config file to provide.
+# Please replace <OVERRIDE_THIS> with your cloud configs/credentials
+#
+druid_storage_type=s3
+druid_storage_bucket=<OVERRIDE_THIS>
+druid_storage_baseKey=druid/segments
+druid_s3_accessKey=<OVERRIDE_THIS>
+druid_s3_secretKey=<OVERRIDE_THIS>
+druid_indexer_logs_type=s3
+druid_indexer_logs_s3Bucket=<OVERRIDE_THIS>
+druid_indexer_logs_s3Prefix=druid/indexing-logs

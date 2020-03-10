@@ -66,7 +66,6 @@ setupConfig()
   setKey $DRUID_SERVICE druid.host $(resolveip -s $HOSTNAME)
   setKey $DRUID_SERVICE druid.worker.ip $(resolveip -s $HOSTNAME)
 
-
   # Write out all the environment variables starting with druid_ to druid service config file
   # This will replace _ with . in the key
   env | grep ^druid_ | while read evar;

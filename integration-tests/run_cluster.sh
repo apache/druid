@@ -80,6 +80,12 @@
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
       echo "\$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH is not set. No override config file provided"
+      if [ "$DRUID_INTEGRATION_TEST_GROUP" = "s3-deep-storage" ] || \
+      [ "$DRUID_INTEGRATION_TEST_GROUP" = "gcs-deep-storage" ] || \
+      [ "$DRUID_INTEGRATION_TEST_GROUP" = "azure-deep-storage" ]; then
+        echo "Test group $DRUID_INTEGRATION_TEST_GROUP requires override config file. Stopping test..."
+        exit 1
+      fi
   else
       echo "\$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH is set with value ${DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH}"
       OVERRIDE_ENV="--env-file=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH"
