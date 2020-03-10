@@ -32,8 +32,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -156,7 +154,12 @@ public class InDimFilter implements DimFilter
   {
     InDimFilter inFilter = optimizeLookup();
     if (inFilter.values.size() == 1) {
-      return new SelectorDimFilter(inFilter.dimension, inFilter.values.first(), inFilter.getExtractionFn(), filterTuning);
+      return new SelectorDimFilter(
+          inFilter.dimension,
+          inFilter.values.first(),
+          inFilter.getExtractionFn(),
+          filterTuning
+      );
     }
     return inFilter;
   }
@@ -272,29 +275,27 @@ public class InDimFilter implements DimFilter
   {
     return Objects.hash(values, dimension, extractionFn, filterTuning);
   }
-  
+
   private DruidLongPredicate createLongPredicate()
   {
     LongArrayList longs = new LongArrayList(values.size());
     for (String value : values) {
-      final Long longValue = DimensionHandlerUtils.getExactLongFromDecimalString(value);
+      final Long longValue = DimensionHandlerUtils.convertObjectToLong(value);
       if (longValue != null) {
-        longs.add(longValue);
+        longs.add((long) longValue);
       }
     }
 
     if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
       final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
-
-      return input -> longHashSet.contains(input);
+      return longHashSet::contains;
     } else {
       final long[] longArray = longs.toLongArray();
       Arrays.sort(longArray);
-
       return input -> Arrays.binarySearch(longArray, input) >= 0;
     }
   }
-  
+
   // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.
   // Pass in a common long predicate supplier to all filters created by .toFilter(), so that
   // we only compute the long hashset/array once per query.
@@ -304,12 +305,12 @@ public class InDimFilter implements DimFilter
     Supplier<DruidLongPredicate> longPredicate = () -> createLongPredicate();
     return Suppliers.memoize(longPredicate);
   }
-  
+
   private DruidFloatPredicate createFloatPredicate()
   {
     IntArrayList floatBits = new IntArrayList(values.size());
     for (String value : values) {
-      Float floatValue = Floats.tryParse(value);
+      Float floatValue = DimensionHandlerUtils.convertObjectToFloat(value);
       if (floatValue != null) {
         floatBits.add(Float.floatToIntBits(floatValue));
       }
@@ -326,18 +327,18 @@ public class InDimFilter implements DimFilter
       return input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
     }
   }
-  
+
   private Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
   {
     Supplier<DruidFloatPredicate> floatPredicate = () -> createFloatPredicate();
     return Suppliers.memoize(floatPredicate);
   }
-  
+
   private DruidDoublePredicate createDoublePredicate()
   {
     LongArrayList doubleBits = new LongArrayList(values.size());
     for (String value : values) {
-      Double doubleValue = Doubles.tryParse(value);
+      Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(value);
       if (doubleValue != null) {
         doubleBits.add(Double.doubleToLongBits((doubleValue)));
       }

@@ -110,7 +110,7 @@ public class JoinTestHelper
         }
 
         @Override
-        public Supplier<Object> makeDimensionProcessor(DimensionSelector selector)
+        public Supplier<Object> makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
         {
           return selector::defaultGetObject;
         }

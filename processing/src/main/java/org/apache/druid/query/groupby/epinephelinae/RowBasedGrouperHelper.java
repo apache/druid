@@ -374,7 +374,12 @@ public class RowBasedGrouperHelper
           }
         };
 
-    return RowBasedColumnSelectorFactory.create(adapter, supplier::get, GroupByQueryHelper.rowSignatureFor(query));
+    return RowBasedColumnSelectorFactory.create(
+        adapter,
+        supplier::get,
+        GroupByQueryHelper.rowSignatureFor(query),
+        false
+    );
   }
 
   /**
