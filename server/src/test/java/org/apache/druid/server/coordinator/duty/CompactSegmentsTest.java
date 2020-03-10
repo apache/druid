@@ -30,6 +30,7 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -44,6 +45,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -74,11 +76,16 @@ public class CompactSegmentsTest
     )
     {
       Preconditions.checkArgument(segments.size() > 1);
-      Collections.sort(segments);
-      Interval compactInterval = new Interval(
-          segments.get(0).getInterval().getStart(),
-          segments.get(segments.size() - 1).getInterval().getEnd()
-      );
+      DateTime minStart = DateTimes.MAX, maxEnd = DateTimes.MIN;
+      for (DataSegment segment : segments) {
+        if (segment.getInterval().getStart().compareTo(minStart) < 0) {
+          minStart = segment.getInterval().getStart();
+        }
+        if (segment.getInterval().getEnd().compareTo(maxEnd) > 0) {
+          maxEnd = segment.getInterval().getEnd();
+        }
+      }
+      Interval compactInterval = new Interval(minStart, maxEnd);
       final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(segments.get(0).getDataSource());
       segments.forEach(
           segment -> timeline.remove(

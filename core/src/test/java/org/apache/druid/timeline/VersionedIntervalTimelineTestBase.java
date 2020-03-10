@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -107,7 +108,10 @@ public class VersionedIntervalTimelineTestBase
   void checkRemove()
   {
     for (TimelineObjectHolder<String, OvershadowableInteger> holder : timeline.findFullyOvershadowed()) {
-      for (PartitionChunk<OvershadowableInteger> chunk : holder.getObject()) {
+      // Copy chunks to avoid the ConcurrentModificationException.
+      // Note that timeline.remove() modifies the PartitionHolder.
+      List<PartitionChunk<OvershadowableInteger>> chunks = FluentIterable.from(holder.getObject()).toList();
+      for (PartitionChunk<OvershadowableInteger> chunk : chunks) {
         timeline.remove(holder.getInterval(), holder.getVersion(), chunk);
       }
     }
@@ -154,26 +158,36 @@ public class VersionedIntervalTimelineTestBase
     );
   }
 
-  PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int value)
+  public static PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int value)
   {
     return makeSingle(majorVersion, 0, value);
   }
 
-  private PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int partitionNum, int val)
+  public static PartitionChunk<OvershadowableInteger> makeSingle(String majorVersion, int partitionNum, int val)
   {
     return new SingleElementPartitionChunk<>(new OvershadowableInteger(majorVersion, partitionNum, val));
   }
 
-  PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int val)
+  public static PartitionChunk<OvershadowableInteger> makeNumbered(String majorVersion, int partitionNum, int val)
+  {
+    return makeNumbered(majorVersion, partitionNum, 0, val);
+  }
+
+  public static PartitionChunk<OvershadowableInteger> makeNumbered(
+      String majorVersion,
+      int partitionNum,
+      int chunks,
+      int val
+  )
   {
     return new NumberedPartitionChunk<>(
         partitionNum,
-        0,
+        chunks,
         new OvershadowableInteger(majorVersion, partitionNum, val)
     );
   }
 
-  PartitionChunk<OvershadowableInteger> makeNumberedOverwriting(
+  public static PartitionChunk<OvershadowableInteger> makeNumberedOverwriting(
       String majorVersion,
       int partitionNumOrdinal,
       int val,

@@ -168,8 +168,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     runTestTask(inputInterval, Granularities.DAY);
 
     final Interval interval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
-    final Collection<DataSegment> allSegments =
-        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+    final Collection<DataSegment> allSegments = new HashSet<>(
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE)
+    );
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
     runTestTask(inputInterval, secondSegmentGranularity);
