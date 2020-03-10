@@ -1,0 +1,8 @@
+druid_storage_type=s3
+druid_storage_bucket=your-bucket
+druid_storage_baseKey=druid/segments
+druid_s3_accessKey=...
+druid_s3_secretKey=...
+druid_indexer_logs_type=s3
+druid_indexer_logs_s3Bucket=your-bucket
+druid_indexer_logs_s3Prefix=druid/indexing-logs

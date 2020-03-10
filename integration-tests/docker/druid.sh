@@ -17,7 +17,8 @@
 
 set -e
 
-getConfPath() {
+getConfPath()
+{
     cluster_conf_base=/tmp/conf/druid/cluster
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;
@@ -31,7 +32,8 @@ getConfPath() {
 }
 
 # Delete the old key (if existing) and append new key=value
-setKey() {
+setKey()
+{
     service="$1"
     key="$2"
     value="$3"
@@ -45,7 +47,8 @@ setKey() {
     echo "Setting $key=$value in $service_conf"
 }
 
-setupConfig() {
+setupConfig()
+{
   echo "$(date -Is) configuring service $DRUID_SERVICE"
 
   # We put all the config in /tmp/conf to allow for a
@@ -73,4 +76,19 @@ setupConfig() {
       var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
       setKey $DRUID_SERVICE "$var" "$val"
   done
+}
+
+setupData()
+{
+  # The "query" and "security" test groups require data to be setup before running the tests.
+  # In particular, they requires segments to be download from a pre-existing s3 bucket.
+  # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
+  if [[ "$DRUID_INTEGRATION_TEST_GROUP" == "query" || "$DRUID_INTEGRATION_TEST_GROUP" == "security" ]]; then
+    # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
+    find /var/lib/mysql -type f -exec touch {} \; && service mysql start && cat /sample-data.sql | mysql -u root druid \
+      && /etc/init.d/mysql stop
+    # below s3 credentials needed to access the pre-existing s3 bucket
+    setKey $DRUID_SERVICE druid.s3.accessKey AKIAJI7DG7CDECGBQ6NA
+    setKey $DRUID_SERVICE druid.s3.secretKey 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
+  fi
 }
