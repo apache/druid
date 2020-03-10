@@ -23,7 +23,6 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import org.apache.commons.collections4.map.HashedMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -34,6 +33,7 @@ import org.joda.time.DateTime;
 
 import java.net.URI;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -108,7 +108,7 @@ public class S3TestUtils extends EasyMockSupport
       Map<DeleteObjectsRequest, Exception> requestToException
   )
   {
-    Map<DeleteObjectsRequest, IExpectationSetters<DeleteObjectsRequest>> requestToResultExpectationSetter = new HashedMap<>();
+    Map<DeleteObjectsRequest, IExpectationSetters<DeleteObjectsRequest>> requestToResultExpectationSetter = new HashMap<>();
 
     for (Map.Entry<DeleteObjectsRequest, Exception> requestsAndErrors : requestToException.entrySet()) {
       DeleteObjectsRequest request = requestsAndErrors.getKey();
