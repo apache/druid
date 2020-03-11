@@ -59,6 +59,8 @@ import java.util.stream.Collectors;
 
 public class IndexedTableJoinMatcher implements JoinMatcher
 {
+  private final static int UNINITIALIZED_CURRENT_ROW = -1;
+
   private final IndexedTable table;
   private final List<Supplier<IntIterator>> conditionMatchers;
   private final IntIterator[] currentMatchedRows;
@@ -81,7 +83,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   )
   {
     this.table = table;
-    this.currentRow = -1;
+    this.currentRow = UNINITIALIZED_CURRENT_ROW;
 
     if (condition.isAlwaysTrue()) {
       this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, table.numRows()));
@@ -232,7 +234,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     // Do not reset matchedRows; we want to remember it across reset() calls so the 'remainder' is anything
     // that was unmatched across _all_ cursor walks.
     currentIterator = null;
-    currentRow = -1;
+    currentRow = UNINITIALIZED_CURRENT_ROW;
     matchingRemainder = false;
   }
 
@@ -242,7 +244,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       currentRow = currentIterator.nextInt();
     } else {
       currentIterator = null;
-      currentRow = -1;
+      currentRow = UNINITIALIZED_CURRENT_ROW;
     }
   }
 
