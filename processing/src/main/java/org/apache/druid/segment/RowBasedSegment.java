@@ -26,7 +26,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -98,7 +97,7 @@ public class RowBasedSegment<RowType> extends AbstractSegment
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Do nothing.
   }
