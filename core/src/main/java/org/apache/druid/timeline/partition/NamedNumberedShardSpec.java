@@ -58,6 +58,12 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == NamedNumberedShardSpec.class;
+  }
+
+  @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return NamedNumberedPartitionChunk.make(getPartitionNum(), getPartitions(), partitionName, obj);
