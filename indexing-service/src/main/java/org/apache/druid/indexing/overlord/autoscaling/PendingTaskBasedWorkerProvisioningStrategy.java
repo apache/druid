@@ -426,8 +426,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
 
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
+        Set<String> currentlyTerminating = currentlyTerminatingMap.computeIfAbsent(
+          category,
+          ignored -> new HashSet<>()
+      );
 
         didTerminate = doTerminate(
             category,
