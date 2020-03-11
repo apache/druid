@@ -55,11 +55,8 @@ public class DefaultWorkerBehaviorConfig implements WorkerBehaviorConfig
   )
   {
     this.selectStrategy = selectStrategy;
-    if (autoScaler != null && autoScalers != null) {
-      throw new IllegalArgumentException("The autoScaler and autoScalers properties are mutually exclusive");
-    }
-    if (autoScaler == null && autoScalers == null) {
-      throw new IllegalArgumentException("Either autoScaler or autoScalers property must be provided");
+    if (autoScaler == null ^ autoScalers == null) {
+      throw new IllegalArgumentException("Either(and only one of) autoScaler or autoScalers property must be provided");
     }
     if (autoScaler != null) {
       this.autoScalers = Collections.singletonList(autoScaler);
