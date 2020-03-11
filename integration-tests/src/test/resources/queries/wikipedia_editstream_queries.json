@@ -1747,7 +1747,7 @@
                 "columnNames": ["k", "v"],
                 "columnTypes": ["string", "string"],
                 "rows": [
-                    ["Wikipedia:Vandalismusmeldung", "inline join!"]
+                    ["Wikipedia:Vandalismusmeldung", "inline!"]
                 ]
             },
             "intervals": [
@@ -1773,7 +1773,7 @@
                 "timestamp": "0000-01-01T00:00:00.000Z",
                 "event": {
                     "k": "Wikipedia:Vandalismusmeldung",
-                    "v": "lookup!",
+                    "v": "inline!",
                     "nonexistent": null,
                     "rows": 1
                 }

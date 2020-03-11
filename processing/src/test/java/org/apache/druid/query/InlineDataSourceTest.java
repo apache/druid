@@ -139,7 +139,7 @@ public class InlineDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertFalse(listDataSource.isConcrete());
+    Assert.assertTrue(listDataSource.isConcrete());
   }
 
   @Test
