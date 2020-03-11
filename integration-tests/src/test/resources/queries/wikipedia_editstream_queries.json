@@ -1699,5 +1699,85 @@
                 }
             }
         ]
+    },
+    {
+        "description": "groupBy on lookup",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "lookup",
+                "lookup": "wiki-simple"
+            },
+            "intervals": [
+                "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+            ],
+            "granularity": "all",
+            "dimensions": ["k", "v", "nonexistent"],
+            "aggregations": [
+                {
+                    "type": "count",
+                    "name": "rows"
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "k": "Wikipedia:Vandalismusmeldung",
+                    "v": "lookup!",
+                    "nonexistent": null,
+                    "rows": 1
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy on inline",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "inline",
+                "columnNames": ["k", "v"],
+                "columnTypes": ["string", "string"],
+                "rows": [
+                    ["Wikipedia:Vandalismusmeldung", "inline join!"]
+                ]
+            },
+            "intervals": [
+                "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+            ],
+            "granularity": "all",
+            "dimensions": ["k", "v", "nonexistent"],
+            "aggregations": [
+                {
+                    "type": "count",
+                    "name": "rows"
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "k": "Wikipedia:Vandalismusmeldung",
+                    "v": "lookup!",
+                    "nonexistent": null,
+                    "rows": 1
+                }
+            }
+        ]
     }
 ]
