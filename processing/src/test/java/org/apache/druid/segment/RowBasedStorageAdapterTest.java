@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import javafx.util.Duration;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,6 +36,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -181,7 +181,7 @@ public class RowBasedStorageAdapterTest
         @Override
         public ToLongFunction<Integer> timestampFunction()
         {
-          return i -> i * (long) Duration.hours(1).toMillis();
+          return i -> i * Duration.standardHours(1).getMillis();
         }
 
         @Override
