@@ -180,8 +180,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
         List<Task> categoryTasks = tasksByCategories.getOrDefault(category, Collections.emptyList());
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
+        Set<String> currentlyProvisioning = currentlyProvisioningMap.computeIfAbsent(
+          category,
+          ignored -> new HashSet<>()
+      );
 
         didProvision = doProvision(
             category,
