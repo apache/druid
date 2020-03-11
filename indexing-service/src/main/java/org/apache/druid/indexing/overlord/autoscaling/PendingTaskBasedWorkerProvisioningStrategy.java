@@ -538,11 +538,10 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         Map<String, Set<String>> currentlyProvisioningMap
     )
     {
-      currentlyProvisioningMap.putIfAbsent(
+      Set<String> currentlyProvisioning = currentlyProvisioningMap.computeIfAbsent(
           category,
-          new HashSet<>()
+          ignored -> new HashSet<>()
       );
-      Set<String> currentlyProvisioning = currentlyProvisioningMap.get(category);
       return doProvision(
           category,
           Collections.emptyList(),
