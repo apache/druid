@@ -87,20 +87,31 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   }
 
   @Nullable
-  public static ColumnCapabilities getColumnCapabilities(
+  static ColumnCapabilities getColumnCapabilities(
       final Map<String, ValueType> rowSignature,
       final String columnName
   )
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
+      return new ColumnCapabilitiesImpl().setType(ValueType.LONG).setIsComplete(true);
     } else {
       final ValueType valueType = rowSignature.get(columnName);
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
       // Do set hasMultipleValues, because we might return multiple values.
-      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType).setHasMultipleValues(true) : null;
+      if (valueType != null) {
+        return new ColumnCapabilitiesImpl()
+            .setType(valueType)
+
+            // Non-numeric types might have multiple values
+            .setHasMultipleValues(!valueType.isNumeric())
+
+            // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
+            .setIsComplete(valueType.isNumeric());
+      } else {
+        return null;
+      }
     }
   }
 

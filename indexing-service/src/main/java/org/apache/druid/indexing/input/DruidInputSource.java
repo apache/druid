@@ -25,10 +25,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -171,15 +171,16 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
 
     final List<TimelineObjectHolder<String, DataSegment>> timeline = createTimeline();
-    final Stream<InputEntity> entityStream = timeline
-        .stream()
-        .flatMap(holder -> {
+    final Iterator<DruidSegmentInputEntity> entityIterator = FluentIterable
+        .from(timeline)
+        .transformAndConcat(holder -> {
+          //noinspection ConstantConditions
           final PartitionHolder<DataSegment> partitionHolder = holder.getObject();
-          return partitionHolder
-              .stream()
-              .map(chunk -> new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()));
-        });
-
+          //noinspection ConstantConditions
+          return FluentIterable
+              .from(partitionHolder)
+              .transform(chunk -> new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()));
+        }).iterator();
     final List<String> effectiveDimensions;
     if (dimensions == null) {
       effectiveDimensions = ReingestionTimelineUtils.getUniqueDimensions(
@@ -209,7 +210,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        entityStream.iterator(),
+        entityIterator,
         temporaryDirectory
     );
   }

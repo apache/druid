@@ -53,9 +53,6 @@ import java.io.InputStream;
  *
  * Items tagged with a particular ID for an announcement listener are updated by a POST to the announcement listener's
  * path "/{announcement}"
- *
- * Discovery of who can listen to particular announcement keys is not part of this class and should be handled
- * by ListenerResourceAnnouncer
  */
 public abstract class ListenerResource
 {

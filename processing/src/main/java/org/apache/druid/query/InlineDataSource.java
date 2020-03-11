@@ -164,7 +164,7 @@ public class InlineDataSource implements DataSource
   @Override
   public boolean isConcrete()
   {
-    return false;
+    return true;
   }
 
   public Map<String, ValueType> getRowSignature()
@@ -172,7 +172,10 @@ public class InlineDataSource implements DataSource
     final ImmutableMap.Builder<String, ValueType> retVal = ImmutableMap.builder();
 
     for (int i = 0; i < columnNames.size(); i++) {
-      retVal.put(columnNames.get(i), columnTypes.get(i));
+      final ValueType columnType = columnTypes.get(i);
+      if (columnType != null) {
+        retVal.put(columnNames.get(i), columnType);
+      }
     }
 
     return retVal.build();
