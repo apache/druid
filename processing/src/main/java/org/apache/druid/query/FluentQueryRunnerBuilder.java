@@ -71,12 +71,17 @@ public class FluentQueryRunnerBuilder<T>
 
     public FluentQueryRunner emitCPUTimeMetric(ServiceEmitter emitter)
     {
+      return emitCPUTimeMetric(emitter, new AtomicLong(0L));
+    }
+
+    public FluentQueryRunner emitCPUTimeMetric(ServiceEmitter emitter, AtomicLong accumulator)
+    {
       return from(
           CPUTimeMetricQueryRunner.safeBuild(
               baseRunner,
               toolChest,
               emitter,
-              new AtomicLong(0L),
+              accumulator,
               true
           )
       );

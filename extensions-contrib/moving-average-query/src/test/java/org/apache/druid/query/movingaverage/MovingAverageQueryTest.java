@@ -375,7 +375,14 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           {
           }
         },
-        baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
+        baseClient,
+        null /* local client; unused in this test, so pass in null */,
+        warehouse,
+        retryConfig,
+        jsonMapper,
+        serverConfig,
+        null,
+        new CacheConfig()
     );
 
     defineMocks();
