@@ -17,28 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
 
-import org.apache.druid.timeline.Overshadowable;
+package org.apache.druid.common.utils;
 
-/**
- */
-public class ImmutablePartitionHolder<T extends Overshadowable<T>> extends PartitionHolder<T>
+import java.util.function.LongSupplier;
+
+public class CurrentTimeMillisSupplier implements LongSupplier
 {
-  protected ImmutablePartitionHolder(OvershadowableManager<T> overshadowableManager)
-  {
-    super(overshadowableManager);
-  }
-
   @Override
-  public PartitionChunk<T> remove(PartitionChunk<T> tPartitionChunk)
+  public long getAsLong()
   {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean add(PartitionChunk<T> tPartitionChunk)
-  {
-    throw new UnsupportedOperationException();
+    return System.currentTimeMillis();
   }
 }

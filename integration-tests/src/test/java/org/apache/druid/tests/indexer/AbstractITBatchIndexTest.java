@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
@@ -250,11 +251,13 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
             );
 
             final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(Intervals.ETERNITY);
-            return holders
-                .stream()
-                .flatMap(holder -> holder.getObject().stream())
-                .anyMatch(chunk -> oldVersions.stream()
-                                              .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment)));
+            return FluentIterable
+                .from(holders)
+                .transformAndConcat(TimelineObjectHolder::getObject)
+                .anyMatch(
+                    chunk -> FluentIterable.from(oldVersions)
+                                           .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment))
+                );
           },
           "See a new version"
       );
