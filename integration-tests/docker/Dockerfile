@@ -46,7 +46,8 @@ RUN ln -sf /usr/share/java/mysql-connector-java.jar /usr/local/druid/lib/mysql-c
 RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && java -cp "/usr/local/druid/lib/*" -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
       && /etc/init.d/mysql stop
-ADD sample-data.sql sample-data.sql
+ADD test-data/query-sample-data.sql query-sample-data.sql
+ADD test-data/security-sample-data.sql security-sample-data.sql
 
 # Setup supervisord
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
