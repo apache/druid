@@ -91,7 +91,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon: IconNames.CROSS,
         title: `Remove: ${trimValue(header)}`,
         onAction: () => {
-          onQueryChange(parsedQuery.removeFromSelect(header), true);
+          onQueryChange(parsedQuery.remove(header), true);
         },
       });
 
@@ -233,27 +233,22 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
 
   function getHeaderClassName(header: string) {
     const { parsedQuery } = props;
+    if (!parsedQuery) return;
 
     const className = [];
-    if (parsedQuery) {
-      const sorted = parsedQuery.getSorted();
-      if (sorted) {
-        className.push(
-          sorted
-            .map(sorted => {
-              if (sorted.id === header) {
-                return sorted.desc ? '-sort-desc' : '-sort-asc';
-              }
-              return '';
-            })
-            .join(''),
-        );
-      }
+    const sorted = parsedQuery.getSorted();
+    const aggregateColumns = parsedQuery.getAggregateColumns();
 
-      const aggregateColumns = parsedQuery.getAggregateColumns();
-      if (aggregateColumns && aggregateColumns.includes(header)) {
-        className.push('aggregate-header');
+    console.log(sorted);
+    if (parsedQuery && sorted) {
+      const sortedColumnNames = sorted.map(column => column.id);
+      if (sortedColumnNames.includes(header)) {
+        className.push(sorted[sortedColumnNames.indexOf(header)].desc ? '-sort-desc' : '-sort-asc');
       }
+    }
+
+    if (aggregateColumns && aggregateColumns.includes(header)) {
+      className.push('aggregate-header');
     }
 
     return className.join(' ');

@@ -19,6 +19,8 @@
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import {
+  SqlAliasRef,
+  SqlFunction,
   SqlInterval,
   SqlLiteral,
   SqlMulti,
@@ -319,10 +321,14 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
           text={`TIME_FLOOR("${columnName}", 'PT1H') AS "${columnName}_time_floor"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                [SqlRef.fromName(columnName), SqlLiteral.fromInput('PT1h')],
-                'TIME_FLOOR',
-                `${columnName}_time_floor`,
+              parsedQuery.addToGroupBy(
+                SqlAliasRef.sqlAliasFactory(
+                  SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
+                    SqlRef.fromName(columnName),
+                    SqlLiteral.fromInput('PT1h'),
+                  ]),
+                  `${columnName}_time_floor`,
+                ),
               ),
               true,
             );
@@ -332,10 +338,14 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
           text={`TIME_FLOOR("${columnName}", 'P1D') AS "${columnName}_time_floor"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                [SqlRef.fromName(columnName), SqlLiteral.fromInput('P1D')],
-                'TIME_FLOOR',
-                `${columnName}_time_floor`,
+              parsedQuery.addToGroupBy(
+                SqlAliasRef.sqlAliasFactory(
+                  SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
+                    SqlRef.fromName(columnName),
+                    SqlLiteral.fromInput('P1D'),
+                  ]),
+                  `${columnName}_time_floor`,
+                ),
               ),
               true,
             );
@@ -345,10 +355,14 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
           text={`TIME_FLOOR("${columnName}", 'P7D') AS "${columnName}_time_floor"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                [SqlRef.fromName(columnName), SqlLiteral.fromInput('P7D')],
-                'TIME_FLOOR',
-                `${columnName}_time_floor`,
+              parsedQuery.addToGroupBy(
+                SqlAliasRef.sqlAliasFactory(
+                  SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
+                    SqlRef.fromName(columnName),
+                    SqlLiteral.fromInput('P7D'),
+                  ]),
+                  `${columnName}_time_floor`,
+                ),
               ),
               true,
             );

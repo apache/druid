@@ -18,7 +18,14 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlLiteral, SqlMulti, SqlQuery, SqlRef } from 'druid-query-toolkit';
+import {
+  SqlAliasRef,
+  SqlFunction,
+  SqlLiteral,
+  SqlMulti,
+  SqlQuery,
+  SqlRef,
+} from 'druid-query-toolkit';
 import React from 'react';
 
 export interface StringMenuItemsProps {
@@ -87,21 +94,25 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
         <MenuItem
           text={`"${columnName}"`}
           onClick={() => {
-            onQueryChange(parsedQuery.addColumnToGroupBy(columnName), true);
+            onQueryChange(
+              parsedQuery.addToGroupBy(SqlRef.fromNameWithDoubleQuotes(columnName)),
+              true,
+            );
           }}
         />
         <MenuItem
           text={`SUBSTRING("${columnName}", 1, 2) AS "${columnName}_substring"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                [
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
-                  SqlLiteral.fromInput(1),
-                  SqlLiteral.fromInput(2),
-                ],
-                'SUBSTRING',
-                `${columnName}_substring`,
+              parsedQuery.addToGroupBy(
+                SqlAliasRef.sqlAliasFactory(
+                  SqlFunction.sqlFunctionFactory('SUBSTRING', [
+                    SqlRef.fromNameWithDoubleQuotes(columnName),
+                    SqlLiteral.fromInput(1),
+                    SqlLiteral.fromInput(2),
+                  ]),
+                  `${columnName}_substring`,
+                ),
               ),
               true,
             );
@@ -125,6 +136,8 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
                 [SqlRef.fromNameWithDoubleQuotes(columnName)],
                 'COUNT',
                 `dist_${columnName}`,
+                undefined,
+                'DISTINCT',
               ),
               true,
             )

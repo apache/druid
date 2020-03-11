@@ -18,7 +18,7 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
+import { SqlAliasRef, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
 export interface NumberMenuItemsProps {
@@ -99,17 +99,24 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
         <MenuItem
           text={`"${columnName}"`}
           onClick={() => {
-            onQueryChange(parsedQuery.addColumnToGroupBy(columnName), true);
+            onQueryChange(
+              parsedQuery.addToGroupBy(SqlRef.fromNameWithDoubleQuotes(columnName)),
+              true,
+            );
           }}
         />
         <MenuItem
           text={`TRUNC("${columnName}", -1) AS "${columnName}_trunc"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                [SqlRef.fromNameWithDoubleQuotes(columnName)],
-                'TRUNC',
-                `${columnName}_truncated`,
+              parsedQuery.addToGroupBy(
+                SqlAliasRef.sqlAliasFactory(
+                  SqlFunction.sqlFunctionFactory('TRUNC', [
+                    SqlRef.fromNameWithDoubleQuotes(columnName),
+                    SqlLiteral.fromInput(-1),
+                  ]),
+                  `${columnName}_truncated`,
+                ),
               ),
               true,
             );
