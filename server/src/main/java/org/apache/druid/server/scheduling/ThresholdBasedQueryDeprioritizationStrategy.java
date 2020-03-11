@@ -64,7 +64,7 @@ public class ThresholdBasedQueryDeprioritizationStrategy implements QueryPriorit
                              ? Optional.empty()
                              : Optional.of(new Period(durationThresholdString).toStandardDuration());
     Preconditions.checkArgument(
-        segmentCountThreshold != null || !periodThreshold.isPresent() || !durationThreshold.isPresent(),
+        segmentCountThreshold != null || periodThreshold.isPresent() || durationThreshold.isPresent(),
         "periodThreshold, durationThreshold, or segmentCountThreshold must be set"
     );
   }
