@@ -20,8 +20,8 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 
 public class QuerySchedulerConfig
 {
