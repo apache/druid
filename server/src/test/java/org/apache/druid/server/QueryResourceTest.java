@@ -48,7 +48,7 @@ import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.server.scheduling.NoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.ThresholdBasedQueryDeprioritizationStrategy;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -176,7 +176,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryScheduler = new QueryScheduler(
         8,
-        NoQueryPrioritizationStrategy.INSTANCE,
+        NoAutoQueryPrioritizationStrategy.INSTANCE,
         NoQueryLaningStrategy.INSTANCE,
         new ServerConfig()
     );
@@ -699,7 +699,7 @@ public class QueryResourceTest
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler laningScheduler = new QueryScheduler(
         2,
-        NoQueryPrioritizationStrategy.INSTANCE,
+        NoAutoQueryPrioritizationStrategy.INSTANCE,
         NoQueryLaningStrategy.INSTANCE,
         new ServerConfig()
     );
@@ -744,7 +744,7 @@ public class QueryResourceTest
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
-        NoQueryPrioritizationStrategy.INSTANCE,
+        NoAutoQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(2),
         new ServerConfig()
     );

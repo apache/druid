@@ -23,15 +23,15 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.scheduling.NoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.ThresholdBasedQueryDeprioritizationStrategy;
 
 import java.util.Optional;
 import java.util.Set;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoQueryPrioritizationStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoAutoQueryPrioritizationStrategy.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "none", value = NoQueryPrioritizationStrategy.class),
+    @JsonSubTypes.Type(name = "none", value = NoAutoQueryPrioritizationStrategy.class),
     @JsonSubTypes.Type(name = "threshold", value = ThresholdBasedQueryDeprioritizationStrategy.class)
 })
 public interface QueryPrioritizationStrategy

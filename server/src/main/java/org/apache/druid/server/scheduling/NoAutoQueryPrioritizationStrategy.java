@@ -26,9 +26,9 @@ import org.apache.druid.server.QueryPrioritizationStrategy;
 import java.util.Optional;
 import java.util.Set;
 
-public class NoQueryPrioritizationStrategy implements QueryPrioritizationStrategy
+public class NoAutoQueryPrioritizationStrategy implements QueryPrioritizationStrategy
 {
-  public static final QueryPrioritizationStrategy INSTANCE = new NoQueryPrioritizationStrategy();
+  public static final QueryPrioritizationStrategy INSTANCE = new NoAutoQueryPrioritizationStrategy();
 
   @Override
   public <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments)

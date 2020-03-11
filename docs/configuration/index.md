@@ -1493,12 +1493,12 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 
 ##### Prioritization strategies
 
-###### No prioritization strategy
-With this configuration, queries are never assigned a priority, but will preserve an priorities manually set on the query context. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `none`.
+###### No auto prioritization strategy
+With this configuration, queries are never assigned a priority automatically, but will preserve a priority manually set on the [query context](../querying/query-context.md) with the `priority` key. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `none`.
 
 ###### Threshold deprioritization strategy
 
-This prioritization strategies lowers queries that cross a configurable set of thresholds, such as how far in the past the data is, how large of a timestamp it covers, and number of segments taking part in a query.
+This prioritization strategy deprioritizes queries that cross any of a configurable set of thresholds, such as how far in the past the data is, how large of an interval a query covers, or the number of segments taking part in a query.
 
 This strategy can be enabled by setting `druid.query.scheduler.prioritization.strategy` to `threshold`.
 
