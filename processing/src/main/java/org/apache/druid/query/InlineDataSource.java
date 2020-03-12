@@ -23,16 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -167,18 +166,15 @@ public class InlineDataSource implements DataSource
     return true;
   }
 
-  public Map<String, ValueType> getRowSignature()
+  public RowSignature getRowSignature()
   {
-    final ImmutableMap.Builder<String, ValueType> retVal = ImmutableMap.builder();
+    final RowSignature.Builder builder = RowSignature.builder();
 
     for (int i = 0; i < columnNames.size(); i++) {
-      final ValueType columnType = columnTypes.get(i);
-      if (columnType != null) {
-        retVal.put(columnNames.get(i), columnType);
-      }
+      builder.add(columnNames.get(i), columnTypes.get(i));
     }
 
-    return retVal.build();
+    return builder.build();
   }
 
   public RowAdapter<Object[]> rowAdapter()

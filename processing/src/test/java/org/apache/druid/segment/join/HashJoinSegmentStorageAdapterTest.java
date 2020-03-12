@@ -68,9 +68,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             "namespace",
             "page",
             "delta",
+            "c1.countryNumber",
             "c1.countryIsoCode",
-            "c1.countryName",
-            "c1.countryNumber"
+            "c1.countryName"
         ),
         Lists.newArrayList(makeFactToCountrySegment().getAvailableDimensions().iterator())
     );

@@ -30,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -122,8 +123,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       throw new IAE("Cannot build hash-join matcher on non-key-based condition: %s", condition);
     }
 
-    final int keyColumnNumber = table.allColumns().indexOf(condition.getRightColumn());
-    final ValueType keyColumnType = table.rowSignature().get(condition.getRightColumn());
+    final int keyColumnNumber = table.rowSignature().indexOf(condition.getRightColumn());
+
+    final ValueType keyColumnType =
+        table.rowSignature().getColumnType(condition.getRightColumn())
+             .orElseThrow(() -> new ISE("Encountered null type for column[%s]", condition.getRightColumn()));
+
     final IndexedTable.Index index = table.columnIndex(keyColumnNumber);
 
     return ColumnProcessors.makeProcessor(

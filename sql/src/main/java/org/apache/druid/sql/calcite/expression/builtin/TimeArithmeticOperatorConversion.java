@@ -28,11 +28,11 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.List;
 

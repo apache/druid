@@ -70,6 +70,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -647,10 +648,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    // Generate rowType
-    final Map<String, ValueType> rowSignature = new HashMap<>();
+    // Generate rowSignature
+    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowSignature.put(columnName, adapter.getColumnCapabilities(columnName).getType());
+      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).getType());
     }
 
     // Perform test
@@ -660,7 +661,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             RowBasedColumnSelectorFactory.create(
                 RowAdapters.standardRow(),
                 rowSupplier::get,
-                rowSignature,
+                rowSignatureBuilder.build(),
                 false
             )
         )

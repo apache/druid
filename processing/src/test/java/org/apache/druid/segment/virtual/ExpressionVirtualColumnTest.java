@@ -48,6 +48,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -201,7 +202,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
       RowAdapters.standardRow(),
       CURRENT_ROW::get,
-      null,
+      RowSignature.empty(),
       false
   );
 
@@ -742,7 +743,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.LONG),
+            RowSignature.builder().add("x", ValueType.LONG).build(),
             false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -765,7 +766,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.DOUBLE),
+            RowSignature.builder().add("x", ValueType.DOUBLE).build(),
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -788,7 +789,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.FLOAT),
+            RowSignature.builder().add("x", ValueType.FLOAT).build(),
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
