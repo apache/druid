@@ -25,9 +25,9 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.junit.Before;
 import org.junit.Test;
 
