@@ -82,9 +82,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       };
 
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
-  private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
-  private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
-  private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
   private static final Long NOT_SET = -1L;
   private static final Long END_OF_PARTITION = Long.MAX_VALUE;
 
@@ -266,7 +263,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected Map<Integer, Long> getPartitionTimeLag()
   {
-    // time lag not current support with kafka
+    // time lag not currently support with kafka
     return null;
   }
 

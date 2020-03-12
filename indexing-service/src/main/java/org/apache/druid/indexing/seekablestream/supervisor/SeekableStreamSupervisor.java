@@ -3170,16 +3170,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   );
 
   /**
-   *
-   *
-   * Not to be confused with {@link #getRecordLagPerPartition} which computes lag as a message difference between offsets,
-   * and feeds the results of this method.
+   * Gets 'lag' of currently processed offset behind latest offset as a measure of difference between offsets.
    */
   @Nullable
   protected abstract Map<PartitionIdType, Long> getPartitionRecordLag();
 
   /**
-   * Gets 'lag' as a measure of
+   * Gets 'lag'of currently processed offset behind latest offset as a measure of the difference in time inserted.
    */
   @Nullable
   protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
