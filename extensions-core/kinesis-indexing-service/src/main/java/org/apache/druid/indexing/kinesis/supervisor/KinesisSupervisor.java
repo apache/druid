@@ -88,6 +88,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   private static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
+  private volatile Map<String, Long> currentPartitionTimeLag;
 
   public KinesisSupervisor(
       final TaskStorage taskStorage,
@@ -114,6 +115,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     this.spec = spec;
     this.awsCredentialsConfig = awsCredentialsConfig;
+    this.currentPartitionTimeLag = null;
   }
 
   @Override
@@ -291,9 +293,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     );
   }
 
-  // not yet supported, will be implemented in the future
+  // not yet supported, will be implemented in the future maybe? need a way to get record count between current
+  // sequence and latest sequence
   @Override
-  protected Map<String, String> getLagPerPartition(Map<String, String> currentOffsets)
+  protected Map<String, Long> getRecordLagPerPartition(Map<String, String> currentOffsets)
   {
     return ImmutableMap.of();
   }
@@ -318,7 +321,20 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       RecordSupplier<String, String> recordSupplier, Set<StreamPartition<String>> streamPartitions
   )
   {
-    // do nothing
+    KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
+    currentPartitionTimeLag = supplier.getPartitionTimeLag();
+  }
+
+  @Override
+  protected Map<String, Long> getPartitionRecordLag()
+  {
+    return null;
+  }
+
+  @Override
+  protected Map<String, Long> getPartitionTimeLag()
+  {
+    return currentPartitionTimeLag;
   }
 
   @Override

@@ -113,9 +113,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private volatile boolean started;
     private volatile boolean stopRequested;
 
-    PartitionResource(
-        StreamPartition<String> streamPartition
-    )
+    private volatile long currentLagMillis;
+
+    PartitionResource(StreamPartition<String> streamPartition)
     {
       this.streamPartition = streamPartition;
     }
@@ -148,6 +148,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       stopRequested = true;
     }
 
+    long getPartitionTimeLag()
+    {
+      return currentLagMillis;
+    }
 
     private Runnable getRecordRunnable()
     {
@@ -191,10 +195,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
               shardIterator).withLimit(recordsPerFetch));
 
+          currentLagMillis = recordsResult.getMillisBehindLatest();
+
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
 
             final List<byte[]> data;
+
 
             if (deaggregate) {
               if (deaggregateHandle == null || getDataHandle == null) {
@@ -635,6 +642,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     this.closed = true;
+  }
+
+  public Map<String, Long> getPartitionTimeLag()
+  {
+    return partitionResources.entrySet()
+                             .stream()
+                             .collect(
+                                 Collectors.toMap(k -> k.getKey().getPartitionId(), k -> k.getValue().getPartitionTimeLag())
+                             );
   }
 
   private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)

@@ -77,6 +77,8 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.DateTime;
@@ -106,6 +108,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -127,6 +130,10 @@ import java.util.stream.Stream;
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType> implements Supervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
+
+  private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
+  private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
+  private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
@@ -484,6 +491,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
+  private final ServiceEmitter emitter;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -502,6 +510,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.sortingMapper = mapper.copy().configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     this.spec = spec;
+    this.emitter = spec.getEmitter();
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
@@ -839,7 +848,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   startTime,
                   remainingSeconds,
                   TaskReportData.TaskType.ACTIVE,
-                  includeOffsets ? getLagPerPartition(currentOffsets) : null
+                  includeOffsets ? getRecordLagPerPartition(currentOffsets) : null,
+                  getPartitionTimeLag()
               )
           );
         }
@@ -866,7 +876,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     startTime,
                     remainingSeconds,
                     TaskReportData.TaskType.PUBLISHING,
-                    null
+                    null,
+                    getPartitionTimeLag()
                 )
             );
           }
@@ -3158,6 +3169,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Set<StreamPartition<PartitionIdType>> partitions
   );
 
+  /**
+   *
+   *
+   * Not to be confused with {@link #getRecordLagPerPartition} which computes lag as a message difference between offsets,
+   * and feeds the results of this method.
+   */
+  @Nullable
+  protected abstract Map<PartitionIdType, Long> getPartitionRecordLag();
+
+  /**
+   * Gets 'lag' as a measure of
+   */
+  @Nullable
+  protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
+
   protected Map<PartitionIdType, SequenceOffsetType> getHighestCurrentOffsets()
   {
     return activelyReadingTaskGroups
@@ -3352,18 +3378,38 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   );
 
   /**
-   * schedules periodic emitLag() reporting for Kafka, not yet implemented in Kinesis,
-   * but will be in the future
+   * default implementation, schedules periodic fetch of latest offsets and {@link #emitLag} reporting for Kafka and Kinesis
    */
-  protected abstract void scheduleReporting(ScheduledExecutorService reportingExec);
+  protected void scheduleReporting(ScheduledExecutorService reportingExec)
+  {
+    SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
+    SeekableStreamSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
+    reportingExec.scheduleAtFixedRate(
+        updateCurrentAndLatestOffsets(),
+        ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
+        Math.max(
+            tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
+        ),
+        TimeUnit.MILLISECONDS
+    );
+
+    reportingExec.scheduleAtFixedRate(
+        this::emitLag,
+        ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
+        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        TimeUnit.MILLISECONDS
+    );
+  }
 
   /**
-   * calculate lag per partition for kafka, kinesis implementation returns an empty
+   * calculate lag per partition for kafka as a measure of message count, kinesis implementation returns an empty
    * map
    *
    * @return map of partition id -> lag
    */
-  protected abstract Map<PartitionIdType, SequenceOffsetType> getLagPerPartition(Map<PartitionIdType, SequenceOffsetType> currentOffsets);
+  protected abstract Map<PartitionIdType, Long> getRecordLagPerPartition(
+      Map<PartitionIdType, SequenceOffsetType> currentOffsets
+  );
 
   /**
    * returns an instance of a specific Kinesis/Kafka recordSupplier
@@ -3395,6 +3441,57 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final SequenceOffsetType earliestOffset = getOffsetFromStreamForPartition(partition, true);
     return earliestOffset != null
            && makeSequenceNumber(earliestOffset).compareTo(makeSequenceNumber(offsetFromMetadata)) <= 0;
+  }
+
+  protected void emitLag()
+  {
+    try {
+      Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
+      Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
+
+      if (partitionRecordLags == null && partitionTimeLags == null) {
+        throw new ISE("Latest offsets have not been fetched");
+      }
+      final String type = spec.getType();
+
+      BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
+        if (partitionLags == null) {
+          return;
+        }
+
+        long maxLag = 0, totalLag = 0, avgLag;
+        for (long lag : partitionLags.values()) {
+          if (lag > maxLag) {
+            maxLag = lag;
+          }
+          totalLag += lag;
+        }
+        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
+
+        emitter.emit(
+            ServiceMetricEvent.builder()
+                              .setDimension("dataSource", dataSource)
+                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), totalLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder()
+                              .setDimension("dataSource", dataSource)
+                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), maxLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder()
+                              .setDimension("dataSource", dataSource)
+                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), avgLag)
+        );
+      };
+
+      // this should probably really be /count or /records or something.. but keeping like this for backwards compat
+      emitFn.accept(partitionRecordLags, "");
+      emitFn.accept(partitionTimeLags, "/time");
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to compute lag");
+    }
   }
 
   /**

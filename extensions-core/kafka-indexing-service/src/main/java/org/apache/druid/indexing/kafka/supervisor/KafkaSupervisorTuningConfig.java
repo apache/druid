@@ -181,6 +181,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     );
   }
 
+  @Override
   @JsonProperty
   public Duration getOffsetFetchPeriod()
   {

@@ -198,6 +198,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
@@ -1305,6 +1306,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testDiscoverExistingPublishingTask() throws Exception
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final Map<String, Long> timeLag = ImmutableMap.of(SHARD_ID1, 0L, SHARD_ID0, 20000000L);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
@@ -1323,6 +1325,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag()).andReturn(timeLag).once();
 
     Task task = createKinesisIndexTask(
         "id1",
@@ -1427,6 +1430,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         SHARD_ID0,
         "1"
     ), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(timeLag, publishingReport.getLagMillis());
 
     KinesisIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
@@ -1463,6 +1467,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final Map<String, Long> timeLag = ImmutableMap.of(SHARD_ID1, 9000L, SHARD_ID0, 1234L);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(EasyMock.anyObject());
@@ -1480,6 +1485,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag()).andReturn(timeLag).once();
 
     Task task = createKinesisIndexTask(
         "id1",
@@ -1573,6 +1579,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         SHARD_ID0,
         "1"
     ), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(timeLag, publishingReport.getLagMillis());
 
     KinesisIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
@@ -1611,6 +1618,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
+    final Map<String, Long> timeLag = ImmutableMap.of(SHARD_ID0, 100L, SHARD_ID1, 200L);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
@@ -1629,6 +1637,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag()).andReturn(timeLag).once();
     Task id1 = createKinesisIndexTask(
         "id1",
         DATASOURCE,
@@ -1768,6 +1777,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         SHARD_ID0,
         "1"
     ), activeReport.getCurrentOffsets());
+    Assert.assertEquals(timeLag, activeReport.getLagMillis());
 
     Assert.assertEquals("id1", publishingReport.getId());
     Assert.assertEquals(ImmutableMap.of(
@@ -1782,6 +1792,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         SHARD_ID0,
         "1"
     ), publishingReport.getCurrentOffsets());
+    Assert.assertEquals(timeLag, publishingReport.getLagMillis());
   }
 
   @Test
@@ -3643,6 +3654,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         42, // This property is different from tuningConfig
         null,
+        null,
         null
     );
 
@@ -4688,6 +4700,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         5000,
+        null,
         null,
         null,
         null,

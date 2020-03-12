@@ -55,5 +55,8 @@ public interface SeekableStreamSupervisorTuningConfig
   @JsonProperty
   Duration getRepartitionTransitionDuration();
 
+  @JsonProperty
+  Duration getOffsetFetchPeriod();
+
   SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig();
 }
