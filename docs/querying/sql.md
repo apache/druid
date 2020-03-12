@@ -334,18 +334,18 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 
 ### Reduction functions
 
-Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed
-as arguments, then the result is `NULL`. The expressions must all be convertible to a
-common data type, which will be the type of the result:
-*  If any argument is `NULL`, the result is `NULL`.
+Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
+arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
+type of the result:
+*  If all argument are `NULL`, the result is `NULL`. Otherwise, `NULL` arguments are ignored.
 *  If the arguments comprise a mix of numbers and strings, the arguments are interpreted as strings.
 *  If all arguments are integer numbers, the arguments are interpreted as longs.
 *  If all arguments are numbers and at least one argument is a double, the arguments are interpreted as doubles. 
 
 |Function|Notes|
 |--------|-----|
-|`GREATEST([expr1, ...])`|Returns the maximum expression across zero or more expressions.|
-|`LEAST([expr1, ...])`|Returns the minimum expression across zero or more expressions.|
+|`GREATEST([expr1, ...])`|Evaluates zero or more expressions and returns the maximum value based on comparisons as described above.|
+|`LEAST([expr1, ...])`|Evaluates zero or more expressions and returns the minimum value based on comparisons as described above.|
 
 
 ### IP address functions

@@ -23,7 +23,9 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.planner.Calcites;
 
 class ReductionOperatorConversionHelper
 {
@@ -32,7 +34,8 @@ class ReductionOperatorConversionHelper
   }
 
   /**
-   * Implements rules similar to: https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
+   * Implements type precedence rules similar to:
+   * https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
    *
    * @see org.apache.druid.math.expr.Function.ReduceFunc#apply
    * @see org.apache.druid.math.expr.Function.ReduceFunc#getComparisionType
@@ -46,16 +49,28 @@ class ReductionOperatorConversionHelper
           return typeFactory.createSqlType(SqlTypeName.NULL);
         }
 
+        SqlTypeName returnSqlTypeName = SqlTypeName.NULL;
         boolean hasDouble = false;
+
         for (int i = 0; i < n; i++) {
           RelDataType type = opBinding.getOperandType(i);
-          if (SqlTypeUtil.isString(type) || SqlTypeUtil.isCharacter(type)) {
-            return type;
-          } else if (SqlTypeUtil.isDouble(type)) {
+          SqlTypeName sqlTypeName = type.getSqlTypeName();
+          ValueType valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+
+          // Return types are listed in order of preference:
+          if (valueType == ValueType.STRING) {
+            returnSqlTypeName = sqlTypeName;
+            break;
+          } else if (valueType == ValueType.DOUBLE || valueType == ValueType.FLOAT) {
+            returnSqlTypeName = SqlTypeName.DOUBLE;
             hasDouble = true;
+          } else if (valueType == ValueType.LONG && !hasDouble) {
+            returnSqlTypeName = SqlTypeName.BIGINT;
+          } else if (sqlTypeName != SqlTypeName.NULL) {
+            throw new IAE("Argument %d has invalid type: %s", i, sqlTypeName);
           }
         }
 
-        return typeFactory.createSqlType(hasDouble ? SqlTypeName.DOUBLE : SqlTypeName.BIGINT);
+        return typeFactory.createSqlType(returnSqlTypeName);
       };
 }

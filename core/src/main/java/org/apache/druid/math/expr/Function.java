@@ -1052,9 +1052,13 @@ public interface Function
       }
 
       ExprAnalysis exprAnalysis = analyzeExprs(args, bindings);
-      if (exprAnalysis == null) {
-        // The GREATEST/LEAST functions are not in the SQL standard, but most (e.g., MySQL, Oracle) return NULL if any
-        // are NULL. Others (e.g., Postgres) only return NULL if all are NULL, otherwise the NULLs are ignored.
+      if (exprAnalysis.exprEvals.isEmpty()) {
+        // The GREATEST/LEAST functions are not in the SQL standard. Emulate the behavior of postgres (return null if
+        // all expressions are null, otherwise skip null values) since it is used as a base for a wide number of
+        // databases. This also matches the behavior the the long/double greatest/least post aggregators. Some other
+        // databases (e.g., MySQL) return null if any expression is null.
+        // https://www.postgresql.org/docs/9.5/functions-conditional.html
+        // https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
         return ExprEval.of(null);
       }
 
@@ -1072,7 +1076,14 @@ public interface Function
       }
     }
 
-    @Nullable
+    /**
+     * Determines which {@link ExprType} to use to compare non-null evaluated expressions.
+     *
+     * @param exprs    Expressions to analyze
+     * @param bindings Bindings for expressions
+     *
+     * @return Comparison type and non-null evaluated expressions.
+     */
     private ExprAnalysis analyzeExprs(List<Expr> exprs, Expr.ObjectBinding bindings)
     {
       Set<ExprType> presentTypes = EnumSet.noneOf(ExprType.class);
@@ -1086,11 +1097,9 @@ public interface Function
           presentTypes.add(exprType);
         }
 
-        if (exprEval.asString() == null) {
-          return null;
+        if (exprEval.value() != null) {
+          exprEvals.add(exprEval);
         }
-
-        exprEvals.add(exprEval);
       }
 
       ExprType comparisonType = getComparisionType(presentTypes);

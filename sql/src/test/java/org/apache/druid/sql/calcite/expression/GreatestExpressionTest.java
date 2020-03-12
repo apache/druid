@@ -20,13 +20,18 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -73,7 +78,20 @@ public class GreatestExpressionTest extends ExpressionTestBase
   }
 
   @Test
-  public void testNull()
+  public void testAllNull()
+  {
+    testExpression(
+        Arrays.asList(
+            testHelper.getConstantNull(),
+            testHelper.getConstantNull()
+        ),
+        buildExpectedExpression(null, null),
+        null
+    );
+  }
+
+  @Test
+  public void testSomeNull()
   {
     testExpression(
         Arrays.asList(
@@ -86,7 +104,7 @@ public class GreatestExpressionTest extends ExpressionTestBase
             null,
             testHelper.makeVariable(STRING_KEY)
         ),
-        null
+        STRING_VALUE
     );
   }
 
@@ -175,6 +193,55 @@ public class GreatestExpressionTest extends ExpressionTestBase
             testHelper.makeVariable(DOUBLE_KEY)
         ),
         DOUBLE_VALUE
+    );
+  }
+
+  @Test
+  public void testDecimal()
+  {
+    testExpression(
+        Arrays.asList(
+            testHelper.makeLiteral(BigDecimal.valueOf(1.2)),
+            testHelper.makeLiteral(BigDecimal.valueOf(3.4))
+        ),
+        buildExpectedExpression(
+            1.2,
+           3.4
+        ),
+        3.4
+    );
+  }
+
+  @Test
+  public void testTimestamp()
+  {
+    testExpression(
+        Arrays.asList(
+            testHelper.makeLiteral(DateTimes.utc(1000)),
+            testHelper.makeLiteral(DateTimes.utc(2000))
+        ),
+        buildExpectedExpression(
+            1000,
+           2000
+        ),
+        2000L
+    );
+  }
+
+  @Test
+  public void testInvalidType()
+  {
+    expectException(IllegalArgumentException.class, "Argument 0 has invalid type: INTERVAL_YEAR_MONTH");
+
+    testExpression(
+        Collections.singletonList(
+            testHelper.makeLiteral(
+                new BigDecimal(13), // YEAR-MONTH literals value is months
+                new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
+            )
+        ),
+        null,
+        null
     );
   }
 
