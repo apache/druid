@@ -2348,7 +2348,7 @@ public class CachingClusteredClientTest
       }
 
       for (Map.Entry<String, Object> entry : rowMap.entrySet()) {
-        final int position = query.getResultRowPositionLookup().getInt(entry.getKey());
+        final int position = query.getResultRowSignature().indexOf(entry.getKey());
         row.set(position, entry.getValue());
       }
 

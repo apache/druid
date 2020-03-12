@@ -104,11 +104,11 @@ public class QueryMaker
       // just as fast as a timeseries query (a noble goal) we can remove timeseries queries from the SQL layer and
       // also remove this hack.
       final String timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions()).getOutputName();
-      rowOrder = druidQuery.getOutputRowSignature().getRowOrder().stream()
+      rowOrder = druidQuery.getOutputRowSignature().getColumnNames().stream()
                            .map(f -> timeDimension.equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
                            .collect(Collectors.toList());
     } else {
-      rowOrder = druidQuery.getOutputRowSignature().getRowOrder();
+      rowOrder = druidQuery.getOutputRowSignature().getColumnNames();
     }
 
     return execute(
@@ -153,7 +153,7 @@ public class QueryMaker
 
     //noinspection unchecked
     final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
-    final List<String> resultArrayFields = toolChest.resultArrayFields(query);
+    final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
     final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
 
     return remapFields(resultArrays, resultArrayFields, newFields, newTypes);

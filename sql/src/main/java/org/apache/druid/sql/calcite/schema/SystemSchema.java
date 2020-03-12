@@ -60,6 +60,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -72,7 +73,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
@@ -257,7 +258,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SEGMENTS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SEGMENTS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -478,7 +479,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SERVERS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SERVERS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -547,7 +548,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SERVER_SEGMENTS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SERVER_SEGMENTS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -566,7 +567,7 @@ public class SystemSchema extends AbstractSchema
 
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
-      final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
+      final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.size();
       for (ImmutableDruidServer druidServer : druidServers) {
         final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
             authenticationResult,
@@ -612,7 +613,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return TASKS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(TASKS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -796,7 +797,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SUPERVISOR_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SUPERVISOR_SIGNATURE, typeFactory);
     }
 
     @Override

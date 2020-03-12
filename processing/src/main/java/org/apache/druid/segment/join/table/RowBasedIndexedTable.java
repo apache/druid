@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
@@ -26,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
@@ -45,48 +47,46 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
 {
   private final List<RowType> table;
   private final List<Map<Object, IntList>> index;
-  private final Map<String, ValueType> rowSignature;
-  private final List<String> columns;
-  private final List<ValueType> columnTypes;
+  private final RowSignature rowSignature;
   private final List<Function<RowType, Object>> columnFunctions;
   private final Set<String> keyColumns;
 
   public RowBasedIndexedTable(
       final List<RowType> table,
       final RowAdapter<RowType> rowAdapter,
-      final Map<String, ValueType> rowSignature,
+      final RowSignature rowSignature,
       final Set<String> keyColumns
   )
   {
     this.table = table;
     this.rowSignature = rowSignature;
-    this.columns = rowSignature.keySet().stream().sorted().collect(Collectors.toList());
-    this.columnTypes = new ArrayList<>(columns.size());
-    this.columnFunctions = columns.stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
+    this.columnFunctions =
+        rowSignature.getColumnNames().stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
     this.keyColumns = keyColumns;
 
     if (new HashSet<>(keyColumns).size() != keyColumns.size()) {
       throw new ISE("keyColumns[%s] must not contain duplicates", keyColumns);
     }
 
-    if (!rowSignature.keySet().containsAll(keyColumns)) {
+    if (!ImmutableSet.copyOf(rowSignature.getColumnNames()).containsAll(keyColumns)) {
       throw new ISE(
           "keyColumns[%s] must all be contained in rowSignature[%s]",
           String.join(", ", keyColumns),
-          String.join(", ", rowSignature.keySet())
+          rowSignature
       );
     }
 
-    index = new ArrayList<>(columns.size());
+    index = new ArrayList<>(rowSignature.size());
 
-    for (int i = 0; i < columns.size(); i++) {
-      final String column = columns.get(i);
+    for (int i = 0; i < rowSignature.size(); i++) {
+      final String column = rowSignature.getColumnName(i);
       final Map<Object, IntList> m;
-      final ValueType columnType = rowSignature.get(column);
-
-      columnTypes.add(columnType);
 
       if (keyColumns.contains(column)) {
+        final ValueType columnType =
+            rowSignature.getColumnType(column)
+                        .orElseThrow(() -> new ISE("Key column[%s] must have nonnull type", column));
+
         final Function<RowType, Object> columnFunction = columnFunctions.get(i);
 
         m = new HashMap<>();
@@ -114,13 +114,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
-  public List<String> allColumns()
-  {
-    return columns;
-  }
-
-  @Override
-  public Map<String, ValueType> rowSignature()
+  public RowSignature rowSignature()
   {
     return rowSignature;
   }
@@ -134,7 +128,9 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       throw new IAE("Column[%d] is not a key column", column);
     }
 
-    final ValueType columnType = columnTypes.get(column);
+    final ValueType columnType =
+        rowSignature.getColumnType(column)
+                    .orElseThrow(() -> new ISE("Key column[%s] must have nonnull type", column));
 
     return key -> {
       final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, columnType, false);
