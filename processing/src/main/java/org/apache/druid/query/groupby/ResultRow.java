@@ -26,12 +26,12 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,7 +45,7 @@ import java.util.Map;
  * ResultRows may sometimes be created without space reserved for post-aggregators, in contexts where it is known
  * that post-aggregators will not be computed.
  *
- * @see GroupByQuery#getResultRowOrder()
+ * @see GroupByQuery#getResultRowSignature()
  * @see GroupByQuery#getResultRowHasTimestamp()
  * @see GroupByQuery#getUniversalTimestamp()
  * @see GroupByQuery#getResultRowDimensionStart()
@@ -158,15 +158,12 @@ public final class ResultRow
    */
   public Map<String, Object> toMap(final GroupByQuery query)
   {
-    final List<String> resultRowOrder = query.getResultRowOrder();
+    final RowSignature signature = query.getResultRowSignature();
     final Map<String, Object> map = new HashMap<>();
 
     for (int i = query.getResultRowDimensionStart(); i < row.length; i++) {
-      final String columnName = resultRowOrder.get(i);
-
-      if (row[i] != null) {
-        map.put(columnName, row[i]);
-      }
+      final String columnName = signature.getColumnName(i);
+      map.put(columnName, row[i]);
     }
 
     return map;

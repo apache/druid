@@ -136,7 +136,7 @@ public class DataSourceAnalysisTest
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(LOOKUP_LOOKYLOO);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());
@@ -153,7 +153,7 @@ public class DataSourceAnalysisTest
     final QueryDataSource queryDataSource = subquery(LOOKUP_LOOKYLOO);
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(queryDataSource);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertTrue(analysis.isQuery());
@@ -172,7 +172,7 @@ public class DataSourceAnalysisTest
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(INLINE);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());
@@ -378,7 +378,7 @@ public class DataSourceAnalysisTest
 
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(joinDataSource);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());

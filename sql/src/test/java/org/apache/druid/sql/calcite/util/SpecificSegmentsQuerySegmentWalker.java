@@ -54,6 +54,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactoryTest;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -119,6 +121,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       @Nullable final QueryScheduler scheduler
   )
   {
+    final NoopServiceEmitter emitter = new NoopServiceEmitter();
+
     this.conglomerate = conglomerate;
     this.joinableFactory = joinableFactory == null ?
                            MapJoinableFactoryTest.fromMap(
@@ -130,8 +134,14 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
     this.scheduler = scheduler;
     this.walker = new ClientQuerySegmentWalker(
-        new NoopServiceEmitter(),
+        emitter,
         new DataServerLikeWalker(),
+        new LocalQuerySegmentWalker(
+            conglomerate,
+            new MapSegmentWrangler(ImmutableMap.of()),
+            this.joinableFactory,
+            emitter
+        ),
         new QueryToolChestWarehouse()
         {
           @Override

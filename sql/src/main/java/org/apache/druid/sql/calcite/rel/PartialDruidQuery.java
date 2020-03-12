@@ -35,8 +35,8 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.List;
 import java.util.Objects;

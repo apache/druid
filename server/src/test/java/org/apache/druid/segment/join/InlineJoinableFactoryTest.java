@@ -75,7 +75,7 @@ public class InlineJoinableFactoryTest
     final Joinable joinable = factory.build(inlineDataSource, makeCondition("x == \"j.long\"")).get();
 
     Assert.assertThat(joinable, CoreMatchers.instanceOf(IndexedTableJoinable.class));
-    Assert.assertEquals(ImmutableList.of("long", "str"), joinable.getAvailableColumns());
+    Assert.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
     Assert.assertEquals(2, joinable.getCardinality("str"));
     Assert.assertEquals(2, joinable.getCardinality("long"));
   }

@@ -48,7 +48,8 @@ import org.joda.time.Interval;
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
   private final ServiceEmitter emitter;
-  private final QuerySegmentWalker baseClient;
+  private final QuerySegmentWalker clusterClient;
+  private final QuerySegmentWalker localClient;
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
@@ -58,7 +59,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
-      QuerySegmentWalker baseClient,
+      QuerySegmentWalker clusterClient,
+      QuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
@@ -68,7 +70,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     this.emitter = emitter;
-    this.baseClient = baseClient;
+    this.clusterClient = clusterClient;
+    this.localClient = localClient;
     this.warehouse = warehouse;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
@@ -80,7 +83,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Inject
   ClientQuerySegmentWalker(
       ServiceEmitter emitter,
-      CachingClusteredClient baseClient,
+      CachingClusteredClient clusterClient,
+      LocalQuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
@@ -91,7 +95,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     this(
         emitter,
-        (QuerySegmentWalker) baseClient,
+        (QuerySegmentWalker) clusterClient,
+        (QuerySegmentWalker) localClient,
         warehouse,
         retryConfig,
         objectMapper,
@@ -107,7 +112,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     if (analysis.isConcreteTableBased()) {
-      return makeRunner(query, baseClient.getQueryRunnerForIntervals(query, intervals));
+      return decorateClusterRunner(query, clusterClient.getQueryRunnerForIntervals(query, intervals));
+    } else if (analysis.isConcreteBased() && analysis.isGlobal()) {
+      // Concrete, non-table based, can run locally. No need to decorate since LocalQuerySegmentWalker does its own.
+      return localClient.getQueryRunnerForIntervals(query, intervals);
     } else {
       // In the future, we will check here to see if parts of the query are inlinable, and if that inlining would
       // be able to create a concrete table-based query that we can run through the distributed query stack.
@@ -121,53 +129,47 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     if (analysis.isConcreteTableBased()) {
-      return makeRunner(query, baseClient.getQueryRunnerForSegments(query, specs));
+      return decorateClusterRunner(query, clusterClient.getQueryRunnerForSegments(query, specs));
     } else {
       throw new ISE("Query dataSource is not table-based, cannot run");
     }
   }
 
-  private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
+  private <T> QueryRunner<T> decorateClusterRunner(Query<T> query, QueryRunner<T> baseClusterRunner)
   {
-    QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+
+    final PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
+        query.<String>getContextValue("postProcessing"),
+        new TypeReference<PostProcessingOperator<T>>() {}
+    );
+
+    final QueryRunner<T> mostlyDecoratedRunner =
+        new FluentQueryRunnerBuilder<>(toolChest)
+            .create(
+                new SetAndVerifyContextQueryRunner<>(
+                    serverConfig,
+                    new RetryQueryRunner<>(
+                        baseClusterRunner,
+                        retryConfig,
+                        objectMapper
+                    )
+                )
+            )
+            .applyPreMergeDecoration()
+            .mergeResults()
+            .applyPostMergeDecoration()
+            .emitCPUTimeMetric(emitter)
+            .postProcess(postProcessing);
 
     // This does not adhere to the fluent workflow. See https://github.com/apache/druid/issues/5517
     return new ResultLevelCachingQueryRunner<>(
-        makeRunner(query, baseClientRunner, toolChest),
+        mostlyDecoratedRunner,
         toolChest,
         query,
         objectMapper,
         cache,
         cacheConfig
     );
-  }
-
-  private <T> QueryRunner<T> makeRunner(
-      Query<T> query,
-      QueryRunner<T> baseClientRunner,
-      QueryToolChest<T, Query<T>> toolChest
-  )
-  {
-    PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
-        query.<String>getContextValue("postProcessing"),
-        new TypeReference<PostProcessingOperator<T>>() {}
-    );
-
-    return new FluentQueryRunnerBuilder<>(toolChest)
-        .create(
-            new SetAndVerifyContextQueryRunner<>(
-                serverConfig,
-                new RetryQueryRunner<>(
-                    baseClientRunner,
-                    retryConfig,
-                    objectMapper
-                )
-            )
-        )
-        .applyPreMergeDecoration()
-        .mergeResults()
-        .applyPostMergeDecoration()
-        .emitCPUTimeMetric(emitter)
-        .postProcess(postProcessing);
   }
 }

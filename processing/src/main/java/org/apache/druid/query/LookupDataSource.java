@@ -93,7 +93,7 @@ public class LookupDataSource implements DataSource
   @Override
   public boolean isConcrete()
   {
-    return false;
+    return true;
   }
 
   @Override

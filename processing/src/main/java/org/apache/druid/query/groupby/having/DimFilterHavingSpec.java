@@ -76,7 +76,7 @@ public class DimFilterHavingSpec implements HavingSpec
     this.finalizers = new Int2ObjectArrayMap<>(query.getAggregatorSpecs().size());
 
     for (AggregatorFactory factory : query.getAggregatorSpecs()) {
-      final int i = query.getResultRowPositionLookup().getInt(factory.getName());
+      final int i = query.getResultRowSignature().indexOf(factory.getName());
       this.finalizers.put(i, factory::finalizeComputation);
     }
 

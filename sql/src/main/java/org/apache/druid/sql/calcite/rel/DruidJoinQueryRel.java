@@ -42,11 +42,12 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.HashSet;
 import java.util.List;
@@ -190,7 +191,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignature.from(
+        RowSignatures.fromRelDataType(
             joinRel.getRowType().getFieldNames(),
             joinRel.getRowType()
         ),
@@ -328,15 +329,15 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     final RowSignature.Builder signatureBuilder = RowSignature.builder();
 
-    for (final String column : leftSignature.getRowOrder()) {
-      signatureBuilder.add(column, leftSignature.getColumnType(column));
+    for (final String column : leftSignature.getColumnNames()) {
+      signatureBuilder.add(column, leftSignature.getColumnType(column).orElse(null));
     }
 
     // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
-    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getRowOrder()) + "0.";
+    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getColumnNames()) + "0.";
 
-    for (final String column : rightSignature.getRowOrder()) {
-      signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column));
+    for (final String column : rightSignature.getColumnNames()) {
+      signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column).orElse(null));
     }
 
     return Pair.of(rightPrefix, signatureBuilder.build());

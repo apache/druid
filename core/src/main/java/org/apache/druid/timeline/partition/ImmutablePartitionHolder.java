@@ -25,9 +25,9 @@ import org.apache.druid.timeline.Overshadowable;
  */
 public class ImmutablePartitionHolder<T extends Overshadowable<T>> extends PartitionHolder<T>
 {
-  public ImmutablePartitionHolder(PartitionHolder<T> partitionHolder)
+  protected ImmutablePartitionHolder(OvershadowableManager<T> overshadowableManager)
   {
-    super(partitionHolder);
+    super(overshadowableManager);
   }
 
   @Override
