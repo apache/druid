@@ -239,8 +239,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     const sorted = parsedQuery.getSorted();
     const aggregateColumns = parsedQuery.getAggregateColumns();
 
-    console.log(sorted);
-    if (parsedQuery && sorted) {
+    if (sorted) {
       const sortedColumnNames = sorted.map(column => column.id);
       if (sortedColumnNames.includes(header)) {
         className.push(sorted[sortedColumnNames.indexOf(header)].desc ? '-sort-desc' : '-sort-asc');
