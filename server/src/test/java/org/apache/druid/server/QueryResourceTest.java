@@ -47,9 +47,9 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
-import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.server.scheduling.ThresholdBasedQueryDeprioritizationStrategy;
+import org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -176,7 +176,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryScheduler = new QueryScheduler(
         8,
-        NoAutoQueryPrioritizationStrategy.INSTANCE,
+        ManualQueryPrioritizationStrategy.INSTANCE,
         NoQueryLaningStrategy.INSTANCE,
         new ServerConfig()
     );
@@ -699,7 +699,7 @@ public class QueryResourceTest
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler laningScheduler = new QueryScheduler(
         2,
-        NoAutoQueryPrioritizationStrategy.INSTANCE,
+        ManualQueryPrioritizationStrategy.INSTANCE,
         NoQueryLaningStrategy.INSTANCE,
         new ServerConfig()
     );
@@ -744,7 +744,7 @@ public class QueryResourceTest
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
-        NoAutoQueryPrioritizationStrategy.INSTANCE,
+        ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(2),
         new ServerConfig()
     );
@@ -799,7 +799,7 @@ public class QueryResourceTest
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
-        new ThresholdBasedQueryDeprioritizationStrategy(null, "P90D", null, null),
+        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null),
         new HiLoQueryLaningStrategy(1),
         new ServerConfig()
     );

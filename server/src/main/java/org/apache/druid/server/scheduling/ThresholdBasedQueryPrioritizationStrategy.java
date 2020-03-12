@@ -36,7 +36,10 @@ import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.Set;
 
-public class ThresholdBasedQueryDeprioritizationStrategy implements QueryPrioritizationStrategy
+/**
+ * Lowers query priority when any of the configured thresholds is exceeded
+ */
+public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritizationStrategy
 {
   private static final int DEFAULT_SEGMENT_THRESHOLD = Integer.MAX_VALUE;
   private static final int DEFAULT_ADJUSTMENT = 5;
@@ -48,7 +51,7 @@ public class ThresholdBasedQueryDeprioritizationStrategy implements QueryPriorit
   private final Optional<Duration> durationThreshold;
 
   @JsonCreator
-  public ThresholdBasedQueryDeprioritizationStrategy(
+  public ThresholdBasedQueryPrioritizationStrategy(
       @JsonProperty("periodThreshold") @Nullable String periodThresholdString,
       @JsonProperty("durationThreshold") @Nullable String durationThresholdString,
       @JsonProperty("segmentCountThreshold") @Nullable Integer segmentCountThreshold,

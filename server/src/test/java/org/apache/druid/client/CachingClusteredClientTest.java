@@ -119,7 +119,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -2480,7 +2480,7 @@ public class CachingClusteredClientTest
         ForkJoinPool.commonPool(),
         new QueryScheduler(
             0,
-            NoAutoQueryPrioritizationStrategy.INSTANCE,
+            ManualQueryPrioritizationStrategy.INSTANCE,
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         )

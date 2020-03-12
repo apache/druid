@@ -48,7 +48,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
-import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
@@ -125,7 +125,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     scheduler = new QueryScheduler(
         5,
-        NoAutoQueryPrioritizationStrategy.INSTANCE,
+        ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(40),
         new ServerConfig()
     );

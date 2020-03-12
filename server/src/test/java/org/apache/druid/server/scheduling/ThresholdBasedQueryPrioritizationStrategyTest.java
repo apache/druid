@@ -39,7 +39,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class ThresholdBasedQueryDeprioritizationStrategyTest
+public class ThresholdBasedQueryPrioritizationStrategyTest
 {
   private final Integer adjustment = 10;
   @Rule
@@ -58,7 +58,7 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationPeriodThresholdInsidePeriod()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
         "P90D", null, null, adjustment);
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
@@ -75,7 +75,7 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationPeriodThresholdOutsidePeriod()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
         "P90D",
         null,
         null,
@@ -97,7 +97,7 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationDurationThresholdInsideDuration()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
         null,
         "P7D",
         null,
@@ -118,7 +118,7 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationDurationThresholdOutsideDuration()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
         null,
         "P7D",
         null,
@@ -140,7 +140,7 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationSegmentCountWithinThreshold()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
         null,
         null,
         2,
@@ -164,7 +164,7 @@ public class ThresholdBasedQueryDeprioritizationStrategyTest
   @Test
   public void testPrioritizationSegmentCountOverThreshold()
   {
-    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryDeprioritizationStrategy(
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
         null,
         null,
         2,

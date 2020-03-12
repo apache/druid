@@ -23,16 +23,16 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
-import org.apache.druid.server.scheduling.ThresholdBasedQueryDeprioritizationStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy;
 
 import java.util.Optional;
 import java.util.Set;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoAutoQueryPrioritizationStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = ManualQueryPrioritizationStrategy.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "none", value = NoAutoQueryPrioritizationStrategy.class),
-    @JsonSubTypes.Type(name = "threshold", value = ThresholdBasedQueryDeprioritizationStrategy.class)
+    @JsonSubTypes.Type(name = "manual", value = ManualQueryPrioritizationStrategy.class),
+    @JsonSubTypes.Type(name = "threshold", value = ThresholdBasedQueryPrioritizationStrategy.class)
 })
 public interface QueryPrioritizationStrategy
 {

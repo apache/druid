@@ -26,9 +26,13 @@ import org.apache.druid.server.QueryPrioritizationStrategy;
 import java.util.Optional;
 import java.util.Set;
 
-public class NoAutoQueryPrioritizationStrategy implements QueryPrioritizationStrategy
+/**
+ * Does nothing, the user must set the {@link org.apache.druid.query.QueryContexts#PRIORITY_KEY} on the query context
+ * to get a priority.
+ */
+public class ManualQueryPrioritizationStrategy implements QueryPrioritizationStrategy
 {
-  public static final QueryPrioritizationStrategy INSTANCE = new NoAutoQueryPrioritizationStrategy();
+  public static final QueryPrioritizationStrategy INSTANCE = new ManualQueryPrioritizationStrategy();
 
   @Override
   public <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments)

@@ -54,7 +54,7 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
-import org.apache.druid.server.scheduling.NoAutoQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -102,7 +102,7 @@ public class QuerySchedulerTest
     laneAcquired = new AtomicLong();
     laneNotAcquired = new AtomicLong();
     laneReleased = new AtomicLong();
-    scheduler = new QueryScheduler(5, NoAutoQueryPrioritizationStrategy.INSTANCE, new HiLoQueryLaningStrategy(40), new ServerConfig()) {
+    scheduler = new QueryScheduler(5, ManualQueryPrioritizationStrategy.INSTANCE, new HiLoQueryLaningStrategy(40), new ServerConfig()) {
       @Override
       List<Bulkhead> acquireLanes(Query<?> query)
       {
