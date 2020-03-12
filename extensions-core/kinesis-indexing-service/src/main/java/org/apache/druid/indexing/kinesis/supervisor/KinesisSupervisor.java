@@ -64,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
@@ -73,8 +72,6 @@ import java.util.concurrent.ScheduledExecutorService;
  * and the list of running indexing tasks and ensures that all partitions are being read from and that there are enough
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kinesis sequences.
- * <p>
- * the Kinesis supervisor does not yet support lag calculations
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
@@ -215,12 +212,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         taskTuningConfig.getFetchSequenceNumberTimeout(),
         taskTuningConfig.getMaxRecordsPerPoll()
     );
-  }
-
-  @Override
-  protected void scheduleReporting(ScheduledExecutorService reportingExec)
-  {
-    // not yet implemented, see issue #6739
   }
 
   /**
