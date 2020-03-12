@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 
 public class IndexedTableJoinMatcher implements JoinMatcher
 {
-  private final static int UNINITIALIZED_CURRENT_ROW = -1;
+  private static final int UNINITIALIZED_CURRENT_ROW = -1;
 
   private final IndexedTable table;
   private final List<Supplier<IntIterator>> conditionMatchers;
