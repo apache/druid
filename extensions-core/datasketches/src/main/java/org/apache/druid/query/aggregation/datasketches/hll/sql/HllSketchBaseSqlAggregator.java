@@ -120,7 +120,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+        && rowSignature.getColumnType(columnArg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),

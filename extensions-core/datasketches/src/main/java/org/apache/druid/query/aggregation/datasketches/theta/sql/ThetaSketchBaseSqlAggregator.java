@@ -98,7 +98,8 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
-    if (columnArg.isDirectColumnAccess() && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+    if (columnArg.isDirectColumnAccess()
+        && rowSignature.getColumnType(columnArg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),

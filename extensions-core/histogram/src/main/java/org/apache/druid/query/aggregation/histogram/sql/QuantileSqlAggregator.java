@@ -175,7 +175,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     final List<VirtualColumn> virtualColumns = new ArrayList<>();
 
     if (input.isDirectColumnAccess()) {
-      if (rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
+      if (rowSignature.getColumnType(input.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
         aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
             histogramName,
             input.getDirectColumn(),
