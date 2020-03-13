@@ -67,25 +67,25 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
   public static Object[][] resources()
   {
     return new Object[][]{
-      {new Pair<>(INPUT_SOURCE_URIS_KEY,
-                  ImmutableList.of(
-                      "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_1,
-                      "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_2,
-                      "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_3
-                      )
-      )},
-      {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
-                  ImmutableList.of(
-                      "s3://" + BUCKET + "/" + PATH
-                  )
-      )},
-      {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
-                  ImmutableList.of(
-                      ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_1),
-                      ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_2),
-                      ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_3)
-                  )
-      )}
+        {new Pair<>(INPUT_SOURCE_URIS_KEY,
+                    ImmutableList.of(
+                        "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_1,
+                        "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_2,
+                        "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_3
+                        )
+        )},
+        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
+                    ImmutableList.of(
+                        "s3://" + BUCKET + "/" + PATH
+                    )
+        )},
+        {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
+                    ImmutableList.of(
+                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_1),
+                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_2),
+                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_3)
+                    )
+        )}
     };
   }
 
