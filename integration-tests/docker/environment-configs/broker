@@ -39,4 +39,3 @@ druid_sql_avatica_enable=true
 druid_server_https_crlPath=/tls/revocations.crl
 druid_query_scheduler_laning_strategy=manual
 druid_query_scheduler_laning_lanes_one=1
-druid_query_scheduler_laning_lanes_two=2

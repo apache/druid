@@ -58,7 +58,7 @@ public class ManualQueryLaningStrategyTest
     this.exactStrategy =
         new ManualQueryLaningStrategy(ImmutableMap.of("one", 1, "ten", 10), null);
     this.percentStrategy =
-        new ManualQueryLaningStrategy(ImmutableMap.of("one", 1, "ten", 10), true);
+        new ManualQueryLaningStrategy(ImmutableMap.of("one", 1, "ten", 10, "one-hundred", 100), true);
   }
 
   @Test
@@ -70,7 +70,7 @@ public class ManualQueryLaningStrategyTest
   }
 
   @Test
-  public void testMustDefineAtLeast1Lane()
+  public void testMustDefineAtLeastOneLane()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("lanes must define at least one lane");
@@ -94,6 +94,14 @@ public class ManualQueryLaningStrategyTest
   }
 
   @Test
+  public void testPercentLaneLimitsMustBeLessThanOneHundred()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("All lane limits must be in the range 1 to 100");
+    new ManualQueryLaningStrategy(ImmutableMap.of("one", 1, "one-hundred-and-one", 101), true);
+  }
+
+  @Test
   public void testExactLimits()
   {
     Object2IntMap<String> exactLanes = exactStrategy.getLaneLimits(50);
@@ -107,6 +115,7 @@ public class ManualQueryLaningStrategyTest
     Object2IntMap<String> exactLanes = percentStrategy.getLaneLimits(50);
     Assert.assertEquals(1, exactLanes.getInt("one"));
     Assert.assertEquals(5, exactLanes.getInt("ten"));
+    Assert.assertEquals(50, exactLanes.getInt("one-hundred"));
   }
 
   @Test

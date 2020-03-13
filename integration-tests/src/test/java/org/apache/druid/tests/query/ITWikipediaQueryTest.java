@@ -84,12 +84,11 @@ public class ITWikipediaQueryTest
   }
 
   @Test
-  public void testQueryLaning() throws Exception
+  public void testQueryLaningLaneIsLimited() throws Exception
   {
-    // the broker is configured with 2 manually defined query lanes, 'one' with limit 1, and 'two' with limit 'two'
+    // the broker is configured with a manually defined query lane, 'one' with limit 1
     //  -Ddruid.query.scheduler.laning.type=manual
     //  -Ddruid.query.scheduler.laning.lanes.one=1
-    //  -Ddruid.query.scheduler.laning.lanes.two=2
     // by issuing 50 queries, at least 1 of them will succeed on 'one', and at least 1 of them will overlap enough to
     // get limited
     final int numQueries = 50;
@@ -133,6 +132,41 @@ public class ITWikipediaQueryTest
     ).get();
 
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), andAnother.getStatus().getCode());
+  }
+
+  @Test
+  public void testQueryLaningWithNoLane() throws Exception
+  {
+    // the broker is configured with a manually defined query lane, 'one' with limit 1
+    //  -Ddruid.query.scheduler.laning.type=manual
+    //  -Ddruid.query.scheduler.laning.lanes.one=1
+    // these queries will not belong to the lane so none of them should be limited
+    final int numQueries = 50;
+    List<Future<StatusResponseHolder>> futures = new ArrayList<>(numQueries);
+    for (int i = 0; i < numQueries; i++) {
+      futures.add(
+          queryClient.queryAsync(
+              queryHelper.getQueryURL(config.getBrokerUrl()),
+              getQueryBuilder().context(ImmutableMap.of("queryId", UUID.randomUUID().toString())).build()
+          )
+      );
+    }
+
+    int success = 0;
+    int limited = 0;
+
+    for (Future<StatusResponseHolder> future : futures) {
+      StatusResponseHolder status = future.get();
+      if (status.getStatus().getCode() == QueryCapacityExceededException.STATUS_CODE) {
+        limited++;
+      } else if (status.getStatus().getCode() == HttpResponseStatus.OK.getCode()) {
+        success++;
+      }
+    }
+
+    Assert.assertTrue(success > 0);
+    Assert.assertEquals(limited, 0);
+
   }
 
   private Druids.TimeseriesQueryBuilder getQueryBuilder()
