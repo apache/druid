@@ -1944,5 +1944,24 @@
             <module>website</module>
           </modules>
         </profile>
+        <profile>
+          <id>skip-static-checks</id>
+          <properties>
+            <animal.sniffer.skip>true</animal.sniffer.skip>
+            <checkstyle.skip>true</checkstyle.skip>
+            <enforcer.skip>true</enforcer.skip>
+            <forbiddenapis.skip>true</forbiddenapis.skip>
+            <maven.javadoc.skip>true</maven.javadoc.skip>
+            <pmd.skip>true</pmd.skip>
+            <spotbugs.skip>true</spotbugs.skip>
+          </properties>
+        </profile>
+        <profile>
+          <id>skip-tests</id>
+          <properties>
+            <skipTests>true</skipTests>
+            <jacoco.skip>true</jacoco.skip>
+          </properties>
+        </profile>
     </profiles>
 </project>

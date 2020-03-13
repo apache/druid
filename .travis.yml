@@ -30,17 +30,8 @@ env:
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
-      MAVEN_SKIP="
-      -Danimal.sniffer.skip=true
-      -Dcheckstyle.skip=true
-      -Ddruid.console.skip=true
-      -Denforcer.skip=true
-      -Dforbiddenapis.skip=true
-      -Dmaven.javadoc.skip=true
-      -Dpmd.skip=true
-      -Dspotbugs.skip=true
-      "
-    - MAVEN_SKIP_TESTS="-DskipTests -Djacoco.skip=true"
+      MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
+    - MAVEN_SKIP_TESTS="-Pskip-tests"
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
@@ -254,13 +245,19 @@ jobs:
       name: "(openjdk11) other modules test (SQL Compatibility)"
       jdk: openjdk11
 
-    - &test_webconsole
-      name: "web console"
+    - name: "web console"
       install: skip
       script:
         - ${MVN} test -pl 'web-console'
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
+
+    - name: "web console end-to-end test"
+      before_install: *setup_generate_license
+      install: web-console/script/druid build
+      before_script: web-console/script/druid start
+      script: (cd web-console && npm run test-e2e)
+      after_script:  web-console/script/druid stop
 
     - name: "docs"
       install: (cd website && npm install)
