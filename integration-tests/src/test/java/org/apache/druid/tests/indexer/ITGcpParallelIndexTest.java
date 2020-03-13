@@ -17,17 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.tests.s3deepstorage;
+package org.apache.druid.tests.indexer;
 
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.tests.TestNGGroup;
-import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
-
-@Test(groups = TestNGGroup.S3_DEEP_STORAGE)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
+public class ITGcpParallelIndexTest
 {
-
 }
