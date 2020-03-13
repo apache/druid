@@ -136,8 +136,7 @@ public class GroupByQueryTest
                   .withIgnoredFields(
                       "applyLimitPushDown",
                       "postProcessingFn",
-                      "resultRowOrder",
-                      "resultRowPositionLookup",
+                      "resultRowSignature",
                       "universalTimestamp"
                   )
                   .verify();

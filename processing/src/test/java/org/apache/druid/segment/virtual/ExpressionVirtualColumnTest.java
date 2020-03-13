@@ -44,9 +44,11 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -198,8 +200,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
   private static final ThreadLocal<Row> CURRENT_ROW = new ThreadLocal<>();
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
+      RowAdapters.standardRow(),
       CURRENT_ROW::get,
-      null
+      RowSignature.empty(),
+      false
   );
 
   @Test
@@ -230,21 +234,33 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     DimensionSpec spec = new DefaultDimensionSpec("expr", "expr");
 
-    final BaseObjectColumnValueSelector selectorImplicit = SCALE_LIST_IMPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
+    final BaseObjectColumnValueSelector selectorImplicit = SCALE_LIST_IMPLICIT.makeDimensionSelector(
+        spec,
+        COLUMN_SELECTOR_FACTORY
+    );
     CURRENT_ROW.set(ROWMULTI);
     Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorImplicit.getObject());
     CURRENT_ROW.set(ROWMULTI2);
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorImplicit.getObject());
     CURRENT_ROW.set(ROWMULTI3);
-    Assert.assertEquals(Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"), selectorImplicit.getObject());
+    Assert.assertEquals(
+        Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"),
+        selectorImplicit.getObject()
+    );
 
-    final BaseObjectColumnValueSelector selectorExplicit = SCALE_LIST_EXPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
+    final BaseObjectColumnValueSelector selectorExplicit = SCALE_LIST_EXPLICIT.makeDimensionSelector(
+        spec,
+        COLUMN_SELECTOR_FACTORY
+    );
     CURRENT_ROW.set(ROWMULTI);
     Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorExplicit.getObject());
     CURRENT_ROW.set(ROWMULTI2);
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorExplicit.getObject());
     CURRENT_ROW.set(ROWMULTI3);
-    Assert.assertEquals(Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"), selectorExplicit.getObject());
+    Assert.assertEquals(
+        Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"),
+        selectorExplicit.getObject()
+    );
   }
 
   @Test
@@ -725,8 +741,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
+            RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.LONG)
+            RowSignature.builder().add("x", ValueType.LONG).build(),
+            false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
     );
@@ -746,8 +764,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
+            RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.DOUBLE)
+            RowSignature.builder().add("x", ValueType.DOUBLE).build(),
+            false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
     );
@@ -767,8 +787,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
+            RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.FLOAT)
+            RowSignature.builder().add("x", ValueType.FLOAT).build(),
+            false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
     );

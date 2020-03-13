@@ -28,7 +28,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
 import java.util.List;

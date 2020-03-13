@@ -30,9 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -40,11 +38,9 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
-import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -60,6 +56,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
+ *
  */
 public class Filters
 {
@@ -120,14 +117,11 @@ public class Filters
       final String value
   )
   {
-    final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-        DimensionHandlerUtils.createColumnSelectorPlus(
-            ValueMatcherColumnSelectorStrategyFactory.instance(),
-            DefaultDimensionSpec.of(columnName),
-            columnSelectorFactory
-        );
-
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), value);
+    return ColumnProcessors.makeProcessor(
+        columnName,
+        new ConstantValueMatcherFactory(value),
+        columnSelectorFactory
+    );
   }
 
   /**
@@ -151,14 +145,11 @@ public class Filters
       final DruidPredicateFactory predicateFactory
   )
   {
-    final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-        DimensionHandlerUtils.createColumnSelectorPlus(
-            ValueMatcherColumnSelectorStrategyFactory.instance(),
-            DefaultDimensionSpec.of(columnName),
-            columnSelectorFactory
-        );
-
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), predicateFactory);
+    return ColumnProcessors.makeProcessor(
+        columnName,
+        new PredicateValueMatcherFactory(predicateFactory),
+        columnSelectorFactory
+    );
   }
 
   public static ImmutableBitmap allFalse(final BitmapIndexSelector selector)
@@ -217,10 +208,11 @@ public class Filters
   /**
    * Return the union of bitmaps for all values matching a particular predicate.
    *
-   * @param dimension dimension to look at
-   * @param selector  bitmap selector
+   * @param dimension           dimension to look at
+   * @param selector            bitmap selector
    * @param bitmapResultFactory
-   * @param predicate predicate to use
+   * @param predicate           predicate to use
+   *
    * @return bitmap of matching rows
    *
    * @see #estimateSelectivity(String, BitmapIndexSelector, Predicate)
@@ -616,9 +608,9 @@ public class Filters
   /**
    * This method provides a "standard" implementation of {@link Filter#shouldUseBitmapIndex(BitmapIndexSelector)} which takes
    * a {@link Filter}, a {@link BitmapIndexSelector}, and {@link FilterTuning} to determine if:
-   *  a) the filter supports bitmap indexes for all required columns
-   *  b) the filter tuning specifies that it should use the index
-   *  c) the cardinality of the column is above the minimum threshold and below the maximum threshold to use the index
+   * a) the filter supports bitmap indexes for all required columns
+   * b) the filter tuning specifies that it should use the index
+   * c) the cardinality of the column is above the minimum threshold and below the maximum threshold to use the index
    *
    * If all these things are true, {@link org.apache.druid.segment.QueryableIndexStorageAdapter} will utilize the
    * indexes.
@@ -646,9 +638,10 @@ public class Filters
    * Create a filter representing an AND relationship across a list of filters.
    *
    * @param filterList List of filters
+   *
    * @return If filterList has more than one element, return an AND filter composed of the filters from filterList
-   *         If filterList has a single element, return that element alone
-   *         If filterList is empty, return null
+   * If filterList has a single element, return that element alone
+   * If filterList is empty, return null
    */
   @Nullable
   public static Filter and(List<Filter> filterList)

@@ -39,13 +39,13 @@ import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorF
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

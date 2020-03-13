@@ -33,6 +33,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -67,9 +68,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             "namespace",
             "page",
             "delta",
+            "c1.countryNumber",
             "c1.countryIsoCode",
-            "c1.countryName",
-            "c1.countryNumber"
+            "c1.countryName"
         ),
         Lists.newArrayList(makeFactToCountrySegment().getAvailableDimensions().iterator())
     );
@@ -1254,6 +1255,32 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             Granularities.ALL,
             false,
             null
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryLeft_filterExcludesAllLeftRows()
+  {
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
+        ).makeCursors(
+            new SelectorFilter("page", "this matches nothing"),
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
         ),
         ImmutableList.of()
     );
