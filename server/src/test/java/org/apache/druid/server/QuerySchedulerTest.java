@@ -183,6 +183,7 @@ public class QuerySchedulerTest
     });
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -217,6 +218,7 @@ public class QuerySchedulerTest
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -272,7 +274,9 @@ public class QuerySchedulerTest
     Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     // too many reports
-    scheduler.run(scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty());
+    scheduler.run(
+        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty()
+    );
   }
 
   @Test
@@ -309,7 +313,9 @@ public class QuerySchedulerTest
     Assert.assertEquals(0, scheduler.getTotalAvailableCapacity());
 
     // one too many
-    scheduler.run(scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty());
+    scheduler.run(
+        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty()
+    );
   }
 
   @Test
@@ -359,7 +365,8 @@ public class QuerySchedulerTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(-1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -380,6 +387,7 @@ public class QuerySchedulerTest
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
 
@@ -421,6 +429,7 @@ public class QuerySchedulerTest
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
 
     Query<?> query = scheduler.prioritizeAndLaneQuery(
         QueryPlus.wrap(makeDefaultQuery()),
@@ -471,6 +480,7 @@ public class QuerySchedulerTest
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("two"));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -493,6 +503,7 @@ public class QuerySchedulerTest
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("twenty"));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   private void maybeDelayNextIteration(int i) throws InterruptedException
