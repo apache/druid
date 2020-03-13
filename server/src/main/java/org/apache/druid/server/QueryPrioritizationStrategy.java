@@ -19,33 +19,22 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.client.SegmentServerSelector;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
-import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy;
 
-public class QuerySchedulerConfig
+import java.util.Optional;
+import java.util.Set;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = ManualQueryPrioritizationStrategy.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "manual", value = ManualQueryPrioritizationStrategy.class),
+    @JsonSubTypes.Type(name = "threshold", value = ThresholdBasedQueryPrioritizationStrategy.class)
+})
+public interface QueryPrioritizationStrategy
 {
-  @JsonProperty
-  private Integer numThreads = 0;
-
-  @JsonProperty("laning")
-  private QueryLaningStrategy laningStrategy = NoQueryLaningStrategy.INSTANCE;
-
-  @JsonProperty("prioritization")
-  private QueryPrioritizationStrategy prioritizationStrategy = ManualQueryPrioritizationStrategy.INSTANCE;
-
-  public int getNumThreads()
-  {
-    return numThreads;
-  }
-
-  public QueryLaningStrategy getLaningStrategy()
-  {
-    return laningStrategy;
-  }
-
-  public QueryPrioritizationStrategy getPrioritizationStrategy()
-  {
-    return prioritizationStrategy;
-  }
+  <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments);
 }
