@@ -3,8 +3,7 @@
 # Please replace <OVERRIDE_THIS> with your cloud configs/credentials
 #
 druid_storage_type=azure
-druid_storage_bucket=<OVERRIDE_THIS>
-druid_storage_baseKey=druid/segments
-druid.azure.account=<OVERRIDE_THIS>
-druid.azure.key=<OVERRIDE_THIS>
-druid.azure.container=<OVERRIDE_THIS>
+druid_azure_account=<OVERRIDE_THIS>
+druid_azure_key=<OVERRIDE_THIS>
+druid_azure_container=<OVERRIDE_THIS>
+druid_extensions_loadList=["druid-azure-extensions"]

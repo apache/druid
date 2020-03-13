@@ -39,7 +39,9 @@ import java.util.function.Function;
  * IMPORTANT:
  * To run this test, you must:
  * 1) Set the variables {@link ITAzureParallelIndexTest#CONTAINER} and {@link ITAzureParallelIndexTest#PATH} for your data
- * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with Azure credentials/configs set. See
+ * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
+ *    located in integration-tests/src/test/resources/data/batch_index to your Azure at the location set in step 1.
+ * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with Azure credentials/configs set. See
  *    integration-tests/docker/environment-configs/override-examples/azure for env vars to provide.
  */
 @Test(groups = TestNGGroup.AZURE_DEEP_STORAGE)
@@ -48,7 +50,7 @@ public class ITAzureParallelIndexTest extends AbstractITBatchIndexTest
 {
   // START: Change this with the configs for your Azure data
   private static final String CONTAINER = "my-container";
-  private static final String PATH = "my-path-to-test-file";
+  private static final String PATH = "my-path-to-test-files/";
   // END: Change this with the configs for your Azure data
 
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
@@ -67,9 +69,9 @@ public class ITAzureParallelIndexTest extends AbstractITBatchIndexTest
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "azure://" + CONTAINER + "/" + PATH + "/" + WIKIPEDIA_DATA_1,
-                        "azure://" + CONTAINER + "/" + PATH + "/" + WIKIPEDIA_DATA_2,
-                        "azure://" + CONTAINER + "/" + PATH + "/" + WIKIPEDIA_DATA_3
+                        "azure://" + CONTAINER + "/" + PATH + WIKIPEDIA_DATA_1,
+                        "azure://" + CONTAINER + "/" + PATH + WIKIPEDIA_DATA_2,
+                        "azure://" + CONTAINER + "/" + PATH + WIKIPEDIA_DATA_3
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
@@ -79,9 +81,9 @@ public class ITAzureParallelIndexTest extends AbstractITBatchIndexTest
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
                     ImmutableList.of(
-                        ImmutableMap.of("bucket", CONTAINER, "path", PATH + "/" + WIKIPEDIA_DATA_1),
-                        ImmutableMap.of("bucket", CONTAINER, "path", PATH + "/" + WIKIPEDIA_DATA_2),
-                        ImmutableMap.of("bucket", CONTAINER, "path", PATH + "/" + WIKIPEDIA_DATA_3)
+                        ImmutableMap.of("bucket", CONTAINER, "path", PATH + WIKIPEDIA_DATA_1),
+                        ImmutableMap.of("bucket", CONTAINER, "path", PATH + WIKIPEDIA_DATA_2),
+                        ImmutableMap.of("bucket", CONTAINER, "path", PATH + WIKIPEDIA_DATA_3)
                     )
         )}
     };

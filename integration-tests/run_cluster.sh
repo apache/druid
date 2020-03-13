@@ -47,11 +47,24 @@
   # Make directories if they dont exist
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
+  mkdir -p $SHARED_DIR/docker/extensions
+  mkdir -p $SHARED_DIR/docker/credentials
 
   # install druid jars
   rm -rf $SHARED_DIR/docker
   cp -R docker $SHARED_DIR/docker
   mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
+
+  # move extensions into a seperate extension folder
+  # For druid-s3-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-s3-extensions
+  mv $SHARED_DIR/docker/lib/druid-s3-extensions-* $SHARED_DIR/docker/extensions/druid-s3-extensions
+  # For druid-azure-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-azure-extensions
+  mv $SHARED_DIR/docker/lib/druid-azure-extensions-* $SHARED_DIR/docker/extensions/druid-azure-extensions
+  # For druid-google-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-google-extensions
+  mv $SHARED_DIR/docker/lib/druid-google-extensions-* $SHARED_DIR/docker/extensions/druid-google-extensions
 
   # install logging config
   cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
@@ -63,6 +76,12 @@
   mkdir -p $SHARED_DIR/wikiticker-it
   cp ../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz $SHARED_DIR/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
   cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
+
+  # copy other files if needed
+  if [ -n "$DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH" ]
+  then
+    cp -a $DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH/. $SHARED_DIR/docker/credentials/
+  fi
 
   # setup all enviornment variables to be pass to the containers
   COMMON_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/common -e DRUID_INTEGRATION_TEST_GROUP"

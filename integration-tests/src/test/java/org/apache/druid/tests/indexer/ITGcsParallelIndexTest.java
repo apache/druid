@@ -38,20 +38,21 @@ import java.util.function.Function;
 /**
  * IMPORTANT:
  * To run this test, you must:
- * 1) Set the variables {@link ITS3ParallelIndexTest#BUCKET} and {@link ITS3ParallelIndexTest#PATH} for your data
+ * 1) Set the variables {@link ITGcsParallelIndexTest#BUCKET} and {@link ITGcsParallelIndexTest#PATH} for your data
  * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
- *    located in integration-tests/src/test/resources/data/batch_index to your S3 at the location set in step 1.
- * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials/configs set. See
- *    integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
+ *    located in integration-tests/src/test/resources/data/batch_index to your GCS at the location set in step 1.
+ * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
+ *    integration-tests/docker/environment-configs/override-examples/gcs for env vars to provide.
+ * 4) Provide -Dresource.file.dir.path<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
  */
-@Test(groups = TestNGGroup.S3_DEEP_STORAGE)
+@Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
+public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
 {
-  // START: Change this with the configs for your s3
+  // START: Change this with the configs for your gcs
   private static final String BUCKET = "my-bucket";
   private static final String PATH = "my-path-to-test-files/";
-  // END: Change this with the configs for your s3
+  // END: Change this with the configs for your gcs
 
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -67,35 +68,35 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
   public static Object[][] resources()
   {
     return new Object[][]{
-      {new Pair<>(INPUT_SOURCE_URIS_KEY,
-                  ImmutableList.of(
-                      "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_1,
-                      "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_2,
-                      "s3://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_3
-                      )
-      )},
-      {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
-                  ImmutableList.of(
-                      "s3://" + BUCKET + "/" + PATH
-                  )
-      )},
-      {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
-                  ImmutableList.of(
-                      ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_1),
-                      ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_2),
-                      ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_3)
-                  )
-      )}
+        {new Pair<>(INPUT_SOURCE_URIS_KEY,
+                    ImmutableList.of(
+                        "gs://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_1,
+                        "gs://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_2,
+                        "gs://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_3
+                    )
+        )},
+        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
+                    ImmutableList.of(
+                        "gs://" + BUCKET + "/" + PATH
+                    )
+        )},
+        {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
+                    ImmutableList.of(
+                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_1),
+                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_2),
+                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_3)
+                    )
+        )}
     };
   }
 
   @Test(dataProvider = "resources")
-  public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
+  public void testGcsIndexData(Pair<String, List> gcsInputSource) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
-      final Function<String, String> s3PropsTransform = spec -> {
+      final Function<String, String> gcsPropsTransform = spec -> {
         try {
           spec = StringUtils.replace(
               spec,
@@ -105,18 +106,18 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
-              "s3"
+              "google"
           );
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_KEY%%",
-              s3InputSource.lhs
+              gcsInputSource.lhs
           );
           return StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_VALUE%%",
               jsonMapper.writeValueAsString(
-                  s3InputSource.rhs
+                  gcsInputSource.rhs
               )
           );
         }
@@ -128,7 +129,7 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          s3PropsTransform,
+          gcsPropsTransform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,
