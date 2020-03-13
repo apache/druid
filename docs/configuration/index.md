@@ -1498,7 +1498,7 @@ With this configuration, queries are never assigned a priority automatically, bu
 
 ###### Threshold prioritization strategy
 
-This prioritization strategy lowers the priority of queries that that cross any of a configurable set of thresholds, such as how far in the past the data is, how large of an interval a query covers, or the number of segments taking part in a query.
+This prioritization strategy lowers the priority of queries that cross any of a configurable set of thresholds, such as how far in the past the data is, how large of an interval a query covers, or the number of segments taking part in a query.
 
 This strategy can be enabled by setting `druid.query.scheduler.prioritization.strategy` to `threshold`.
 
