@@ -43,7 +43,7 @@ The values are described below.
 |`type`|String|password provider type|Yes: `environment`|
 |`variable`|String|environment variable to read password from|Yes|
 
-AWS RDS token password provider provides temp token for accesing AWS RDS DB instances.
+AWS RDS token password provider provides temp token for accessing AWS RDS DB instances.
 
 ```json
 { "type": "awsrdstoken", "region": "AWS_REGION" }

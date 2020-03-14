@@ -143,6 +143,7 @@ ParseSpecs
 Protobuf
 RDBMS
 RDDs
+RDS
 Rackspace
 Redis
 S3
