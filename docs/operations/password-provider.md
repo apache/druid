@@ -50,7 +50,7 @@ AWS RDS token password provider provides temp token for accessing AWS RDS DB ins
 ```
 
 Before using this password provider, please make sure that you have connected all dots for db user to connect using token.
-See https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html
+See [AWS Guide](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html).
 
 Following additional metadata storage configuration must be provided to use `awsrdstoken` password provider.
 `druid.metadata.storage.connector.connectURI`
