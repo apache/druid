@@ -85,8 +85,8 @@ public class AWSRDSTokenPasswordProvider implements PasswordProvider
       return authToken;
     }
     catch (Exception ex) {
-      LOGGER.error(ex, "Couldn't generate AWS IAM token.");
-      throw new RE(ex, "Couldn't generate AWS IAM token.");
+      LOGGER.error(ex, "Couldn't generate AWS token.");
+      throw new RE(ex, "Couldn't generate AWS token.");
     }
   }
 }
