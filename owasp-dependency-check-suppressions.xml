@@ -184,4 +184,16 @@
     <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@2.9.10$</packageUrl>
     <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-databind:2.9.0 since it is via parquet transitive dependencies -->
   </suppress>
+  <suppress>
+     <notes><![CDATA[
+     file name: node-sass:4.13.1
+
+     The vulnerability is fixed in 4.13.1: https://github.com/sass/node-sass/issues/2816#issuecomment-575136455
+
+     But the dependency check plugin thinks it's still broken as the affected/fixed versions has not been updated on
+     Sonatype OSS Index: https://ossindex.sonatype.org/vuln/c97f4ae7-be1f-4f71-b238-7c095b126e74
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/node\-sass@.*$</packageUrl>
+     <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
+  </suppress>
 </suppressions>
