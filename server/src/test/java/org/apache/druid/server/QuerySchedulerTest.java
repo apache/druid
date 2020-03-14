@@ -183,6 +183,7 @@ public class QuerySchedulerTest
     });
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -217,6 +218,7 @@ public class QuerySchedulerTest
     future.get();
     Assert.assertEquals(5, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -272,7 +274,9 @@ public class QuerySchedulerTest
     Assert.assertEquals(0, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
 
     // too many reports
-    scheduler.run(scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty());
+    scheduler.run(
+        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeReportQuery()), ImmutableSet.of()), Sequences.empty()
+    );
   }
 
   @Test
@@ -309,7 +313,9 @@ public class QuerySchedulerTest
     Assert.assertEquals(0, scheduler.getTotalAvailableCapacity());
 
     // one too many
-    scheduler.run(scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty());
+    scheduler.run(
+        scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of()), Sequences.empty()
+    );
   }
 
   @Test
@@ -359,7 +365,8 @@ public class QuerySchedulerTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
-    Assert.assertEquals(-1, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
   @Test
@@ -380,6 +387,7 @@ public class QuerySchedulerTest
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
   }
 
 
@@ -421,6 +429,7 @@ public class QuerySchedulerTest
     final QueryScheduler scheduler = provider.get().get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
 
     Query<?> query = scheduler.prioritizeAndLaneQuery(
         QueryPlus.wrap(makeDefaultQuery()),
@@ -451,6 +460,51 @@ public class QuerySchedulerTest
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
   }
 
+
+  @Test
+  public void testConfigManual()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.put(propertyPrefix + ".numThreads", "10");
+    properties.put(propertyPrefix + ".laning.strategy", "manual");
+    properties.put(propertyPrefix + ".laning.lanes.one", "1");
+    properties.put(propertyPrefix + ".laning.lanes.two", "2");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("two"));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
+  }
+
+  @Test
+  public void testConfigManualPercent()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.scheduler";
+    final JsonConfigProvider<QuerySchedulerProvider> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        QuerySchedulerProvider.class
+    );
+    final Properties properties = new Properties();
+    properties.put(propertyPrefix + ".numThreads", "10");
+    properties.put(propertyPrefix + ".laning.strategy", "manual");
+    properties.put(propertyPrefix + ".laning.isLimitPercent", "true");
+    properties.put(propertyPrefix + ".laning.lanes.one", "1");
+    properties.put(propertyPrefix + ".laning.lanes.twenty", "20");
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final QueryScheduler scheduler = provider.get().get().get();
+    Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
+    Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
+    Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("twenty"));
+    Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
+  }
 
   private void maybeDelayNextIteration(int i) throws InterruptedException
   {

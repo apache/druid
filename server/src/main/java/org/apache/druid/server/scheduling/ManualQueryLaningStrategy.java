@@ -25,54 +25,53 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
 
+import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * Query laning strategy which associates all {@link Query} with priority lower than 0 into a 'low' lane
- */
-public class HiLoQueryLaningStrategy implements QueryLaningStrategy
+public class ManualQueryLaningStrategy implements QueryLaningStrategy
 {
-  public static final String LOW = "low";
+  @JsonProperty
+  private Map<String, Integer> lanes;
 
   @JsonProperty
-  private final int maxLowPercent;
+  private boolean isLimitPercent;
 
   @JsonCreator
-  public HiLoQueryLaningStrategy(
-      @JsonProperty("maxLowPercent") Integer maxLowPercent
+  public ManualQueryLaningStrategy(
+      @JsonProperty("lanes") Map<String, Integer> lanes,
+      @JsonProperty("isLimitPercent") @Nullable Boolean isLimitPercent
   )
   {
-    this.maxLowPercent = Preconditions.checkNotNull(maxLowPercent, "maxLowPercent must be set");
+    this.lanes = Preconditions.checkNotNull(lanes, "lanes must be set");
+    this.isLimitPercent = isLimitPercent != null ? isLimitPercent : false;
+    Preconditions.checkArgument(lanes.size() > 0, "lanes must define at least one lane");
     Preconditions.checkArgument(
-        0 < maxLowPercent && maxLowPercent <= 100,
-        "maxLowPercent must be in the range 1 to 100"
+        lanes.values().stream().allMatch(x -> this.isLimitPercent ? 0 < x && x <= 100 : x > 0),
+        this.isLimitPercent ? "All lane limits must be in the range 1 to 100" : "All lane limits must be greater than 0"
     );
   }
 
   @Override
   public Object2IntMap<String> getLaneLimits(int totalLimit)
   {
-    Object2IntMap<String> onlyLow = new Object2IntArrayMap<>(1);
-    onlyLow.put(LOW, computeLimitFromPercent(totalLimit, maxLowPercent));
-    return onlyLow;
+
+    if (isLimitPercent) {
+      Object2IntMap<String> laneLimits = new Object2IntArrayMap<>(lanes.size());
+      lanes.forEach((key, value) -> laneLimits.put(key, computeLimitFromPercent(totalLimit, value)));
+      return laneLimits;
+    }
+    return new Object2IntArrayMap<>(lanes);
   }
 
   @Override
   public <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
-    final Query<T> theQuery = query.getQuery();
-    // QueryContexts.getPriority gives a default, since we are setting priority
-    final Integer priority = theQuery.getContextValue(QueryContexts.PRIORITY_KEY);
-    final String lane = theQuery.getContextValue(QueryContexts.LANE_KEY);
-    if (lane == null && priority != null && priority < 0) {
-      return Optional.of(LOW);
-    }
-    return Optional.ofNullable(lane);
+    return Optional.ofNullable(QueryContexts.getLane(query.getQuery()));
   }
 }
