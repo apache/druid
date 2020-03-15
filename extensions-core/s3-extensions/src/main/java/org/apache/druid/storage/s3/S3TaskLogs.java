@@ -165,7 +165,7 @@ public class S3TaskLogs implements TaskLogs
   @Override
   public void killAll() throws IOException
   {
-    log.info("Deleting all task logs from s3 location [bucket: %s    prefix: %s].",
+    log.info("Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'].",
              config.getS3Bucket(), config.getS3Prefix()
     );
 
