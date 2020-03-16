@@ -262,11 +262,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     );
   }
 
-  public List<JoinableClause> getClauses()
-  {
-    return clauses;
-  }
-
   /**
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
@@ -275,13 +270,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   {
     return !getClauseForColumn(column).isPresent();
   }
-
-  /*
-  public boolean isEnableFilterPushDown()
-  {
-    return enableFilterPushDown;
-  }
-  */
 
   /**
    * Return a String set containing the name of columns that belong to the base table (including any pre-join virtual
