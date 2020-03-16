@@ -53,11 +53,6 @@ public class CryptoService
   private int iterationCount = ITERATION_COUNT;
   private int keyLength = KEY_LENGTH;
 
-  public CryptoService(String passPhrase)
-  {
-    this(passPhrase, null, null, null, null, null, null);
-  }
-
   public CryptoService(
       String passPhrase,
       @Nullable String alg,
