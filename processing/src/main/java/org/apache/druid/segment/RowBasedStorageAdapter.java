@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.joda.time.DateTime;
@@ -39,7 +39,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A {@link StorageAdapter} that is based on a stream of objects. Generally created by a {@link RowBasedSegment}.
@@ -50,12 +49,12 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
 {
   private final Iterable<RowType> rowIterable;
   private final RowAdapter<RowType> rowAdapter;
-  private final Map<String, ValueType> rowSignature;
+  private final RowSignature rowSignature;
 
   RowBasedStorageAdapter(
       final Iterable<RowType> rowIterable,
       final RowAdapter<RowType> rowAdapter,
-      final Map<String, ValueType> rowSignature
+      final RowSignature rowSignature
   )
   {
     this.rowIterable = Preconditions.checkNotNull(rowIterable, "rowIterable");
@@ -72,7 +71,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<>(new ArrayList<>(rowSignature.keySet()));
+    return new ListIndexed<>(new ArrayList<>(rowSignature.getColumnNames()));
   }
 
   @Override

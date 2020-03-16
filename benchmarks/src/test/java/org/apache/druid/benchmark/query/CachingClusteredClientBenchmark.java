@@ -107,6 +107,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -342,7 +343,12 @@ public class CachingClusteredClientBenchmark
         new DruidHttpClientConfig(),
         processingConfig,
         forkJoinPool,
-        new QueryScheduler(0, NoQueryLaningStrategy.INSTANCE, new ServerConfig())
+        new QueryScheduler(
+            0,
+            ManualQueryPrioritizationStrategy.INSTANCE,
+            NoQueryLaningStrategy.INSTANCE,
+            new ServerConfig()
+        )
     );
   }
 

@@ -30,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -59,6 +60,8 @@ import java.util.stream.Collectors;
 
 public class IndexedTableJoinMatcher implements JoinMatcher
 {
+  private static final int UNINITIALIZED_CURRENT_ROW = -1;
+
   private final IndexedTable table;
   private final List<Supplier<IntIterator>> conditionMatchers;
   private final IntIterator[] currentMatchedRows;
@@ -81,6 +84,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   )
   {
     this.table = table;
+    this.currentRow = UNINITIALIZED_CURRENT_ROW;
 
     if (condition.isAlwaysTrue()) {
       this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, table.numRows()));
@@ -119,8 +123,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       throw new IAE("Cannot build hash-join matcher on non-key-based condition: %s", condition);
     }
 
-    final int keyColumnNumber = table.allColumns().indexOf(condition.getRightColumn());
-    final ValueType keyColumnType = table.rowSignature().get(condition.getRightColumn());
+    final int keyColumnNumber = table.rowSignature().indexOf(condition.getRightColumn());
+
+    final ValueType keyColumnType =
+        table.rowSignature().getColumnType(condition.getRightColumn())
+             .orElseThrow(() -> new ISE("Encountered null type for column[%s]", condition.getRightColumn()));
+
     final IndexedTable.Index index = table.columnIndex(keyColumnNumber);
 
     return ColumnProcessors.makeProcessor(
@@ -231,7 +239,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     // Do not reset matchedRows; we want to remember it across reset() calls so the 'remainder' is anything
     // that was unmatched across _all_ cursor walks.
     currentIterator = null;
-    currentRow = -1;
+    currentRow = UNINITIALIZED_CURRENT_ROW;
     matchingRemainder = false;
   }
 
@@ -241,7 +249,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       currentRow = currentIterator.nextInt();
     } else {
       currentIterator = null;
-      currentRow = -1;
+      currentRow = UNINITIALIZED_CURRENT_ROW;
     }
   }
 

@@ -86,7 +86,7 @@ public class IndexedTableJoinableTest
   public void test_getAvailableColumns()
   {
     final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    Assert.assertEquals(ImmutableList.of("long", "str"), joinable.getAvailableColumns());
+    Assert.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
   }
 
   @Test

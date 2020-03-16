@@ -19,10 +19,7 @@
 import { Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { HeaderRows, SqlQuery } from 'druid-query-toolkit';
-import {
-  basicIdentifierEscape,
-  basicLiteralEscape,
-} from 'druid-query-toolkit/build/ast/sql-query/helpers';
+import { basicIdentifierEscape, basicLiteralEscape } from 'druid-query-toolkit/build/sql/helpers';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
@@ -94,7 +91,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon: IconNames.CROSS,
         title: `Remove: ${trimValue(header)}`,
         onAction: () => {
-          onQueryChange(parsedQuery.excludeColumn(header), true);
+          onQueryChange(parsedQuery.remove(header), true);
         },
       });
 
@@ -161,14 +158,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon={IconNames.FILTER_KEEP}
             text={`Filter by: ${trimValue(header)} = ${trimValue(value)}`}
             onClick={() => {
-              onQueryChange(parsedQuery.filterRow(header, value, '='), true);
+              onQueryChange(parsedQuery.addWhereFilter(header, '=', value), true);
             }}
           />
           <MenuItem
             icon={IconNames.FILTER_REMOVE}
             text={`Filter by: ${trimValue(header)} != ${trimValue(value)}`}
             onClick={() => {
-              onQueryChange(parsedQuery.filterRow(header, value, '!='), true);
+              onQueryChange(parsedQuery.addWhereFilter(header, '!=', value), true);
             }}
           />
           {!isNaN(Number(value)) && (
@@ -177,14 +174,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 icon={IconNames.FILTER_KEEP}
                 text={`Filter by: ${trimValue(header)} >= ${trimValue(value)}`}
                 onClick={() => {
-                  onQueryChange(parsedQuery.filterRow(header, value, '>='), true);
+                  onQueryChange(parsedQuery.addWhereFilter(header, '>=', value), true);
                 }}
               />
               <MenuItem
                 icon={IconNames.FILTER_KEEP}
                 text={`Filter by: ${trimValue(header)} <= ${trimValue(value)}`}
                 onClick={() => {
-                  onQueryChange(parsedQuery.filterRow(header, value, '<='), true);
+                  onQueryChange(parsedQuery.addWhereFilter(header, '<=', value), true);
                 }}
               />
             </>
@@ -236,25 +233,21 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
 
   function getHeaderClassName(header: string) {
     const { parsedQuery } = props;
+    if (!parsedQuery) return;
 
     const className = [];
-    if (parsedQuery) {
-      const sorted = parsedQuery.getSorted();
-      if (sorted) {
-        className.push(
-          sorted.map(sorted => {
-            if (sorted.id === header) {
-              return sorted.desc ? '-sort-desc' : '-sort-asc';
-            }
-            return '';
-          })[0],
-        );
-      }
+    const sorted = parsedQuery.getSorted();
+    const aggregateColumns = parsedQuery.getAggregateColumns();
 
-      const aggregateColumns = parsedQuery.getAggregateColumns();
-      if (aggregateColumns && aggregateColumns.includes(header)) {
-        className.push('aggregate-header');
+    if (sorted) {
+      const sortedColumnNames = sorted.map(column => column.id);
+      if (sortedColumnNames.includes(header)) {
+        className.push(sorted[sortedColumnNames.indexOf(header)].desc ? '-sort-desc' : '-sort-asc');
       }
+    }
+
+    if (aggregateColumns && aggregateColumns.includes(header)) {
+      className.push('aggregate-header');
     }
 
     return className.join(' ');

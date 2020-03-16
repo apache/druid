@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 
 public class QuerySchedulerConfig
@@ -30,6 +31,9 @@ public class QuerySchedulerConfig
   @JsonProperty("laning")
   private QueryLaningStrategy laningStrategy = NoQueryLaningStrategy.INSTANCE;
 
+  @JsonProperty("prioritization")
+  private QueryPrioritizationStrategy prioritizationStrategy = ManualQueryPrioritizationStrategy.INSTANCE;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -38,5 +42,10 @@ public class QuerySchedulerConfig
   public QueryLaningStrategy getLaningStrategy()
   {
     return laningStrategy;
+  }
+
+  public QueryPrioritizationStrategy getPrioritizationStrategy()
+  {
+    return prioritizationStrategy;
   }
 }

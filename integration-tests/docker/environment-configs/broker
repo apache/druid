@@ -37,3 +37,5 @@ druid_cache_sizeInBytes=40000000
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/broker
 druid_sql_avatica_enable=true
 druid_server_https_crlPath=/tls/revocations.crl
+druid_query_scheduler_laning_strategy=manual
+druid_query_scheduler_laning_lanes_one=1

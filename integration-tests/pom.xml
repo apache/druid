@@ -278,6 +278,7 @@
         <profile>
             <id>integration-tests</id>
             <properties>
+                <start.hadoop.docker>false</start.hadoop.docker>
                 <override.config.path></override.config.path>
                 <resource.file.dir.path></resource.file.dir.path>
             </properties>
@@ -295,6 +296,7 @@
                                 <phase>pre-integration-test</phase>
                                 <configuration>
                                     <environmentVariables>
+                                    <DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>${start.hadoop.docker}</DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>
                                     <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                     <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                     <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>

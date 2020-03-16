@@ -18,8 +18,7 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery, StringType } from 'druid-query-toolkit';
-import { aliasFactory } from 'druid-query-toolkit/build/ast/sql-query/helpers';
+import { SqlAliasRef, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
 export interface NumberMenuItemsProps {
@@ -37,13 +36,25 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
         <MenuItem
           text={`"${columnName}" > 100`}
           onClick={() => {
-            onQueryChange(parsedQuery.filterRow(columnName, 100, '>'));
+            onQueryChange(
+              parsedQuery.addWhereFilter(
+                SqlRef.fromNameWithDoubleQuotes(columnName),
+                '>',
+                SqlLiteral.fromInput(100),
+              ),
+            );
           }}
         />
         <MenuItem
           text={`"${columnName}" <= 100`}
           onClick={() => {
-            onQueryChange(parsedQuery.filterRow(columnName, 100, '<='));
+            onQueryChange(
+              parsedQuery.addWhereFilter(
+                SqlRef.fromNameWithDoubleQuotes(columnName),
+                '<=',
+                SqlLiteral.fromInput(100),
+              ),
+            );
           }}
         />
       </MenuItem>
@@ -52,7 +63,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
   function renderRemoveFilter(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasFilterForColumn(columnName)) return;
+    if (!parsedQuery.getCurrentFilters().includes(columnName)) return;
 
     return (
       <MenuItem
@@ -67,13 +78,13 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    if (!parsedQuery.hasGroupByColumn(columnName)) return;
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
         text={'Remove group by'}
         onClick={() => {
-          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+          onQueryChange(parsedQuery.removeFromGroupBy(columnName), true);
         }}
       />
     );
@@ -81,32 +92,31 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
   function renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.groupByClause) return;
+    if (!parsedQuery.groupByExpression) return;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem
           text={`"${columnName}"`}
           onClick={() => {
-            onQueryChange(parsedQuery.addToGroupBy(columnName), true);
+            onQueryChange(
+              parsedQuery.addToGroupBy(SqlRef.fromNameWithDoubleQuotes(columnName)),
+              true,
+            );
           }}
         />
         <MenuItem
           text={`TRUNC("${columnName}", -1) AS "${columnName}_trunc"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addFunctionToGroupBy(
-                'TRUNC',
-                [' '],
-                [
-                  new StringType({
-                    spacing: [],
-                    chars: columnName,
-                    quote: '"',
-                  }),
-                  -1,
-                ],
-                aliasFactory(`${columnName}_truncated`),
+              parsedQuery.addToGroupBy(
+                SqlAliasRef.sqlAliasFactory(
+                  SqlFunction.sqlFunctionFactory('TRUNC', [
+                    SqlRef.fromNameWithDoubleQuotes(columnName),
+                    SqlLiteral.fromInput(-1),
+                  ]),
+                  `${columnName}_truncated`,
+                ),
               ),
               true,
             );
@@ -118,7 +128,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
   function renderAggregateMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.groupByClause) return;
+    if (!parsedQuery.groupByExpression) return;
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
@@ -126,7 +136,11 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           text={`SUM(${columnName}) AS "sum_${columnName}"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addAggregateColumn(columnName, 'SUM', aliasFactory(`sum_${columnName}`)),
+              parsedQuery.addAggregateColumn(
+                [SqlRef.fromName(columnName)],
+                'SUM',
+                `sum_${columnName}`,
+              ),
               true,
             );
           }}
@@ -135,7 +149,11 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           text={`MAX(${columnName}) AS "max_${columnName}"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addAggregateColumn(columnName, 'MAX', aliasFactory(`max_${columnName}`)),
+              parsedQuery.addAggregateColumn(
+                [SqlRef.fromName(columnName)],
+                'MAX',
+                `max_${columnName}`,
+              ),
               true,
             );
           }}
@@ -144,7 +162,11 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           text={`MIN(${columnName}) AS "min_${columnName}"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addAggregateColumn(columnName, 'MIN', aliasFactory(`min_${columnName}`)),
+              parsedQuery.addAggregateColumn(
+                [SqlRef.fromName(columnName)],
+                'MIN',
+                `min_${columnName}`,
+              ),
               true,
             );
           }}

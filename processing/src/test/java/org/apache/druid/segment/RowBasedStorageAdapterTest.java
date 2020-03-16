@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
@@ -34,6 +33,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.Duration;
@@ -48,7 +48,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
@@ -56,14 +55,14 @@ import java.util.stream.Collectors;
 
 public class RowBasedStorageAdapterTest
 {
-  private static final Map<String, ValueType> ROW_SIGNATURE =
-      ImmutableMap.<String, ValueType>builder()
-          .put(ValueType.FLOAT.name(), ValueType.FLOAT)
-          .put(ValueType.DOUBLE.name(), ValueType.DOUBLE)
-          .put(ValueType.LONG.name(), ValueType.LONG)
-          .put(ValueType.STRING.name(), ValueType.STRING)
-          .put(ValueType.COMPLEX.name(), ValueType.COMPLEX)
-          .build();
+  private static final RowSignature ROW_SIGNATURE =
+      RowSignature.builder()
+                  .add(ValueType.FLOAT.name(), ValueType.FLOAT)
+                  .add(ValueType.DOUBLE.name(), ValueType.DOUBLE)
+                  .add(ValueType.LONG.name(), ValueType.LONG)
+                  .add(ValueType.STRING.name(), ValueType.STRING)
+                  .add(ValueType.COMPLEX.name(), ValueType.COMPLEX)
+                  .build();
 
   private static final List<Function<Cursor, Supplier<Object>>> READ_STRING =
       ImmutableList.of(
@@ -101,7 +100,7 @@ public class RowBasedStorageAdapterTest
 
     // Read all the types as all the other types.
 
-    for (final String valueTypeName : ROW_SIGNATURE.keySet()) {
+    for (final String valueTypeName : ROW_SIGNATURE.getColumnNames()) {
       PROCESSORS.put(
           StringUtils.format("%s-float", StringUtils.toLowerCase(valueTypeName)),
           cursor -> {
@@ -223,7 +222,7 @@ public class RowBasedStorageAdapterTest
 
     // Sort them for comparison purposes.
     Assert.assertEquals(
-        ROW_SIGNATURE.keySet().stream().sorted().collect(Collectors.toList()),
+        ROW_SIGNATURE.getColumnNames().stream().sorted().collect(Collectors.toList()),
         Lists.newArrayList(adapter.getAvailableDimensions()).stream().sorted().collect(Collectors.toList())
     );
   }
@@ -245,7 +244,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
-    for (String column : ROW_SIGNATURE.keySet()) {
+    for (String column : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(Integer.MAX_VALUE, adapter.getDimensionCardinality(column));
     }
   }
@@ -286,7 +285,7 @@ public class RowBasedStorageAdapterTest
     // Row based adapters don't know min/max values, so they always return null.
     // Test both known and unknown columns.
     final List<String> columns =
-        ImmutableList.<String>builder().addAll(ROW_SIGNATURE.keySet()).add("unknown", "__time").build();
+        ImmutableList.<String>builder().addAll(ROW_SIGNATURE.getColumnNames()).add("unknown", "__time").build();
 
     for (String column : columns) {
       Assert.assertNull(column, adapter.getMinValue(column));
@@ -301,7 +300,7 @@ public class RowBasedStorageAdapterTest
     // Row based adapters don't know min/max values, so they always return null.
     // Test both known and unknown columns.
     final List<String> columns =
-        ImmutableList.<String>builder().addAll(ROW_SIGNATURE.keySet()).add("unknown", "__time").build();
+        ImmutableList.<String>builder().addAll(ROW_SIGNATURE.getColumnNames()).add("unknown", "__time").build();
 
     for (String column : columns) {
       Assert.assertNull(column, adapter.getMaxValue(column));
@@ -314,7 +313,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
-    for (String column : ROW_SIGNATURE.keySet()) {
+    for (String column : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(Integer.MAX_VALUE, adapter.getDimensionCardinality(column));
     }
   }
@@ -393,7 +392,7 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    for (String columnName : ROW_SIGNATURE.keySet()) {
+    for (String columnName : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(columnName, ValueType.valueOf(columnName).name(), adapter.getColumnTypeName(columnName));
     }
   }

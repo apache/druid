@@ -23,13 +23,12 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.function.ToLongFunction;
 
 /**
@@ -55,7 +54,7 @@ public class RowBasedCursor<RowType> implements Cursor
       final VirtualColumns virtualColumns,
       final Granularity gran,
       final boolean descending,
-      final Map<String, ValueType> rowSignature
+      final RowSignature rowSignature
   )
   {
     this.rowWalker = rowWalker;

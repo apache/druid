@@ -232,7 +232,6 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
           {
             type: 'index_parallel',
             spec: {
-              type: 'index_parallel',
               ioConfig: {
                 type: 'index_parallel',
                 inputSource: { type: 'inline', data: '{"test":"Data"}' },

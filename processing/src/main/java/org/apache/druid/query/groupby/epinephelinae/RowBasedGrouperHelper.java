@@ -51,7 +51,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -365,7 +364,7 @@ public class RowBasedGrouperHelper
           @Override
           public Function<ResultRow, Object> columnFunction(final String columnName)
           {
-            final int columnIndex = query.getResultRowPositionLookup().getInt(columnName);
+            final int columnIndex = query.getResultRowSignature().indexOf(columnName);
             if (columnIndex < 0) {
               return row -> null;
             } else {
@@ -377,7 +376,7 @@ public class RowBasedGrouperHelper
     return RowBasedColumnSelectorFactory.create(
         adapter,
         supplier::get,
-        GroupByQueryHelper.rowSignatureFor(query),
+        query.getResultRowSignature(),
         false
     );
   }
@@ -545,7 +544,7 @@ public class RowBasedGrouperHelper
 
     if (dimsToInclude != null) {
       for (String dimension : dimsToInclude) {
-        final int dimIndex = query.getResultRowPositionLookup().getInt(dimension);
+        final int dimIndex = query.getResultRowSignature().indexOf(dimension);
         if (dimIndex >= 0) {
           dimsToIncludeBitSet.set(dimIndex - resultRowDimensionStart);
         }

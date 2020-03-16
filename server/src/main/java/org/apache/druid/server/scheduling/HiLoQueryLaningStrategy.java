@@ -22,7 +22,6 @@ package org.apache.druid.server.scheduling;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
@@ -60,7 +59,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
   public Object2IntMap<String> getLaneLimits(int totalLimit)
   {
     Object2IntMap<String> onlyLow = new Object2IntArrayMap<>(1);
-    onlyLow.put(LOW, Ints.checkedCast((long) Math.ceil(totalLimit * ((double) maxLowPercent / 100))));
+    onlyLow.put(LOW, computeLimitFromPercent(totalLimit, maxLowPercent));
     return onlyLow;
   }
 
