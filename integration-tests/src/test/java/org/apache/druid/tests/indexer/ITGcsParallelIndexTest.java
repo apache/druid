@@ -108,16 +108,6 @@ public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
 
           spec = StringUtils.replace(
               spec,
-              "%%BUCKET%%",
-              config.getCloudBucket()
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%PATH%%",
-              config.getCloudPath()
-          );
-          spec = StringUtils.replace(
-              spec,
               "%%PARTITIONS_SPEC%%",
               jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null))
           );

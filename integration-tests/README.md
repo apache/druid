@@ -106,7 +106,7 @@ To run only a single test using mvn run the following command:
   mvn verify -P int-tests-config-file -Dit.test=<test_name>
 ```
 
-Running a Test That Cloud
+Running a Test That Uses Cloud
 -------------------
 The integration test that indexes from Cloud or uses Cloud as deep storage is not run as part
 of the integration test run discussed above. Running these tests requires the user to provide
@@ -118,7 +118,7 @@ to -Dgroups for Google Cloud Storage, Amazon S3, and Microsoft Azure respectivel
 one group should be run per mvn command.
 
 In addition to specifying the -Dgroups to mvn command, the following will need to be provided:
-1) Set the bucket and path for your data. This can be done by setting -Ddruid.test.config.cloudBucket and 
+1) Set the bucket and path for your test data. This can be done by setting -Ddruid.test.config.cloudBucket and 
 -Ddruid.test.config.cloudPath in the mvn command or setting "cloud_bucket" and "cloud_path" in the config file.
 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json 
 located in integration-tests/src/test/resources/data/batch_index to your Cloud storage at the location set in step 1.
