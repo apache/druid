@@ -81,6 +81,15 @@ public class Joinables
    *                             callers to remember to track metrics on CPU time required for creation of Joinables
    * @param enableFilterPushDown whether to enable filter push down optimizations to the base segment. In production
    *                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
+   * @param enableFilterRewrite whether to enable filter rewrite optimizations for RHS columns. In production
+   *                             this should generally be {@code QueryContexts.getEnableJoinFilterRewrite(query)}.
+   * @param enableRewriteValueColumnFilters whether to enable filter rewrite optimizations for RHS columns that are not
+   *                                        key columns. In production this should generally
+   *                                        be {@code QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query)}.
+   * @param filterRewriteMaxSize the max allowed size of correlated value sets for RHS rewrites. In production
+   *                             this should generally be {@code QueryContexts.getJoinFilterRewriteMaxSize(query)}.
+   * @param originalFilter The original filter from the query.
+   * @param virtualColumns The virtual columns from the query.
    */
   public static Function<Segment, Segment> createSegmentMapFn(
       final List<PreJoinableClause> clauses,

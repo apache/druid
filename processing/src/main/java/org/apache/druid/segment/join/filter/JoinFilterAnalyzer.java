@@ -51,27 +51,27 @@ import java.util.Set;
 /**
  * When there is a filter in a join query, we can sometimes improve performance by applying parts of the filter
  * when we first read from the base table instead of after the join.
- * <p>
+ * 
  * The first step of the filter splitting is to convert the filter into
  * https://en.wikipedia.org/wiki/Conjunctive_normal_form (an AND of ORs). This allows us to consider each
  * OR clause independently as a candidate for filter push down to the base table.
- * <p>
+ * 
  * A filter clause can be pushed down if it meets one of the following conditions:
  * - The filter only applies to columns from the base table
  * - The filter applies to columns from the join table, and we determine that the filter can be rewritten
  *   into a filter on columns from the base table
- * <p>
+ * 
  * For the second case, where we rewrite filter clauses, the rewritten clause can be less selective than the original,
  * so we preserve the original clause in the post-join filtering phase.
- * <p>
+ * 
  * The starting point for join analysis is the {@link #computeJoinFilterPreAnalysis} method. This method should be
  * called before performing any per-segment join query work. This method converts the query filter into
  * conjunctive normal form, and splits the CNF clauses into a portion that only references base table columns and
  * a portion that references join table columns. For the filter clauses that apply to join table columns, the
  * pre-analysis step computes the information necessary for rewriting such filters into filters on base table columns.
- * <p>
+ * 
  * The result of this pre-analysis method should be passed into the next step of join filter analysis, described below.
- * <p>
+ * 
  * The {@link #splitFilter(JoinFilterPreAnalysis)} method takes the pre-analysis result and optionally applies the\
  * filter rewrite and push down operations on a per-segment level.
  */
@@ -88,14 +88,15 @@ public class JoinFilterAnalyzer
    *
    * See {@link JoinFilterPreAnalysis} for details on the result of this pre-analysis step.
    *
-   * @param joinableClauses The joinable clauses from the query
-   * @param virtualColumns The virtual columns from the query
-   * @param originalFilter The original filter from the query
-   * @param enableFilterPushDown Whether to enable filter push down
-   * @param enableFilterRewrite Whether to enable rewrites of filters involving RHS columns
+   * @param joinableClauses                 The joinable clauses from the query
+   * @param virtualColumns                  The virtual columns from the query
+   * @param originalFilter                  The original filter from the query
+   * @param enableFilterPushDown            Whether to enable filter push down
+   * @param enableFilterRewrite             Whether to enable rewrites of filters involving RHS columns
    * @param enableRewriteValueColumnFilters Whether to enable rewrites of filters invovling RHS non-key columns
-   * @param filterRewriteMaxSize The maximum size of the correlated value set for rewritten filters. If the correlated
-   *                             value set size exceeds this, the filter will not be rewritten and pushed down.
+   * @param filterRewriteMaxSize            The maximum size of the correlated value set for rewritten filters.
+   *                                        If the correlated value set size exceeds this, the filter will not be
+   *                                        rewritten and pushed down.
    *
    * @return A JoinFilterPreAnalysis containing information determined in this pre-analysis step.
    */
@@ -188,7 +189,7 @@ public class JoinFilterAnalyzer
     // Determine candidates for filter rewrites.
     // A candidate is an RHS column that appears in a filter, along with the value being filtered on, plus
     // the joinable clause associated with the table that the RHS column is from.
-    Set<RHSRewriteCandidate> rhsRewriteCandidates = new HashSet<>();
+    Set<RhsRewriteCandidate> rhsRewriteCandidates = new HashSet<>();
     for (Filter orClause : normalizedJoinTableClauses) {
       if (filterMatchesNull(orClause)) {
         continue;
@@ -201,7 +202,7 @@ public class JoinFilterAnalyzer
         JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
         if (joinableClause != null) {
           rhsRewriteCandidates.add(
-              new RHSRewriteCandidate(
+              new RhsRewriteCandidate(
                   joinableClause,
                   reqColumn,
                   reqValue
@@ -218,7 +219,7 @@ public class JoinFilterAnalyzer
             JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
             if (joinableClause != null) {
               rhsRewriteCandidates.add(
-                  new RHSRewriteCandidate(
+                  new RhsRewriteCandidate(
                       joinableClause,
                       reqColumn,
                       reqValue
@@ -231,7 +232,7 @@ public class JoinFilterAnalyzer
     }
 
     // Build a map of RHS table prefix -> JoinFilterColumnCorrelationAnalysis based on the RHS rewrite candidates
-    for (RHSRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
+    for (RhsRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.computeIfAbsent(
           rhsRewriteCandidate.getJoinableClause().getPrefix(),
           p -> findCorrelatedBaseTableColumns(
@@ -253,7 +254,7 @@ public class JoinFilterAnalyzer
     // to another via multiple columns.
     // (See JoinFilterAnalyzerTest.test_filterPushDown_factToRegionOneColumnToTwoRHSColumnsAndFilterOnRHS for an example)
     Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn = new HashMap<>();
-    for (RHSRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
+    for (RhsRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.get(
           rhsRewriteCandidate.getJoinableClause().getPrefix()
       );
@@ -315,6 +316,10 @@ public class JoinFilterAnalyzer
     );
   }
 
+  /**
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @return A JoinFilterSplit indicating what parts of the filter should be applied pre-join and post-join
+   */
   public static JoinFilterSplit splitFilter(
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
@@ -364,6 +369,15 @@ public class JoinFilterAnalyzer
   }
 
 
+  /**
+   * Analyze a filter clause from a filter that is in conjunctive normal form (AND of ORs).
+   * The clause is expected to be an OR filter or a leaf filter.
+   *
+   * @param filterClause     Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   *
+   * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
+   */
   private static JoinFilterAnalysis analyzeJoinFilterClause(
       Filter filterClause,
       JoinFilterPreAnalysis joinFilterPreAnalysis
@@ -394,6 +408,15 @@ public class JoinFilterAnalyzer
     return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
   }
 
+  /**
+   * Potentially rewrite the subfilters of an OR filter so that the whole OR filter can be pushed down to
+   * the base table.
+   *
+   * @param orFilter         OrFilter to be rewritten
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   *
+   * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
+   */
   private static JoinFilterAnalysis rewriteOrFilter(
       OrFilter orFilter,
       JoinFilterPreAnalysis joinFilterPreAnalysis
@@ -431,6 +454,14 @@ public class JoinFilterAnalyzer
     );
   }
 
+  /**
+   * Rewrites a selector filter on a join table into an IN filter on the base table.
+   *
+   * @param selectorFilter   SelectorFilter to be rewritten
+   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   *
+   * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
+   */
   private static JoinFilterAnalysis rewriteSelectorFilter(
       SelectorFilter selectorFilter,
       JoinFilterPreAnalysis joinFilterPreAnalysis
@@ -565,6 +596,37 @@ public class JoinFilterAnalyzer
     );
   }
 
+  /**
+   * For each rhs column that appears in the equiconditions for a table's JoinableClause,
+   * we try to determine what base table columns are related to the rhs column through the total set of equiconditions.
+   * We do this by searching backwards through the chain of join equiconditions using the provided equicondition map.
+   *
+   * For example, suppose we have 3 tables, A,B,C, joined with the following conditions, where A is the base table:
+   *   A.joinColumn == B.joinColumn
+   *   B.joinColum == C.joinColumn
+   *
+   * We would determine that C.joinColumn is correlated with A.joinColumn: we first see that
+   * C.joinColumn is linked to B.joinColumn which in turn is linked to A.joinColumn
+   *
+   * Suppose we had the following join conditions instead:
+   *   f(A.joinColumn) == B.joinColumn
+   *   B.joinColum == C.joinColumn
+   * In this case, the JoinFilterColumnCorrelationAnalysis for C.joinColumn would be linked to f(A.joinColumn).
+   *
+   * Suppose we had the following join conditions instead:
+   *   A.joinColumn == B.joinColumn
+   *   f(B.joinColum) == C.joinColumn
+   *
+   * Because we cannot reverse the function f() applied to the second table B in all cases,
+   * we cannot relate C.joinColumn to A.joinColumn, and we would not generate a correlation for C.joinColumn
+   *
+   * @param tablePrefix          Prefix for a join table
+   * @param clauseForTablePrefix Joinable clause for the prefix
+   * @param equiConditions       Map of equiconditions, keyed by the right hand columns
+   *
+   * @return A list of correlatation analyses for the equicondition RHS columns that reside in the table associated with
+   * the tablePrefix
+   */
   private static Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> findCorrelatedBaseTableColumns(
       List<JoinableClause> joinableClauses,
       String tablePrefix,
@@ -614,6 +676,17 @@ public class JoinFilterAnalyzer
     }
   }
 
+  /**
+   * Helper method for {@link #findCorrelatedBaseTableColumns} that determines correlated base table columns
+   * and/or expressions for a single RHS column and adds them to the provided sets as it traverses the
+   * equicondition column relationships.
+   *
+   * @param equiConditions Map of equiconditions, keyed by the right hand columns
+   * @param rhsColumn RHS column to find base table correlations for
+   * @param correlatedBaseColumns Set of correlated base column names for the provided RHS column. Will be modified.
+   * @param correlatedBaseExpressions Set of correlated base column expressions for the provided RHS column. Will be
+   *                                  modified.
+   */
   private static void getCorrelationForRHSColumn(
       List<JoinableClause> joinableClauses,
       Map<String, Set<Expr>> equiConditions,
@@ -660,16 +733,16 @@ public class JoinFilterAnalyzer
   /**
    * Given a list of JoinFilterColumnCorrelationAnalysis, prune the list so that we only have one
    * JoinFilterColumnCorrelationAnalysis for each unique combination of base columns.
-   * <p>
+   * 
    * Suppose we have a join condition like the following, where A is the base table:
    * A.joinColumn == B.joinColumn && A.joinColumn == B.joinColumn2
-   * <p>
+   * 
    * We only need to consider one correlation to A.joinColumn since B.joinColumn and B.joinColumn2 must
    * have the same value in any row that matches the join condition.
-   * <p>
+   * 
    * In the future this method could consider which column correlation should be preserved based on availability of
    * indices and other heuristics.
-   * <p>
+   * 
    * When push down of filters with LHS expressions in the join condition is supported, this method should also
    * consider expressions.
    *
@@ -764,13 +837,13 @@ public class JoinFilterAnalyzer
     }
   }
 
-  private static class RHSRewriteCandidate
+  private static class RhsRewriteCandidate
   {
     private final JoinableClause joinableClause;
     private final String rhsColumn;
     private final String valueForRewrite;
 
-    public RHSRewriteCandidate(
+    public RhsRewriteCandidate(
         JoinableClause joinableClause,
         String rhsColumn,
         String valueForRewrite
