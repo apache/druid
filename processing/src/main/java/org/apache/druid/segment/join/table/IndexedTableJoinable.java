@@ -44,13 +44,13 @@ public class IndexedTableJoinable implements Joinable
   @Override
   public List<String> getAvailableColumns()
   {
-    return table.allColumns();
+    return table.rowSignature().getColumnNames();
   }
 
   @Override
   public int getCardinality(String columnName)
   {
-    if (table.allColumns().contains(columnName)) {
+    if (table.rowSignature().contains(columnName)) {
       return table.numRows();
     } else {
       // NullDimensionSelector has cardinality = 1 (one null, nothing else).
@@ -87,8 +87,8 @@ public class IndexedTableJoinable implements Joinable
       String retrievalColumnName
   )
   {
-    int filterColumnPosition = table.allColumns().indexOf(searchColumnName);
-    int correlatedColumnPosition = table.allColumns().indexOf(retrievalColumnName);
+    int filterColumnPosition = table.rowSignature().indexOf(searchColumnName);
+    int correlatedColumnPosition = table.rowSignature().indexOf(retrievalColumnName);
 
     if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
       return ImmutableSet.of();

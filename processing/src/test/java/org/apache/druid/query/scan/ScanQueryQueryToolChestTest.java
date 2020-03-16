@@ -28,6 +28,7 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,7 +52,7 @@ public class ScanQueryQueryToolChestTest
   );
 
   @Test
-  public void test_resultArrayFields_columnsNotSpecified()
+  public void test_resultArraySignature_columnsNotSpecified()
   {
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
@@ -59,11 +60,11 @@ public class ScanQueryQueryToolChestTest
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
               .build();
 
-    Assert.assertEquals(ImmutableList.of(), toolChest.resultArrayFields(scanQuery));
+    Assert.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
   }
 
   @Test
-  public void test_resultArrayFields_columnsNotSpecifiedLegacyMode()
+  public void test_resultArraySignature_columnsNotSpecifiedLegacyMode()
   {
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
@@ -72,11 +73,11 @@ public class ScanQueryQueryToolChestTest
               .legacy(true)
               .build();
 
-    Assert.assertEquals(ImmutableList.of(), toolChest.resultArrayFields(scanQuery));
+    Assert.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
   }
 
   @Test
-  public void test_resultArrayFields_columnsSpecified()
+  public void test_resultArraySignature_columnsSpecified()
   {
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
@@ -85,11 +86,14 @@ public class ScanQueryQueryToolChestTest
               .columns("foo", "bar")
               .build();
 
-    Assert.assertEquals(ImmutableList.of("foo", "bar"), toolChest.resultArrayFields(scanQuery));
+    Assert.assertEquals(
+        RowSignature.builder().add("foo", null).add("bar", null).build(),
+        toolChest.resultArraySignature(scanQuery)
+    );
   }
 
   @Test
-  public void test_resultArrayFields_columnsSpecifiedLegacyMode()
+  public void test_resultArraySignature_columnsSpecifiedLegacyMode()
   {
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
@@ -99,7 +103,10 @@ public class ScanQueryQueryToolChestTest
               .legacy(true)
               .build();
 
-    Assert.assertEquals(ImmutableList.of("timestamp", "foo", "bar"), toolChest.resultArrayFields(scanQuery));
+    Assert.assertEquals(
+        RowSignature.builder().add("timestamp", null).add("foo", null).add("bar", null).build(),
+        toolChest.resultArraySignature(scanQuery)
+    );
   }
 
   @Test

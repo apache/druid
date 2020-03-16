@@ -25,10 +25,10 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.Map;
 

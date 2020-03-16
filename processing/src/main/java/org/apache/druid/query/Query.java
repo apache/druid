@@ -148,6 +148,11 @@ public interface Query<T>
     return this;
   }
 
+  default Query<T> withPriority(int priority)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+  }
+
   default Query<T> withLane(String lane)
   {
     return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -30,13 +30,13 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -49,19 +49,19 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
   private final Supplier<T> supplier;
   private final RowAdapter<T> adapter;
-  private final Map<String, ValueType> rowSignature;
+  private final RowSignature rowSignature;
   private final boolean throwParseExceptions;
 
   private RowBasedColumnSelectorFactory(
       final Supplier<T> supplier,
       final RowAdapter<T> adapter,
-      @Nullable final Map<String, ValueType> rowSignature,
+      final RowSignature rowSignature,
       final boolean throwParseExceptions
   )
   {
     this.supplier = supplier;
     this.adapter = adapter;
-    this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.of();
+    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
   }
 
@@ -71,15 +71,17 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    * @param adapter              adapter for these row objects
    * @param supplier             supplier of row objects
    * @param signature            will be used for reporting available columns and their capabilities. Note that the this
-   *                             factory will still allow creation of selectors on any field in the rows, even if it
-   *                             doesn't appear in "rowSignature".
+   *                             factory will still allow creation of selectors on any named field in the rows, even if
+   *                             it doesn't appear in "rowSignature". (It only needs to be accessible via
+   *                             {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
+   *                             passing in {@link RowSignature#empty()}.
    * @param throwParseExceptions whether numeric selectors should throw parse exceptions or use a default/null value
    *                             when their inputs are not actually numeric
    */
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
-      @Nullable final Map<String, ValueType> signature,
+      final RowSignature signature,
       final boolean throwParseExceptions
   )
   {
@@ -87,20 +89,31 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   }
 
   @Nullable
-  public static ColumnCapabilities getColumnCapabilities(
-      final Map<String, ValueType> rowSignature,
+  static ColumnCapabilities getColumnCapabilities(
+      final RowSignature rowSignature,
       final String columnName
   )
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
+      return new ColumnCapabilitiesImpl().setType(ValueType.LONG).setIsComplete(true);
     } else {
-      final ValueType valueType = rowSignature.get(columnName);
+      final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
       // Do set hasMultipleValues, because we might return multiple values.
-      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType).setHasMultipleValues(true) : null;
+      if (valueType != null) {
+        return new ColumnCapabilitiesImpl()
+            .setType(valueType)
+
+            // Non-numeric types might have multiple values
+            .setHasMultipleValues(!valueType.isNumeric())
+
+            // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
+            .setIsComplete(valueType.isNumeric());
+      } else {
+        return null;
+      }
     }
   }
 
