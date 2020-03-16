@@ -19,9 +19,10 @@
 
 package org.apache.druid.crypto;
 
-import com.google.common.base.Charsets;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.nio.charset.StandardCharsets;
 
 public class CryptoServiceTest
 {
@@ -38,7 +39,7 @@ public class CryptoServiceTest
         128
     );
 
-    byte[] original = "i am a test string".getBytes(Charsets.UTF_8);
+    byte[] original = "i am a test string".getBytes(StandardCharsets.UTF_8);
 
     byte[] decrypted = cryptoService.decrypt(cryptoService.encrypt(original));
 
