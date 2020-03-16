@@ -119,22 +119,20 @@ public class WorkerSelectUtils
     );
 
     // select worker according to worker category spec
-    if (workerCategorySpec != null) {
-      String preferredCategory = getTaskCategory(task, workerCategorySpec, null);
+    String preferredCategory = getTaskCategory(task, workerCategorySpec, null);
 
-      if (preferredCategory != null) {
-        // select worker from preferred category
-        final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(
-            preferredCategory,
-            runnableWorkers
-        );
-        final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
+    if (preferredCategory != null) {
+      // select worker from preferred category
+      final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(
+          preferredCategory,
+          runnableWorkers
+      );
+      final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
 
-        if (selected != null) {
-          return selected;
-        } else if (workerCategorySpec.isStrong()) {
-          return null;
-        }
+      if (selected != null) {
+        return selected;
+      } else if (workerCategorySpec.isStrong()) {
+        return null;
       }
     }
 

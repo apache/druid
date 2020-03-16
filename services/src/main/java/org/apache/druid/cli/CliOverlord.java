@@ -127,7 +127,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import java.util.List;
 
 /**
- *
  */
 @Command(
     name = "overlord",

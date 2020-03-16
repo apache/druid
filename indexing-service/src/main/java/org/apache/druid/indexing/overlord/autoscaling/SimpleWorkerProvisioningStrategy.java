@@ -202,10 +202,14 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
 
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
-        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
+        Set<String> currentlyProvisioning = currentlyProvisioningMap.computeIfAbsent(
+            category,
+            ignored -> new HashSet<>()
+        );
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.computeIfAbsent(
+            category,
+            ignored -> new HashSet<>()
+        );
 
         didProvision = doProvision(
             category,
@@ -328,11 +332,16 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
         // Correct category name by selected autoscaler
         category = ProvisioningUtil.getAutoscalerCategory(categoryAutoscaler);
+
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
-        currentlyProvisioningMap.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.get(category);
-        currentlyTerminatingMap.putIfAbsent(category, new HashSet<>());
-        Set<String> currentlyTerminating = this.currentlyTerminatingMap.get(category);
+        Set<String> currentlyProvisioning = this.currentlyProvisioningMap.computeIfAbsent(
+            category,
+            ignored -> new HashSet<>()
+        );
+        Set<String> currentlyTerminating = this.currentlyTerminatingMap.computeIfAbsent(
+            category,
+            ignored -> new HashSet<>()
+        );
         List<? extends TaskRunnerWorkItem> categoryPendingTasks = pendingTasksByCategories.getOrDefault(
             category,
             Collections.emptyList()

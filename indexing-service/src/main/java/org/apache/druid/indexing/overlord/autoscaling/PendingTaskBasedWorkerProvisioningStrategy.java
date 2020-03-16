@@ -181,9 +181,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         List<Task> categoryTasks = tasksByCategories.getOrDefault(category, Collections.emptyList());
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
         Set<String> currentlyProvisioning = currentlyProvisioningMap.computeIfAbsent(
-          category,
-          ignored -> new HashSet<>()
-      );
+            category,
+            ignored -> new HashSet<>()
+        );
 
         didProvision = doProvision(
             category,
@@ -427,9 +427,9 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
         List<ImmutableWorkerInfo> categoryWorkers = workersByCategories.getOrDefault(category, Collections.emptyList());
         Set<String> currentlyTerminating = currentlyTerminatingMap.computeIfAbsent(
-          category,
-          ignored -> new HashSet<>()
-      );
+            category,
+            ignored -> new HashSet<>()
+        );
 
         didTerminate = doTerminate(
             category,
