@@ -20,9 +20,9 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.junit.Assert;
@@ -38,10 +38,10 @@ import java.util.Map;
 public class RowBasedIndexedTableTest
 {
   // Indexes of fields within the "countries" and "regions" tables.
-  private static final int INDEX_COUNTRIES_COUNTRY_ISO_CODE = 0;
-  private static final int INDEX_COUNTRIES_COUNTRY_NAME = 1;
-  private static final int INDEX_COUNTRIES_COUNTRY_NUMBER = 2;
-  private static final int INDEX_REGIONS_REGION_ISO_CODE = 1;
+  private static final int INDEX_COUNTRIES_COUNTRY_NUMBER = 0;
+  private static final int INDEX_COUNTRIES_COUNTRY_ISO_CODE = 1;
+  private static final int INDEX_COUNTRIES_COUNTRY_NAME = 2;
+  private static final int INDEX_REGIONS_REGION_ISO_CODE = 0;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -69,23 +69,14 @@ public class RowBasedIndexedTableTest
   }
 
   @Test
-  public void test_allColumns_countries()
-  {
-    Assert.assertEquals(
-        ImmutableList.of("countryIsoCode", "countryName", "countryNumber"),
-        countriesTable.allColumns()
-    );
-  }
-
-  @Test
   public void test_rowSignature_countries()
   {
     Assert.assertEquals(
-        ImmutableMap.<String, ValueType>builder()
-            .put("countryIsoCode", ValueType.STRING)
-            .put("countryName", ValueType.STRING)
-            .put("countryNumber", ValueType.LONG)
-            .build(),
+        RowSignature.builder()
+                    .add("countryNumber", ValueType.LONG)
+                    .add("countryIsoCode", ValueType.STRING)
+                    .add("countryName", ValueType.STRING)
+                    .build(),
         countriesTable.rowSignature()
     );
   }
@@ -93,7 +84,7 @@ public class RowBasedIndexedTableTest
   @Test
   public void test_numRows_countries()
   {
-    Assert.assertEquals(17, countriesTable.numRows());
+    Assert.assertEquals(18, countriesTable.numRows());
   }
 
   @Test
@@ -125,7 +116,7 @@ public class RowBasedIndexedTableTest
   @Test
   public void test_columnIndex_countriesCountryName()
   {
-    expectedException.expectMessage("Column[1] is not a key column");
+    expectedException.expectMessage("Column[2] is not a key column");
     countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_NAME);
   }
 

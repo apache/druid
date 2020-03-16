@@ -34,10 +34,12 @@ import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_ceil";
+
   @Override
   public String name()
   {
-    return "timestamp_ceil";
+    return FN_NAME;
   }
 
   @Override
@@ -60,7 +62,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 
     TimestampCeilExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
       this.granularity = getGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -103,7 +105,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
   {
     TimestampCeilDynamicExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
     }
 
     @Nonnull

@@ -21,23 +21,16 @@
   <suppress>
     <!-- druid-indexing-hadoop.jar is mistaken for hadoop -->
     <notes><![CDATA[
-   file name: org.apache.druid:druid-indexing-hadoop:0.17.0-incubating-SNAPSHOT
+   file name: org.apache.druid:druid-indexing-hadoop
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2012-4449</cve>
-  </suppress>
-  <suppress>
-    <!-- druid-indexing-hadoop.jar is mistaken for hadoop -->
-    <notes><![CDATA[
-   file name: druid-indexing-hadoop-0.17.0-incubating-SNAPSHOT.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
     <cve>CVE-2017-3162</cve>
   </suppress>
   <suppress>
     <!-- druid-processing.jar is mistaken for org.processing:processing -->
     <notes><![CDATA[
-   file name: org.apache.druid:druid-processing:0.17.0-incubating-SNAPSHOT
+   file name: org.apache.druid:druid-processing
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-processing@.*$</packageUrl>
     <cve>CVE-2018-1000840</cve>
@@ -45,9 +38,10 @@
   <suppress>
     <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
     <notes><![CDATA[
-   file name: openstack-swift-1.9.3.jar
+   file name: openstack-swift
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-swift@.*$</packageUrl>
+    <cve>CVE-2013-7109</cve>
     <cve>CVE-2016-0737</cve>
     <cve>CVE-2016-0738</cve>
     <cve>CVE-2017-16613</cve>
@@ -145,7 +139,7 @@
     <notes><![CDATA[
    file name: netty-3.10.6.Final.jar
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.netty/netty@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.6.Final$</packageUrl>
     <cve>CVE-2019-16869</cve>
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
@@ -155,7 +149,7 @@
     <notes><![CDATA[
    file name: nimbus-jose-jwt-4.41.1.jar
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.nimbusds/nimbus\-jose\-jwt@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.nimbusds/nimbus\-jose\-jwt@4.41.1$</packageUrl>
     <cve>CVE-2019-17195</cve>
   </suppress>
   <suppress>
@@ -163,7 +157,7 @@
       <notes><![CDATA[
    file name: libthrift-0.6.1.jar
    ]]></notes>
-      <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@.*$</packageUrl>
+      <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.6.1$</packageUrl>
       <cve>CVE-2016-5397</cve>
       <cve>CVE-2018-1320</cve>
       <cve>CVE-2019-0205</cve>
@@ -176,26 +170,30 @@
     <notes><![CDATA[
    file name: htrace-core4-4.0.1-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-databind:2.4.0)
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
-    <cve>CVE-2017-7525</cve>
-    <cve>CVE-2017-15095</cve>
-    <cve>CVE-2017-17485</cve>
-    <cve>CVE-2018-5968</cve>
-    <cve>CVE-2018-7489</cve>
-    <cve>CVE-2018-11307</cve>
-    <cve>CVE-2018-14718</cve>
-    <cve>CVE-2018-14719</cve>
-    <cve>CVE-2018-14720</cve>
-    <cve>CVE-2018-14721</cve>
-    <cve>CVE-2018-19360</cve>
-    <cve>CVE-2018-19361</cve>
-    <cve>CVE-2018-19362</cve>
-    <cve>CVE-2019-14540</cve>
-    <cve>CVE-2019-16335</cve>
-    <cve>CVE-2019-16942</cve>
-    <cve>CVE-2019-16943</cve>
-    <cve>CVE-2019-17267</cve>
-    <cve>CVE-2019-17531</cve>
-    <cve>CVE-2019-20330</cve>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@2.4.0$</packageUrl>
+    <cve>CVE-2018-14721</cve>  <!-- cvss of 10.0 -->
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-databind:2.4.0 since it is via htrace-core4 -->
+  </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix by updating parquet version in extensions-core/parquet-extensions.
+      -->
+    <notes><![CDATA[
+   file name: parquet-jackson-1.11.0.jar (shaded: com.fasterxml.jackson.core:jackson-databind:2.9.10)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@2.9.10$</packageUrl>
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-databind:2.9.0 since it is via parquet transitive dependencies -->
+  </suppress>
+  <suppress>
+     <notes><![CDATA[
+     file name: node-sass:4.13.1
+
+     The vulnerability is fixed in 4.13.1: https://github.com/sass/node-sass/issues/2816#issuecomment-575136455
+
+     But the dependency check plugin thinks it's still broken as the affected/fixed versions has not been updated on
+     Sonatype OSS Index: https://ossindex.sonatype.org/vuln/c97f4ae7-be1f-4f71-b238-7c095b126e74
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/node\-sass@.*$</packageUrl>
+     <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
   </suppress>
 </suppressions>

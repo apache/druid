@@ -27,12 +27,12 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;

@@ -22,7 +22,6 @@ package org.apache.druid.segment.join;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
@@ -53,6 +52,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
@@ -87,18 +87,19 @@ public class JoinTestHelper
       new StringDimensionSchema("page"),
       new LongDimensionSchema("delta")
   );
-  private static final Map<String, ValueType> COUNTRIES_SIGNATURE =
-      ImmutableMap.<String, ValueType>builder()
-          .put("countryNumber", ValueType.LONG)
-          .put("countryIsoCode", ValueType.STRING)
-          .put("countryName", ValueType.STRING)
-          .build();
-  private static final Map<String, ValueType> REGIONS_SIGNATURE =
-      ImmutableMap.<String, ValueType>builder()
-          .put("regionIsoCode", ValueType.STRING)
-          .put("countryIsoCode", ValueType.STRING)
-          .put("regionName", ValueType.STRING)
-          .build();
+  private static final RowSignature COUNTRIES_SIGNATURE =
+      RowSignature.builder()
+                  .add("countryNumber", ValueType.LONG)
+                  .add("countryIsoCode", ValueType.STRING)
+                  .add("countryName", ValueType.STRING)
+                  .build();
+
+  private static final RowSignature REGIONS_SIGNATURE =
+      RowSignature.builder()
+                  .add("regionIsoCode", ValueType.STRING)
+                  .add("countryIsoCode", ValueType.STRING)
+                  .add("regionName", ValueType.STRING)
+                  .build();
 
   private static final ColumnProcessorFactory<Supplier<Object>> SIMPLE_READER =
       new ColumnProcessorFactory<Supplier<Object>>()
@@ -110,7 +111,7 @@ public class JoinTestHelper
         }
 
         @Override
-        public Supplier<Object> makeDimensionProcessor(DimensionSelector selector)
+        public Supplier<Object> makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
         {
           return selector::defaultGetObject;
         }
@@ -140,7 +141,7 @@ public class JoinTestHelper
         }
       };
 
-  private static RowAdapter<Map<String, Object>> createMapRowAdapter(final Map<String, ValueType> signature)
+  private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
     return new RowAdapter<Map<String, Object>>()
     {
@@ -153,7 +154,7 @@ public class JoinTestHelper
       @Override
       public Function<Map<String, Object>, Object> columnFunction(String columnName)
       {
-        final ValueType columnType = signature.get(columnName);
+        final ValueType columnType = signature.getColumnType(columnName).orElse(null);
 
         if (columnType == null) {
           return row -> row.get(columnName);

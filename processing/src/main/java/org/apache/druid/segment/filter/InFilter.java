@@ -49,6 +49,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
+ * The IN filter.
+ * For single-valued dimension, this filter returns true if the dimension value matches to one of the
+ * given {@link #values}.
+ * For multi-valued dimension, this filter returns true if one of the dimension values matches to one of the
+ * given {@link #values}.
  */
 public class InFilter implements Filter
 {

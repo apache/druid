@@ -124,15 +124,10 @@ public class CliIndexer extends ServerRunnable
             binder.bind(ThreadingTaskRunner.class).in(LazySingleton.class);
 
             CliPeon.bindRowIngestionMeters(binder);
-
             CliPeon.bindChatHandler(binder);
-
             CliPeon.bindPeonDataSegmentHandlers(binder);
-
             CliPeon.bindRealtimeCache(binder);
-
             CliPeon.bindCoordinatorHandoffNotiferAndClient(binder);
-
             CliMiddleManager.bindWorkerManagementClasses(binder);
 
             binder.bind(AppenderatorsManager.class)
@@ -173,7 +168,7 @@ public class CliIndexer extends ServerRunnable
                 config.getIp(),
                 config.getCapacity(),
                 config.getVersion(),
-                WorkerConfig.DEFAULT_CATEGORY
+                config.getCategory()
             );
           }
 
@@ -185,7 +180,7 @@ public class CliIndexer extends ServerRunnable
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
                 workerConfig.getVersion(),
-                WorkerConfig.DEFAULT_CATEGORY
+                workerConfig.getCategory()
             );
           }
 

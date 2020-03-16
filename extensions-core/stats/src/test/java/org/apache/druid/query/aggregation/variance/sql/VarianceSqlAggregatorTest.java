@@ -59,6 +59,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -230,7 +231,12 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            CalciteTestBase.DEFAULT_PARAMETERS,
+            authenticationResult
+        ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -285,7 +291,12 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            CalciteTestBase.DEFAULT_PARAMETERS,
+            authenticationResult
+        ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -340,7 +351,12 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            CalciteTestBase.DEFAULT_PARAMETERS,
+            authenticationResult
+        ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -402,7 +418,12 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            CalciteTestBase.DEFAULT_PARAMETERS,
+            authenticationResult
+        ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -463,7 +484,12 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            CalciteTestBase.DEFAULT_PARAMETERS,
+            authenticationResult
+        ).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();

@@ -221,7 +221,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -334,7 +339,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + ")";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1L
@@ -365,7 +375,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                          Collections.singletonList(
                                                              new DefaultDimensionSpec(
                                                                  "v0",
-                                                                 "v0",
+                                                                 "d0",
                                                                  ValueType.LONG
                                                              )
                                                          )
@@ -430,7 +440,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + " HAVING APPROX_COUNT_DISTINCT_DS_HLL(m1) = 2";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results =
+        sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, DEFAULT_PARAMETERS, authenticationResult).toList();
     final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
     Assert.assertEquals(expected, results.size());
   }
@@ -457,7 +468,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             "\"AgEHDAMIAgDhUv8P63iABQ==\"",
@@ -605,7 +621,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     final String sql2 = StringUtils.format("SELECT HLL_SKETCH_ESTIMATE(y), HLL_SKETCH_TO_STRING(y) from (%s)", sql);
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql2,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             2.000000004967054d,

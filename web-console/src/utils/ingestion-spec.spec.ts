@@ -21,71 +21,73 @@ import { downgradeSpec, upgradeSpec } from './ingestion-spec';
 describe('ingestion-spec', () => {
   const oldSpec = {
     type: 'index_parallel',
-    ioConfig: {
-      type: 'index_parallel',
-      firehose: {
-        type: 'http',
-        uris: ['https://static.imply.io/data/wikipedia.json.gz'],
-      },
-    },
-    tuningConfig: {
-      type: 'index_parallel',
-    },
-    dataSchema: {
-      dataSource: 'wikipedia',
-      granularitySpec: {
-        type: 'uniform',
-        segmentGranularity: 'DAY',
-        queryGranularity: 'HOUR',
-        rollup: true,
-      },
-      parser: {
-        type: 'string',
-        parseSpec: {
-          format: 'json',
-          timestampSpec: {
-            column: 'timestamp',
-            format: 'iso',
-          },
-          dimensionsSpec: {
-            dimensions: ['channel', 'cityName', 'comment'],
-          },
-          flattenSpec: {
-            fields: [
-              {
-                type: 'path',
-                name: 'cityNameAlt',
-                expr: '$.cityName',
-              },
-            ],
-          },
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        firehose: {
+          type: 'http',
+          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
         },
       },
-      transformSpec: {
-        transforms: [
+      tuningConfig: {
+        type: 'index_parallel',
+      },
+      dataSchema: {
+        dataSource: 'wikipedia',
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'DAY',
+          queryGranularity: 'HOUR',
+          rollup: true,
+        },
+        parser: {
+          type: 'string',
+          parseSpec: {
+            format: 'json',
+            timestampSpec: {
+              column: 'timestamp',
+              format: 'iso',
+            },
+            dimensionsSpec: {
+              dimensions: ['channel', 'cityName', 'comment'],
+            },
+            flattenSpec: {
+              fields: [
+                {
+                  type: 'path',
+                  name: 'cityNameAlt',
+                  expr: '$.cityName',
+                },
+              ],
+            },
+          },
+        },
+        transformSpec: {
+          transforms: [
+            {
+              type: 'expression',
+              name: 'channel',
+              expression: 'concat("channel", \'lol\')',
+            },
+          ],
+          filter: {
+            type: 'selector',
+            dimension: 'commentLength',
+            value: '35',
+          },
+        },
+        metricsSpec: [
           {
-            type: 'expression',
-            name: 'channel',
-            expression: 'concat("channel", \'lol\')',
+            name: 'count',
+            type: 'count',
+          },
+          {
+            name: 'sum_added',
+            type: 'longSum',
+            fieldName: 'added',
           },
         ],
-        filter: {
-          type: 'selector',
-          dimension: 'commentLength',
-          value: '35',
-        },
       },
-      metricsSpec: [
-        {
-          name: 'count',
-          type: 'count',
-        },
-        {
-          name: 'sum_added',
-          type: 'longSum',
-          fieldName: 'added',
-        },
-      ],
     },
   };
 

@@ -178,7 +178,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   )
   {
     try {
-      queryWatcher.registerQuery(query, future);
+      queryWatcher.registerQueryFuture(query, future);
       if (QueryContexts.hasTimeout(query)) {
         future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
       } else {

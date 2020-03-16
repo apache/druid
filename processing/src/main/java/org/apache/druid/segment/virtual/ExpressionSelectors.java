@@ -223,19 +223,13 @@ public class ExpressionSelectors
 
       // Optimization for dimension selectors that wrap a single underlying string column.
       // The string column can be multi-valued, but if so, it must be implicitly mappable (i.e. the expression is
-      // not treating it as an array, not wanting to output an array, and the multi-value dimension appears
-      // exactly once).
+      // not treating it as an array and not wanting to output an array
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
           && capabilities.isDictionaryEncoded()
           && capabilities.isComplete()
           && !exprDetails.hasInputArrays()
           && !exprDetails.isOutputArray()
-          // the following condition specifically is to handle the case of when a multi-value column identifier
-          // appears more than once in an expression,
-          // e.g. 'x + x' is fine if 'x' is scalar, but if 'x' is multi-value it should be translated to
-          // 'cartesian_map((x_1, x_2) -> x_1 + x_2, x, x)'
-          && (!capabilities.hasMultipleValues() || exprDetails.getFreeVariables().size() == 1)
       ) {
         return new SingleStringInputDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),

@@ -40,7 +40,11 @@ export const EMPTY_ARRAY: any[] = [];
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
-  type?: IngestionType;
+  type: IngestionType;
+  spec: IngestionSpecInner;
+}
+
+export interface IngestionSpecInner {
   ioConfig: IoConfig;
   dataSchema: DataSchema;
   tuningConfig?: TuningConfig;
@@ -61,6 +65,7 @@ export type IngestionComboType =
   | 'index_parallel:druid'
   | 'index_parallel:inline'
   | 'index_parallel:s3'
+  | 'index_parallel:azure'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
 
@@ -68,8 +73,9 @@ export type IngestionComboType =
 export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
 
 export function adjustIngestionSpec(spec: IngestionSpec) {
-  if (spec.tuningConfig) {
-    spec = deepSet(spec, 'tuningConfig', adjustTuningConfig(spec.tuningConfig));
+  const tuningConfig = deepGet(spec, 'spec.tuningConfig');
+  if (tuningConfig) {
+    spec = deepSet(spec, 'spec.tuningConfig', adjustTuningConfig(tuningConfig));
   }
   return spec;
 }
@@ -87,7 +93,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
 }
 
 export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
-  const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+  const ioConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
     case 'kafka':
@@ -95,13 +101,14 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
       return ioConfig.type;
 
     case 'index_parallel':
-      const inputSource = deepGet(spec, 'ioConfig.inputSource') || EMPTY_OBJECT;
+      const inputSource = deepGet(spec, 'spec.ioConfig.inputSource') || EMPTY_OBJECT;
       switch (inputSource.type) {
         case 'local':
         case 'http':
         case 'druid':
         case 'inline':
         case 's3':
+        case 'azure':
         case 'google':
         case 'hdfs':
           return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
@@ -127,6 +134,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index_parallel:s3':
       return 'Amazon S3';
+
+    case 'index_parallel:azure':
+      return 'Azure Data Lake';
 
     case 'index_parallel:google':
       return 'Google Cloud Storage';
@@ -180,6 +190,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
+    case 'index_parallel:azure':
+      return 'druid-azure-extensions';
+
     case 'index_parallel:google':
       return 'druid-google-extensions';
 
@@ -222,20 +235,20 @@ export interface InputFormat {
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: IngestionSpec): DimensionMode {
-  const dimensions = deepGet(spec, 'dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
+  const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
 
 export function getRollup(spec: IngestionSpec): boolean {
-  const specRollup = deepGet(spec, 'dataSchema.granularitySpec.rollup');
+  const specRollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup');
   return typeof specRollup === 'boolean' ? specRollup : true;
 }
 
 export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   return (
     deepGet(spec, 'type') ||
-    deepGet(spec, 'ioConfig.type') ||
-    deepGet(spec, 'tuningConfig.type') ||
+    deepGet(spec, 'spec.ioConfig.type') ||
+    deepGet(spec, 'spec.tuningConfig.type') ||
     'index_parallel'
   );
 }
@@ -249,7 +262,7 @@ export function isTask(spec: IngestionSpec) {
 }
 
 export function isDruidSource(spec: IngestionSpec): boolean {
-  return deepGet(spec, 'ioConfig.inputSource.type') === 'druid';
+  return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
 /**
@@ -263,14 +276,21 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   }
 
   // Make sure that if we actually get a task payload we extract the spec
-  if (typeof (spec as any).spec === 'object') spec = (spec as any).spec;
+  if (typeof spec.spec !== 'object' && typeof (spec as any).ioConfig === 'object') {
+    spec = { spec: spec as any };
+  }
 
   const specType =
-    deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type');
+    deepGet(spec, 'type') ||
+    deepGet(spec, 'spec.ioConfig.type') ||
+    deepGet(spec, 'spec.tuningConfig.type');
+
   if (!specType) return spec as IngestionSpec;
   if (!deepGet(spec, 'type')) spec = deepSet(spec, 'type', specType);
-  if (!deepGet(spec, 'ioConfig.type')) spec = deepSet(spec, 'ioConfig.type', specType);
-  if (!deepGet(spec, 'tuningConfig.type')) spec = deepSet(spec, 'tuningConfig.type', specType);
+  if (!deepGet(spec, 'spec.ioConfig.type')) spec = deepSet(spec, 'spec.ioConfig.type', specType);
+  if (!deepGet(spec, 'spec.tuningConfig.type')) {
+    spec = deepSet(spec, 'spec.tuningConfig.type', specType);
+  }
   return spec as IngestionSpec;
 }
 
@@ -983,7 +1003,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -1208,6 +1228,67 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
+    case 'index_parallel:azure':
+      return [
+        inputSourceType,
+        {
+          name: 'inputSource.uris',
+          label: 'Azure URIs',
+          type: 'string-array',
+          placeholder:
+            'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+          required: true,
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
+          info: (
+            <>
+              <p>
+                The full Azure URI of your file. To ingest from multiple URIs, use commas to
+                separate each individual URI.
+              </p>
+              <p>Either Azure URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.prefixes',
+          label: 'Azure prefixes',
+          type: 'string-array',
+          placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+          required: true,
+          defined: ioConfig =>
+            !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
+          info: (
+            <>
+              <p>A list of paths (with bucket) where your files are stored.</p>
+              <p>Either Azure URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.objects',
+          label: 'Azure objects',
+          type: 'json',
+          placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
+          required: true,
+          defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
+          info: (
+            <>
+              <p>
+                JSON array of{' '}
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/azure.html`}
+                >
+                  S3 Objects
+                </ExternalLink>
+                .
+              </p>
+              <p>Either Azure URIs or prefixes or objects must be set.</p>
+            </>
+          ),
+        },
+      ];
+
     case 'index_parallel:google':
       return [
         inputSourceType,
@@ -1423,6 +1504,7 @@ function issueWithInputSource(inputSource: InputSource | undefined): string | un
       break;
 
     case 's3':
+    case 'azure':
     case 'google':
       if (
         !nonEmptyArray(inputSource.uris) &&
@@ -1478,6 +1560,7 @@ export function getIoConfigTuningFormFields(
   switch (ingestionComboType) {
     case 'index_parallel:http':
     case 'index_parallel:s3':
+    case 'index_parallel:azure':
     case 'index_parallel:google':
     case 'index_parallel:hdfs':
       return [
@@ -1791,11 +1874,11 @@ function basenameFromFilename(filename: string): string | undefined {
 export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
   const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
-  return deepSet(spec, 'dataSchema.dataSource', possibleName);
+  return deepSet(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
 export function guessDataSourceName(spec: IngestionSpec): string | undefined {
-  const ioConfig = deepGet(spec, 'ioConfig');
+  const ioConfig = deepGet(spec, 'spec.ioConfig');
   if (!ioConfig) return;
 
   switch (ioConfig.type) {
@@ -1815,6 +1898,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
           }
 
         case 's3':
+        case 'azure':
         case 'google':
           const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
           const uriPath =
@@ -2417,22 +2501,22 @@ export function updateIngestionType(
 
   let newSpec = spec;
   newSpec = deepSet(newSpec, 'type', ingestionType);
-  newSpec = deepSet(newSpec, 'ioConfig.type', ioAndTuningConfigType);
-  newSpec = deepSet(newSpec, 'tuningConfig.type', ioAndTuningConfigType);
+  newSpec = deepSet(newSpec, 'spec.ioConfig.type', ioAndTuningConfigType);
+  newSpec = deepSet(newSpec, 'spec.tuningConfig.type', ioAndTuningConfigType);
 
   if (inputSourceType) {
-    newSpec = deepSet(newSpec, 'ioConfig.inputSource', { type: inputSourceType });
+    newSpec = deepSet(newSpec, 'spec.ioConfig.inputSource', { type: inputSourceType });
 
     if (inputSourceType === 'local') {
-      newSpec = deepSet(newSpec, 'ioConfig.inputSource.filter', '*');
+      newSpec = deepSet(newSpec, 'spec.ioConfig.inputSource.filter', '*');
     }
   }
 
-  if (!deepGet(spec, 'dataSchema.dataSource')) {
-    newSpec = deepSet(newSpec, 'dataSchema.dataSource', 'new-data-source');
+  if (!deepGet(spec, 'spec.dataSchema.dataSource')) {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dataSource', 'new-data-source');
   }
 
-  if (!deepGet(spec, 'dataSchema.granularitySpec')) {
+  if (!deepGet(spec, 'spec.dataSchema.granularitySpec')) {
     const granularitySpec: GranularitySpec = {
       type: 'uniform',
       queryGranularity: 'HOUR',
@@ -2441,22 +2525,22 @@ export function updateIngestionType(
       granularitySpec.segmentGranularity = 'HOUR';
     }
 
-    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec', granularitySpec);
   }
 
-  if (!deepGet(spec, 'dataSchema.timestampSpec')) {
-    newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', getDummyTimestampSpec());
+  if (!deepGet(spec, 'spec.dataSchema.timestampSpec')) {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.timestampSpec', getDummyTimestampSpec());
   }
 
-  if (!deepGet(spec, 'dataSchema.dimensionsSpec')) {
-    newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec', {});
+  if (!deepGet(spec, 'spec.dataSchema.dimensionsSpec')) {
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec', {});
   }
 
   return newSpec;
 }
 
 export function fillInputFormat(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
-  return deepSet(spec, 'ioConfig.inputFormat', guessInputFormat(sampleData));
+  return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
 }
 
 function guessInputFormat(sampleData: string[]): InputFormat {
@@ -2609,53 +2693,61 @@ export function getFilterFormFields() {
 }
 
 export function upgradeSpec(spec: any): any {
-  if (deepGet(spec, 'ioConfig.firehose')) {
-    switch (deepGet(spec, 'ioConfig.firehose.type')) {
+  if (deepGet(spec, 'spec.ioConfig.firehose')) {
+    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
       case 'static-s3':
-        deepSet(spec, 'ioConfig.firehose.type', 's3');
+        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
         break;
 
       case 'static-google-blobstore':
-        deepSet(spec, 'ioConfig.firehose.type', 'google');
-        deepMove(spec, 'ioConfig.firehose.blobs', 'ioConfig.firehose.objects');
+        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
+        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
         break;
     }
 
-    spec = deepMove(spec, 'ioConfig.firehose', 'ioConfig.inputSource');
-    spec = deepMove(spec, 'dataSchema.parser.parseSpec.timestampSpec', 'dataSchema.timestampSpec');
+    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
     spec = deepMove(
       spec,
-      'dataSchema.parser.parseSpec.dimensionsSpec',
-      'dataSchema.dimensionsSpec',
+      'spec.dataSchema.parser.parseSpec.timestampSpec',
+      'spec.dataSchema.timestampSpec',
     );
-    spec = deepMove(spec, 'dataSchema.parser.parseSpec', 'ioConfig.inputFormat');
-    spec = deepDelete(spec, 'dataSchema.parser');
-    spec = deepMove(spec, 'ioConfig.inputFormat.format', 'ioConfig.inputFormat.type');
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+      'spec.dataSchema.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+    spec = deepDelete(spec, 'spec.dataSchema.parser');
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
   }
   return spec;
 }
 
 export function downgradeSpec(spec: any): any {
-  if (deepGet(spec, 'ioConfig.inputSource')) {
-    spec = deepMove(spec, 'ioConfig.inputFormat.type', 'ioConfig.inputFormat.format');
-    spec = deepSet(spec, 'dataSchema.parser', { type: 'string' });
-    spec = deepMove(spec, 'ioConfig.inputFormat', 'dataSchema.parser.parseSpec');
+  if (deepGet(spec, 'spec.ioConfig.inputSource')) {
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat.type', 'spec.ioConfig.inputFormat.format');
+    spec = deepSet(spec, 'spec.dataSchema.parser', { type: 'string' });
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat', 'spec.dataSchema.parser.parseSpec');
     spec = deepMove(
       spec,
-      'dataSchema.dimensionsSpec',
-      'dataSchema.parser.parseSpec.dimensionsSpec',
+      'spec.dataSchema.dimensionsSpec',
+      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
     );
-    spec = deepMove(spec, 'dataSchema.timestampSpec', 'dataSchema.parser.parseSpec.timestampSpec');
-    spec = deepMove(spec, 'ioConfig.inputSource', 'ioConfig.firehose');
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.timestampSpec',
+      'spec.dataSchema.parser.parseSpec.timestampSpec',
+    );
+    spec = deepMove(spec, 'spec.ioConfig.inputSource', 'spec.ioConfig.firehose');
 
-    switch (deepGet(spec, 'ioConfig.firehose.type')) {
+    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
       case 's3':
-        deepSet(spec, 'ioConfig.firehose.type', 'static-s3');
+        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-s3');
         break;
 
       case 'google':
-        deepSet(spec, 'ioConfig.firehose.type', 'static-google-blobstore');
-        deepMove(spec, 'ioConfig.firehose.objects', 'ioConfig.firehose.blobs');
+        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-google-blobstore');
+        deepMove(spec, 'spec.ioConfig.firehose.objects', 'spec.ioConfig.firehose.blobs');
         break;
     }
   }

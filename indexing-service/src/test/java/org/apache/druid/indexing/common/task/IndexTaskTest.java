@@ -1637,15 +1637,16 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testIndexTaskWitSingleDimPartitionsSpecThrowingException() throws Exception
+  public void testIndexTaskWithSingleDimPartitionsSpecThrowingException() throws Exception
   {
+    final File tmpDir = temporaryFolder.newFolder();
     final IndexTask task = new IndexTask(
         null,
         null,
         createIngestionSpec(
             useInputFormatApi,
             jsonMapper,
-            null,
+            tmpDir,
             null,
             null,
             null,

@@ -451,7 +451,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           Duration.millis(timeLeft)
       );
 
-      queryWatcher.registerQuery(query, future);
+      queryWatcher.registerQueryFuture(query, future);
 
       openConnections.getAndIncrement();
       Futures.addCallback(

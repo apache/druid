@@ -516,6 +516,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               onExplain={emptyQuery ? undefined : this.handleExplain}
               onHistory={() => this.setState({ historyDialogOpen: true })}
               onPrettier={() => this.prettyPrintJson()}
+              loading={loading}
             />
             {this.renderAutoRunSwitch()}
             {this.renderWrapQueryLimitSelector()}

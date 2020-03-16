@@ -21,6 +21,7 @@ package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -32,10 +33,12 @@ import java.util.regex.Pattern;
 
 public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "regexp_extract";
+
   @Override
   public String name()
   {
-    return "regexp_extract";
+    return FN_NAME;
   }
 
   @Override
@@ -62,7 +65,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     {
       private RegexpExtractExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
@@ -80,6 +83,21 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new RegexpExtractExpr(newArg));
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (indexExpr != null) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              patternExpr.stringify(),
+              indexExpr.stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
       }
     }
     return new RegexpExtractExpr(arg);

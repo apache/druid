@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.virtual;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,18 +36,26 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.BucketExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 
 public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
@@ -175,10 +184,26 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       TestExprMacroTable.INSTANCE
   );
 
+  private static final ExpressionVirtualColumn SCALE_LIST_SELF_IMPLICIT = new ExpressionVirtualColumn(
+      "expr",
+      "b * b",
+      ValueType.STRING,
+      TestExprMacroTable.INSTANCE
+  );
+
+  private static final ExpressionVirtualColumn SCALE_LIST_SELF_EXPLICIT = new ExpressionVirtualColumn(
+      "expr",
+      "map(b -> b * b, b)",
+      ValueType.STRING,
+      TestExprMacroTable.INSTANCE
+  );
+
   private static final ThreadLocal<Row> CURRENT_ROW = new ThreadLocal<>();
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
+      RowAdapters.standardRow(),
       CURRENT_ROW::get,
-      null
+      RowSignature.empty(),
+      false
   );
 
   @Test
@@ -209,21 +234,140 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     DimensionSpec spec = new DefaultDimensionSpec("expr", "expr");
 
-    final BaseObjectColumnValueSelector selectorImplicit = SCALE_LIST_IMPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
+    final BaseObjectColumnValueSelector selectorImplicit = SCALE_LIST_IMPLICIT.makeDimensionSelector(
+        spec,
+        COLUMN_SELECTOR_FACTORY
+    );
     CURRENT_ROW.set(ROWMULTI);
     Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorImplicit.getObject());
     CURRENT_ROW.set(ROWMULTI2);
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorImplicit.getObject());
     CURRENT_ROW.set(ROWMULTI3);
-    Assert.assertEquals(Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"), selectorImplicit.getObject());
+    Assert.assertEquals(
+        Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"),
+        selectorImplicit.getObject()
+    );
 
-    final BaseObjectColumnValueSelector selectorExplicit = SCALE_LIST_EXPLICIT.makeDimensionSelector(spec, COLUMN_SELECTOR_FACTORY);
+    final BaseObjectColumnValueSelector selectorExplicit = SCALE_LIST_EXPLICIT.makeDimensionSelector(
+        spec,
+        COLUMN_SELECTOR_FACTORY
+    );
     CURRENT_ROW.set(ROWMULTI);
     Assert.assertEquals(ImmutableList.of("2.0", "4.0", "6.0"), selectorExplicit.getObject());
     CURRENT_ROW.set(ROWMULTI2);
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorExplicit.getObject());
     CURRENT_ROW.set(ROWMULTI3);
-    Assert.assertEquals(Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"), selectorExplicit.getObject());
+    Assert.assertEquals(
+        Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"),
+        selectorExplicit.getObject()
+    );
+  }
+
+  @Test
+  public void testMultiObjectSelectorMakesRightSelector()
+  {
+    DimensionSpec spec = new DefaultDimensionSpec("expr", "expr");
+
+    // do some ugly faking to test if SingleStringInputDimensionSelector is created for multi-value expressions when possible
+    ColumnSelectorFactory factory = new ColumnSelectorFactory()
+    {
+      @Override
+      public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        DimensionSelector delegate = COLUMN_SELECTOR_FACTORY.makeDimensionSelector(dimensionSpec);
+        DimensionSelector faker = new DimensionSelector()
+        {
+          @Override
+          public IndexedInts getRow()
+          {
+            return delegate.getRow();
+          }
+
+          @Override
+          public ValueMatcher makeValueMatcher(@Nullable String value)
+          {
+            return delegate.makeValueMatcher(value);
+          }
+
+          @Override
+          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+          {
+            return delegate.makeValueMatcher(predicate);
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            delegate.inspectRuntimeShape(inspector);
+          }
+
+          @Nullable
+          @Override
+          public Object getObject()
+          {
+            return delegate.getObject();
+          }
+
+          @Override
+          public Class<?> classOfObject()
+          {
+            return delegate.classOfObject();
+          }
+
+          @Override
+          public int getValueCardinality()
+          {
+            // value doesn't matter as long as not CARDINALITY_UNKNOWN
+            return 3;
+          }
+
+          @Nullable
+          @Override
+          public String lookupName(int id)
+          {
+            return null;
+          }
+
+          @Override
+          public boolean nameLookupPossibleInAdvance()
+          {
+            // fake this so when SingleStringInputDimensionSelector it doesn't explode
+            return true;
+          }
+
+          @Nullable
+          @Override
+          public IdLookup idLookup()
+          {
+            return name -> 0;
+          }
+        };
+        return faker;
+      }
+
+      @Override
+      public ColumnValueSelector makeColumnValueSelector(String columnName)
+      {
+        return COLUMN_SELECTOR_FACTORY.makeColumnValueSelector(columnName);
+      }
+
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                           .setHasMultipleValues(true)
+                                           .setDictionaryEncoded(true)
+                                           .setIsComplete(true);
+      }
+    };
+    final BaseObjectColumnValueSelector selectorImplicit =
+        SCALE_LIST_SELF_IMPLICIT.makeDimensionSelector(spec, factory);
+    final BaseObjectColumnValueSelector selectorExplicit =
+        SCALE_LIST_SELF_EXPLICIT.makeDimensionSelector(spec, factory);
+
+    Assert.assertTrue(selectorImplicit instanceof SingleStringInputDimensionSelector);
+    Assert.assertTrue(selectorExplicit instanceof MultiValueExpressionDimensionSelector);
   }
 
   @Test
@@ -597,8 +741,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
+            RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.LONG)
+            RowSignature.builder().add("x", ValueType.LONG).build(),
+            false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
     );
@@ -618,8 +764,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
+            RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.DOUBLE)
+            RowSignature.builder().add("x", ValueType.DOUBLE).build(),
+            false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
     );
@@ -639,8 +787,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
+            RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.FLOAT)
+            RowSignature.builder().add("x", ValueType.FLOAT).build(),
+            false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
     );

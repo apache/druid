@@ -218,7 +218,12 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -330,7 +335,12 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT_DS_THETA(cnt) AS u FROM druid.foo GROUP BY 1)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1L
@@ -361,7 +371,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                                                          Collections.singletonList(
                                                              new DefaultDimensionSpec(
                                                                  "v0",
-                                                                 "v0",
+                                                                 "d0",
                                                                  ValueType.LONG
                                                              )
                                                          )
@@ -431,7 +441,12 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -604,7 +619,12 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     final String sql2 = StringUtils.format("SELECT THETA_SKETCH_ESTIMATE(y) from (%s)", sql);
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql2,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             2.0d

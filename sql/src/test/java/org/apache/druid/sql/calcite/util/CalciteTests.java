@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -44,6 +45,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -104,6 +106,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
@@ -699,6 +702,15 @@ public class CalciteTests
       final File tmpDir
   )
   {
+    return createMockWalker(conglomerate, tmpDir, null);
+  }
+
+  public static SpecificSegmentsQuerySegmentWalker createMockWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final File tmpDir,
+      @Nullable final QueryScheduler scheduler
+  )
+  {
     final QueryableIndex index1 = IndexBuilder
         .create()
         .tmpDir(new File(tmpDir, "1"))
@@ -751,7 +763,8 @@ public class CalciteTests
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
         INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
-        null
+        null,
+        scheduler
     ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -865,14 +878,19 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
+
+    final DruidNode coordinatorNode = new DruidNode("test", "dummy", false, 8080, null, true, false);
+    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         new FakeHttpClient(),
-        new FakeDruidNodeDiscoveryProvider(),
+        provider,
         NodeRole.COORDINATOR,
-        "/simple/leader",
-        () -> {
-          throw new UnsupportedOperationException();
-        }
+        "/simple/leader"
     );
 
     return new SystemSchema(
@@ -889,7 +907,7 @@ public class CalciteTests
         authorizerMapper,
         druidLeaderClient,
         druidLeaderClient,
-        new FakeDruidNodeDiscoveryProvider(),
+        provider,
         getJsonMapper()
     );
   }
@@ -1019,18 +1037,66 @@ public class CalciteTests
    */
   private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
+    private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
+
+    public FakeDruidNodeDiscoveryProvider(Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries)
+    {
+      this.nodeDiscoveries = nodeDiscoveries;
+    }
+
     @Override
     public BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole)
     {
-      throw new UnsupportedOperationException();
+      boolean get = nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery())
+                                   .getAllNodes()
+                                   .stream()
+                                   .anyMatch(x -> x.getDruidNode().equals(node));
+      return () -> get;
     }
 
     @Override
     public DruidNodeDiscovery getForNodeRole(NodeRole nodeRole)
     {
-      throw new UnsupportedOperationException();
+      return nodeDiscoveries.getOrDefault(nodeRole, new FakeDruidNodeDiscovery());
     }
   }
+
+  private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+  {
+    private final Set<DiscoveryDruidNode> nodes;
+
+    FakeDruidNodeDiscovery()
+    {
+      this.nodes = new HashSet<>();
+    }
+
+    FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+    {
+      this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
+      nodes.forEach((k, v) -> {
+        addNode(v, k);
+      });
+    }
+
+    @Override
+    public Collection<DiscoveryDruidNode> getAllNodes()
+    {
+      return nodes;
+    }
+
+    void addNode(DruidNode node, NodeRole role)
+    {
+      final DiscoveryDruidNode discoveryNode = new DiscoveryDruidNode(node, role, ImmutableMap.of());
+      this.nodes.add(discoveryNode);
+    }
+
+    @Override
+    public void registerListener(Listener listener)
+    {
+
+    }
+  }
+
 
   /**
    * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.

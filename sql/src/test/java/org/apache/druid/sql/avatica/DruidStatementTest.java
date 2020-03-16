@@ -50,6 +50,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 public class DruidStatementTest extends CalciteTestBase
@@ -159,7 +160,7 @@ public class DruidStatementTest extends CalciteTestBase
     }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for all rows.
-    Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 6);
+    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
     Assert.assertEquals(
         Meta.Frame.create(
             0,
@@ -192,7 +193,7 @@ public class DruidStatementTest extends CalciteTestBase
     }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
 
     // First frame, ask for 2 rows.
-    Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 2);
+    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 2);
     Assert.assertEquals(
         Meta.Frame.create(
             0,

@@ -326,7 +326,7 @@ These end points can be used to get the propagation status of configured lookups
 
 ### List lookup state of all processes
 
-`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers from zookeeper or configured lookup tiers are listed.
+`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers or configured lookup tiers are listed.
 
 ### List lookup state of processes in a tier
 
@@ -383,7 +383,7 @@ The return value will be the json representation of the factory.
 
 See [Lookups Dynamic Configuration](../configuration/index.md#lookups-dynamic-configuration) for Coordinator configuration.
 
-To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use the `druid.zk.paths.lookupTier` property.
+To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use following properties.
 
 |Property | Description | Default |
 |---------|-------------|---------|

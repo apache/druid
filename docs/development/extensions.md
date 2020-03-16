@@ -37,6 +37,7 @@ Core extensions are maintained by Druid committers.
 |Name|Description|Docs|
 |----|-----------|----|
 |druid-avro-extensions|Support for data in Apache Avro data format.|[link](../development/extensions-core/avro.md)|
+|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
 |druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
 |druid-caffeine-cache|A local cache implementation backed by Caffeine.|[link](../configuration/index.md#cache-configuration)|
@@ -73,7 +74,6 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |Name|Description|Docs|
 |----|-----------|----|
 |ambari-metrics-emitter|Ambari Metrics Emitter |[link](../development/extensions-contrib/ambari-metrics-emitter.md)|
-|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-contrib/azure.md)|
 |druid-cassandra-storage|Apache Cassandra deep storage.|[link](../development/extensions-contrib/cassandra.md)|
 |druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/extensions-contrib/cloudfiles.md)|
 |druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.md)|

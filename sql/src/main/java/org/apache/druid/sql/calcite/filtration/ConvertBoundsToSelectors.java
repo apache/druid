@@ -23,8 +23,9 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 public class ConvertBoundsToSelectors extends BottomUpTransform
 {
@@ -45,7 +46,8 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
   {
     if (filter instanceof BoundDimFilter) {
       final BoundDimFilter bound = (BoundDimFilter) filter;
-      final StringComparator comparator = rowSignature.naturalStringComparator(
+      final StringComparator comparator = RowSignatures.getNaturalStringComparator(
+          rowSignature,
           SimpleExtraction.of(bound.getDimension(), bound.getExtractionFn())
       );
 

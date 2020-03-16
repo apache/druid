@@ -23,7 +23,9 @@ import com.google.common.base.Function;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
@@ -54,9 +56,48 @@ public class ColumnProcessors
   )
   {
     return makeProcessorInternal(
-        factory -> getColumnType(factory, column),
+        factory -> factory.getColumnCapabilities(column),
         factory -> factory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
         factory -> factory.makeColumnValueSelector(column),
+        processorFactory,
+        selectorFactory
+    );
+  }
+
+  /**
+   * Make a processor for a particular {@link DimensionSpec}.
+   *
+   * @param dimensionSpec    the dimension spec
+   * @param processorFactory the processor factory
+   * @param selectorFactory  the column selector factory
+   * @param <T>              processor type
+   */
+  public static <T> T makeProcessor(
+      final DimensionSpec dimensionSpec,
+      final ColumnProcessorFactory<T> processorFactory,
+      final ColumnSelectorFactory selectorFactory
+  )
+  {
+    return makeProcessorInternal(
+        factory -> {
+          // Capabilities of the column that the dimensionSpec is reading. We can't return these straight-up, because
+          // the _result_ of the dimensionSpec might have different capabilities. But what we return will generally be
+          // based on them.
+          final ColumnCapabilities dimensionCapabilities = factory.getColumnCapabilities(dimensionSpec.getDimension());
+
+          if (dimensionSpec.getExtractionFn() != null || dimensionSpec.mustDecorate()) {
+            // DimensionSpec is doing some sort of transformation. The result is always a string.
+
+            return new ColumnCapabilitiesImpl()
+                .setType(ValueType.STRING)
+                .setHasMultipleValues(dimensionSpec.mustDecorate() || mayBeMultiValue(dimensionCapabilities));
+          } else {
+            // No transformation. Pass through.
+            return dimensionCapabilities;
+          }
+        },
+        factory -> factory.makeDimensionSelector(dimensionSpec),
+        factory -> factory.makeColumnValueSelector(dimensionSpec.getDimension()),
         processorFactory,
         selectorFactory
     );
@@ -68,6 +109,7 @@ public class ColumnProcessors
    * Otherwise, it uses an expression selector of type {@code exprTypeHint}.
    *
    * @param expr             the parsed expression
+   * @param exprTypeHint     expression selector type to use for exprs that are not simple identifiers
    * @param processorFactory the processor factory
    * @param selectorFactory  the column selector factory
    * @param <T>              processor type
@@ -79,12 +121,12 @@ public class ColumnProcessors
       final ColumnSelectorFactory selectorFactory
   )
   {
-    if (expr.getIdentifierIfIdentifier() != null) {
+    if (expr.getBindingIfIdentifier() != null) {
       // If expr is an identifier, treat this the same way as a direct column reference.
-      return makeProcessor(expr.getIdentifierIfIdentifier(), processorFactory, selectorFactory);
+      return makeProcessor(expr.getBindingIfIdentifier(), processorFactory, selectorFactory);
     } else {
       return makeProcessorInternal(
-          factory -> exprTypeHint,
+          factory -> new ColumnCapabilitiesImpl().setType(exprTypeHint).setHasMultipleValues(true),
           factory -> ExpressionSelectors.makeDimensionSelector(factory, expr, null),
           factory -> ExpressionSelectors.makeColumnValueSelector(factory, expr),
           processorFactory,
@@ -97,8 +139,10 @@ public class ColumnProcessors
    * Creates "column processors", which are objects that wrap a single input column and provide some
    * functionality on top of it.
    *
-   * @param inputTypeFn           function that returns the "natural" input type of the column being processed. This is
-   *                              permitted to return null; if it does, then processorFactory.defaultType() will be used.
+   * @param inputCapabilitiesFn   function that returns capabilities of the column being processed. The type provided
+   *                              by these capabilities will be used to determine what kind of selector to create. If
+   *                              this function returns null, then processorFactory.defaultType() will be
+   *                              used to construct a set of assumed capabilities.
    * @param dimensionSelectorFn   function that creates a DimensionSelector for the column being processed. Will be
    *                              called if the column type is string.
    * @param valueSelectorFunction function that creates a ColumnValueSelector for the column being processed. Will be
@@ -109,19 +153,22 @@ public class ColumnProcessors
    * @see DimensionHandlerUtils#makeVectorProcessor the vectorized version
    */
   private static <T> T makeProcessorInternal(
-      final Function<ColumnSelectorFactory, ValueType> inputTypeFn,
+      final Function<ColumnSelectorFactory, ColumnCapabilities> inputCapabilitiesFn,
       final Function<ColumnSelectorFactory, DimensionSelector> dimensionSelectorFn,
       final Function<ColumnSelectorFactory, ColumnValueSelector<?>> valueSelectorFunction,
       final ColumnProcessorFactory<T> processorFactory,
       final ColumnSelectorFactory selectorFactory
   )
   {
-    final ValueType type = inputTypeFn.apply(selectorFactory);
-    final ValueType effectiveType = type != null ? type : processorFactory.defaultType();
+    final ColumnCapabilities capabilities = inputCapabilitiesFn.apply(selectorFactory);
+    final ValueType effectiveType = capabilities != null ? capabilities.getType() : processorFactory.defaultType();
 
     switch (effectiveType) {
       case STRING:
-        return processorFactory.makeDimensionProcessor(dimensionSelectorFn.apply(selectorFactory));
+        return processorFactory.makeDimensionProcessor(
+            dimensionSelectorFn.apply(selectorFactory),
+            mayBeMultiValue(capabilities)
+        );
       case LONG:
         return processorFactory.makeLongProcessor(valueSelectorFunction.apply(selectorFactory));
       case FLOAT:
@@ -135,10 +182,12 @@ public class ColumnProcessors
     }
   }
 
-  @Nullable
-  private static ValueType getColumnType(final ColumnSelectorFactory selectorFactory, final String columnName)
+  /**
+   * Returns true if a given set of capabilities might indicate an underlying multi-value column. Errs on the side
+   * of returning true if unknown; i.e. if this returns false, there are _definitely not_ mul.
+   */
+  private static boolean mayBeMultiValue(@Nullable final ColumnCapabilities capabilities)
   {
-    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    return capabilities == null ? null : capabilities.getType();
+    return capabilities == null || !capabilities.isComplete() || capabilities.hasMultipleValues();
   }
 }

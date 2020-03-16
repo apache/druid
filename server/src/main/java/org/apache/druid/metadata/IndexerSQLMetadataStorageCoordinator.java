@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -52,6 +53,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
@@ -70,13 +72,11 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.StreamSupport;
 
 /**
  */
@@ -503,6 +503,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "version");
+    Interval allocateInterval = interval.withChronology(ISOChronology.getInstanceUTC());
 
     return connector.retryWithHandle(
         handle -> {
@@ -511,7 +512,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 handle,
                 dataSource,
                 sequenceName,
-                interval,
+                allocateInterval,
                 partialShardSpec,
                 maxVersion
             );
@@ -521,7 +522,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 dataSource,
                 sequenceName,
                 previousSegmentId,
-                interval,
+                allocateInterval,
                 partialShardSpec,
                 maxVersion
             );
@@ -809,9 +810,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return null;
 
     } else {
-      if (existingChunks
-          .stream()
-          .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+      //noinspection ConstantConditions
+      if (FluentIterable
+          .from(existingChunks)
+          .transformAndConcat(TimelineObjectHolder::getObject)
           .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(partialShardSpec.getShardSpecClass()))) {
         // All existing segments should have a compatible shardSpec with partialShardSpec.
         return null;
@@ -823,15 +825,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       if (!existingChunks.isEmpty()) {
         TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
 
-        maxId = StreamSupport
-            .stream(existingHolder.getObject().spliterator(), false)
+        //noinspection ConstantConditions
+        for (DataSegment segment : FluentIterable
+            .from(existingHolder.getObject())
+            .transform(PartitionChunk::getObject)
             // Here we check only the segments of the same shardSpec to find out the max partitionId.
             // Note that OverwriteShardSpec has the higher range for partitionId than others.
             // See PartitionIds.
-            .filter(chunk -> chunk.getObject().getShardSpec().getClass() == partialShardSpec.getShardSpecClass())
-            .max(Comparator.comparing(chunk -> chunk.getObject().getShardSpec().getPartitionNum()))
-            .map(chunk -> SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))
-            .orElse(null);
+            .filter(segment -> segment.getShardSpec().getClass() == partialShardSpec.getShardSpecClass())) {
+          // Don't use the stream API for performance.
+          if (maxId == null || maxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
+            maxId = SegmentIdWithShardSpec.fromDataSegment(segment);
+          }
+        }
       }
 
       final List<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(

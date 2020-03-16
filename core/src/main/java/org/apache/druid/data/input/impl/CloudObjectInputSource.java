@@ -33,14 +33,14 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public abstract class CloudObjectInputSource<T extends InputEntity> extends AbstractInputSource
-    implements SplittableInputSource<CloudObjectLocation>
+public abstract class CloudObjectInputSource extends AbstractInputSource
+    implements SplittableInputSource<List<CloudObjectLocation>>
 {
-  protected static final int MAX_LISTING_LENGTH = 1024;
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
@@ -91,7 +91,7 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
    * Create the correct {@link InputEntity} for this input source given a split on a {@link CloudObjectLocation}. This
    * is called internally by {@link #formattableReader} and operates on the output of {@link #createSplits}.
    */
-  protected abstract T createEntity(InputSplit<CloudObjectLocation> split);
+  protected abstract InputEntity createEntity(CloudObjectLocation location);
 
   /**
    * Create a stream of {@link CloudObjectLocation} splits by listing objects that appear under {@link #prefixes} using
@@ -99,22 +99,24 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
    * only if {@link #prefixes} is set, otherwise the splits are created directly from {@link #uris} or {@link #objects}.
    * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
    */
-  protected abstract Stream<InputSplit<CloudObjectLocation>> getPrefixesSplitStream();
+  protected abstract Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(SplitHintSpec splitHintSpec);
 
   @Override
-  public Stream<InputSplit<CloudObjectLocation>> createSplits(
+  public Stream<InputSplit<List<CloudObjectLocation>>> createSplits(
       InputFormat inputFormat,
       @Nullable SplitHintSpec splitHintSpec
   )
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
-      return objects.stream().map(InputSplit::new);
+      return objects.stream().map(object -> new InputSplit<>(Collections.singletonList(object)));
     }
     if (!CollectionUtils.isNullOrEmpty(uris)) {
-      return uris.stream().map(CloudObjectLocation::new).map(InputSplit::new);
+      return uris.stream()
+                 .map(CloudObjectLocation::new)
+                 .map(object -> new InputSplit<>(Collections.singletonList(object)));
     }
 
-    return getPrefixesSplitStream();
+    return getPrefixesSplitStream(getSplitHintSpecOrDefault(splitHintSpec));
   }
 
   @Override
@@ -128,7 +130,7 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
       return uris.size();
     }
 
-    return Ints.checkedCast(getPrefixesSplitStream().count());
+    return Ints.checkedCast(getPrefixesSplitStream(getSplitHintSpecOrDefault(splitHintSpec)).count());
   }
 
   @Override
@@ -147,7 +149,7 @@ public abstract class CloudObjectInputSource<T extends InputEntity> extends Abst
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(this::createEntity),
+        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(this::createEntity).iterator(),
         temporaryDirectory
     );
   }

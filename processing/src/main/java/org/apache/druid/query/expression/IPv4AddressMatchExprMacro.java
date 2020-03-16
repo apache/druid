@@ -21,6 +21,7 @@ package org.apache.druid.query.expression;
 
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -52,13 +53,13 @@ import java.util.List;
  */
 public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String NAME = "ipv4_match";
+  public static final String FN_NAME = "ipv4_match";
   private static final int ARG_SUBNET = 1;
 
   @Override
   public String name()
   {
-    return NAME;
+    return FN_NAME;
   }
 
   @Override
@@ -77,7 +78,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 
       private IPv4AddressMatchExpr(Expr arg, SubnetUtils.SubnetInfo subnetInfo)
       {
-        super(arg);
+        super(FN_NAME, arg);
         this.subnetInfo = subnetInfo;
       }
 
@@ -115,6 +116,12 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new IPv4AddressMatchExpr(newArg, subnetInfo));
+      }
+
+      @Override
+      public String stringify()
+      {
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(ARG_SUBNET).stringify());
       }
     }
 

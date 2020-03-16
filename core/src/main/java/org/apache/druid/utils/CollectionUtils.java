@@ -31,7 +31,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.TreeSet;
@@ -144,7 +143,7 @@ public final class CollectionUtils
     return new LinkedHashMap<>(Integer.MAX_VALUE);
   }
 
-  public static boolean isNullOrEmpty(@Nullable List<?> list)
+  public static boolean isNullOrEmpty(@Nullable Collection<?> list)
   {
     return list == null || list.isEmpty();
   }

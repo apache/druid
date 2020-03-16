@@ -37,28 +37,15 @@ This expression language supports the following operators (listed in decreasing 
 |<, <=, >, >=, ==, !=|Binary Comparison|
 |&&, &#124;&#124;|Binary Logical AND, OR|
 
-Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise
-it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value.
-String literals should be quoted by single quotation marks.
+Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
 
-Additionally, the expression language supports long, double, and string arrays. Array literals are created by wrapping
-square brackets around a list of scalar literals values delimited by a comma or space character. All values in an array
-literal must be the same type.
+Additionally, the expression language supports long, double, and string arrays. Array literals are created by wrapping square brackets around a list of scalar literals values delimited by a comma or space character. All values in an array literal must be the same type, however null values are accepted. Typed empty arrays may be defined by prefixing with their type in angle brackets: `<STRING>[]`, `<DOUBLE>[]`, or `<LONG>[]`.
 
-Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not
-begin with a digit. To escape other special characters, you can quote it with double quotation marks.
+Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not begin with a digit. To escape other special characters, you can quote it with double quotation marks.
 
-For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string
-type, it's the evaluation result of 'Boolean.valueOf(string)'.
+For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-[Multi-value string dimensions](../querying/multi-value-dimensions.html) are supported and may be treated as either
-scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply
-the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in
-arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string
-dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL
-dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the
-complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator,
-allows transforming the stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.html) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
 
 
 The following built-in functions are available.
@@ -194,12 +181,25 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
 
+### Reduction functions
+
+Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
+arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
+type of the result:
+*  If all arguments are `NULL`, the result is `NULL`. Otherwise, `NULL` arguments are ignored.
+*  If the arguments comprise a mix of numbers and strings, the arguments are interpreted as strings.
+*  If all arguments are integer numbers, the arguments are interpreted as longs.
+*  If all arguments are numbers and at least one argument is a double, the arguments are interpreted as doubles. 
+
+| function | description |
+| --- | --- |
+| greatest([expr1, ...]) | Evaluates zero or more expressions and returns the maximum value based on comparisons as described above. |
+| least([expr1, ...]) | Evaluates zero or more expressions and returns the minimum value based on comparisons as described above. |
+
+
 ## IP address functions
 
-For the IPv4 address functions, the `address` argument can either be an IPv4 dotted-decimal string
-(e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). The `subnet`
-argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g.,
-"192.168.0.0/16").
+For the IPv4 address functions, the `address` argument can either be an IPv4 dotted-decimal string (e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). The `subnet` argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
 
 | function | description |
 | --- | --- |

@@ -57,7 +57,7 @@ public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
 
 
   @Override
-  protected String getQueryURL(String schemeAndHost)
+  public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2?pretty", schemeAndHost);
   }
