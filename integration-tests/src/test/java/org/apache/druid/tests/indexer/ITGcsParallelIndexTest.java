@@ -38,7 +38,8 @@ import java.util.function.Function;
 /**
  * IMPORTANT:
  * To run this test, you must:
- * 1) Set the variables {@link ITGcsParallelIndexTest#BUCKET} and {@link ITGcsParallelIndexTest#PATH} for your data
+ * 1) Set the bucket and path for your data. This can be done by setting -Ddruid.test.config.cloudBucket and
+ *    -Ddruid.test.config.cloudPath or setting "cloud_bucket" and "cloud_path" in the config file.
  * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index to your GCS at the location set in step 1.
  * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
@@ -49,11 +50,6 @@ import java.util.function.Function;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
 {
-  // START: Change this with the configs for your gcs
-  private static final String BUCKET = "my-bucket";
-  private static final String PATH = "my-path-to-test-files/";
-  // END: Change this with the configs for your gcs
-
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test_" + UUID.randomUUID();
@@ -70,21 +66,21 @@ public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "gs://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_1,
-                        "gs://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_2,
-                        "gs://" + BUCKET + "/" + PATH + WIKIPEDIA_DATA_3
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "gs://" + BUCKET + "/" + PATH
+                        "gs://%%BUCKET%%/%%PATH%%"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
                     ImmutableList.of(
-                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_1),
-                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_2),
-                        ImmutableMap.of("bucket", BUCKET, "path", PATH + WIKIPEDIA_DATA_3)
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_1),
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_2),
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_3)
                     )
         )}
     };
@@ -98,6 +94,28 @@ public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
     ) {
       final Function<String, String> gcsPropsTransform = spec -> {
         try {
+          String inputSourceValue = jsonMapper.writeValueAsString(gcsInputSource.rhs);
+          inputSourceValue = StringUtils.replace(
+              inputSourceValue,
+              "%%BUCKET%%",
+              config.getCloudBucket()
+          );
+          inputSourceValue = StringUtils.replace(
+              inputSourceValue,
+              "%%PATH%%",
+              config.getCloudPath()
+          );
+
+          spec = StringUtils.replace(
+              spec,
+              "%%BUCKET%%",
+              config.getCloudBucket()
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PATH%%",
+              config.getCloudPath()
+          );
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
@@ -116,9 +134,7 @@ public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
           return StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_VALUE%%",
-              jsonMapper.writeValueAsString(
-                  gcsInputSource.rhs
-              )
+              inputSourceValue
           );
         }
         catch (Exception e) {

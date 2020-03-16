@@ -40,6 +40,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   @JsonProperty
   private String extraDatasourceNameSuffix = "";
 
+  @JsonProperty
+  private String cloudPath;
+
+  @JsonProperty
+  private String cloudBucket;
+
   @Override
   public IntegrationTestingConfig get()
   {
@@ -210,6 +216,18 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getExtraDatasourceNameSuffix()
       {
         return extraDatasourceNameSuffix;
+      }
+
+      @Override
+      public String getCloudBucket()
+      {
+        return cloudBucket;
+      }
+
+      @Override
+      public String getCloudPath()
+      {
+        return cloudPath;
       }
     };
   }

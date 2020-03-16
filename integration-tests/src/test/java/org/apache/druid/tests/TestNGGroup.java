@@ -30,8 +30,10 @@ public class TestNGGroup
   public static final String KAFKA_INDEX = "kafka-index";
   public static final String OTHER_INDEX = "other-index";
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
+  // This group can only be run individually using -Dgroups=query since it requires specific test data setup.
   public static final String QUERY = "query";
   public static final String REALTIME_INDEX = "realtime-index";
+  // This group can only be run individually using -Dgroups=security since it requires specific test data setup.
   public static final String SECURITY = "security";
   // This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
   // The path of the file must then we pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
