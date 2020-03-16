@@ -44,7 +44,7 @@ import java.util.function.Function;
  *    located in integration-tests/src/test/resources/data/batch_index to your GCS at the location set in step 1.
  * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
  *    integration-tests/docker/environment-configs/override-examples/gcs for env vars to provide.
- * 4) Provide -Dresource.file.dir.path<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
+ * 4) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
  */
 @Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
