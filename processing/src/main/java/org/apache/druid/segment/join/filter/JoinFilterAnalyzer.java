@@ -519,10 +519,7 @@ public class JoinFilterAnalyzer
         }
 
         for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
-          // We need to create a virtual column for the expressions when pushing down.
-          // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
-          // will return false if there any correlated expressions on the base table, as this is not
-          // implemented yet.
+          // We need to create a virtual column for the expressions when pushing down
           String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
 
           VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(

@@ -44,7 +44,6 @@ import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -671,8 +670,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
-  // Rewriting filters on rhs columns is currently disabled when the lhs of the equicondition is an expression
-  @Ignore
   @Test
   public void test_filterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName()
   {
@@ -915,8 +912,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
   }
 
-  // Rewriting filters on rhs columns is currently disabled when the lhs of the equicondition is an expression
-  @Ignore
   @Test
   public void test_filterPushDown_factConcatExpressionToCountryLeftFilterOnChannelAndCountryName()
   {

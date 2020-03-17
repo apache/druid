@@ -78,6 +78,6 @@ public class JoinFilterColumnCorrelationAnalysis
 
   public boolean supportsPushDown()
   {
-    return !baseColumns.isEmpty() && baseExpressions.isEmpty();
+    return !baseColumns.isEmpty() || !baseExpressions.isEmpty();
   }
 }
