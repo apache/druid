@@ -521,10 +521,8 @@ public class JoinFilterAnalyzer
         for (Expr correlatedBaseExpr : correlationAnalysis.getBaseExpressions()) {
           // We need to create a virtual column for the expressions when pushing down.
           // Note that this block is never entered right now, since correlationAnalysis.supportsPushDown()
-          // will return false if there any correlated expressions on the base table.
-          // Pushdown of such filters is disabled until the expressions system supports converting an expression
-          // into a String representation that can be reparsed into the same expression.
-          // https://github.com/apache/druid/issues/9326 tracks this expressions issue.
+          // will return false if there any correlated expressions on the base table, as this is not
+          // implemented yet.
           String vcName = getCorrelatedBaseExprVirtualColumnName(pushdownVirtualColumns.size());
 
           VirtualColumn correlatedBaseExprVirtualColumn = new ExpressionVirtualColumn(
