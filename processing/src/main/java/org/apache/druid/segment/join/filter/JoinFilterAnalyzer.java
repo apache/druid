@@ -183,7 +183,6 @@ public class JoinFilterAnalyzer
       }
     }
 
-    List<VirtualColumn> pushDownVirtualColumns = new ArrayList<>();
     Map<String, Optional<Map<String, JoinFilterColumnCorrelationAnalysis>>> correlationsByPrefix = new HashMap<>();
 
     // Determine candidates for filter rewrites.
@@ -233,7 +232,7 @@ public class JoinFilterAnalyzer
 
     // Build a map of RHS table prefix -> JoinFilterColumnCorrelationAnalysis based on the RHS rewrite candidates
     for (RhsRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
-      Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.computeIfAbsent(
+      correlationsByPrefix.computeIfAbsent(
           rhsRewriteCandidate.getJoinableClause().getPrefix(),
           p -> findCorrelatedBaseTableColumns(
               joinableClauses,

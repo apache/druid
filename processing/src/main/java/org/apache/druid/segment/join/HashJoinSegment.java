@@ -44,11 +44,10 @@ public class HashJoinSegment extends AbstractSegment
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
   /**
-   * @param baseSegment          The left-hand side base segment
-   * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                             duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param enableFilterPushDown Whether to enable filter push down optimizations to the base segment. In production
-   *                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
+   * @param baseSegment           The left-hand side base segment
+   * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
+   *                              duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param joinFilterPreAnalysis Pre-analysis computed by {@link org.apache.druid.segment.join.filter.JoinFilterAnalyzer#computeJoinFilterPreAnalysis}
    */
   public HashJoinSegment(
       Segment baseSegment,

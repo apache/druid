@@ -221,12 +221,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
-    final Set<String> baseColumns = determineBaseColumnsWithPreAndPostJoinVirtualColumns(
-        virtualColumns,
-        preJoinVirtualColumns,
-        postJoinVirtualColumns
-    );
-
     JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
