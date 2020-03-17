@@ -684,6 +684,16 @@ libraries:
 
 ---
 
+name: org.objenesis objenesis
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.0.1
+libraries:
+  - org.objenesis: objenesis
+
+---
+
 name: com.nimbusds lang-tag
 license_category: binary
 module: java-core
