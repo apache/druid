@@ -643,6 +643,82 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(SHARDS_LAG_MILLIS, recordSupplier.getPartitionTimeLag());
   }
 
+
+  @Test
+  public void getPartitionTimeLag() throws InterruptedException
+  {
+    EasyMock.expect(kinesis.getShardIterator(
+        EasyMock.anyObject(),
+        EasyMock.eq(SHARD_ID0),
+        EasyMock.anyString(),
+        EasyMock.anyString()
+    )).andReturn(
+        getShardIteratorResult0).anyTimes();
+
+    EasyMock.expect(kinesis.getShardIterator(
+        EasyMock.anyObject(),
+        EasyMock.eq(SHARD_ID1),
+        EasyMock.anyString(),
+        EasyMock.anyString()
+    )).andReturn(
+        getShardIteratorResult1).anyTimes();
+
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
+    EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR, recordsPerFetch)))
+            .andReturn(getRecordsResult0)
+            .anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR, recordsPerFetch)))
+            .andReturn(getRecordsResult1)
+            .anyTimes();
+    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS).once();
+    EasyMock.expect(getRecordsResult1.getRecords()).andReturn(SHARD1_RECORDS).once();
+    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(SHARD0_LAG_MILLIS).once();
+    EasyMock.expect(getRecordsResult1.getMillisBehindLatest()).andReturn(SHARD1_LAG_MILLIS).once();
+
+    replayAll();
+
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+        StreamPartition.of(STREAM, SHARD_ID0),
+        StreamPartition.of(STREAM, SHARD_ID1)
+    );
+
+
+    recordSupplier = new KinesisRecordSupplier(
+        kinesis,
+        recordsPerFetch,
+        0,
+        2,
+        true,
+        100,
+        5000,
+        5000,
+        60000,
+        100
+    );
+
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
+
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 12; i++) {
+      Thread.sleep(100);
+    }
+
+    Map<String, String> offsts = ImmutableMap.of(
+        SHARD_ID1, SHARD1_RECORDS.get(0).getSequenceNumber(),
+        SHARD_ID0, SHARD0_RECORDS.get(0).getSequenceNumber()
+    );
+    Map<String, Long> timeLag = recordSupplier.getPartitionTimeLag(offsts);
+
+    verifyAll();
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertEquals(SHARDS_LAG_MILLIS, timeLag);
+  }
+
   /**
    * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
    * array itself. Does not modify position or limit of the buffer.
@@ -660,4 +736,5 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       return retVal;
     }
   }
+
 }

@@ -688,6 +688,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.closed = true;
   }
 
+  @VisibleForTesting
   public Map<String, Long> getPartitionTimeLag()
   {
     return partitionResources.entrySet()
