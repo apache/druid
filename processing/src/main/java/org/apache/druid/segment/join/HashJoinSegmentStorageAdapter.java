@@ -19,13 +19,11 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Capabilities;
@@ -38,6 +36,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -55,40 +54,22 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
-  private final boolean enableFilterPushDown;
-  private final boolean enableFilterRewrite;
+  private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
   /**
    * @param baseAdapter          A StorageAdapter for the left-hand side base segment
    * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
    *                             duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param enableFilterPushDown Whether to enable filter push down optimizations to the base segment
    */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
-      final boolean enableFilterPushDown,
-      final boolean enableFilterRewrite
+      final JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
-    this.enableFilterPushDown = enableFilterPushDown;
-    this.enableFilterRewrite = enableFilterRewrite;
-  }
-
-  @VisibleForTesting
-  HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses
-  )
-  {
-    this(
-        baseAdapter,
-        clauses,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
-    );
+    this.joinFilterPreAnalysis = joinFilterPreAnalysis;
   }
 
   @Override
@@ -237,22 +218,16 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
-    final Set<String> baseColumns = determineBaseColumnsWithPreAndPostJoinVirtualColumns(
+
+    determineBaseColumnsWithPreAndPostJoinVirtualColumns(
         virtualColumns,
         preJoinVirtualColumns,
         postJoinVirtualColumns
     );
 
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-        this,
-        baseColumns,
-        filter,
-        enableFilterPushDown,
-        enableFilterRewrite
-    );
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
@@ -287,11 +262,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     );
   }
 
-  public List<JoinableClause> getClauses()
-  {
-    return clauses;
-  }
-
   /**
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
@@ -299,11 +269,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   public boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
-  }
-
-  public boolean isEnableFilterPushDown()
-  {
-    return enableFilterPushDown;
   }
 
   /**

@@ -88,7 +88,11 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         joinableFactory,
         cpuAccumulator,
         QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query)
+        QueryContexts.getEnableJoinFilterRewrite(query),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getJoinFilterRewriteMaxSize(query),
+        query.getFilter() == null ? null : query.getFilter().toFilter(),
+        query.getVirtualColumns()
     );
 
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

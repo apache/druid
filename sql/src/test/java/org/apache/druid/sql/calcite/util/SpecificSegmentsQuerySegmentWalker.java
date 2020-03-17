@@ -407,7 +407,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           joinableFactory,
           new AtomicLong(),
           QueryContexts.getEnableJoinFilterPushDown(query),
-          QueryContexts.getEnableJoinFilterRewrite(query)
+          QueryContexts.getEnableJoinFilterRewrite(query),
+          QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+          QueryContexts.getJoinFilterRewriteMaxSize(query),
+          query.getFilter() == null ? null : query.getFilter().toFilter(),
+          query.getVirtualColumns()
       );
 
       final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
