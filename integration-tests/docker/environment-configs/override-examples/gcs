@@ -17,17 +17,13 @@
 # under the License.
 #
 
-DRUID_SERVICE=historical
-DRUID_LOG_PATH=/shared/logs/historical.log
+#
+# Example of override config file to provide.
+# Please replace <OVERRIDE_THIS> and <YOUR_GOOGLE_CREDENTIALS_FILE_NAME> with your cloud configs/credentials
+#
+druid_storage_type=google
+druid_google_bucket=<OVERRIDE_THIS>
+druid_google_prefix=<OVERRIDE_THIS>
+druid_extensions_loadList=["druid-google-extensions"]
+GOOGLE_APPLICATION_CREDENTIALS=/shared/docker/credentials/<YOUR_GOOGLE_CREDENTIALS_FILE_NAME>
 
-# JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+UseG1GC
-
-# Druid configs
-druid_processing_buffer_sizeBytes=25000000
-druid_processing_numThreads=2
-druid_query_groupBy_maxOnDiskStorage=300000000
-druid_segmentCache_locations=[{"path":"/shared/druid/indexCache","maxSize":5000000000}]
-druid_server_maxSize=5000000000
-druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical
-druid_server_https_crlPath=/tls/revocations.crl

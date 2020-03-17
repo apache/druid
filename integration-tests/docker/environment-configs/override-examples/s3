@@ -17,17 +17,14 @@
 # under the License.
 #
 
-DRUID_SERVICE=historical
-DRUID_LOG_PATH=/shared/logs/historical.log
-
-# JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+UseG1GC
-
-# Druid configs
-druid_processing_buffer_sizeBytes=25000000
-druid_processing_numThreads=2
-druid_query_groupBy_maxOnDiskStorage=300000000
-druid_segmentCache_locations=[{"path":"/shared/druid/indexCache","maxSize":5000000000}]
-druid_server_maxSize=5000000000
-druid_auth_basic_common_cacheDirectory=/tmp/authCache/historical
-druid_server_https_crlPath=/tls/revocations.crl
+#
+# Example of override config file to provide.
+# Please replace <OVERRIDE_THIS> with your cloud configs/credentials
+#
+druid_storage_type=s3
+druid_storage_bucket=<OVERRIDE_THIS>
+druid_storage_baseKey=druid/segments
+druid_s3_accessKey=<OVERRIDE_THIS>
+druid_s3_secretKey=<OVERRIDE_THIS>
+AWS_REGION=<OVERRIDE_THIS>
+druid_extensions_loadList=["druid-s3-extensions"]
