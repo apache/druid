@@ -44,6 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
@@ -163,7 +164,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           final String offsetToUse;
           if (offset == null || KinesisSupervisor.NOT_SET.equals(offset)) {
             // this should probably check if will start processing earliest or latest rather than assuming earliest
-            // if latest we could skip this because latest will not be behing latest so lag is 0.
+            // if latest we could skip this because latest will not be behind latest so lag is 0.
             iteratorType = ShardIteratorType.TRIM_HORIZON.toString();
             offsetToUse = null;
           } else {
@@ -688,8 +689,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.closed = true;
   }
 
+  // this is only used for tests
   @VisibleForTesting
-  public Map<String, Long> getPartitionTimeLag()
+  Map<String, Long> getPartitionTimeLag()
   {
     return partitionResources.entrySet()
                              .stream()
@@ -700,11 +702,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   public Map<String, Long> getPartitionTimeLag(Map<String, String> currentOffsets)
   {
-    return partitionResources.entrySet()
-                             .stream()
-                             .collect(
-                                 Collectors.toMap(k -> k.getKey().getPartitionId(), k -> k.getValue().getPartitionTimeLag(currentOffsets.get(k.getKey().getPartitionId())))
-                             );
+    Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
+    for (Map.Entry<StreamPartition<String>, PartitionResource> partition : partitionResources.entrySet()) {
+      final String partitionId = partition.getKey().getPartitionId();
+      partitionLag.put(partitionId, partition.getValue().getPartitionTimeLag(currentOffsets.get(partitionId)));
+    }
+    return partitionLag;
   }
 
   private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)

@@ -3174,14 +3174,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected abstract Map<PartitionIdType, Long> getPartitionRecordLag();
 
   /**
-   * Gets 'lag'of currently processed offset behind latest offset as a measure of the difference in time inserted.
+   * Gets 'lag' of currently processed offset behind latest offset as a measure of the difference in time inserted.
    */
   @Nullable
   protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
 
   protected Map<PartitionIdType, SequenceOffsetType> getHighestCurrentOffsets()
   {
-    if (!spec.isSuspended() || (activelyReadingTaskGroups.size() > 0 || pendingCompletionTaskGroups.size() > 0)) {
+    if (!spec.isSuspended() || activelyReadingTaskGroups.size() > 0 || pendingCompletionTaskGroups.size() > 0) {
       return activelyReadingTaskGroups
           .values()
           .stream()

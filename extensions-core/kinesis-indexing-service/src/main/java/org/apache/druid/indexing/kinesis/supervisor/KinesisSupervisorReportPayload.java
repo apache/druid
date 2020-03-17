@@ -39,9 +39,8 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       SupervisorStateManager.State state,
       SupervisorStateManager.State detailedState,
       List<SupervisorStateManager.ExceptionEvent> recentErrors,
-      @Nullable Map<String, String> latestOffsets,
-      @Nullable Map<String, Long> minimumLag,
-      @Nullable Long aggregateLag
+      @Nullable Map<String, Long> minimumLagMillis,
+      @Nullable Long aggregateLagMillis
   )
   {
     super(
@@ -50,9 +49,11 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         partitions,
         replicas,
         durationSeconds,
-        latestOffsets,
-        minimumLag,
-        aggregateLag,
+        null,
+        null,
+        null,
+        minimumLagMillis,
+        aggregateLagMillis,
         null,
         suspended,
         healthy,
@@ -78,8 +79,8 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", state=" + getState() +
            ", detailedState=" + getDetailedState() +
            ", recentErrors=" + getRecentErrors() +
-           (getMinimumLag() != null ? ", minimumLag=" + getMinimumLag() : "") +
-           (getAggregateLag() != null ? ", aggregateLag=" + getAggregateLag() : "") +
+           (getMinimumLagMillis() != null ? ", minimumLagMillis=" + getMinimumLagMillis() : "") +
+           (getAggregateLagMillis() != null ? ", aggregateLagMillis=" + getAggregateLagMillis() : "") +
            '}';
   }
 }

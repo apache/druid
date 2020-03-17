@@ -43,6 +43,8 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final Map<PartitionIdType, SequenceOffsetType> latestOffsets;
   private final Map<PartitionIdType, Long> minimumLag;
   private final Long aggregateLag;
+  private final Map<PartitionIdType, Long> minimumLagMillis;
+  private final Long aggregateLagMillis;
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
   private final boolean healthy;
@@ -59,6 +61,8 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable Map<PartitionIdType, SequenceOffsetType> latestOffsets,
       @Nullable Map<PartitionIdType, Long> minimumLag,
       @Nullable Long aggregateLag,
+      @Nullable Map<PartitionIdType, Long> minimumLagMillis,
+      @Nullable Long aggregateLagMillis,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       boolean healthy,
@@ -77,6 +81,8 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     this.latestOffsets = latestOffsets;
     this.minimumLag = minimumLag;
     this.aggregateLag = aggregateLag;
+    this.minimumLagMillis = minimumLagMillis;
+    this.aggregateLagMillis = aggregateLagMillis;
     this.offsetsLastUpdated = offsetsLastUpdated;
     this.suspended = suspended;
     this.healthy = healthy;
@@ -166,6 +172,19 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   public Long getAggregateLag()
   {
     return aggregateLag;
+  }
+
+  @JsonProperty
+  public Long getAggregateLagMillis()
+  {
+    return aggregateLagMillis;
+  }
+
+
+  @JsonProperty
+  public Map<PartitionIdType, Long> getMinimumLagMillis()
+  {
+    return minimumLagMillis;
   }
 
   @JsonProperty

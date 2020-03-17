@@ -64,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 /**
  * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
@@ -86,7 +85,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   public static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
-  private volatile Map<String, String> latestSequenceFromStream;
   private volatile Map<String, Long> currentPartitionTimeLag;
 
   public KinesisSupervisor(
@@ -284,7 +282,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         stateManager.getSupervisorState().getBasicState(),
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents(),
-        includeOffsets ? latestSequenceFromStream : null,
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
     );
@@ -326,14 +323,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
-    latestSequenceFromStream = streamPartitions.stream()
-                                         .collect(Collectors.toMap(
-                                             StreamPartition::getPartitionId,
-                                             entry -> {
-                                               String latest = recordSupplier.getLatestSequenceNumber(entry);
-                                               return latest == null ? KinesisSupervisor.NOT_SET : latest;
-                                             }
-                                         ));
     currentPartitionTimeLag = supplier.getPartitionTimeLag(getHighestCurrentOffsets());
   }
 
@@ -485,5 +474,4 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     return new KinesisDataSourceMetadata(newSequences);
   }
-
 }

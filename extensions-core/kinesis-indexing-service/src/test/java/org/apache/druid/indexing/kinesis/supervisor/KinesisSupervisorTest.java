@@ -1452,6 +1452,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
 
+    Assert.assertEquals(timeLag, payload.getMinimumLagMillis());
+    Assert.assertEquals(20000000L, (long) payload.getAggregateLagMillis());
+
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
     Assert.assertEquals("id1", publishingReport.getId());
@@ -1601,6 +1604,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, payload.getPublishingTasks().size());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
+    Assert.assertEquals(timeLag, payload.getMinimumLagMillis());
+    Assert.assertEquals(9000L + 1234L, (long) payload.getAggregateLagMillis());
+
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
