@@ -1076,11 +1076,21 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <LearnMore href={getIngestionDocLink(spec)} />
           </Callout>
           {ingestionComboType ? (
-            <AutoForm
-              fields={getIoConfigFormFields(ingestionComboType)}
-              model={ioConfig}
-              onChange={c => this.updateSpecPreview(deepSet(spec, 'spec.ioConfig', c))}
-            />
+            <>
+              <AutoForm
+                fields={getIoConfigFormFields(ingestionComboType)}
+                model={ioConfig}
+                onChange={c => this.updateSpecPreview(deepSet(spec, 'spec.ioConfig', c))}
+              />
+              {deepGet(spec, 'spec.ioConfig.inputSource.properties.secretAccessKey.password') && (
+                <FormGroup>
+                  <Callout intent={Intent.WARNING}>
+                    Inlining the access key into the ingestion spec is dangerous as it might appear
+                    in server log files and can be seen by anyone accessing this console.
+                  </Callout>
+                </FormGroup>
+              )}
+            </>
           ) : (
             <FormGroup label="IO Config">
               <JsonInput
