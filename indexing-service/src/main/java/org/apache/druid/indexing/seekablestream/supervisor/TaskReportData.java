@@ -34,7 +34,8 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
   private final Long remainingSeconds;
   private final TaskType type;
   private final Map<PartitionIdType, SequenceOffsetType> currentOffsets;
-  private final Map<PartitionIdType, SequenceOffsetType> lag;
+  private final Map<PartitionIdType, Long> lag;
+  private final Map<PartitionIdType, Long> lagMillis;
 
   public TaskReportData(
       String id,
@@ -43,7 +44,8 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
       @Nullable DateTime startTime,
       Long remainingSeconds,
       TaskType type,
-      @Nullable Map<PartitionIdType, SequenceOffsetType> lag
+      @Nullable Map<PartitionIdType, Long> lag,
+      @Nullable Map<PartitionIdType, Long> lagMillis
   )
   {
     this.id = id;
@@ -53,6 +55,7 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
     this.remainingSeconds = remainingSeconds;
     this.type = type;
     this.lag = lag;
+    this.lagMillis = lagMillis;
   }
 
   @JsonProperty
@@ -95,9 +98,16 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<PartitionIdType, SequenceOffsetType> getLag()
+  public Map<PartitionIdType, Long> getLag()
   {
     return lag;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<PartitionIdType, Long> getLagMillis()
+  {
+    return lagMillis;
   }
 
   @Override
@@ -110,6 +120,7 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
            ", startTime=" + startTime +
            ", remainingSeconds=" + remainingSeconds +
            (lag != null ? ", lag=" + lag : "") +
+           (lagMillis != null ? ", lagMillis=" + lagMillis : "") +
            '}';
   }
 
