@@ -487,7 +487,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
-  private volatile RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
+  protected volatile RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
@@ -849,7 +849,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   remainingSeconds,
                   TaskReportData.TaskType.ACTIVE,
                   includeOffsets ? getRecordLagPerPartition(currentOffsets) : null,
-                  getPartitionTimeLag()
+                  includeOffsets ? getTimeLagPerPartition(currentOffsets) : null
               )
           );
         }
@@ -877,7 +877,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     remainingSeconds,
                     TaskReportData.TaskType.PUBLISHING,
                     null,
-                    getPartitionTimeLag()
+                    null
                 )
             );
           }
@@ -3101,18 +3101,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public Runnable updateCurrentAndLatestOffsets()
+  public void updateCurrentAndLatestOffsets()
   {
-    return () -> {
-      try {
-        updateCurrentOffsets();
-        updateLatestOffsetsFromStream();
-        sequenceLastUpdated = DateTimes.nowUtc();
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception while getting current/latest sequences");
-      }
-    };
+    try {
+      updateCurrentOffsets();
+      updateLatestOffsetsFromStream();
+      sequenceLastUpdated = DateTimes.nowUtc();
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception while getting current/latest sequences");
+    }
   }
 
   private void updateCurrentOffsets() throws InterruptedException, ExecutionException, TimeoutException
@@ -3183,16 +3181,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected Map<PartitionIdType, SequenceOffsetType> getHighestCurrentOffsets()
   {
-    return activelyReadingTaskGroups
-        .values()
-        .stream()
-        .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
-        .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream())
-        .collect(Collectors.toMap(
-            Entry::getKey,
-            Entry::getValue,
-            (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
-        ));
+    if (!spec.isSuspended() || (activelyReadingTaskGroups.size() > 0 || pendingCompletionTaskGroups.size() > 0)) {
+      return activelyReadingTaskGroups
+          .values()
+          .stream()
+          .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+          .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream())
+          .collect(Collectors.toMap(
+              Entry::getKey,
+              Entry::getValue,
+              (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
+          ));
+    } else {
+      // if supervisor is suspended, no tasks are likely running so use offsets in metadata, if exist
+      return getOffsetsFromMetadataStorage();
+    }
   }
 
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
@@ -3382,7 +3385,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     SeekableStreamSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
     reportingExec.scheduleAtFixedRate(
-        updateCurrentAndLatestOffsets(),
+        this::updateCurrentAndLatestOffsets,
         ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
         Math.max(
             tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
@@ -3405,6 +3408,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return map of partition id -> lag
    */
   protected abstract Map<PartitionIdType, Long> getRecordLagPerPartition(
+      Map<PartitionIdType, SequenceOffsetType> currentOffsets
+  );
+
+  protected abstract Map<PartitionIdType, Long> getTimeLagPerPartition(
       Map<PartitionIdType, SequenceOffsetType> currentOffsets
   );
 
@@ -3442,6 +3449,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
+    if (spec.isSuspended()) {
+      // don't emit metrics if supervisor is suspended (lag should still available in status report)
+      return;
+    }
     try {
       Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
       Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();

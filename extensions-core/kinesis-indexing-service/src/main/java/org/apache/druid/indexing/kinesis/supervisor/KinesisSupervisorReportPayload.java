@@ -22,8 +22,9 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 
-import java.util.Collections;
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
@@ -37,7 +38,10 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       boolean healthy,
       SupervisorStateManager.State state,
       SupervisorStateManager.State detailedState,
-      List<SupervisorStateManager.ExceptionEvent> recentErrors
+      List<SupervisorStateManager.ExceptionEvent> recentErrors,
+      @Nullable Map<String, String> latestOffsets,
+      @Nullable Map<String, Long> minimumLag,
+      @Nullable Long aggregateLag
   )
   {
     super(
@@ -46,9 +50,9 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         partitions,
         replicas,
         durationSeconds,
-        Collections.emptyMap(),
-        Collections.emptyMap(),
-        null,
+        latestOffsets,
+        minimumLag,
+        aggregateLag,
         null,
         suspended,
         healthy,
@@ -74,7 +78,8 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", state=" + getState() +
            ", detailedState=" + getDetailedState() +
            ", recentErrors=" + getRecentErrors() +
+           (getMinimumLag() != null ? ", minimumLag=" + getMinimumLag() : "") +
+           (getAggregateLag() != null ? ", aggregateLag=" + getAggregateLag() : "") +
            '}';
   }
-
 }

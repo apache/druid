@@ -34,8 +34,6 @@ import java.io.File;
 public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
 {
-  private static final String DEFAULT_OFFSET_FETCH_PERIOD = "PT30S";
-
   private final Integer workerThreads;
   private final Integer chatThreads;
   private final Long chatRetries;

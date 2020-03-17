@@ -288,6 +288,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected Map<Integer, Long> getTimeLagPerPartition(Map<Integer, Long> currentOffsets)
+  {
+    return null;
+  }
+
+  @Override
   protected KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<Integer, Long> map)
   {
     return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));

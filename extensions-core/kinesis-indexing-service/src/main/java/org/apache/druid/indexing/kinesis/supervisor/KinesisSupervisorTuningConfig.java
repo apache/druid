@@ -111,7 +111,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
-      @JsonProperty("offsetFetchPeriod") Duration offsetFetchPeriod
+      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod
   )
   {
     super(
@@ -154,7 +154,10 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         repartitionTransitionDuration,
         DEFAULT_REPARTITION_TRANSITION_DURATION
     );
-    this.offsetFetchPeriod = offsetFetchPeriod;
+    this.offsetFetchPeriod = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        offsetFetchPeriod,
+        DEFAULT_OFFSET_FETCH_PERIOD
+    );
   }
 
   @Override
@@ -272,5 +275,4 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getIntermediateHandoffPeriod()
     );
   }
-
 }

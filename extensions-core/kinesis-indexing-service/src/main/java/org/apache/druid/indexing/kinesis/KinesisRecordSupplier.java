@@ -47,6 +47,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -150,6 +151,49 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     long getPartitionTimeLag()
     {
+      return currentLagMillis;
+    }
+
+    long getPartitionTimeLag(String offset)
+    {
+      // if not started (fetching records in background), fetch lag ourself with a throw-away iterator
+      if (!started) {
+        try {
+          final String iteratorType;
+          final String offsetToUse;
+          if (offset == null || KinesisSupervisor.NOT_SET.equals(offset)) {
+            // this should probably check if will start processing earliest or latest rather than assuming earliest
+            // if latest we could skip this because latest will not be behing latest so lag is 0.
+            iteratorType = ShardIteratorType.TRIM_HORIZON.toString();
+            offsetToUse = null;
+          } else {
+            iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
+            offsetToUse = offset;
+          }
+          String shardIterator = kinesis.getShardIterator(
+              streamPartition.getStream(),
+              streamPartition.getPartitionId(),
+              iteratorType,
+              offsetToUse
+          ).getShardIterator();
+
+          GetRecordsResult recordsResult = kinesis.getRecords(
+              new GetRecordsRequest().withShardIterator(shardIterator).withLimit(recordsPerFetch)
+          );
+
+          currentLagMillis = recordsResult.getMillisBehindLatest();
+          return currentLagMillis;
+        }
+        catch (Exception ex) {
+          // eat it
+          log.warn(
+              ex,
+              "Failed to determine partition lag for partition %s of stream %s",
+              streamPartition.getPartitionId(),
+              streamPartition.getStream()
+          );
+        }
+      }
       return currentLagMillis;
     }
 
@@ -650,6 +694,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                              .stream()
                              .collect(
                                  Collectors.toMap(k -> k.getKey().getPartitionId(), k -> k.getValue().getPartitionTimeLag())
+                             );
+  }
+
+  public Map<String, Long> getPartitionTimeLag(Map<String, String> currentOffsets)
+  {
+    return partitionResources.entrySet()
+                             .stream()
+                             .collect(
+                                 Collectors.toMap(k -> k.getKey().getPartitionId(), k -> k.getValue().getPartitionTimeLag(currentOffsets.get(k.getKey().getPartitionId())))
                              );
   }
 

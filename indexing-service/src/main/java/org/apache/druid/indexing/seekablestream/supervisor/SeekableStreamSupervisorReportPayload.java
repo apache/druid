@@ -41,7 +41,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final List<TaskReportData> activeTasks;
   private final List<TaskReportData> publishingTasks;
   private final Map<PartitionIdType, SequenceOffsetType> latestOffsets;
-  private final Map<PartitionIdType, SequenceOffsetType> minimumLag;
+  private final Map<PartitionIdType, Long> minimumLag;
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
@@ -57,7 +57,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       int replicas,
       long durationSeconds,
       @Nullable Map<PartitionIdType, SequenceOffsetType> latestOffsets,
-      @Nullable Map<PartitionIdType, SequenceOffsetType> minimumLag,
+      @Nullable Map<PartitionIdType, Long> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
@@ -157,7 +157,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   }
 
   @JsonProperty
-  public Map<PartitionIdType, SequenceOffsetType> getMinimumLag()
+  public Map<PartitionIdType, Long> getMinimumLag()
   {
     return minimumLag;
   }
