@@ -1231,10 +1231,19 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Access key ID type',
           type: 'string',
           suggestions: [undefined, 'environment', 'default'],
+          placeholder: '(none)',
           info: (
             <>
-              <p>S3 access key for this S3 bucket.</p>
+              <p>S3 access key type.</p>
               <p>Setting this will override the default configuration provided in the config.</p>
+              <p>
+                The access key can be pulled from an environment variable or inlined in the
+                ingestion spec (default).
+              </p>
+              <p>
+                Note: Inlining the access key into the ingestion spec is dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
             </>
           ),
           adjustment: (ioConfig: IoConfig) => {
@@ -1269,10 +1278,19 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Secret key type',
           type: 'string',
           suggestions: [undefined, 'environment', 'default'],
+          placeholder: '(none)',
           info: (
             <>
-              <p>S3 secret key for this S3 bucket.</p>
+              <p>S3 secret key type.</p>
               <p>Setting this will override the default configuration provided in the config.</p>
+              <p>
+                The secret key can be pulled from an environment variable or inlined in the
+                ingestion spec (default).
+              </p>
+              <p>
+                Note: Inlining the secret key into the ingestion spec is dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
             </>
           ),
         },
