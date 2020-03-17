@@ -1226,6 +1226,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
+
         {
           name: 'inputSource.properties.accessKeyId.type',
           label: 'Access key ID type',
@@ -1256,23 +1257,31 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
         {
           name: 'inputSource.properties.accessKeyId.variable',
+          label: 'Access key ID environment variable',
+          type: 'string',
+          placeholder: '(environment variable name)',
+          defined: (ioConfig: IoConfig) =>
+            deepGet(ioConfig, 'inputSource.properties.accessKeyId.type') === 'environment',
+          info: <p>The environment variable containing the S3 access key for this S3 bucket.</p>,
+        },
+        {
+          name: 'inputSource.properties.accessKeyId.password',
           label: 'Access key ID value',
           type: 'string',
-          placeholder: (ioConfig: IoConfig) =>
-            deepGet(ioConfig, 'inputSource.properties.accessKeyId.type') === 'environment'
-              ? '(environment variable)'
-              : '(access key)',
+          placeholder: '(access key)',
           defined: (ioConfig: IoConfig) =>
-            ['environment', 'default'].includes(
-              deepGet(ioConfig, 'inputSource.properties.accessKeyId.type'),
-            ),
+            deepGet(ioConfig, 'inputSource.properties.accessKeyId.type') === 'default',
           info: (
             <>
               <p>S3 access key for this S3 bucket.</p>
-              <p>Setting this will override the default configuration provided in the config.</p>
+              <p>
+                Note: Inlining the access key into the ingestion spec is dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
             </>
           ),
         },
+
         {
           name: 'inputSource.properties.secretAccessKey.type',
           label: 'Secret key type',
@@ -1298,18 +1307,25 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.properties.secretAccessKey.variable',
           label: 'Secret key value',
           type: 'string',
-          placeholder: (ioConfig: IoConfig) =>
-            deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type') === 'environment'
-              ? '(environment variable)'
-              : '(secret key)',
+          placeholder: '(environment variable name)',
           defined: (ioConfig: IoConfig) =>
-            ['environment', 'default'].includes(
-              deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type'),
-            ),
+            deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type') === 'environment',
+          info: <p>The environment variable containing the S3 secret key for this S3 bucket.</p>,
+        },
+        {
+          name: 'inputSource.properties.secretAccessKey.password',
+          label: 'Secret key value',
+          type: 'string',
+          placeholder: '(secret key)',
+          defined: (ioConfig: IoConfig) =>
+            deepGet(ioConfig, 'inputSource.properties.secretAccessKey.type') === 'default',
           info: (
             <>
               <p>S3 secret key for this S3 bucket.</p>
-              <p>Setting this will override the default configuration provided in the config.</p>
+              <p>
+                Note: Inlining the access key into the ingestion spec is dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
             </>
           ),
         },
