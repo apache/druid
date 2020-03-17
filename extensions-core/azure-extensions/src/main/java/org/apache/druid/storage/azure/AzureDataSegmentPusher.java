@@ -186,12 +186,24 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
     final DataSegment outSegment = segment
         .withSize(size)
-        .withLoadSpec(this.makeLoadSpec(new URI(azurePath)))
+        .withLoadSpec(this.makeLoadSpec(segmentConfig.getContainer(), azurePath))
         .withBinaryVersion(binaryVersion);
 
     log.debug("Deleting file [%s]", compressedSegmentData);
     compressedSegmentData.delete();
 
     return outSegment;
+  }
+
+  private Map<String, Object> makeLoadSpec(String container, String prefix)
+  {
+    return ImmutableMap.of(
+        "type",
+        AzureStorageDruidModule.SCHEME,
+        "containerName",
+        container,
+        "blobPath",
+        prefix
+    );
   }
 }
