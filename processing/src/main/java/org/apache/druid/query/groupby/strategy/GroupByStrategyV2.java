@@ -421,7 +421,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
             // Insert dummy dimension so all subtotals queries have ResultRows with the same shape.
             // Use a field name that does not appear in the main query result, to assure the result will be null.
             String dimName = "_" + i;
-            while (query.getResultRowPositionLookup().getInt(dimName) >= 0) {
+            while (query.getResultRowSignature().indexOf(dimName) >= 0) {
               dimName = "_" + dimName;
             }
             newDimensions.add(DefaultDimensionSpec.of(dimName));

@@ -24,6 +24,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -36,6 +39,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.List;
 
 public class HashJoinSegmentTest
 {
@@ -62,23 +66,35 @@ public class HashJoinSegmentTest
         SegmentId.dummy("facts")
     );
 
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            "j0.",
+            new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression("1", "j0.", ExprMacroTable.nil())
+        ),
+        new JoinableClause(
+            "j1.",
+            new IndexedTableJoinable(JoinTestHelper.createRegionsIndexedTable()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
+        )
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+
     hashJoinSegment = new HashJoinSegment(
         baseSegment,
-        ImmutableList.of(
-            new JoinableClause(
-                "j0.",
-                new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression("1", "j0.", ExprMacroTable.nil())
-            ),
-            new JoinableClause(
-                "j1.",
-                new IndexedTableJoinable(JoinTestHelper.createRegionsIndexedTable()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
-            )
-        ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        joinableClauses,
+        joinFilterPreAnalysis
     );
   }
 
@@ -88,10 +104,22 @@ public class HashJoinSegmentTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
 
+    List<JoinableClause> joinableClauses = ImmutableList.of();
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+
     final HashJoinSegment ignored = new HashJoinSegment(
         baseSegment,
-        ImmutableList.of(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        joinableClauses,
+        joinFilterPreAnalysis
     );
   }
 

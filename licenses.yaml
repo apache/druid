@@ -1869,6 +1869,17 @@ libraries:
 
 ---
 
+name: Resilience4j
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - io.github.resilience4j: resilience4j-core
+  - io.github.resilience4j: resilience4j-bulkhead
+
+---
+
 name: RoaringBitmap
 license_category: binary
 module: java-core
@@ -1877,6 +1888,17 @@ version: 0.8.11
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
+
+---
+
+name: vavr
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.10.2
+libraries:
+  - io.vavr: vavr
+  - io.vavr: vavr-match
 
 ---
 

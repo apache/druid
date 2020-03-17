@@ -25,6 +25,8 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.ValidationException;
@@ -33,13 +35,20 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.QueryCapacityExceededException;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
@@ -67,9 +76,11 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -85,9 +96,11 @@ public class SqlResourceTest extends CalciteTestBase
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
   private SpecificSegmentsQuerySegmentWalker walker = null;
+  private QueryScheduler scheduler = null;
   private TestRequestLogger testRequestLogger;
   private SqlResource resource;
   private HttpServletRequest req;
+  private ListeningExecutorService executorService;
 
   @BeforeClass
   public static void setUpClass()
@@ -107,7 +120,16 @@ public class SqlResourceTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+    executorService = MoreExecutors.listeningDecorator(
+      Execs.multiThreaded(8, "test_sql_resource_%s")
+    );
+    scheduler = new QueryScheduler(
+        5,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new HiLoQueryLaningStrategy(40),
+        new ServerConfig()
+    );
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
 
     final PlannerConfig plannerConfig = new PlannerConfig()
     {
@@ -167,6 +189,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+    executorService.shutdownNow();
   }
 
   @Test
@@ -638,7 +661,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testCannotValidate() throws Exception
   {
-    final QueryInterruptedException exception = doPost(
+    final QueryException exception = doPost(
         new SqlQuery(
             "SELECT dim4 FROM druid.foo",
             ResultFormat.OBJECT,
@@ -659,7 +682,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCannotConvert() throws Exception
   {
     // SELECT + ORDER unsupported
-    final QueryInterruptedException exception = doPost(
+    final QueryException exception = doPost(
         new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", ResultFormat.OBJECT, false, null, null)
     ).lhs;
 
@@ -676,7 +699,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testResourceLimitExceeded() throws Exception
   {
-    final QueryInterruptedException exception = doPost(
+    final QueryException exception = doPost(
         new SqlQuery(
             "SELECT DISTINCT dim1 FROM foo",
             ResultFormat.OBJECT,
@@ -690,6 +713,56 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.RESOURCE_LIMIT_EXCEEDED);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
     checkSqlRequestLog(false);
+  }
+
+  @Test
+  public void testTooManyRequests() throws Exception
+  {
+    final int numQueries = 3;
+
+    List<Future<Pair<QueryException, List<Map<String, Object>>>>> futures = new ArrayList<>(numQueries);
+    for (int i = 0; i < numQueries; i++) {
+      futures.add(executorService.submit(() -> {
+        try {
+          return doPost(
+              new SqlQuery(
+                  "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
+                  null,
+                  false,
+                  ImmutableMap.of("priority", -5),
+                  null
+              ),
+              makeExpectedReq()
+          );
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }));
+    }
+
+
+    int success = 0;
+    int limited = 0;
+    for (int i = 0; i < numQueries; i++) {
+      Pair<QueryException, List<Map<String, Object>>> result = futures.get(i).get();
+      List<Map<String, Object>> rows = result.rhs;
+      if (rows != null) {
+        Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 6, "TheFoo", "foo")), rows);
+        success++;
+      } else {
+        QueryException interruped = result.lhs;
+        Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, interruped.getErrorCode());
+        Assert.assertEquals(
+            StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, HiLoQueryLaningStrategy.LOW),
+            interruped.getMessage()
+        );
+        limited++;
+      }
+    }
+    Assert.assertEquals(2, success);
+    Assert.assertEquals(1, limited);
+    Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
   }
 
   @SuppressWarnings("unchecked")
@@ -710,23 +783,53 @@ public class SqlResourceTest extends CalciteTestBase
     }
   }
 
+
+  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
+  {
+    return doPost(query, new TypeReference<List<Map<String, Object>>>()
+    {
+    });
+  }
+
   // Returns either an error or a result, assuming the result is a JSON object.
-  private <T> Pair<QueryInterruptedException, T> doPost(
+  private <T> Pair<QueryException, T> doPost(
       final SqlQuery query,
       final TypeReference<T> typeReference
   ) throws Exception
   {
-    final Pair<QueryInterruptedException, String> pair = doPostRaw(query);
+    return doPost(query, req, typeReference);
+  }
+
+  private Pair<QueryException, String> doPostRaw(final SqlQuery query) throws Exception
+  {
+    return doPostRaw(query, req);
+  }
+
+  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query, HttpServletRequest req) throws Exception
+  {
+    return doPost(query, req, new TypeReference<List<Map<String, Object>>>()
+    {
+    });
+  }
+
+  // Returns either an error or a result, assuming the result is a JSON object.
+  private <T> Pair<QueryException, T> doPost(
+      final SqlQuery query,
+      final HttpServletRequest req,
+      final TypeReference<T> typeReference
+  ) throws Exception
+  {
+    final Pair<QueryException, String> pair = doPostRaw(query, req);
     if (pair.rhs == null) {
       //noinspection unchecked
-      return (Pair<QueryInterruptedException, T>) pair;
+      return (Pair<QueryException, T>) pair;
     } else {
       return Pair.of(pair.lhs, JSON_MAPPER.readValue(pair.rhs, typeReference));
     }
   }
 
   // Returns either an error or a result.
-  private Pair<QueryInterruptedException, String> doPostRaw(final SqlQuery query) throws Exception
+  private Pair<QueryException, String> doPostRaw(final SqlQuery query, final HttpServletRequest req) throws Exception
   {
     final Response response = resource.doPost(query, req);
     if (response.getStatus() == 200) {
@@ -739,16 +842,32 @@ public class SqlResourceTest extends CalciteTestBase
       );
     } else {
       return Pair.of(
-          JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryInterruptedException.class),
+          JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class),
           null
       );
     }
   }
 
-  private Pair<QueryInterruptedException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
+  private HttpServletRequest makeExpectedReq()
   {
-    return doPost(query, new TypeReference<List<Map<String, Object>>>()
-    {
-    });
+    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getRemoteAddr()).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    EasyMock.replay(req);
+    return req;
   }
 }

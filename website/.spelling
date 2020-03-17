@@ -218,6 +218,8 @@ dbcp
 denormalization
 denormalize
 denormalized
+deprioritization
+deprioritizes
 dequeued
 deserialization
 deserialize
@@ -260,6 +262,7 @@ javadoc
 kerberos
 keystore
 keytab
+laning
 lifecycle
 localhost
 log4j

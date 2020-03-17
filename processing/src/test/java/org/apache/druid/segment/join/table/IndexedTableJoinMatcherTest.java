@@ -84,7 +84,7 @@ public class IndexedTableJoinMatcherTest
                 ValueType.STRING,
                 IndexedTableJoinMatcherTest::createSingletonIntList
             );
-        return conditionMatcherFactory.makeDimensionProcessor(new TestDimensionSelector(KEY, valueCardinality));
+        return conditionMatcherFactory.makeDimensionProcessor(new TestDimensionSelector(KEY, valueCardinality), false);
       }
 
       private static class TestDimensionSelector extends ConstantDimensionSelector

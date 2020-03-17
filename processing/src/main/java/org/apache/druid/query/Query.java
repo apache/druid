@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -36,6 +37,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -145,5 +147,20 @@ public interface Query<T>
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
     return this;
+  }
+
+  default Query<T> withPriority(int priority)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+  }
+
+  default Query<T> withLane(String lane)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+  }
+
+  default VirtualColumns getVirtualColumns()
+  {
+    return VirtualColumns.EMPTY;
   }
 }

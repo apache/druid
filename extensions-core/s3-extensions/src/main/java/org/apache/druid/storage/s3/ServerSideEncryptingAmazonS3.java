@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
@@ -126,6 +127,11 @@ public class ServerSideEncryptingAmazonS3
   public void deleteObject(String bucket, String key)
   {
     amazonS3.deleteObject(bucket, key);
+  }
+
+  public void deleteObjects(DeleteObjectsRequest request)
+  {
+    amazonS3.deleteObjects(request);
   }
 
   public static class Builder

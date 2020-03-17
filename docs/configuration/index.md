@@ -1235,8 +1235,8 @@ If the peon is running in remote mode, there must be an Overlord up and running.
 
 ##### SegmentWriteOutMediumFactory
 
-When new segments are created, Druid temporarily stores some preprocessed data in some buffers. Currently two types of
-*medium* exist for those buffers: *temporary files* and *off-heap memory*.
+When new segments are created, Druid temporarily stores some preprocessed data in some buffers. Currently three types of
+*medium* exist for those buffers: *temporary files*, *off-heap memory*, and *on-heap memory*.
 
 *Temporary files* (`tmpFile`) are stored under the task working directory (see `druid.indexer.task.baseTaskDir`
 configuration above) and thus share it's mounting properties, e. g. they could be backed by HDD, SSD or memory (tmpfs).
@@ -1248,13 +1248,18 @@ This type of medium is preferred, but it may require to allow the JVM to have mo
 to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory,
 than the configured maximum *heap* size (`-Xmx`) for the same JVM.
 
+*On-heap memory medium* (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task.
+Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is
+most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory
+effectively.
+
 For most types of tasks SegmentWriteOutMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.md)
 page, "TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type,
 then the value from the configuration below is used:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
+|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile`, `offHeapMemory`, or `onHeapMemory`, see explanation above|`tmpFile`|
 
 ### Indexer
 
@@ -1468,7 +1473,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 
 #### Query configuration
 
-##### Query prioritization
+##### Query routing
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -1476,9 +1481,63 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.broker.select.tier`|`highestPriority`, `lowestPriority`, `custom`|If segments are cross-replicated across tiers in a cluster, you can tell the broker to prefer to select segments in a tier with a certain priority.|`highestPriority`|
 |`druid.broker.select.tier.custom.priorities`|`An array of integer priorities.`|Select servers in tiers with a custom priority list.|None|
 
+##### Query prioritization and laning
+
+*Laning strategies* allow you to control capacity utilization for heterogeneous query workloads. With laning, the broker examines and classifies a query for the purpose of assigning it to a 'lane'. Lanes have capacity limits, enforced by the broker, that can be used to ensure sufficient resources are available for other lanes or for interactive queries (with no lane), or to limit overall throughput for queries within the lane. Requests in excess of the capacity are discarded with an HTTP 429 status code.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.numThreads`|Maximum number of HTTP threads to dedicate to query processing. To save HTTP thread capacity, this should be lower than `druid.server.http.numThreads`.|Unbounded|
+|`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
+|`druid.query.scheduler.prioritization.strategy`|Query prioritization strategy to automatically assign priorities.|`manual`|
+
+##### Prioritization strategies
+
+###### Manual prioritization strategy
+With this configuration, queries are never assigned a priority automatically, but will preserve a priority manually set on the [query context](../querying/query-context.md) with the `priority` key. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `none`.
+
+###### Threshold prioritization strategy
+
+This prioritization strategy lowers the priority of queries that cross any of a configurable set of thresholds, such as how far in the past the data is, how large of an interval a query covers, or the number of segments taking part in a query.
+
+This strategy can be enabled by setting `druid.query.scheduler.prioritization.strategy` to `threshold`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.prioritization.periodThreshold`|ISO duration threshold for how old data can be queried before automatically adjusting query priority.|None|
+|`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|None|
+|`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|None|
+|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|None|
+
+##### Laning strategies
+
+###### No laning strategy
+
+In this mode, queries are never assigned a lane, and the concurrent query count will only be limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode. Enable this strategy explicitly by setting `druid.query.scheduler.laning.strategy` to `none`.
+
+###### 'High/Low' laning strategy
+This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. Queries with priority of zero (the default) or above are considered 'interactive'. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available.
+
+If the `low` lane is specified in the [query context](../querying/query-context.md) `lane` parameter, this will override the computed lane. 
+
+This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=hilo`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.laning.maxLowPercent`|Maximum percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, defining the number of HTTP threads that can be used by queries with a priority lower than 0. Value must be an integer in the range 1 to 100, and will be rounded up|No default, must be set if using this mode|
+
+
+###### 'Manual' laning strategy
+This laning strategy is best suited for cases where one or more external applications which query Druid are capable of manually deciding what lane a given query should belong to. Configured with a map of lane names to percent or exact max capacities, queries with a matching `lane` parameter in the [query context](../querying/query-context.md) will be subjected to those limits.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.laning.lanes.{name}`|Maximum percent or exact limit of queries that can concurrently run in the defined lanes. Any number of lanes may be defined like this.|No default, must define at least one lane with a limit above 0. If `druid.query.scheduler.laning.isLimitPercent` is set to `true`, values must be integers in the range of 1 to 100.|
+|`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are _not_ required to add up to, and can exceed, 100%.|`false`|
+
 ##### Server Configuration
 
-Druid uses Jetty to serve HTTP requests.
+Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, and in most cases comparatively very short lived, HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|

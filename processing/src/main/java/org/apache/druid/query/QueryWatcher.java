@@ -43,5 +43,5 @@ public interface QueryWatcher
    * @param query a query, which may be a subset of a larger query, as long as the underlying queryId is unchanged
    * @param future the future holding the execution status of the query
    */
-  void registerQuery(Query query, ListenableFuture future);
+  void registerQueryFuture(Query<?> query, ListenableFuture<?> future);
 }

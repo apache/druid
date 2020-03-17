@@ -64,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
@@ -73,8 +72,6 @@ import java.util.concurrent.ScheduledExecutorService;
  * and the list of running indexing tasks and ensures that all partitions are being read from and that there are enough
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kinesis sequences.
- * <p>
- * the Kinesis supervisor does not yet support lag calculations
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
@@ -85,9 +82,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       {
       };
 
-  private static final String NOT_SET = "-1";
+  public static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
+  private volatile Map<String, Long> currentPartitionTimeLag;
 
   public KinesisSupervisor(
       final TaskStorage taskStorage,
@@ -114,6 +112,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     this.spec = spec;
     this.awsCredentialsConfig = awsCredentialsConfig;
+    this.currentPartitionTimeLag = null;
   }
 
   @Override
@@ -215,12 +214,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     );
   }
 
-  @Override
-  protected void scheduleReporting(ScheduledExecutorService reportingExec)
-  {
-    // not yet implemented, see issue #6739
-  }
-
   /**
    * We hash the shard ID string, and then use the first four bytes of the hash as an int % task count
    */
@@ -277,6 +270,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
+    Map<String, Long> partitionLag = getTimeLagPerPartition(getHighestCurrentOffsets());
     return new KinesisSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
@@ -287,15 +281,24 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         stateManager.isHealthy(),
         stateManager.getSupervisorState().getBasicState(),
         stateManager.getSupervisorState(),
-        stateManager.getExceptionEvents()
+        stateManager.getExceptionEvents(),
+        includeOffsets ? partitionLag : null,
+        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
     );
   }
 
-  // not yet supported, will be implemented in the future
+  // not yet supported, will be implemented in the future maybe? need a way to get record count between current
+  // sequence and latest sequence
   @Override
-  protected Map<String, String> getLagPerPartition(Map<String, String> currentOffsets)
+  protected Map<String, Long> getRecordLagPerPartition(Map<String, String> currentOffsets)
   {
     return ImmutableMap.of();
+  }
+
+  @Override
+  protected Map<String, Long> getTimeLagPerPartition(Map<String, String> currentOffsets)
+  {
+    return ((KinesisRecordSupplier) recordSupplier).getPartitionTimeLag(currentOffsets);
   }
 
   @Override
@@ -315,10 +318,24 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   @Override
   protected void updateLatestSequenceFromStream(
-      RecordSupplier<String, String> recordSupplier, Set<StreamPartition<String>> streamPartitions
+      RecordSupplier<String, String> recordSupplier,
+      Set<StreamPartition<String>> streamPartitions
   )
   {
-    // do nothing
+    KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
+    currentPartitionTimeLag = supplier.getPartitionTimeLag(getHighestCurrentOffsets());
+  }
+
+  @Override
+  protected Map<String, Long> getPartitionRecordLag()
+  {
+    return null;
+  }
+
+  @Override
+  protected Map<String, Long> getPartitionTimeLag()
+  {
+    return currentPartitionTimeLag;
   }
 
   @Override
@@ -457,5 +474,4 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     return new KinesisDataSourceMetadata(newSequences);
   }
-
 }

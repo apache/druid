@@ -148,7 +148,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
     EasyMock.expect(azureCloudBlobToLocationConverter.createCloudObjectLocation(cloudBlobDruid1))
             .andReturn(CLOUD_OBJECT_LOCATION_1);
-    EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L);
+    EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
     replayAll();
 
     azureInputSource = new AzureInputSource(

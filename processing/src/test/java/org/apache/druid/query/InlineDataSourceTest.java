@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -114,12 +115,12 @@ public class InlineDataSourceTest
   public void test_getRowSignature()
   {
     Assert.assertEquals(
-        ImmutableMap.of(
-            ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG,
-            "str", ValueType.STRING,
-            "double", ValueType.DOUBLE,
-            "complex", ValueType.COMPLEX
-        ),
+        RowSignature.builder()
+                    .add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG)
+                    .add("str", ValueType.STRING)
+                    .add("double", ValueType.DOUBLE)
+                    .add("complex", ValueType.COMPLEX)
+                    .build(),
         listDataSource.getRowSignature()
     );
   }
@@ -139,7 +140,7 @@ public class InlineDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertFalse(listDataSource.isConcrete());
+    Assert.assertTrue(listDataSource.isConcrete());
   }
 
   @Test

@@ -48,9 +48,10 @@ export DOCKER_IP=127.0.0.1
 
 ## Running tests
 
-To run all the tests using docker and mvn run the following command:
+To run all tests from a test group using docker and mvn run the following command: 
+(list of test groups can be found at integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java)
 ```
-  mvn verify -P integration-tests
+  mvn verify -P integration-tests -Dgroups=<test_group>
 ```
 
 To run only a single test using mvn run the following command:
@@ -60,6 +61,12 @@ To run only a single test using mvn run the following command:
 
 Add `-rf :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
+
+Integration tests can also be run with either Java 8 or Java 11 by adding -Djvm.runtime=# to mvn command, where #
+can either be 8 or 11.
+
+Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
+The file must contain one property per line, the key must start with druid_ and the format should be snake case. 
 
 Running Tests Using A Configuration File for Any Cluster
 -------------------
@@ -79,6 +86,8 @@ To run tests on any druid cluster that is already running, create a configuratio
        "coordinator_port": "<coordinator_port>",
        "middlemanager_host": "<middle_manager_ip>",
        "zookeeper_hosts": "<comma-separated list of zookeeper_ip:zookeeper_port>",
+       "cloud_bucket": "<(optional) cloud_bucket for test data if running cloud integration test>",
+       "cloud_path": "<(optional) cloud_path for test data if running cloud integration test>",
     }
 
 Set the environment variable CONFIG_FILE to the name of the configuration file:
@@ -86,9 +95,10 @@ Set the environment variable CONFIG_FILE to the name of the configuration file:
 export CONFIG_FILE=<config file name>
 ```
 
-To run all the tests using mvn run the following command: 
+To run all tests from a test group using mvn run the following command: 
+(list of test groups can be found at integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java)
 ```
-  mvn verify -P int-tests-config-file
+  mvn verify -P int-tests-config-file -Dgroups=<test_group>
 ```
 
 To run only a single test using mvn run the following command:
@@ -96,6 +106,34 @@ To run only a single test using mvn run the following command:
   mvn verify -P int-tests-config-file -Dit.test=<test_name>
 ```
 
+Running a Test That Uses Cloud
+-------------------
+The integration test that indexes from Cloud or uses Cloud as deep storage is not run as part
+of the integration test run discussed above. Running these tests requires the user to provide
+their own Cloud. 
+
+Currently, the integration test supports Google Cloud Storage, Amazon S3, and Microsoft Azure.
+These can be run by providing "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
+to -Dgroups for Google Cloud Storage, Amazon S3, and Microsoft Azure respectively. Note that only
+one group should be run per mvn command.
+
+In addition to specifying the -Dgroups to mvn command, the following will need to be provided:
+1) Set the bucket and path for your test data. This can be done by setting -Ddruid.test.config.cloudBucket and 
+-Ddruid.test.config.cloudPath in the mvn command or setting "cloud_bucket" and "cloud_path" in the config file.
+2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json 
+located in integration-tests/src/test/resources/data/batch_index to your Cloud storage at the location set in step 1.
+3) Provide -Doverride.config.path=<PATH_TO_FILE> with your Cloud credentials/configs set. See
+integration-tests/docker/environment-configs/override-examples/ directory for env vars to provide for each Cloud storage.
+
+For running Google Cloud Storage, in addition to the above, you will also have to:
+1) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
+
+For example, to run integration test for Google Cloud Storage:
+```
+  mvn verify -P integration-tests -Dgroups=gcs-deep-storage -Doverride.config.path=<PATH_TO_FILE> -Dresource.file.dir.path=<PATH_TO_FOLDER> -Ddruid.test.config.cloudBucket=test-bucket -Ddruid.test.config.cloudPath=test-data-folder/
+```
+
+ 
 Running a Test That Uses Hadoop
 -------------------
 
