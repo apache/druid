@@ -169,8 +169,10 @@ public class AzureTaskLogs implements TaskLogs
   @Override
   public void killAll() throws IOException
   {
-    log.info("Deleting all task logs from Azure storage location [bucket: %s    prefix: %s].",
-             config.getContainer(), config.getPrefix()
+    log.info(
+        "Deleting all task logs from Azure storage location [bucket: %s    prefix: %s].",
+        config.getContainer(),
+        config.getPrefix()
     );
 
     long now = timeSupplier.getAsLong();
@@ -180,8 +182,11 @@ public class AzureTaskLogs implements TaskLogs
   @Override
   public void killOlderThan(long timestamp) throws IOException
   {
-    log.info("Deleting all task logs from Azure storage location [bucket: '%s' prefix: '%s'] older than %s.",
-             config.getContainer(), config.getPrefix(), new Date(timestamp)
+    log.info(
+        "Deleting all task logs from Azure storage location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getContainer(),
+        config.getPrefix(),
+        new Date(timestamp)
     );
     try {
       AzureUtils.deleteObjectsInPath(
@@ -195,7 +200,7 @@ public class AzureTaskLogs implements TaskLogs
       );
     }
     catch (Exception e) {
-      log.error("Error occurred while deleting task log files from s3. Error: %s", e.getMessage());
+      log.error("Error occurred while deleting task log files from Azure. Error: %s", e.getMessage());
       throw new IOException(e);
     }
   }

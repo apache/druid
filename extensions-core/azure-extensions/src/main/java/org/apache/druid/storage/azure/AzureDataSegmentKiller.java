@@ -88,8 +88,10 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
-    log.info("Deleting all segment files from Azure storage location [bucket: '%s' prefix: '%s']",
-             segmentConfig.getContainer(), segmentConfig.getPrefix()
+    log.info(
+        "Deleting all segment files from Azure storage location [bucket: '%s' prefix: '%s']",
+        segmentConfig.getContainer(),
+        segmentConfig.getPrefix()
     );
     try {
       AzureUtils.deleteObjectsInPath(
@@ -103,7 +105,7 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
       );
     }
     catch (Exception e) {
-      log.error("Error occurred while deleting segment files from s3. Error: %s", e.getMessage());
+      log.error("Error occurred while deleting segment files from Azure. Error: %s", e.getMessage());
       throw new IOException(e);
     }
   }
