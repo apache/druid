@@ -50,7 +50,8 @@ public class GoogleTaskLogs implements TaskLogs
       GoogleTaskLogsConfig config,
       GoogleStorage storage,
       GoogleInputDataConfig inputDataConfig,
-      CurrentTimeMillisSupplier timeSupplier)
+      CurrentTimeMillisSupplier timeSupplier
+  )
   {
     this.config = config;
     this.storage = storage;
@@ -171,8 +172,10 @@ public class GoogleTaskLogs implements TaskLogs
   @Override
   public void killAll() throws IOException
   {
-    LOG.info("Deleting all task logs from gs location [bucket: '%s' prefix: '%s'].",
-             config.getBucket(), config.getPrefix()
+    LOG.info(
+        "Deleting all task logs from gs location [bucket: '%s' prefix: '%s'].",
+        config.getBucket(),
+        config.getPrefix()
     );
 
     long now = timeSupplier.getAsLong();
@@ -182,8 +185,11 @@ public class GoogleTaskLogs implements TaskLogs
   @Override
   public void killOlderThan(long timestamp) throws IOException
   {
-    LOG.info("Deleting all task logs from gs location [bucket: '%s' prefix: '%s'] older than %s.",
-             config.getBucket(), config.getPrefix(), new Date(timestamp)
+    LOG.info(
+        "Deleting all task logs from gs location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getBucket(),
+        config.getPrefix(),
+        new Date(timestamp)
     );
     try {
       GoogleUtils.deleteObjectsInPath(

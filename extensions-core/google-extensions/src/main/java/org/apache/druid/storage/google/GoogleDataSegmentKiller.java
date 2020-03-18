@@ -45,7 +45,8 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   public GoogleDataSegmentKiller(
       final GoogleStorage storage,
       GoogleAccountConfig accountConfig,
-      GoogleInputDataConfig inputDataConfig)
+      GoogleInputDataConfig inputDataConfig
+  )
   {
     this.storage = storage;
     this.accountConfig = accountConfig;
@@ -103,8 +104,10 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
-    LOG.info("Deleting all segment files from gs location [bucket: '%s' prefix: '%s']",
-             accountConfig.getBucket(), accountConfig.getPrefix()
+    LOG.info(
+        "Deleting all segment files from gs location [bucket: '%s' prefix: '%s']",
+        accountConfig.getBucket(),
+        accountConfig.getPrefix()
     );
     try {
       GoogleUtils.deleteObjectsInPath(
