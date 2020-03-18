@@ -24,6 +24,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.context.ResponseContext;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 public class FluentQueryRunnerBuilder<T>
 {
@@ -95,6 +96,11 @@ public class FluentQueryRunnerBuilder<T>
     public FluentQueryRunner mergeResults()
     {
       return from(toolChest.mergeResults(baseRunner));
+    }
+
+    public FluentQueryRunner map(final Function<QueryRunner<T>, QueryRunner<T>> mapFn)
+    {
+      return from(mapFn.apply(baseRunner));
     }
   }
 }

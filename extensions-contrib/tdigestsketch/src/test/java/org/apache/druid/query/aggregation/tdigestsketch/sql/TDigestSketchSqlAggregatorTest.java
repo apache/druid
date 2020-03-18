@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
@@ -88,10 +88,8 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -193,7 +191,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
         authenticationResult
     ).toList();
     final List<String[]> expectedResults = ImmutableList.of(
-        new String[] {
+        new String[]{
             "\"AAAAAT/wAAAAAAAAQBgAAAAAAABAaQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""
         }
     );
@@ -265,7 +263,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
         authenticationResult
     ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
-        new double[] {
+        new double[]{
             1.1,
             2.9,
             5.3,
@@ -319,7 +317,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
         authenticationResult
     ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
-        new double[] {
+        new double[]{
             1.0,
             3.5,
             6.0
@@ -390,7 +388,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
         authenticationResult
     ).toList();
     final List<double[]> expectedResults = ImmutableList.of(
-        new double[] {
+        new double[]{
             1.0,
             3.5,
             6.0
@@ -457,7 +455,8 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                   ),
                   new TDigestSketchAggregatorFactory("a2:agg", "m1",
                                                      300
-                  )))
+                  )
+              ))
               .postAggregators(
                   new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.0f),
                   new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.5f),

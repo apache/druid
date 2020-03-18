@@ -1779,5 +1779,157 @@
                 }
             }
         ]
+    },
+    {
+        "description": "groupBy on topN subquery on inline",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "query",
+                "query": {
+                    "queryType": "topN",
+                    "dataSource": {
+                        "type": "inline",
+                        "columnNames": [
+                            "k",
+                            "v"
+                        ],
+                        "columnTypes": [
+                            "string",
+                            "string"
+                        ],
+                        "rows": [
+                            [
+                                "Wikipedia:Vandalismusmeldung",
+                                "inline!"
+                            ]
+                        ]
+                    },
+                    "intervals": [
+                        "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+                    ],
+                    "granularity": "all",
+                    "dimension": {
+                        "type": "default",
+                        "dimension": "k",
+                        "outputName": "d"
+                    },
+                    "aggregations": [
+                        {
+                            "type": "count",
+                            "name": "rows"
+                        }
+                    ],
+                    "metric": "rows",
+                    "threshold": 3,
+                    "context": {
+                        "useCache": "true",
+                        "populateCache": "true",
+                        "timeout": 360000
+                    }
+                },
+                "intervals": [
+                    "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+                ],
+                "granularity": "all",
+                "dimensions": [
+                    "d",
+                    {
+                        "type": "default",
+                        "dimension": "rows",
+                        "outputName": "rows",
+                        "outputType": "long"
+                    }
+                ],
+                "context": {
+                    "useCache": "true",
+                    "populateCache": "true",
+                    "timeout": 360000
+                }
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Vandalismusmeldung",
+                    "rows": 1
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy on topN subquery on table",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "query",
+                "query": {
+                    "queryType": "topN",
+                    "dataSource": "wikipedia_editstream",
+                    "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+                    "granularity": "all",
+                    "aggregations": [
+                        {
+                            "type": "count",
+                            "name": "rows"
+                        }
+                    ],
+                    "dimension": {"type": "default", "dimension": "page", "outputName": "d"},
+                    "metric": "rows",
+                    "threshold": 3,
+                    "context": {
+                        "useCache": "true",
+                        "populateCache": "true",
+                        "timeout": 360000
+                    }
+                },
+                "intervals": [
+                    "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+                ],
+                "granularity": "all",
+                "dimensions": [
+                    "d",
+                    {
+                        "type": "default",
+                        "dimension": "rows",
+                        "outputName": "rows",
+                        "outputType": "long"
+                    }
+                ],
+                "context": {
+                    "useCache": "true",
+                    "populateCache": "true",
+                    "timeout": 360000
+                }
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Vandalismusmeldung",
+                    "rows": 991
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Administrators'_noticeboard/Incidents",
+                    "rows": 990
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Vandalismusmeldung",
+                    "rows": "Wikipedia:Administrator_intervention_against_vandalism"
+                }
+            }
+        ]
     }
 ]

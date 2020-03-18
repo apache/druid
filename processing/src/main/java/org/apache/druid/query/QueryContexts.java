@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 @PublicApi
 public class QueryContexts
 {
+  public static final String FINALIZE_KEY = "finalize";
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
@@ -164,7 +165,7 @@ public class QueryContexts
 
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "finalize", defaultValue);
+    return parseBoolean(query, FINALIZE_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)

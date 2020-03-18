@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -121,6 +122,8 @@ public class ColumnProcessors
       final ColumnSelectorFactory selectorFactory
   )
   {
+    Preconditions.checkNotNull(exprTypeHint, "'exprTypeHint' must be nonnull");
+
     if (expr.getBindingIfIdentifier() != null) {
       // If expr is an identifier, treat this the same way as a direct column reference.
       return makeProcessor(expr.getBindingIfIdentifier(), processorFactory, selectorFactory);

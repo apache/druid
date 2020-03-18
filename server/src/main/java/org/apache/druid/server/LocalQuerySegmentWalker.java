@@ -49,6 +49,8 @@ import java.util.stream.StreamSupport;
  * The datasource for the query must satisfy {@link DataSourceAnalysis#isConcreteBased()} and
  * {@link DataSourceAnalysis#isGlobal()}. Its base datasource must also be handleable by the provided
  * {@link SegmentWrangler}.
+ *
+ * Mainly designed to be used by {@link ClientQuerySegmentWalker}.
  */
 public class LocalQuerySegmentWalker implements QuerySegmentWalker
 {
