@@ -310,7 +310,7 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testNotLimitedByDefaultLimiterIfNoTotalIsSet() throws InterruptedException
+  public void testNotLimitedByDefaultLimiterIfNoTotalIsSet()
   {
     scheduler = new ObservableQueryScheduler(
         0,
