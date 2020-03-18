@@ -1085,8 +1085,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               {deepGet(spec, 'spec.ioConfig.inputSource.properties.secretAccessKey.password') && (
                 <FormGroup>
                   <Callout intent={Intent.WARNING}>
-                    Inlining the access key into the ingestion spec is dangerous as it might appear
-                    in server log files and can be seen by anyone accessing this console.
+                    This key will be visible to anyone accessing this console and may appear in server logs. 
+                    For production scenarios, use of a more secure secret key type is strongly recommended.
                   </Callout>
                 </FormGroup>
               )}
