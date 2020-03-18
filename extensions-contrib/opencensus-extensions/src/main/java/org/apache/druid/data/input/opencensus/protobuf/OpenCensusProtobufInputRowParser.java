@@ -128,21 +128,20 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
         // Time in millis
         labels.put(TIMESTAMP_COLUMN, point.getTimestamp().getSeconds() * 1000);
 
-        List<Map<String, Object>> derivedMetricsList = new ArrayList<>();
         switch (point.getValueCase()) {
           case DOUBLE_VALUE:
             Map<String, Object> doubleGauge = new HashMap<>();
             doubleGauge.putAll(labels);
             doubleGauge.put(NAME, metric.getMetricDescriptor().getName());
             doubleGauge.put(VALUE, point.getDoubleValue());
-            derivedMetricsList.add(doubleGauge);
+            addDerivedMetricsRow(doubleGauge, dimensions, rows);
             break;
           case INT64_VALUE:
             HashMap<String, Object> intGauge = new HashMap<>();
             intGauge.putAll(labels);
             intGauge.put(VALUE, point.getInt64Value());
             intGauge.put(NAME, metric.getMetricDescriptor().getName());
-            derivedMetricsList.add(intGauge);
+            addDerivedMetricsRow(intGauge, dimensions, rows);
             break;
           case SUMMARY_VALUE:
             // count
@@ -150,14 +149,14 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
             summaryCount.putAll(labels);
             summaryCount.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "count");
             summaryCount.put(VALUE, point.getSummaryValue().getCount().getValue());
-            derivedMetricsList.add(summaryCount);
+            addDerivedMetricsRow(summaryCount, dimensions, rows);
 
             // sum
             Map<String, Object> summarySum = new HashMap<>();
             summarySum.putAll(labels);
             summarySum.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "sum");
             summarySum.put(VALUE, point.getSummaryValue().getSnapshot().getSum().getValue());
-            derivedMetricsList.add(summarySum);
+            addDerivedMetricsRow(summarySum, dimensions, rows);
 
             // TODO : Do we put percentiles into druid ?
             break;
@@ -166,29 +165,30 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
             Map<String, Object> distCount = new HashMap<>();
             distCount.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "count");
             distCount.put(VALUE, point.getDistributionValue().getCount());
-            derivedMetricsList.add(distCount);
+            addDerivedMetricsRow(distCount, dimensions, rows);
 
             // sum
             Map<String, Object> distSum = new HashMap<>();
             distSum.put(NAME, metric.getMetricDescriptor().getName() + SEPARATOR + "sum");
             distSum.put(VALUE, point.getDistributionValue().getSum());
-            derivedMetricsList.add(distSum);
+            addDerivedMetricsRow(distSum, dimensions, rows);
             // TODO: How to handle buckets ?
             break;
-        }
-
-        // Add druid rows based on derivedMetrics list.
-        for (Map<String, Object> derivedMetrics : derivedMetricsList) {
-          rows.add(new MapBasedInputRow(
-              parseSpec.getTimestampSpec().extractTimestamp(derivedMetrics),
-              dimensions,
-              derivedMetrics
-          ));
         }
       }
     }
 
     return rows;
+  }
+
+  private void addDerivedMetricsRow(Map<String, Object> derivedMetrics, List<String> dimensions,
+      List<InputRow> rows)
+  {
+    rows.add(new MapBasedInputRow(
+        parseSpec.getTimestampSpec().extractTimestamp(derivedMetrics),
+        dimensions,
+        derivedMetrics
+    ));
   }
 
 }
