@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.QueryLaningStrategy;
+import org.apache.druid.server.QueryScheduler;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -75,6 +76,22 @@ public class ManualQueryLaningStrategyTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("lanes must define at least one lane");
     new ManualQueryLaningStrategy(ImmutableMap.of(), null);
+  }
+
+  @Test
+  public void testMustNotUseTotalName()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Lane cannot be named 'total'");
+    new ManualQueryLaningStrategy(ImmutableMap.of(QueryScheduler.TOTAL, 12), null);
+  }
+
+  @Test
+  public void testMustNotUseDefaultName()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Lane cannot be named 'default'");
+    new ManualQueryLaningStrategy(ImmutableMap.of("default", 12), null);
   }
 
   @Test
