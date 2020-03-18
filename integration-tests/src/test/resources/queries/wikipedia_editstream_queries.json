@@ -1910,8 +1910,8 @@
                 "version": "v1",
                 "timestamp": "0000-01-01T00:00:00.000Z",
                 "event": {
-                    "d": "Wikipedia:Vandalismusmeldung",
-                    "rows": 991
+                    "d": "Wikipedia:Administrator_intervention_against_vandalism",
+                    "rows": 800
                 }
             },
             {
@@ -1927,7 +1927,7 @@
                 "timestamp": "0000-01-01T00:00:00.000Z",
                 "event": {
                     "d": "Wikipedia:Vandalismusmeldung",
-                    "rows": "Wikipedia:Administrator_intervention_against_vandalism"
+                    "rows": 991
                 }
             }
         ]
