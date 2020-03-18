@@ -30,7 +30,6 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -61,6 +60,9 @@ import java.util.stream.Collectors;
 public class IndexedTableJoinMatcher implements JoinMatcher
 {
   private static final int UNINITIALIZED_CURRENT_ROW = -1;
+
+  // Key column type to use when the actual key type is unknown.
+  static final ValueType DEFAULT_KEY_TYPE = ValueType.STRING;
 
   private final IndexedTable table;
   private final List<Supplier<IntIterator>> conditionMatchers;
@@ -125,16 +127,15 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     final int keyColumnNumber = table.rowSignature().indexOf(condition.getRightColumn());
 
-    final ValueType keyColumnType =
-        table.rowSignature().getColumnType(condition.getRightColumn())
-             .orElseThrow(() -> new ISE("Encountered null type for column[%s]", condition.getRightColumn()));
+    final ValueType keyType =
+        table.rowSignature().getColumnType(condition.getRightColumn()).orElse(DEFAULT_KEY_TYPE);
 
     final IndexedTable.Index index = table.columnIndex(keyColumnNumber);
 
     return ColumnProcessors.makeProcessor(
         condition.getLeftExpr(),
-        keyColumnType,
-        new ConditionMatcherFactory(keyColumnType, index),
+        keyType,
+        new ConditionMatcherFactory(keyType, index),
         selectorFactory
     );
   }

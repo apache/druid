@@ -83,9 +83,8 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       final Map<Object, IntList> m;
 
       if (keyColumns.contains(column)) {
-        final ValueType columnType =
-            rowSignature.getColumnType(column)
-                        .orElseThrow(() -> new ISE("Key column[%s] must have nonnull type", column));
+        final ValueType keyType =
+            rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
 
         final Function<RowType, Object> columnFunction = columnFunctions.get(i);
 
@@ -93,7 +92,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
 
         for (int j = 0; j < table.size(); j++) {
           final RowType row = table.get(j);
-          final Object key = DimensionHandlerUtils.convertObjectToType(columnFunction.apply(row), columnType);
+          final Object key = DimensionHandlerUtils.convertObjectToType(columnFunction.apply(row), keyType);
           if (key != null) {
             final IntList array = m.computeIfAbsent(key, k -> new IntArrayList());
             array.add(j);
@@ -129,8 +128,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     }
 
     final ValueType columnType =
-        rowSignature.getColumnType(column)
-                    .orElseThrow(() -> new ISE("Key column[%s] must have nonnull type", column));
+        rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
 
     return key -> {
       final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, columnType, false);
