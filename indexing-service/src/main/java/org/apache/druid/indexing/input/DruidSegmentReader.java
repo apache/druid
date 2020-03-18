@@ -60,6 +60,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 
 public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
@@ -208,8 +209,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     {
       this.cursor = cursor;
 
-      timestampColumnSelector =
-          cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+      timestampColumnSelector = cursor
+          .getColumnSelectorFactory()
+          .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
 
       dimSelectors = new HashMap<>();
       for (String dim : dimensionNames) {
@@ -224,8 +226,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
 
       metSelectors = new HashMap<>();
       for (String metric : metricNames) {
-        final BaseObjectColumnValueSelector metricSelector =
-            cursor.getColumnSelectorFactory().makeColumnValueSelector(metric);
+        final BaseObjectColumnValueSelector metricSelector = cursor
+            .getColumnSelectorFactory()
+            .makeColumnValueSelector(metric);
         metSelectors.put(metric, metricSelector);
       }
     }
@@ -239,6 +242,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     @Override
     public Map<String, Object> next()
     {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
       final Map<String, Object> theEvent = Maps.newLinkedHashMap();
 
       for (Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
