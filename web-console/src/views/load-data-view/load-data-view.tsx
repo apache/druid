@@ -1085,8 +1085,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               {deepGet(spec, 'spec.ioConfig.inputSource.properties.secretAccessKey.password') && (
                 <FormGroup>
                   <Callout intent={Intent.WARNING}>
-                    This key will be visible to anyone accessing this console and may appear in server logs. 
-                    For production scenarios, use of a more secure secret key type is strongly recommended.
+                    This key will be visible to anyone accessing this console and may appear in
+                    server logs. For production scenarios, use of a more secure secret key type is
+                    strongly recommended.
                   </Callout>
                 </FormGroup>
               )}
