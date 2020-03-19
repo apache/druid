@@ -23,6 +23,7 @@ import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 
 import java.net.URISyntaxException;
+import java.util.Date;
 
 /**
  * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
@@ -50,5 +51,10 @@ public class CloudBlobHolder
   public long getBlobLength()
   {
     return delegate.getProperties().getLength();
+  }
+
+  public Date getLastModifed()
+  {
+    return delegate.getProperties().getLastModified();
   }
 }
