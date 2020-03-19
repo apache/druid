@@ -153,14 +153,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI uri)
   {
-    return ImmutableMap.of(
-        "type",
-        AzureStorageDruidModule.SCHEME,
-        "containerName",
-        segmentConfig.getContainer(),
-        "blobPath",
-        uri.toString()
-    );
+    return makeLoadSpec(uri.toString());
   }
 
   @VisibleForTesting
@@ -186,7 +179,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
     final DataSegment outSegment = segment
         .withSize(size)
-        .withLoadSpec(this.makeLoadSpec(segmentConfig.getContainer(), azurePath))
+        .withLoadSpec(this.makeLoadSpec(azurePath))
         .withBinaryVersion(binaryVersion);
 
     log.debug("Deleting file [%s]", compressedSegmentData);
@@ -195,13 +188,13 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     return outSegment;
   }
 
-  private Map<String, Object> makeLoadSpec(String container, String prefix)
+  private Map<String, Object> makeLoadSpec(String prefix)
   {
     return ImmutableMap.of(
         "type",
         AzureStorageDruidModule.SCHEME,
         "containerName",
-        container,
+        segmentConfig.getContainer(),
         "blobPath",
         prefix
     );
