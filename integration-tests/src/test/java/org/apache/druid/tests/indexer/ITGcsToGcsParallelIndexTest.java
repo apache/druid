@@ -48,7 +48,7 @@ import java.util.function.Function;
  */
 @Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITGcsParallelIndexTest extends AbstractITBatchIndexTest
+public class ITGcsToGcsParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
