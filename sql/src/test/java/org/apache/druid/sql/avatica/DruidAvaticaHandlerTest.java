@@ -48,6 +48,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -127,10 +128,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass

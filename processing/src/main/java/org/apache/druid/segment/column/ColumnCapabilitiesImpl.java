@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -65,7 +66,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   public ColumnCapabilitiesImpl setType(ValueType type)
   {
-    this.type = type;
+    this.type = Preconditions.checkNotNull(type, "'type' must be nonnull");
     return this;
   }
 

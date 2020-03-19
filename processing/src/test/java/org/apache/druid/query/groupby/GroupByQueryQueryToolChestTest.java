@@ -64,6 +64,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
@@ -666,7 +667,7 @@ public class GroupByQueryQueryToolChestTest
   }
 
   @Test
-  public void testResultArrayFieldsAllGran()
+  public void testResultArraySignatureAllGran()
   {
     final GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -678,13 +679,19 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     Assert.assertEquals(
-        ImmutableList.of("dim", "rows", "index", "uniques", "const"),
-        new GroupByQueryQueryToolChest(null, null).resultArrayFields(query)
+        RowSignature.builder()
+                    .add("dim", ValueType.STRING)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 
   @Test
-  public void testResultArrayFieldsDayGran()
+  public void testResultArraySignatureDayGran()
   {
     final GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -696,8 +703,15 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     Assert.assertEquals(
-        ImmutableList.of("__time", "dim", "rows", "index", "uniques", "const"),
-        new GroupByQueryQueryToolChest(null, null).resultArrayFields(query)
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim", ValueType.STRING)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 

@@ -81,6 +81,8 @@ interface QueryWithContext {
 
 export interface QueryViewProps {
   initQuery: string | undefined;
+  defaultQueryContext?: Record<string, any>;
+  mandatoryQueryContext?: Record<string, any>;
 }
 
 export interface QueryViewState {
@@ -175,11 +177,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
+    const { mandatoryQueryContext } = props;
 
     const queryString = props.initQuery || localStorageGet(LocalStorageKeys.QUERY_KEY) || '';
     const parsedQuery = queryString ? parser(queryString) : undefined;
 
-    const queryContext = localStorageGetJson(LocalStorageKeys.QUERY_CONTEXT) || {};
+    const queryContext =
+      localStorageGetJson(LocalStorageKeys.QUERY_CONTEXT) || props.defaultQueryContext || {};
 
     const possibleQueryHistory = localStorageGetJson(LocalStorageKeys.QUERY_HISTORY);
     const queryHistory = Array.isArray(possibleQueryHistory) ? possibleQueryHistory : [];
@@ -251,8 +255,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           };
         }
 
-        if (!isEmptyContext(queryContext) || wrapQueryLimit) {
-          jsonQuery.context = Object.assign({}, jsonQuery.context || {}, queryContext);
+        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
+          jsonQuery.context = Object.assign(
+            {},
+            jsonQuery.context || {},
+            queryContext,
+            mandatoryQueryContext || {},
+          );
           jsonQuery.context.sqlOuterLimit = wrapQueryLimit;
         }
 

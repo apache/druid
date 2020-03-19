@@ -37,6 +37,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -130,6 +131,11 @@ public interface Query<T>
   @Nullable
   String getId();
 
+  Query<T> withSubQueryId(String subQueryId);
+
+  @Nullable
+  String getSubQueryId();
+
   default Query<T> withSqlQueryId(String sqlQueryId)
   {
     return this;
@@ -148,9 +154,18 @@ public interface Query<T>
     return this;
   }
 
+  default Query<T> withPriority(int priority)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+  }
+
   default Query<T> withLane(String lane)
   {
     return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
   }
 
+  default VirtualColumns getVirtualColumns()
+  {
+    return VirtualColumns.EMPTY;
+  }
 }

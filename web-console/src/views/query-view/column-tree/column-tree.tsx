@@ -27,7 +27,7 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { refExpressionFactory, SqlQuery, stringFactory } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -184,12 +184,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 icon={IconNames.EXCHANGE}
                                 text={`Replace FROM with: ${table}`}
                                 onClick={() => {
-                                  props.onQueryStringChange(
-                                    parsedQuery.replaceFrom(
-                                      refExpressionFactory(stringFactory(table, `"`)),
-                                    ),
-                                    true,
-                                  );
+                                  props.onQueryStringChange(parsedQuery.replaceFrom(table), true);
                                 }}
                               />
                             )}

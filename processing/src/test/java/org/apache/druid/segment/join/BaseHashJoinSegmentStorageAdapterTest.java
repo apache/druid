@@ -23,8 +23,12 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -182,9 +186,20 @@ public class BaseHashJoinSegmentStorageAdapterTest
 
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))
+        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
+        preAnalysis
     );
   }
 

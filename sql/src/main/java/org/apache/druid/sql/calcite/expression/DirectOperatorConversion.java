@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 

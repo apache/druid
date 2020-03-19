@@ -21,14 +21,18 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Iterator;
 
 /**
  * Utility class for miscellaneous things involving Azure.
@@ -94,6 +98,55 @@ public class AzureUtils
     } else {
       return blobPath;
     }
+  }
+
+  /**
+   * Delete the files from Azure Storage in a specified bucket, matching a specified prefix and filter
+   *
+   * @param storage Azure Storage client
+   * @param config  specifies the configuration to use when finding matching files in Azure Storage to delete
+   * @param bucket  Azure Storage bucket
+   * @param prefix  the file prefix
+   * @param filter  function which returns true if the prefix file found should be deleted and false otherwise.
+   * @throws Exception
+   */
+  public static void deleteObjectsInPath(
+      AzureStorage storage,
+      AzureInputDataConfig config,
+      AzureAccountConfig accountConfig,
+      AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
+      String bucket,
+      String prefix,
+      Predicate<CloudBlobHolder> filter
+  )
+      throws Exception
+  {
+    AzureCloudBlobIterable azureCloudBlobIterable =
+        azureCloudBlobIterableFactory.create(ImmutableList.of(new CloudObjectLocation(
+            bucket,
+            prefix
+        ).toUri("azure")), config.getMaxListingLength());
+    Iterator<CloudBlobHolder> iterator = azureCloudBlobIterable.iterator();
+
+    while (iterator.hasNext()) {
+      final CloudBlobHolder nextObject = iterator.next();
+      if (filter.apply(nextObject)) {
+        deleteBucketKeys(storage, accountConfig.getMaxTries(), nextObject.getContainerName(), nextObject.getName());
+      }
+    }
+  }
+
+  private static void deleteBucketKeys(
+      AzureStorage storage,
+      int maxTries,
+      String bucket,
+      String prefix
+  ) throws Exception
+  {
+    AzureUtils.retryAzureOperation(() -> {
+      storage.emptyCloudBlobDirectory(bucket, prefix);
+      return null;
+    }, maxTries);
   }
 
   static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception

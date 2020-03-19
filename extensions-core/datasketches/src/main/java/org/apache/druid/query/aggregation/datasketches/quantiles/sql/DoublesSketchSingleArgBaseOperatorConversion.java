@@ -25,12 +25,12 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;

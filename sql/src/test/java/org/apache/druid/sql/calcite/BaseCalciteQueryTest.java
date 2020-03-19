@@ -28,7 +28,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -63,6 +62,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -407,10 +407,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass

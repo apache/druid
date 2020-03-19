@@ -181,6 +181,22 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
 
+### Reduction functions
+
+Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
+arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
+type of the result:
+*  If all arguments are `NULL`, the result is `NULL`. Otherwise, `NULL` arguments are ignored.
+*  If the arguments comprise a mix of numbers and strings, the arguments are interpreted as strings.
+*  If all arguments are integer numbers, the arguments are interpreted as longs.
+*  If all arguments are numbers and at least one argument is a double, the arguments are interpreted as doubles. 
+
+| function | description |
+| --- | --- |
+| greatest([expr1, ...]) | Evaluates zero or more expressions and returns the maximum value based on comparisons as described above. |
+| least([expr1, ...]) | Evaluates zero or more expressions and returns the minimum value based on comparisons as described above. |
+
+
 ## IP address functions
 
 For the IPv4 address functions, the `address` argument can either be an IPv4 dotted-decimal string (e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). The `subnet` argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").

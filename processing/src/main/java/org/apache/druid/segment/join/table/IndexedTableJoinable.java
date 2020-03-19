@@ -44,13 +44,13 @@ public class IndexedTableJoinable implements Joinable
   @Override
   public List<String> getAvailableColumns()
   {
-    return table.allColumns();
+    return table.rowSignature().getColumnNames();
   }
 
   @Override
   public int getCardinality(String columnName)
   {
-    if (table.allColumns().contains(columnName)) {
+    if (table.rowSignature().contains(columnName)) {
       return table.numRows();
     } else {
       // NullDimensionSelector has cardinality = 1 (one null, nothing else).
@@ -84,11 +84,13 @@ public class IndexedTableJoinable implements Joinable
   public Set<String> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
-      String retrievalColumnName
+      String retrievalColumnName,
+      long maxCorrelationSetSize,
+      boolean allowNonKeyColumnSearch
   )
   {
-    int filterColumnPosition = table.allColumns().indexOf(searchColumnName);
-    int correlatedColumnPosition = table.allColumns().indexOf(retrievalColumnName);
+    int filterColumnPosition = table.rowSignature().indexOf(searchColumnName);
+    int correlatedColumnPosition = table.rowSignature().indexOf(retrievalColumnName);
 
     if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
       return ImmutableSet.of();
@@ -102,14 +104,25 @@ public class IndexedTableJoinable implements Joinable
       for (int i = 0; i < rowIndex.size(); i++) {
         int rowNum = rowIndex.getInt(i);
         correlatedValues.add(reader.read(rowNum).toString());
+
+        if (correlatedValues.size() > maxCorrelationSetSize) {
+          return ImmutableSet.of();
+        }
       }
       return correlatedValues;
     } else {
+      if (!allowNonKeyColumnSearch) {
+        return ImmutableSet.of();
+      }
+
       IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
       IndexedTable.Reader correlatedColumnReader = table.columnReader(correlatedColumnPosition);
       for (int i = 0; i < table.numRows(); i++) {
         if (searchColumnValue.equals(dimNameReader.read(i).toString())) {
           correlatedValues.add(correlatedColumnReader.read(i).toString());
+        }
+        if (correlatedValues.size() > maxCorrelationSetSize) {
+          return ImmutableSet.of();
         }
       }
 

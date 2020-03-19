@@ -44,10 +44,12 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
@@ -95,7 +97,6 @@ public class SqlResourceTest extends CalciteTestBase
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
   private SpecificSegmentsQuerySegmentWalker walker = null;
-  private QueryScheduler scheduler = null;
   private TestRequestLogger testRequestLogger;
   private SqlResource resource;
   private HttpServletRequest req;
@@ -104,10 +105,8 @@ public class SqlResourceTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -119,10 +118,14 @@ public class SqlResourceTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    executorService = MoreExecutors.listeningDecorator(
-      Execs.multiThreaded(8, "test_sql_resource_%s")
+    final QueryScheduler scheduler = new QueryScheduler(
+        5,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new HiLoQueryLaningStrategy(40),
+        new ServerConfig()
     );
-    scheduler = new QueryScheduler(5, new HiLoQueryLaningStrategy(40), new ServerConfig());
+
+    executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
 
     final PlannerConfig plannerConfig = new PlannerConfig()
@@ -133,7 +136,12 @@ public class SqlResourceTest extends CalciteTestBase
         return false;
       }
     };
-    final SchemaPlus rootSchema = CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
+    final SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);

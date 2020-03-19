@@ -90,7 +90,9 @@ public class LookupJoinable implements Joinable
   public Set<String> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
-      String retrievalColumnName
+      String retrievalColumnName,
+      long maxCorrelationSetSize,
+      boolean allowNonKeyColumnSearch
   )
   {
     Set<String> correlatedValues;
@@ -101,9 +103,14 @@ public class LookupJoinable implements Joinable
         correlatedValues = ImmutableSet.of(extractor.apply(searchColumnName));
       }
     } else {
+      if (!allowNonKeyColumnSearch) {
+        return ImmutableSet.of();
+      }
       if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
         correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
+        // Lookup extractor unapply only provides a list of strings, so we can't respect
+        // maxCorrelationSetSize easily. This should be handled eventually.
         correlatedValues = ImmutableSet.copyOf(extractor.unapply(searchColumnValue));
       }
     }
