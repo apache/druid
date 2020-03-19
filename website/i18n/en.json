@@ -120,7 +120,7 @@
         "title": "Moment Sketches for Approximate Quantiles module"
       },
       "development/extensions-contrib/moving-average-query": {
-        "title": "development/extensions-contrib/moving-average-query"
+        "title": "Moving Average Query"
       },
       "development/extensions-contrib/opentsdb-emitter": {
         "title": "OpenTSDB Emitter"
