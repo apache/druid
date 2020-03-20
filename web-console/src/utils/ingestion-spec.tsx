@@ -2391,7 +2391,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'indexSpec.bitmap.type',
     label: 'Index bitmap type',
     type: 'string',
-    defaultValue: 'concise',
+    defaultValue: 'roaring',
     suggestions: ['concise', 'roaring'],
     info: <>Compression format for bitmap indexes.</>,
   },

@@ -522,7 +522,7 @@ An example of the result is
         "numShards": null,
         "indexSpec": {
           "bitmap": {
-            "type": "concise"
+            "type": "roaring"
           },
           "dimensionCompression": "lz4",
           "metricCompression": "lz4",
@@ -530,7 +530,7 @@ An example of the result is
         },
         "indexSpecForIntermediatePersists": {
           "bitmap": {
-            "type": "concise"
+            "type": "roaring"
           },
           "dimensionCompression": "lz4",
           "metricCompression": "lz4",

@@ -27,10 +27,8 @@ import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -107,7 +105,9 @@ public class IndexSpec
     Preconditions.checkArgument(longEncoding == null || LONG_ENCODING_NAMES.contains(longEncoding),
                                 "Unknown long encoding type[%s]", longEncoding);
 
-    this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
+    this.bitmapSerdeFactory = bitmapSerdeFactory != null
+                              ? bitmapSerdeFactory
+                              : new BitmapSerde.DefaultBitmapSerdeFactory();
     this.dimensionCompression = dimensionCompression == null ? DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
     this.metricCompression = metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression;
     this.longEncoding = longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding;
