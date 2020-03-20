@@ -25,14 +25,13 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
 import java.io.Closeable;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-public class AbstractGcsInputSourceSimpleIndexTest extends AbstractITBatchIndexTest
+public abstract class AbstractGcsInputSourceSimpleIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";

@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-public class AbstractS3InputSourceSimpleIndexTest extends AbstractITBatchIndexTest
+public abstract class AbstractS3InputSourceSimpleIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
