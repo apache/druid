@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExprType;
@@ -258,7 +259,12 @@ public class Projection
 
     for (int i = 0; i < expressions.size(); i++) {
       final DruidExpression expression = expressions.get(i);
-      if (expression.isDirectColumnAccess()) {
+
+      final SqlTypeName sqlTypeName = project.getRowType().getFieldList().get(i).getType().getSqlTypeName();
+      if (expression.isDirectColumnAccess()
+          && inputRowSignature.getColumnType(expression.getDirectColumn()).orElse(null)
+             == Calcites.getValueTypeForSqlTypeName(sqlTypeName)) {
+        // Refer to column directly when it's a direct access with matching type.
         rowOrder.add(expression.getDirectColumn());
       } else {
         final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(

@@ -1632,6 +1632,10 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`druid.sql.planner.serializeComplexValues`|Whether to serialize "complex" output values, false will return the class name instead of the serialized value.|true|
 
+> Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
+> These properties are no longer available. Since Druid 0.18.0, you can use `druid.server.http.maxSubqueryRows` to control the maximum
+> number of rows permitted across all subqueries.
+
 #### Broker Caching
 
 You can optionally only configure caching to be enabled on the Broker by setting caching configs here.

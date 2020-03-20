@@ -75,6 +75,8 @@ import java.util.function.Function;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
+ *
+ * In tests, this class's behavior is partially mimicked by TestClusterQuerySegmentWalker.
  */
 public class ServerManager implements QuerySegmentWalker
 {

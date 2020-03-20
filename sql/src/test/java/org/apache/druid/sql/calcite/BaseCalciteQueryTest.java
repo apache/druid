@@ -142,36 +142,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return false;
     }
   };
-  public static final PlannerConfig PLANNER_CONFIG_SINGLE_NESTING_ONLY = new PlannerConfig()
-  {
-    @Override
-    public int getMaxQueryCount()
-    {
-      return 2;
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_NO_SUBQUERIES = new PlannerConfig()
-  {
-    @Override
-    public int getMaxQueryCount()
-    {
-      return 1;
-    }
-  };
   public static final PlannerConfig PLANNER_CONFIG_LOS_ANGELES = new PlannerConfig()
   {
     @Override
     public DateTimeZone getSqlTimeZone()
     {
       return DateTimes.inferTzFromString("America/Los_Angeles");
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT = new PlannerConfig()
-  {
-    @Override
-    public int getMaxSemiJoinRowsInMemory()
-    {
-      return 2;
     }
   };
 
