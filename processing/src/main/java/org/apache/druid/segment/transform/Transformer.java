@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.transform;
 
+import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.Row;
@@ -37,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *
@@ -138,17 +140,32 @@ public class Transformer
   {
     private final InputRow row;
     private final Map<String, RowFunction> transforms;
+    private final List<String> dimensions;
 
     public TransformedInputRow(final InputRow row, final Map<String, RowFunction> transforms)
     {
       this.row = row;
       this.transforms = transforms;
+
+      Set<String> transformedDims = Sets.newHashSet(transforms.keySet());
+
+      for (String dim : row.getDimensions()) {
+        transformedDims.remove(dim);
+      }
+
+      if (transformedDims.isEmpty()) {
+        this.dimensions = row.getDimensions();
+      } else {
+        this.dimensions = new ArrayList<>(row.getDimensions().size() + transforms.size());
+        dimensions.addAll(row.getDimensions());
+        dimensions.addAll(transformedDims);
+      }
     }
 
     @Override
     public List<String> getDimensions()
     {
-      return row.getDimensions();
+      return dimensions;
     }
 
     @Override

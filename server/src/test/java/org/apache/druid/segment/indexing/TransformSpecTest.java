@@ -85,7 +85,7 @@ public class TransformSpecTest
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
     Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
-    Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
+    Assert.assertEquals(ImmutableList.of("f", "x", "y", "g", "h"), row.getDimensions());
     Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
     Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
     Assert.assertEquals("foobar", row.getRaw("f"));

@@ -872,6 +872,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                 .put("dim1", "foo")
                 .put("dim2", null)
                 .put("met1", 6L)
+                .put("dim1PlusBar", "foobar")
                 .build(),
             null,
             null
@@ -886,6 +887,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                 .put("dim1", "foo2")
                 .put("dim2", null)
                 .put("met1", 4L)
+                .put("dim1PlusBar", "foo2bar")
                 .build(),
             null,
             null
@@ -900,6 +902,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                 .put("dim1", "foo")
                 .put("dim2", "bar")
                 .put("met1", 5L)
+                .put("dim1PlusBar", "foobar")
                 .build(),
             null,
             null
