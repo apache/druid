@@ -32,14 +32,14 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 {
   "type":"kafka",
   "kafkaTopic":"testTopic",
-  "kafkaProperties":{"zookeeper.connect":"somehost:2181/kafka"}
+  "kafkaProperties":{"bootstrap.servers":"somehost:9092"}
 }
 ```
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`kafkaTopic`|The Kafka topic to read the data from|Yes||
-|`kafkaProperties`|Kafka consumer properties. At least"zookeeper.connect" must be specified. Only the zookeeper connector is supported|Yes||
+|`kafkaProperties`|Kafka consumer properties. At least"bootstrap.servers" must be specified.|Yes||
 |`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
 |`isOneToOne`|The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.md))|No|`false`|
 
