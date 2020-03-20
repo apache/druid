@@ -20,6 +20,8 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.testng.annotations.DataProvider;
@@ -29,56 +31,82 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITBatchIndexTest
+public class AbstractS3InputSourceSimpleIndexTest extends AbstractITBatchIndexTest
 {
-  private static final String INDEX_TASK = "/indexer/wikipedia_cloud_simple_index_task.json";
+  private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test_" + UUID.randomUUID();
-  private static final String INPUT_SOURCE_PATHS_KEY = "paths";
+  private static final String INPUT_SOURCE_URIS_KEY = "uris";
+  private static final String INPUT_SOURCE_PREFIXES_KEY = "prefixes";
+  private static final String INPUT_SOURCE_OBJECTS_KEY = "objects";
+  private static final String WIKIPEDIA_DATA_1 = "wikipedia_index_data1.json";
+  private static final String WIKIPEDIA_DATA_2 = "wikipedia_index_data2.json";
+  private static final String WIKIPEDIA_DATA_3 = "wikipedia_index_data3.json";
 
   @DataProvider
   public static Object[][] resources()
   {
     return new Object[][]{
-        {new Pair<>(INPUT_SOURCE_PATHS_KEY,
-                    "hdfs://druid-it-hadoop:9000/batch_index"
-        )},
-        {new Pair<>(INPUT_SOURCE_PATHS_KEY,
+        {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "hdfs://druid-it-hadoop:9000/batch_index"
+                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
+                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
+                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
                     )
         )},
-        {new Pair<>(INPUT_SOURCE_PATHS_KEY,
+        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data1.json",
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data2.json",
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data3.json"
+                        "s3://%%BUCKET%%/%%PATH%%"
+                    )
+        )},
+        {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
+                    ImmutableList.of(
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_1),
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_2),
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_3)
                     )
         )}
     };
   }
 
-  void doTest(Pair<String, List> hdfsInputSource) throws Exception
+  void doTest(Pair<String, List> s3InputSource) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
-      final Function<String, String> hdfsPropsTransform = spec -> {
+      final Function<String, String> s3PropsTransform = spec -> {
         try {
+          String inputSourceValue = jsonMapper.writeValueAsString(s3InputSource.rhs);
+          inputSourceValue = StringUtils.replace(
+              inputSourceValue,
+              "%%BUCKET%%",
+              config.getCloudBucket()
+          );
+          inputSourceValue = StringUtils.replace(
+              inputSourceValue,
+              "%%PATH%%",
+              config.getCloudPath()
+          );
+
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null))
+          );
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
-              "hdfs"
+              "s3"
           );
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_KEY%%",
-              hdfsInputSource.lhs
+              s3InputSource.lhs
           );
           return StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_VALUE%%",
-              jsonMapper.writeValueAsString(hdfsInputSource.rhs)
+              inputSourceValue
           );
         }
         catch (Exception e) {
@@ -89,7 +117,7 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          hdfsPropsTransform,
+          s3PropsTransform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,

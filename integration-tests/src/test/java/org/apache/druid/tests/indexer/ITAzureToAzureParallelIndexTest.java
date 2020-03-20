@@ -19,21 +19,13 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.io.Closeable;
 import java.util.List;
-import java.util.UUID;
-import java.util.function.Function;
 
 /**
  * IMPORTANT:
@@ -47,99 +39,11 @@ import java.util.function.Function;
  */
 @Test(groups = TestNGGroup.AZURE_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITAzureToAzureParallelIndexTest extends AbstractITBatchIndexTest
+public class ITAzureToAzureParallelIndexTest extends AbstractAzureInputSourceSimpleIndexTest
 {
-  private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
-  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static final String INDEX_DATASOURCE = "wikipedia_index_test_" + UUID.randomUUID();
-  private static final String INPUT_SOURCE_URIS_KEY = "uris";
-  private static final String INPUT_SOURCE_PREFIXES_KEY = "prefixes";
-  private static final String INPUT_SOURCE_OBJECTS_KEY = "objects";
-  private static final String WIKIPEDIA_DATA_1 = "wikipedia_index_data1.json";
-  private static final String WIKIPEDIA_DATA_2 = "wikipedia_index_data2.json";
-  private static final String WIKIPEDIA_DATA_3 = "wikipedia_index_data3.json";
-
-  @DataProvider
-  public static Object[][] resources()
-  {
-    return new Object[][]{
-        {new Pair<>(INPUT_SOURCE_URIS_KEY,
-                    ImmutableList.of(
-                        "azure://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
-                        "azure://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
-                        "azure://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
-                    )
-        )},
-        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
-                    ImmutableList.of(
-                        "azure://%%BUCKET%%/%%PATH%%"
-                    )
-        )},
-        {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
-                    ImmutableList.of(
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_1),
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_2),
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_3)
-                    )
-        )}
-    };
-  }
-
   @Test(dataProvider = "resources")
   public void testAzureIndexData(Pair<String, List> azureInputSource) throws Exception
   {
-    try (
-        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-    ) {
-      final Function<String, String> azurePropsTransform = spec -> {
-        try {
-          String inputSourceValue = jsonMapper.writeValueAsString(azureInputSource.rhs);
-          inputSourceValue = StringUtils.replace(
-              inputSourceValue,
-              "%%BUCKET%%",
-              config.getCloudBucket()
-          );
-          inputSourceValue = StringUtils.replace(
-              inputSourceValue,
-              "%%PATH%%",
-              config.getCloudPath()
-          );
-
-          spec = StringUtils.replace(
-              spec,
-              "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null))
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%INPUT_SOURCE_TYPE%%",
-              "azure"
-          );
-          spec = StringUtils.replace(
-              spec,
-              "%%INPUT_SOURCE_PROPERTY_KEY%%",
-              azureInputSource.lhs
-          );
-          return StringUtils.replace(
-              spec,
-              "%%INPUT_SOURCE_PROPERTY_VALUE%%",
-              inputSourceValue
-          );
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      };
-
-      doIndexTest(
-          INDEX_DATASOURCE,
-          INDEX_TASK,
-          azurePropsTransform,
-          INDEX_QUERIES_RESOURCE,
-          false,
-          true,
-          true
-      );
-    }
+    doTest(azureInputSource);
   }
 }
