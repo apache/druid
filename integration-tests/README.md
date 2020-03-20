@@ -140,15 +140,22 @@ Running a Test That Uses Hadoop
 The integration test that indexes from hadoop is not run as part
 of the integration test run discussed above.  This is because druid
 test clusters might not, in general, have access to hadoop.
-That's the case (for now, at least) when using the docker cluster set 
-up by the integration-tests profile, so the hadoop test
-has to be run using a cluster specified in a configuration file.
+This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage. 
+To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
+1) Run your own Druid + Haddop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
+2) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. 
 
-The data file is 
-integration-tests/src/test/resources/hadoop/batch_hadoop.data.
+Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with 
+Druid Docker test clusters by passing -Dstart.hadoop.docker=true to start Hadoop container.
+You will also have to provide -Doverride.config.path=<PATH_TO_FILE> with your Druid's Hadoop configs set. 
+See integration-tests/docker/environment-configs/override-examples/hdfs directory for example.
+Note that if the integration test you are running also uses other cloud extension (S3, Azure, GCS), additional
+credentials/configs may need to be set in the same file as your Druid's Hadoop configs set. 
+
+Currently, ITHadoopIndexTest can only be run with your own Druid + Haddop cluster by following the below steps:
 Create a directory called batchHadoop1 in the hadoop file system
-(anywhere you want) and put batch_hadoop.data into that directory
-(as its only file).
+(anywhere you want) and put batch_hadoop.data (integration-tests/src/test/resources/hadoop/batch_hadoop.data) 
+into that directory (as its only file).
 
 Add this keyword to the configuration file (see above):
 
