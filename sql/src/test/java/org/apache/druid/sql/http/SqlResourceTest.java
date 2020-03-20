@@ -756,7 +756,7 @@ public class SqlResourceTest extends CalciteTestBase
         QueryException interruped = result.lhs;
         Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, interruped.getErrorCode());
         Assert.assertEquals(
-            StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, HiLoQueryLaningStrategy.LOW),
+            QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 2),
             interruped.getMessage()
         );
         limited++;
