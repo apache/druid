@@ -131,6 +131,11 @@ public interface Query<T>
   @Nullable
   String getId();
 
+  Query<T> withSubQueryId(String subQueryId);
+
+  @Nullable
+  String getSubQueryId();
+
   default Query<T> withSqlQueryId(String sqlQueryId)
   {
     return this;

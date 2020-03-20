@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.hamcrest.CoreMatchers;
@@ -43,12 +44,11 @@ public class InlineJoinableFactoryTest
   private final InlineJoinableFactory factory = new InlineJoinableFactory();
 
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
-      ImmutableList.of("str", "long"),
-      ImmutableList.of(ValueType.STRING, ValueType.LONG),
       ImmutableList.of(
           new Object[]{"foo", 1L},
           new Object[]{"bar", 2L}
-      )
+      ),
+      RowSignature.builder().add("str", ValueType.STRING).add("long", ValueType.LONG).build()
   );
 
   @Test

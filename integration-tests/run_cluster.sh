@@ -68,6 +68,9 @@
   # For druid-google-extensions
   mkdir -p $SHARED_DIR/docker/extensions/druid-google-extensions
   mv $SHARED_DIR/docker/lib/druid-google-extensions-* $SHARED_DIR/docker/extensions/druid-google-extensions
+  $ For druid-hdfs-storage
+  mkdir -p $SHARED_DIR/docker/extensions/druid-hdfs-storage
+  mv $SHARED_DIR/docker/lib/druid-hdfs-storage-* $SHARED_DIR/docker/extensions/druid-hdfs-storage
 
   # Pull Hadoop dependency if needed
   if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
@@ -157,6 +160,42 @@ fi
 
 # Start docker containers for all Druid processes and dependencies
 {
+  # Start Hadoop docker if needed
+  if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
+  then
+    # Start Hadoop docker container
+    docker run -d --privileged --net druid-it-net --ip 172.172.172.13 -h druid-it-hadoop --name druid-it-hadoop -p 2049:2049 -p 2122:2122 -p 8020:8020 -p 8021:8021 -p 8030:8030 -p 8031:8031 -p 8032:8032 -p 8033:8033 -p 8040:8040 -p 8042:8042 -p 8088:8088 -p 8443:8443 -p 9000:9000 -p 10020:10020 -p 19888:19888 -p 34455:34455 -p 49707:49707 -p 50010:50010 -p 50020:50020 -p 50030:50030 -p 50060:50060 -p 50070:50070 -p 50075:50075 -p 50090:50090 -p 51111:51111 -v $RESOURCEDIR:/resources -v $SHARED_DIR:/shared druid-it/hadoop:2.8.5 sh -c "/etc/bootstrap.sh && tail -f /dev/null"
+
+    # wait for hadoop namenode to be up
+    echo "Waiting for hadoop namenode to be up"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
+    while [ $? -ne 0 ]
+    do
+       sleep 2
+       docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
+    done
+    echo "Finished waiting for Hadoop namenode"
+
+    # Setup hadoop druid dirs
+    echo "Setting up druid hadoop dirs"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid/segments"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /quickstart"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /druid"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /druid/segments"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /quickstart"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /tmp"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /user"
+    # Copy data files to Hadoop container
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /shared/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /resources/data/batch_index /batch_index"
+    echo "Finished setting up druid hadoop dirs"
+
+    echo "Copying Hadoop XML files to shared"
+    docker exec -t druid-it-hadoop sh -c "cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml"
+    echo "Copied Hadoop XML files to shared"
+  fi
+
   # Start zookeeper and kafka
   docker run -d --privileged --net druid-it-net --ip 172.172.172.2 ${COMMON_ENV} --name druid-zookeeper-kafka -p 2181:2181 -p 9092:9092 -p 9093:9093 -v $SHARED_DIR:/shared -v $SERVICE_SUPERVISORDS_DIR/zookeeper.conf:$SUPERVISORDIR/zookeeper.conf -v $SERVICE_SUPERVISORDS_DIR/kafka.conf:$SUPERVISORDIR/kafka.conf druid/cluster
 
@@ -189,39 +228,4 @@ fi
 
   # Start Router with custom TLS cert checkers
   docker run -d --privileged --net druid-it-net --ip 172.172.172.12 ${COMMON_ENV} ${ROUTER_CUSTOM_CHECK_TLS_ENV} ${OVERRIDE_ENV} --hostname druid-router-custom-check-tls --name druid-router-custom-check-tls -p 8891:8891 -p 9091:9091 -v $SHARED_DIR:/shared -v $SERVICE_SUPERVISORDS_DIR/druid.conf:$SUPERVISORDIR/druid.conf --link druid-zookeeper-kafka:druid-zookeeper-kafka --link druid-coordinator:druid-coordinator --link druid-broker:druid-broker druid/cluster
-
-  # Start Hadoop docker if needed
-  if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
-  then
-    # Start Hadoop docker container
-    docker run -d --privileged --net druid-it-net --ip 172.172.172.13 -h druid-it-hadoop --name druid-it-hadoop -p 2049:2049 -p 2122:2122 -p 8020:8020 -p 8021:8021 -p 8030:8030 -p 8031:8031 -p 8032:8032 -p 8033:8033 -p 8040:8040 -p 8042:8042 -p 8088:8088 -p 8443:8443 -p 9000:9000 -p 10020:10020 -p 19888:19888 -p 34455:34455 -p 49707:49707 -p 50010:50010 -p 50020:50020 -p 50030:50030 -p 50060:50060 -p 50070:50070 -p 50075:50075 -p 50090:50090 -p 51111:51111 -v $SHARED_DIR:/shared druid-it/hadoop:2.8.5 sh -c "/etc/bootstrap.sh && tail -f /dev/null"
-
-    # wait for hadoop namenode to be up
-    echo "Waiting for hadoop namenode to be up"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
-    while [ $? -ne 0 ]
-    do
-       sleep 2
-       docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
-    done
-    echo "Finished waiting for Hadoop namenode"
-
-    # Setup hadoop druid dirs
-    echo "Setting up druid hadoop dirs"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid/segments"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /quickstart"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /druid"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /druid/segments"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /quickstart"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /tmp"
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /user"
-    # Copy data files to Hadoop container
-    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /shared/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz"
-    echo "Finished setting up druid hadoop dirs"
-
-    echo "Copying Hadoop XML files to shared"
-    docker exec -t druid-it-hadoop sh -c "cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml"
-    echo "Copied Hadoop XML files to shared"
-  fi
 }

@@ -28,6 +28,7 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
+import org.apache.druid.server.QueryScheduler;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -54,6 +55,17 @@ public class ManualQueryLaningStrategy implements QueryLaningStrategy
     Preconditions.checkArgument(
         lanes.values().stream().allMatch(x -> this.isLimitPercent ? 0 < x && x <= 100 : x > 0),
         this.isLimitPercent ? "All lane limits must be in the range 1 to 100" : "All lane limits must be greater than 0"
+    );
+    Preconditions.checkArgument(
+        lanes.keySet().stream().noneMatch(QueryScheduler.TOTAL::equals),
+        "Lane cannot be named 'total'"
+    );
+
+    // 'default' has special meaning for resilience4j bulkhead used by query scheduler, this restriction
+    // can potentially be relaxed if we ever change enforcement mechanism
+    Preconditions.checkArgument(
+        lanes.keySet().stream().noneMatch("default"::equals),
+        "Lane cannot be named 'default'"
     );
   }
 

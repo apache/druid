@@ -70,6 +70,7 @@ import { NUMERIC_TIME_FORMATS, possibleDruidFormatForValues } from '../../utils/
 import { updateSchemaWithSample } from '../../utils/druid-type';
 import {
   adjustIngestionSpec,
+  adjustTuningConfig,
   DimensionMode,
   DimensionSpec,
   DimensionsSpec,
@@ -1075,11 +1076,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <LearnMore href={getIngestionDocLink(spec)} />
           </Callout>
           {ingestionComboType ? (
-            <AutoForm
-              fields={getIoConfigFormFields(ingestionComboType)}
-              model={ioConfig}
-              onChange={c => this.updateSpecPreview(deepSet(spec, 'spec.ioConfig', c))}
-            />
+            <>
+              <AutoForm
+                fields={getIoConfigFormFields(ingestionComboType)}
+                model={ioConfig}
+                onChange={c => this.updateSpecPreview(deepSet(spec, 'spec.ioConfig', c))}
+              />
+              {deepGet(spec, 'spec.ioConfig.inputSource.properties.secretAccessKey.password') && (
+                <FormGroup>
+                  <Callout intent={Intent.WARNING}>
+                    This key will be visible to anyone accessing this console and may appear in
+                    server logs. For production scenarios, use of a more secure secret key type is
+                    strongly recommended.
+                  </Callout>
+                </FormGroup>
+              )}
+            </>
           ) : (
             <FormGroup label="IO Config">
               <JsonInput
@@ -2747,6 +2759,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <AutoForm
             fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index_parallel')}
             model={tuningConfig}
+            globalAdjustment={adjustTuningConfig}
             onChange={t => this.updateSpec(deepSet(spec, 'spec.tuningConfig', t))}
           />
         </div>

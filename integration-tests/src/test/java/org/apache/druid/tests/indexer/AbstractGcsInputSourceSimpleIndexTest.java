@@ -24,30 +24,14 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
 
 import java.io.Closeable;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-/**
- * IMPORTANT:
- * To run this test, you must:
- * 1) Set the bucket and path for your data. This can be done by setting -Ddruid.test.config.cloudBucket and
- *    -Ddruid.test.config.cloudPath or setting "cloud_bucket" and "cloud_path" in the config file.
- * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
- *    located in integration-tests/src/test/resources/data/batch_index to your S3 at the location set in step 1.
- * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials/configs set. See
- *    integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
- */
-@Test(groups = TestNGGroup.S3_DEEP_STORAGE)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
+public abstract class AbstractGcsInputSourceSimpleIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -65,14 +49,14 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
-                        )
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
+                    )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%"
+                        "gs://%%BUCKET%%/%%PATH%%"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
@@ -85,15 +69,14 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
     };
   }
 
-  @Test(dataProvider = "resources")
-  public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
+  void doTest(Pair<String, List> gcsInputSource) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
-      final Function<String, String> s3PropsTransform = spec -> {
+      final Function<String, String> gcsPropsTransform = spec -> {
         try {
-          String inputSourceValue = jsonMapper.writeValueAsString(s3InputSource.rhs);
+          String inputSourceValue = jsonMapper.writeValueAsString(gcsInputSource.rhs);
           inputSourceValue = StringUtils.replace(
               inputSourceValue,
               "%%BUCKET%%",
@@ -113,12 +96,12 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
-              "s3"
+              "google"
           );
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_KEY%%",
-              s3InputSource.lhs
+              gcsInputSource.lhs
           );
           return StringUtils.replace(
               spec,
@@ -134,7 +117,7 @@ public class ITS3ParallelIndexTest extends AbstractITBatchIndexTest
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          s3PropsTransform,
+          gcsPropsTransform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,

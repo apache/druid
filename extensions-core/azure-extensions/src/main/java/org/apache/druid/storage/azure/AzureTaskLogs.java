@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.util.Date;
 
 /**
  * Deals with reading and writing task logs stored in Azure.
@@ -42,13 +44,27 @@ public class AzureTaskLogs implements TaskLogs
   private static final Logger log = new Logger(AzureTaskLogs.class);
 
   private final AzureTaskLogsConfig config;
+  private final AzureInputDataConfig inputDataConfig;
+  private final AzureAccountConfig accountConfig;
   private final AzureStorage azureStorage;
+  private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
+  private final CurrentTimeMillisSupplier timeSupplier;
 
   @Inject
-  public AzureTaskLogs(AzureTaskLogsConfig config, AzureStorage azureStorage)
+  public AzureTaskLogs(
+      AzureTaskLogsConfig config,
+      AzureInputDataConfig inputDataConfig,
+      AzureAccountConfig accountConfig,
+      AzureStorage azureStorage,
+      AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
+      CurrentTimeMillisSupplier timeSupplier)
   {
     this.config = config;
+    this.inputDataConfig = inputDataConfig;
     this.azureStorage = azureStorage;
+    this.accountConfig = accountConfig;
+    this.azureCloudBlobIterableFactory = azureCloudBlobIterableFactory;
+    this.timeSupplier = timeSupplier;
   }
 
   @Override
@@ -151,14 +167,41 @@ public class AzureTaskLogs implements TaskLogs
   }
 
   @Override
-  public void killAll()
+  public void killAll() throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    log.info(
+        "Deleting all task logs from Azure storage location [bucket: %s    prefix: %s].",
+        config.getContainer(),
+        config.getPrefix()
+    );
+
+    long now = timeSupplier.getAsLong();
+    killOlderThan(now);
   }
 
   @Override
-  public void killOlderThan(long timestamp)
+  public void killOlderThan(long timestamp) throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    log.info(
+        "Deleting all task logs from Azure storage location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getContainer(),
+        config.getPrefix(),
+        new Date(timestamp)
+    );
+    try {
+      AzureUtils.deleteObjectsInPath(
+          azureStorage,
+          inputDataConfig,
+          accountConfig,
+          azureCloudBlobIterableFactory,
+          config.getContainer(),
+          config.getPrefix(),
+          (object) -> object.getLastModifed().getTime() < timestamp
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting task log files from Azure. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
   }
 }

@@ -71,17 +71,24 @@ public class InlineDataSourceTest
       ValueType.COMPLEX
   );
 
-  private final InlineDataSource listDataSource = InlineDataSource.fromIterable(
-      expectedColumnNames,
-      expectedColumnTypes,
-      rows
-  );
+  private final RowSignature expectedRowSignature;
 
-  private final InlineDataSource iterableDataSource = InlineDataSource.fromIterable(
-      expectedColumnNames,
-      expectedColumnTypes,
-      rowsIterable
-  );
+  private final InlineDataSource listDataSource;
+
+  private final InlineDataSource iterableDataSource;
+
+  public InlineDataSourceTest()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (int i = 0; i < expectedColumnNames.size(); i++) {
+      builder.add(expectedColumnNames.get(i), expectedColumnTypes.get(i));
+    }
+
+    expectedRowSignature = builder.build();
+    listDataSource = InlineDataSource.fromIterable(rows, expectedRowSignature);
+    iterableDataSource = InlineDataSource.fromIterable(rowsIterable, expectedRowSignature);
+  }
 
   @Test
   public void test_getTableNames()
@@ -222,7 +229,7 @@ public class InlineDataSourceTest
   {
     EqualsVerifier.forClass(InlineDataSource.class)
                   .usingGetClass()
-                  .withNonnullFields("columnNames", "columnTypes", "rows")
+                  .withNonnullFields("rows", "signature")
                   .verify();
   }
 
@@ -245,6 +252,7 @@ public class InlineDataSourceTest
 
     Assert.assertEquals(listDataSource.getColumnNames(), deserialized.getColumnNames());
     Assert.assertEquals(listDataSource.getColumnTypes(), deserialized.getColumnTypes());
+    Assert.assertEquals(listDataSource.getRowSignature(), deserialized.getRowSignature());
     assertRowsEqual(listDataSource.getRows(), deserialized.getRows());
   }
 
@@ -260,10 +268,36 @@ public class InlineDataSourceTest
     // Lazy iterables turn into Lists upon serialization.
     Assert.assertEquals(listDataSource.getColumnNames(), deserialized.getColumnNames());
     Assert.assertEquals(listDataSource.getColumnTypes(), deserialized.getColumnTypes());
+    Assert.assertEquals(listDataSource.getRowSignature(), deserialized.getRowSignature());
     assertRowsEqual(listDataSource.getRows(), deserialized.getRows());
 
     // Should have iterated once.
     Assert.assertEquals(1, iterationCounter.get());
+  }
+
+  @Test
+  public void test_serde_untyped() throws Exception
+  {
+    // Create a row signature with no types set.
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (String columnName : expectedRowSignature.getColumnNames()) {
+      builder.add(columnName, null);
+    }
+
+    final RowSignature untypedSignature = builder.build();
+    final InlineDataSource untypedDataSource = InlineDataSource.fromIterable(rows, untypedSignature);
+
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final InlineDataSource deserialized = (InlineDataSource) jsonMapper.readValue(
+        jsonMapper.writeValueAsString(untypedDataSource),
+        DataSource.class
+    );
+
+    Assert.assertEquals(untypedDataSource.getColumnNames(), deserialized.getColumnNames());
+    Assert.assertEquals(untypedDataSource.getColumnTypes(), deserialized.getColumnTypes());
+    Assert.assertEquals(untypedDataSource.getRowSignature(), deserialized.getRowSignature());
+    Assert.assertNull(deserialized.getColumnTypes());
+    assertRowsEqual(listDataSource.getRows(), deserialized.getRows());
   }
 
   /**
