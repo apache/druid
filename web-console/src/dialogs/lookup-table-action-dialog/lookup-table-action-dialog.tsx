@@ -28,7 +28,7 @@ interface LookupTableActionDialogProps {
   onClose: () => void;
 }
 
-export const LookupTableActionDialog = React.memo(function DatasourceTableActionDialog(
+export const LookupTableActionDialog = React.memo(function LookupTableActionDialog(
   props: LookupTableActionDialogProps,
 ) {
   const { onClose, lookupId, actions } = props;
@@ -53,7 +53,7 @@ export const LookupTableActionDialog = React.memo(function DatasourceTableAction
       {activeTab === 'values' && (
         <LookupValuesTable
           lookupId={lookupId ? lookupId : ''}
-          downloadFilename={`datasource-dimensions-${lookupId}.json`}
+          downloadFilename={`lookup-dimensions-${lookupId}.json`}
         />
       )}
     </TableActionDialog>

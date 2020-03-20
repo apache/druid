@@ -21,16 +21,16 @@ import React from 'react';
 
 import { LookupTableActionDialog } from './lookup-table-action-dialog';
 
-describe('Datasource table action dialog', () => {
+describe('Lookup table action dialog', () => {
   it('matches snapshot', () => {
-    const datasourceTableActionDialog = (
+    const lookupTableActionDialog = (
       <LookupTableActionDialog
         lookupId="test"
         actions={[{ title: 'test', onAction: () => null }]}
         onClose={() => {}}
       />
     );
-    render(datasourceTableActionDialog);
+    render(lookupTableActionDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
 });
