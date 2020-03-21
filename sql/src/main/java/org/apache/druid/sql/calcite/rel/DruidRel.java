@@ -68,10 +68,10 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   }
 
   /**
-   * Convert this DruidRel to a DruidQuery. This may be an expensive operation. For example, DruidSemiJoin needs to
-   * execute the right-hand side query in order to complete this method.
+   * Convert this DruidRel to a DruidQuery. This must be an inexpensive operation, since it is done often throughout
+   * query planning.
    *
-   * This method may not return null.
+   * This method must not return null.
    *
    * @param finalizeAggregations true if this query should include explicit finalization for all of its
    *                             aggregators, where required. Useful for subqueries where Druid's native query layer
@@ -82,13 +82,9 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   public abstract DruidQuery toDruidQuery(boolean finalizeAggregations);
 
   /**
-   * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation. For
-   * example, DruidSemiJoin will use a dummy dataSource in order to complete this method, rather than executing
-   * the right-hand side query.
+   * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation.
    *
-   * This method may not return null.
-   *
-   * @return query
+   * This method must not return null.
    *
    * @throws CannotBuildQueryException
    */

@@ -41,8 +41,6 @@ import java.util.Set;
  */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
-  static final double COST_BASE = 1.0;
-
   private final RelOptTable table;
   private final DruidTable druidTable;
   private final PartialDruidQuery partialQuery;
