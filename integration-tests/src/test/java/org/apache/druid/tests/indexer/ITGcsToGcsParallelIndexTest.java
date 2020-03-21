@@ -40,7 +40,7 @@ import java.util.List;
  */
 @Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITGcsToGcsParallelIndexTest extends AbstractGcsInputSourceSimpleIndexTest
+public class ITGcsToGcsParallelIndexTest extends AbstractGcsInputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
   public void testGcsIndexData(Pair<String, List> gcsInputSource) throws Exception
