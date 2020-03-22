@@ -115,7 +115,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     throw new UnsupportedOperationException();
   }
 
-  @Nullable
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
@@ -195,7 +194,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    return planner.getCostFactory().makeCost(rels.stream().mapToDouble(mq::getRowCount).sum(), 0, 0);
+    return planner.getCostFactory().makeCost(CostEstimates.COST_BASE, 0, 0);
   }
 
   public int getLimit()

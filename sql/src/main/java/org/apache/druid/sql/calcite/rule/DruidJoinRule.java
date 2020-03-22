@@ -31,10 +31,8 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableBitSet;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.rel.DruidRels;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,21 +62,12 @@ public class DruidJoinRule extends RelOptRule
   public boolean matches(RelOptRuleCall call)
   {
     final Join join = call.rel(0);
-    final DruidRel<?> left = call.rel(1);
     final DruidRel<?> right = call.rel(2);
 
     // 1) Condition must be handleable.
-    // 2) Left must be a scan or a join.
-    // 3) If left is not a join, it must be concrete.
-    // 4) Right must be a scan (and *cannot* be a join; we want to generate left-heavy trees).
-    // 5) Right must be global.
-    return
-        canHandleCondition(join.getCondition(), join.getLeft().getRowType())
-        && DruidRels.isScanOrMapping(left, true)
-        && DruidRels.isScanOrMapping(right, false)
-        && (left instanceof DruidJoinQueryRel
-            || DruidRels.dataSourceIfLeafRel(left).filter(DataSource::isConcrete).isPresent())
-        && DruidRels.dataSourceIfLeafRel(right).filter(DataSource::isGlobal).isPresent();
+    // 2) Right cannot be a join; we want to generate left-heavy trees.
+    return canHandleCondition(join.getCondition(), join.getLeft().getRowType())
+           && !(right instanceof DruidJoinQueryRel);
   }
 
   @Override
@@ -86,11 +75,10 @@ public class DruidJoinRule extends RelOptRule
   {
     final Join join = call.rel(0);
     final DruidRel<?> left = call.rel(1);
+    final DruidRel<?> right = call.rel(2);
 
     // Preconditions were already verified in "matches".
-    call.transformTo(
-        DruidJoinQueryRel.create(join, left.getQueryMaker())
-    );
+    call.transformTo(DruidJoinQueryRel.create(join, left, right));
   }
 
   /**

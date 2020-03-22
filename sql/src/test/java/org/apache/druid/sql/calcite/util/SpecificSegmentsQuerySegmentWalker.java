@@ -32,11 +32,14 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.InlineSegmentWrangler;
+import org.apache.druid.segment.LookupSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.LookupJoinableFactory;
@@ -107,7 +110,12 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         ),
         QueryStackTests.createLocalQuerySegmentWalker(
             conglomerate,
-            new MapSegmentWrangler(ImmutableMap.of()),
+            new MapSegmentWrangler(
+                ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
+                    .put(InlineDataSource.class, new InlineSegmentWrangler())
+                    .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
+                    .build()
+            ),
             joinableFactoryToUse
         ),
         conglomerate,
