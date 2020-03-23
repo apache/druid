@@ -47,10 +47,16 @@ import java.security.spec.KeySpec;
 public class CryptoService
 {
   private final char[] passPhrase;
-  
+
+  // Cipher algorithm related information
   private final String cipherAlgName;
-  private final String pbeAlg;
+  private final String cipherAlgMode;
+  private final String cipherAlgPadding;
+
+  // transformation =  "cipherAlgName/cipherAlgMode/cipherAlgPadding" used in Cipher.getInstance(transformation)
   private final String transformation;
+
+  private final String pbeAlg;
   private final int saltSize;
   private final int iterationCount;
   private final int keyLength;
@@ -58,8 +64,9 @@ public class CryptoService
   public CryptoService(
       String passPhrase,
       @Nullable String cipherAlgName,
+      @Nullable String cipherAlgMode,
+      @Nullable String cipherAlgPadding,
       @Nullable String pbeAlg,
-      @Nullable String transformation,
       @Nullable Integer saltSize,
       @Nullable Integer iterationCount,
       @Nullable Integer keyLength
@@ -72,8 +79,11 @@ public class CryptoService
     this.passPhrase = passPhrase.toCharArray();
 
     this.cipherAlgName = cipherAlgName == null ? "AES" : cipherAlgName;
+    this.cipherAlgMode = cipherAlgMode == null ? "CBC" : cipherAlgMode;
+    this.cipherAlgPadding = cipherAlgPadding == null ? "PKCS5Padding" : cipherAlgPadding;
+    this.transformation = StringUtils.format("%s/%s/%s", this.cipherAlgName, this.cipherAlgMode, this.cipherAlgPadding);
+
     this.pbeAlg = pbeAlg == null ? "PBKDF2WithHmacSHA256" : pbeAlg;
-    this.transformation = transformation == null ? "AES/CBC/PKCS5Padding" : transformation;
     this.saltSize = saltSize == null ? 8 : saltSize;
     this.iterationCount = iterationCount == null ? 65536 : iterationCount;
     this.keyLength = keyLength == null ? 128 : keyLength;
