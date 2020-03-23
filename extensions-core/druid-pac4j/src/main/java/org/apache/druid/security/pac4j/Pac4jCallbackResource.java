@@ -27,6 +27,10 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 
+/**
+ * Fixed Callback endpoint used after successful login with Identity Provider e.g. OAuth server.
+ * See https://www.pac4j.org/blog/understanding-the-callback-endpoint.html
+ */
 @Path(Pac4jCallbackResource.SELF_URL)
 @LazySingleton
 public class Pac4jCallbackResource
