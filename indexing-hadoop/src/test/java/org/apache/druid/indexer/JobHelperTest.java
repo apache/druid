@@ -19,18 +19,25 @@
 
 package org.apache.druid.indexer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.druid.java.util.common.CompressionUtilsTest;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
@@ -53,7 +60,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -61,10 +67,47 @@ import java.util.Map;
  */
 public class JobHelperTest
 {
-  String VALID_DRUID_PROP = "druid.javascript.enableTest";
-  String VALID_HADOOP_PREFIX = "hadoop.";
-  String VALID_HADOOP_PROP = "test.enableTest";
-  String INVALID_PROP = "invalid.test.enableTest";
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+  private static final DataSchema DATA_SCHEMA = new DataSchema(
+      "test_ds",
+      JSON_MAPPER.convertValue(
+          new HadoopyStringInputRowParser(
+              new JSONParseSpec(
+                  new TimestampSpec("t", "auto", null),
+                  new DimensionsSpec(
+                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2")),
+                      null,
+                      null
+                  ),
+                  new JSONPathSpec(true, ImmutableList.of()),
+                  ImmutableMap.of()
+              )
+          ),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      ),
+      new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+      null,
+      JSON_MAPPER
+  );
+
+  private static final HadoopIOConfig IO_CONFIG = new HadoopIOConfig(
+      JSON_MAPPER.convertValue(
+          new StaticPathSpec("dummyPath", null),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      ),
+      null,
+      "dummyOutputPath"
+  );
+
+  private static final HadoopTuningConfig TUNING_CONFIG = HadoopTuningConfig
+      .makeDefaultTuningConfig()
+      .withWorkingPath("dummyWorkingPath");
+  private static final HadoopIngestionSpec DUMMY_SPEC = new HadoopIngestionSpec(DATA_SCHEMA, IO_CONFIG, TUNING_CONFIG);
+  private static final String VALID_DRUID_PROP = "druid.javascript.enableTest";
+  private static final String VALID_HADOOP_PREFIX = "hadoop.";
+  private static final String VALID_HADOOP_PROP = "test.enableTest";
+  private static final String INVALID_PROP = "invalid.test.enableTest";
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -181,11 +224,9 @@ public class JobHelperTest
   @Test
   public void testInjectSystemProperties()
   {
-    ArrayList<String> allowedHadoopPrefix = new ArrayList<>();
-    allowedHadoopPrefix.add("druid.storage");
-    allowedHadoopPrefix.add("druid.javascript");
+    HadoopDruidIndexerConfig hadoopDruidIndexerConfig = new HadoopDruidIndexerConfig(DUMMY_SPEC);
     Configuration config = new Configuration();
-    JobHelper.injectSystemProperties(config, allowedHadoopPrefix);
+    JobHelper.injectSystemProperties(config, hadoopDruidIndexerConfig);
 
     // This should be injected
     Assert.assertNotNull(config.get(VALID_DRUID_PROP));

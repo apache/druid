@@ -138,20 +138,6 @@ public class HadoopDruidIndexerConfig
     ROWS_THROWN_AWAY_COUNTER
   }
 
-  public static Map<String, String> getAllowedProperties(List<String> listOfAllowedPrefix)
-  {
-    Map<String, String> allowedPropertiesMap = new HashMap<>();
-    for (String propName : PROPERTIES.stringPropertyNames()) {
-      for (String prefix : listOfAllowedPrefix) {
-        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
-          allowedPropertiesMap.put(propName, PROPERTIES.getProperty(propName));
-          break;
-        }
-      }
-    }
-    return allowedPropertiesMap;
-  }
-
   public static HadoopDruidIndexerConfig fromSpec(HadoopIngestionSpec spec)
   {
     return new HadoopDruidIndexerConfig(spec);
@@ -393,6 +379,20 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
+  public Map<String, String> getAllowedProperties()
+  {
+    Map<String, String> allowedPropertiesMap = new HashMap<>();
+    for (String propName : PROPERTIES.stringPropertyNames()) {
+      for (String prefix : allowedHadoopPrefix) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
+          allowedPropertiesMap.put(propName, PROPERTIES.getProperty(propName));
+          break;
+        }
+      }
+    }
+    return allowedPropertiesMap;
+  }
+
   boolean isUseYarnRMJobStatusFallback()
   {
     return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
@@ -609,10 +609,5 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
-  }
-
-  List<String> getAllowedHadoopPrefix()
-  {
-    return allowedHadoopPrefix;
   }
 }

@@ -305,12 +305,12 @@ public class JobHelper
     return SNAPSHOT_JAR.matcher(jarFile.getName()).matches();
   }
 
-  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
+  public static void injectDruidProperties(Configuration configuration, HadoopDruidIndexerConfig hadoopDruidIndexerConfig)
   {
     String mapJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
     String reduceJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
 
-    for (Map.Entry<String, String> allowedProperties : HadoopDruidIndexerConfig.getAllowedProperties(listOfAllowedPrefix).entrySet()) {
+    for (Map.Entry<String, String> allowedProperties : hadoopDruidIndexerConfig.getAllowedProperties().entrySet()) {
       mapJavaOpts = StringUtils.format(
           "%s -D%s=%s",
           mapJavaOpts,
@@ -333,7 +333,7 @@ public class JobHelper
     }
   }
 
-  public static Configuration injectSystemProperties(Configuration conf, List<String> listOfAllowedPrefix)
+  public static Configuration injectSystemProperties(Configuration conf, HadoopDruidIndexerConfig hadoopDruidIndexerConfig)
   {
     for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
       if (propName.startsWith("hadoop.")) {
@@ -341,7 +341,7 @@ public class JobHelper
       }
     }
 
-    for (Map.Entry<String, String> allowedProperties : HadoopDruidIndexerConfig.getAllowedProperties(listOfAllowedPrefix).entrySet()) {
+    for (Map.Entry<String, String> allowedProperties : hadoopDruidIndexerConfig.getAllowedProperties().entrySet()) {
       conf.set(allowedProperties.getKey(), allowedProperties.getValue());
     }
 
@@ -359,7 +359,7 @@ public class JobHelper
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
-      injectSystemProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());
+      injectSystemProperties(job.getConfiguration(), config);
       config.addJobProperties(job);
 
       config.addInputPaths(job);
@@ -396,7 +396,7 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          Configuration conf = injectSystemProperties(new Configuration(), config.getAllowedHadoopPrefix());
+          Configuration conf = injectSystemProperties(new Configuration(), config);
           config.addJobProperties(conf);
           workingPath.getFileSystem(conf).delete(workingPath, true);
         }
@@ -424,7 +424,7 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          Configuration conf = injectSystemProperties(new Configuration(), config.getAllowedHadoopPrefix());
+          Configuration conf = injectSystemProperties(new Configuration(), config);
           config.addJobProperties(conf);
           workingPath.getFileSystem(conf).delete(workingPath, true);
         }
