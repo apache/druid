@@ -42,13 +42,24 @@ import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
 
 /**
+ * Utility class for symmetric key encryption (i.e. same secret is used for encryption and decryption) of byte[]
+ * using javax.crypto package.
  *
+ * To learn about possible algorithms supported and their names,
+ * See https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html
  */
 public class CryptoService
 {
+  // User provided secret phrase used for encrypting data
   private final char[] passPhrase;
 
-  // Cipher algorithm related information
+  // Variables for algorithm used to generate a SecretKey based on user provided passPhrase
+  private final String secretKeyFactoryAlg;
+  private final int saltSize;
+  private final int iterationCount;
+  private final int keyLength;
+
+  // Cipher algorithm information
   private final String cipherAlgName;
   private final String cipherAlgMode;
   private final String cipherAlgPadding;
@@ -56,17 +67,12 @@ public class CryptoService
   // transformation =  "cipherAlgName/cipherAlgMode/cipherAlgPadding" used in Cipher.getInstance(transformation)
   private final String transformation;
 
-  private final String pbeAlg;
-  private final int saltSize;
-  private final int iterationCount;
-  private final int keyLength;
-
   public CryptoService(
       String passPhrase,
       @Nullable String cipherAlgName,
       @Nullable String cipherAlgMode,
       @Nullable String cipherAlgPadding,
-      @Nullable String pbeAlg,
+      @Nullable String secretKeyFactoryAlg,
       @Nullable Integer saltSize,
       @Nullable Integer iterationCount,
       @Nullable Integer keyLength
@@ -83,7 +89,7 @@ public class CryptoService
     this.cipherAlgPadding = cipherAlgPadding == null ? "PKCS5Padding" : cipherAlgPadding;
     this.transformation = StringUtils.format("%s/%s/%s", this.cipherAlgName, this.cipherAlgMode, this.cipherAlgPadding);
 
-    this.pbeAlg = pbeAlg == null ? "PBKDF2WithHmacSHA256" : pbeAlg;
+    this.secretKeyFactoryAlg = secretKeyFactoryAlg == null ? "PBKDF2WithHmacSHA256" : secretKeyFactoryAlg;
     this.saltSize = saltSize == null ? 8 : saltSize;
     this.iterationCount = iterationCount == null ? 65536 : iterationCount;
     this.keyLength = keyLength == null ? 128 : keyLength;
@@ -138,7 +144,7 @@ public class CryptoService
   private SecretKey getKeyFromPassword(char[] passPhrase, byte[] salt)
       throws NoSuchAlgorithmException, InvalidKeySpecException
   {
-    SecretKeyFactory factory = SecretKeyFactory.getInstance(pbeAlg);
+    SecretKeyFactory factory = SecretKeyFactory.getInstance(secretKeyFactoryAlg);
     KeySpec spec = new PBEKeySpec(passPhrase, salt, iterationCount, keyLength);
     return factory.generateSecret(spec);
   }

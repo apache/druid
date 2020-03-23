@@ -32,8 +32,9 @@ public class CryptoServiceTest
     CryptoService cryptoService = new CryptoService(
         "random-passphrase",
         "AES",
+        "CBC",
+        "PKCS5Padding",
         "PBKDF2WithHmacSHA256",
-        "AES/CBC/PKCS5Padding",
         8,
         65536,
         128
