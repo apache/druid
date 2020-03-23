@@ -138,7 +138,7 @@ source_paths:
 
 name: code adapted from Apache Knox KnoxSessionStore and ConfigurableEncryptor
 license_category: source
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 source_paths:
   - extensions-core/druid-pac4j/src/main/java/org/apache/druid/security/pac4j/Pac4jSessionStore.java
@@ -666,7 +666,7 @@ libraries:
 
 name: pac4j-oidc java security library
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 3.8.3
 libraries:
@@ -676,7 +676,7 @@ libraries:
 
 name: pac4j-core java security library
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 3.8.3
 libraries:
@@ -686,7 +686,7 @@ libraries:
 
 name: org.objenesis objenesis
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 3.0.1
 libraries:
@@ -696,7 +696,7 @@ libraries:
 
 name: com.nimbusds lang-tag
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.4.4
 libraries:
@@ -706,7 +706,7 @@ libraries:
 
 name: com.nimbusds nimbus-jose-jwt
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 7.9
 libraries:
@@ -716,7 +716,7 @@ libraries:
 
 name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 6.5
 libraries:
@@ -726,7 +726,7 @@ libraries:
 
 name: net.bytebuddy byte-buddy
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.9.10
 libraries:
@@ -736,7 +736,7 @@ libraries:
 
 name: net.bytebuddy byte-buddy-agent
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 1.9.10
 libraries:
@@ -746,7 +746,7 @@ libraries:
 
 name: org.mockito mockito-core
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: MIT License
 version: 2.28.2
 libraries:
@@ -756,7 +756,7 @@ libraries:
 
 name: javax.activation activation
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
 version: 1.1.1
 libraries:
@@ -766,7 +766,7 @@ libraries:
 
 name: com.sun.mail javax.mail
 license_category: binary
-module: java-core
+module: extensions/druid-kubernetes-extensions
 license_name: CDDL 1.1
 version: 1.6.1
 libraries:
