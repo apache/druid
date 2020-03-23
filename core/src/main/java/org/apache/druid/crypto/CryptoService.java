@@ -47,7 +47,8 @@ import java.security.spec.KeySpec;
 public class CryptoService
 {
   private final char[] passPhrase;
-  private final String alg;
+  
+  private final String cipherAlgName;
   private final String pbeAlg;
   private final String transformation;
   private final int saltSize;
@@ -56,7 +57,7 @@ public class CryptoService
 
   public CryptoService(
       String passPhrase,
-      @Nullable String alg,
+      @Nullable String cipherAlgName,
       @Nullable String pbeAlg,
       @Nullable String transformation,
       @Nullable Integer saltSize,
@@ -70,7 +71,7 @@ public class CryptoService
     );
     this.passPhrase = passPhrase.toCharArray();
 
-    this.alg = alg == null ? "AES" : alg;
+    this.cipherAlgName = cipherAlgName == null ? "AES" : cipherAlgName;
     this.pbeAlg = pbeAlg == null ? "PBKDF2WithHmacSHA256" : pbeAlg;
     this.transformation = transformation == null ? "AES/CBC/PKCS5Padding" : transformation;
     this.saltSize = saltSize == null ? 8 : saltSize;
@@ -93,7 +94,7 @@ public class CryptoService
       rnd.nextBytes(salt);
 
       SecretKey tmp = getKeyFromPassword(passPhrase, salt);
-      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), alg);
+      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
       Cipher ecipher = Cipher.getInstance(transformation);
       ecipher.init(Cipher.ENCRYPT_MODE, secret);
       return new EncryptedData(
@@ -113,7 +114,7 @@ public class CryptoService
       EncryptedData encryptedData = EncryptedData.fromByteArray(data);
 
       SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
-      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), alg);
+      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
 
       Cipher dcipher = Cipher.getInstance(transformation);
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
