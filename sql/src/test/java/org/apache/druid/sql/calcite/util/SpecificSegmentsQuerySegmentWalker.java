@@ -85,7 +85,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryRunnerFactoryConglomerate conglomerate,
       final LookupExtractorFactoryContainerProvider lookupProvider,
       @Nullable final JoinableFactory joinableFactory,
-      @Nullable final QueryScheduler scheduler
+      final QueryScheduler scheduler
   )
   {
     final JoinableFactory joinableFactoryToUse;
@@ -116,6 +116,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                     .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
                     .build()
             ),
+            scheduler,
             joinableFactoryToUse
         ),
         conglomerate,
@@ -146,7 +147,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
           }
         },
         null,
-        null
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 
