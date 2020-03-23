@@ -32,6 +32,7 @@ import org.pac4j.core.exception.TechnicalException;
 import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.util.JavaSerializationHelper;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -75,6 +76,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
     return null;
   }
 
+  @Nullable
   @Override
   public Object get(WebContext context, String key)
   {
@@ -88,7 +90,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
   }
 
   @Override
-  public void set(WebContext context, String key, Object value)
+  public void set(WebContext context, String key, @Nullable Object value)
   {
     Object profile = value;
     Cookie cookie;
@@ -116,6 +118,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
     context.addResponseCookie(cookie);
   }
 
+  @Nullable
   private String compressEncryptBase64(final Object o)
   {
     if (o == null || "".equals(o)
@@ -133,6 +136,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
     }
   }
 
+  @Nullable
   private Serializable uncompressDecryptBase64(final String v)
   {
     if (v != null && !v.isEmpty()) {
