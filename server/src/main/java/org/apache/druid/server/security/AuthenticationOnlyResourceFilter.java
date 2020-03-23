@@ -30,7 +30,7 @@ import java.io.IOException;
 /**
  * Sets necessary request attributes for requests sent to endpoints that need authentication but no authorization.
  */
-public class UnauthorizedResourceFilter implements Filter
+public class AuthenticationOnlyResourceFilter implements Filter
 {
   @Override
   public void init(FilterConfig filterConfig)
