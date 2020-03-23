@@ -41,5 +41,5 @@ druid.auth.authenticator.pac4j.type=pac4j
 |`druid.auth.pac4j.oidc.clientID`|OAuth Client Application id.|none|Yes|
 |`druid.auth.pac4j.oidc.clientSecret`|OAuth Client Application secret. It can be provided as plaintext string or The [Password Provider](../../operations/password-provider.md).|none|Yes|
 |`druid.auth.pac4j.oidc.discoveryURI`|discovery URI for fetching OP metadata [see this](http://openid.net/specs/openid-connect-discovery-1_0.html).|none|Yes|
-|`druid.auth.pac4j.oidc.cookiePassphrase`|passphrase for encrypting the cookies used to manage authentication session with browser.|none|Yes|
+|`druid.auth.pac4j.oidc.cookiePassphrase`|passphrase for encrypting the cookies used to manage authentication session with browser. It can be provided as plaintext string or The [Password Provider](../../operations/password-provider.md).|none|Yes|
 
