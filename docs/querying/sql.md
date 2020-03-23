@@ -558,7 +558,7 @@ The supported result formats are:
 |Format|Description|Content-Type|
 |------|-----------|------------|
 |`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|application/json|
-|`wrappedObject`|Like `object` but the JSON array of objects is wrapped as `data` field of enclosing JSON object |application/json|
+|`wrappedObject`|Like `object` but the JSON array of objects is wrapped as `data` field of enclosing JSON object.|application/json|
 |`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|application/json|
 |`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
 |`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
