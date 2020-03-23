@@ -310,26 +310,21 @@ public class JobHelper
     String mapJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
     String reduceJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
 
-    for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
-      for (String prefix : listOfAllowedPrefix) {
-        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
-          mapJavaOpts = StringUtils.format(
-              "%s -D%s=%s",
-              mapJavaOpts,
-              propName,
-              HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName)
-          );
-          reduceJavaOpts = StringUtils.format(
-              "%s -D%s=%s",
-              reduceJavaOpts,
-              propName,
-              HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName)
-          );
-          break;
-        }
-      }
-
+    for (Map.Entry<String, String> allowedProperties : HadoopDruidIndexerConfig.getAllowedProperties(listOfAllowedPrefix).entrySet()) {
+      mapJavaOpts = StringUtils.format(
+          "%s -D%s=%s",
+          mapJavaOpts,
+          allowedProperties.getKey(),
+          allowedProperties.getValue()
+      );
+      reduceJavaOpts = StringUtils.format(
+          "%s -D%s=%s",
+          reduceJavaOpts,
+          allowedProperties.getKey(),
+          allowedProperties.getValue()
+      );
     }
+
     if (!Strings.isNullOrEmpty(mapJavaOpts)) {
       configuration.set(MRJobConfig.MAP_JAVA_OPTS, mapJavaOpts);
     }
@@ -343,15 +338,13 @@ public class JobHelper
     for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
       if (propName.startsWith("hadoop.")) {
         conf.set(propName.substring("hadoop.".length()), HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName));
-      } else {
-        for (String prefix : listOfAllowedPrefix) {
-          if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
-            conf.set(propName, HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName));
-            break;
-          }
-        }
       }
     }
+
+    for (Map.Entry<String, String> allowedProperties : HadoopDruidIndexerConfig.getAllowedProperties(listOfAllowedPrefix).entrySet()) {
+      conf.set(allowedProperties.getKey(), allowedProperties.getValue());
+    }
+
     return conf;
   }
 
