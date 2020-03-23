@@ -29,6 +29,7 @@ import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
+import org.pac4j.core.http.adapter.HttpActionAdapter;
 import org.pac4j.core.profile.CommonProfile;
 
 import javax.servlet.Filter;
@@ -45,6 +46,8 @@ import java.util.Collection;
 public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
+
+  private static final HttpActionAdapter<String, J2EContext> NOOP_HTTP_ACTION_ADAPTER = (int code, J2EContext ctx) -> null;
 
   private final Config pac4jConfig;
   private final SecurityLogic<String, J2EContext> securityLogic;
@@ -63,7 +66,7 @@ public class Pac4jFilter implements Filter
     this.name = name;
     this.authorizerName = authorizerName;
 
-    this.sessionStore = new Pac4jSessionStore(cookiePassphrase);
+    this.sessionStore = new Pac4jSessionStore<>(cookiePassphrase);
   }
 
   @Override
@@ -84,7 +87,7 @@ public class Pac4jFilter implements Filter
       callbackLogic.perform(
           context,
           pac4jConfig,
-          (int code, J2EContext ctx) -> null,
+          NOOP_HTTP_ACTION_ADAPTER,
           "/",
           true, false, false, null);
     } else {
@@ -99,7 +102,7 @@ public class Pac4jFilter implements Filter
               return profiles.iterator().next().getId();
             }
           },
-          (int code, J2EContext ctx) -> null,
+          NOOP_HTTP_ACTION_ADAPTER,
           null, null, null, null);
 
       if (uid != null) {
