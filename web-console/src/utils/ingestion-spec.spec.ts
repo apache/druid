@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { downgradeSpec, upgradeSpec } from './ingestion-spec';
+import { cleanSpec, downgradeSpec, upgradeSpec } from './ingestion-spec';
 
 describe('ingestion-spec', () => {
   const oldSpec = {
@@ -97,5 +97,27 @@ describe('ingestion-spec', () => {
 
   it('round trips', () => {
     expect(downgradeSpec(upgradeSpec(oldSpec))).toMatchObject(oldSpec);
+  });
+
+  it('cleanSpec', () => {
+    expect(
+      cleanSpec({
+        type: 'index_parallel',
+        id: 'index_parallel_coronavirus_hamlcmea_2020-03-19T00:56:12.175Z',
+        groupId: 'index_parallel_coronavirus_hamlcmea_2020-03-19T00:56:12.175Z',
+        resource: {
+          availabilityGroup: 'index_parallel_coronavirus_hamlcmea_2020-03-19T00:56:12.175Z',
+          requiredCapacity: 1,
+        },
+        spec: {
+          dataSchema: {},
+        },
+      } as any),
+    ).toEqual({
+      type: 'index_parallel',
+      spec: {
+        dataSchema: {},
+      },
+    });
   });
 });
