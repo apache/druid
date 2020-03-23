@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.pac4j.core.config.Config;
@@ -42,6 +44,7 @@ public class Pac4jAuthenticator implements Authenticator
 {
   private final String name;
   private final String authorizerName;
+  private final Supplier<Config> pac4jConfigSupplier;
   private final OIDCConfig oidcConfig;
 
   @JsonCreator
@@ -54,6 +57,7 @@ public class Pac4jAuthenticator implements Authenticator
     this.name = name;
     this.authorizerName = authorizerName;
     this.oidcConfig = oidcConfig;
+    this.pac4jConfigSupplier = Suppliers.memoize(() -> createPac4jConfig(oidcConfig));
   }
 
   @Override
@@ -62,7 +66,7 @@ public class Pac4jAuthenticator implements Authenticator
     return new Pac4jFilter(
         name,
         authorizerName,
-        createPac4jConfig(oidcConfig),
+        pac4jConfigSupplier.get(),
         oidcConfig.getCookiePassphrase().getPassword()
     );
   }
