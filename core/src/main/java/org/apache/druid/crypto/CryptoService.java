@@ -50,6 +50,9 @@ import java.security.spec.KeySpec;
  */
 public class CryptoService
 {
+  // Based on Javadocs on SecureRandom, It is threadsafe as well.
+  private static final SecureRandom SECURE_RANDOM_INSTANCE = new SecureRandom();
+
   // User provided secret phrase used for encrypting data
   private final char[] passPhrase;
 
@@ -106,8 +109,7 @@ public class CryptoService
   {
     try {
       byte[] salt = new byte[saltSize];
-      SecureRandom rnd = new SecureRandom();
-      rnd.nextBytes(salt);
+      SECURE_RANDOM_INSTANCE.nextBytes(salt);
 
       SecretKey tmp = getKeyFromPassword(passPhrase, salt);
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
