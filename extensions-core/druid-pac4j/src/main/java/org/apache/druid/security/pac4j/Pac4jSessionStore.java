@@ -44,7 +44,7 @@ import java.util.zip.GZIPOutputStream;
  * Code here is slight adaptation from <a href="https://github.com/apache/knox/blob/master/gateway-provider-security-pac4j/src/main/java/org/apache/knox/gateway/pac4j/session/KnoxSessionStore.java">KnoxSessionStore</a>
  * for storing oauth session information in cookies.
  */
-public class Pac4jSessionStore implements SessionStore
+public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
 {
 
   private static final Logger LOGGER = new Logger(Pac4jSessionStore.class);
