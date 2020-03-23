@@ -21,6 +21,7 @@ package org.apache.druid.security.pac4j;
 
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -32,6 +33,8 @@ public class Pac4jCallbackResource
 {
   public static final String SELF_URL = "/druid-ext/druid-pac4j/callback";
 
+  private static final Logger LOGGER = new Logger(Pac4jCallbackResource.class);
+
   @Inject
   public Pac4jCallbackResource()
   {
@@ -40,9 +43,10 @@ public class Pac4jCallbackResource
   @GET
   public Response callback()
   {
-    /*
-    This endpoint is to be handled by the pac4j filter to redirect users, request should never reach here.
-     */
+    LOGGER.error(
+        new RuntimeException(),
+        "This endpoint is to be handled by the pac4j filter to redirect users, request should never reach here."
+    );
     return Response.serverError().build();
   }
 }
