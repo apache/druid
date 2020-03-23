@@ -32,6 +32,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -40,18 +41,18 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
 
+/**
+ *
+ */
 public class CryptoService
 {
-  private static final int ITERATION_COUNT = 65536;
-  private static final int KEY_LENGTH = 128;
-
-  private char[] passPhrase;
-  private String alg = "AES";
-  private String pbeAlg = "PBKDF2WithHmacSHA256";
-  private String transformation = "AES/CBC/PKCS5Padding";
-  private int saltSize = 8;
-  private int iterationCount = ITERATION_COUNT;
-  private int keyLength = KEY_LENGTH;
+  private final char[] passPhrase;
+  private final String alg;
+  private final String pbeAlg;
+  private final String transformation;
+  private final int saltSize;
+  private final int iterationCount;
+  private final int keyLength;
 
   public CryptoService(
       String passPhrase,
@@ -69,29 +70,12 @@ public class CryptoService
     );
     this.passPhrase = passPhrase.toCharArray();
 
-    if (alg != null) {
-      this.alg = alg;
-    }
-
-    if (pbeAlg != null) {
-      this.pbeAlg = pbeAlg;
-    }
-
-    if (transformation != null) {
-      this.transformation = transformation;
-    }
-
-    if (saltSize != null) {
-      this.saltSize = saltSize;
-    }
-
-    if (iterationCount != null) {
-      this.iterationCount = iterationCount;
-    }
-
-    if (keyLength != null) {
-      this.keyLength = keyLength;
-    }
+    this.alg = alg == null ? "AES" : alg;
+    this.pbeAlg = pbeAlg == null ? "PBKDF2WithHmacSHA256" : pbeAlg;
+    this.transformation = transformation == null ? "AES/CBC/PKCS5Padding" : transformation;
+    this.saltSize = saltSize == null ? 8 : saltSize;
+    this.iterationCount = iterationCount == null ? 65536 : iterationCount;
+    this.keyLength = keyLength == null ? 128 : keyLength;
 
     // encrypt/decrypt a test string to ensure all params are valid
     String testString = "duh! !! !!!";
@@ -112,7 +96,7 @@ public class CryptoService
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), alg);
       Cipher ecipher = Cipher.getInstance(transformation);
       ecipher.init(Cipher.ENCRYPT_MODE, secret);
-      return new EncryptionResult(
+      return new EncryptedData(
           salt,
           ecipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV(),
           ecipher.doFinal(plain)
@@ -126,14 +110,14 @@ public class CryptoService
   public byte[] decrypt(byte[] data)
   {
     try {
-      EncryptionResult encryptionResult = EncryptionResult.fromByteArray(data);
+      EncryptedData encryptedData = EncryptedData.fromByteArray(data);
 
-      SecretKey tmp = getKeyFromPassword(passPhrase, encryptionResult.getSalt());
+      SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), alg);
 
       Cipher dcipher = Cipher.getInstance(transformation);
-      dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptionResult.getIv()));
-      return dcipher.doFinal(encryptionResult.getCipher());
+      dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
+      return dcipher.doFinal(encryptedData.getCipher());
     }
     catch (InvalidKeySpecException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
       throw new RuntimeException(ex);
@@ -146,5 +130,69 @@ public class CryptoService
     SecretKeyFactory factory = SecretKeyFactory.getInstance(pbeAlg);
     KeySpec spec = new PBEKeySpec(passPhrase, salt, iterationCount, keyLength);
     return factory.generateSecret(spec);
+  }
+
+  private static class EncryptedData
+  {
+    private final byte[] salt;
+    private final byte[] iv;
+    private final byte[] cipher;
+
+    public EncryptedData(byte[] salt, byte[] iv, byte[] cipher)
+    {
+      this.salt = salt;
+      this.iv = iv;
+      this.cipher = cipher;
+    }
+
+    public byte[] getSalt()
+    {
+      return salt;
+    }
+
+    public byte[] getIv()
+    {
+      return iv;
+    }
+
+    public byte[] getCipher()
+    {
+      return cipher;
+    }
+
+    public byte[] toByteAray()
+    {
+      int headerLength = 12;
+      ByteBuffer bb = ByteBuffer.allocate(salt.length + iv.length + cipher.length + headerLength);
+      bb.putInt(salt.length)
+        .putInt(iv.length)
+        .putInt(cipher.length)
+        .put(salt)
+        .put(iv)
+        .put(cipher);
+      bb.flip();
+
+      return bb.array();
+    }
+
+    public static EncryptedData fromByteArray(byte[] array)
+    {
+      ByteBuffer bb = ByteBuffer.wrap(array);
+
+      int saltSize = bb.getInt();
+      int ivSize = bb.getInt();
+      int cipherSize = bb.getInt();
+
+      byte[] salt = new byte[saltSize];
+      bb.get(salt);
+
+      byte[] iv = new byte[ivSize];
+      bb.get(iv);
+
+      byte[] cipher = new byte[cipherSize];
+      bb.get(cipher);
+
+      return new EncryptedData(salt, iv, cipher);
+    }
   }
 }
