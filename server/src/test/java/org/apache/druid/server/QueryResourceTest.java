@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -86,7 +85,8 @@ public class QueryResourceTest
 {
   private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private static final AuthenticationResult AUTHENTICATION_RESULT = new AuthenticationResult("druid", "druid", null, null);
+  private static final AuthenticationResult AUTHENTICATION_RESULT =
+      new AuthenticationResult("druid", "druid", null, null);
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
 
@@ -728,7 +728,7 @@ public class QueryResourceTest
           catch (IOException e) {
             throw new RuntimeException(e);
           }
-          Assert.assertEquals(QueryCapacityExceededException.ERROR_MESSAGE, ex.getMessage());
+          Assert.assertEquals(QueryCapacityExceededException.makeTotalErrorMessage(2), ex.getMessage());
           Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
         }
     );
@@ -770,10 +770,7 @@ public class QueryResourceTest
             throw new RuntimeException(e);
           }
           Assert.assertEquals(
-              StringUtils.format(
-                  QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE,
-                  HiLoQueryLaningStrategy.LOW
-              ),
+              QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
               ex.getMessage()
           );
           Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
@@ -825,10 +822,7 @@ public class QueryResourceTest
             throw new RuntimeException(e);
           }
           Assert.assertEquals(
-              StringUtils.format(
-                  QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE,
-                  HiLoQueryLaningStrategy.LOW
-              ),
+              QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
               ex.getMessage()
           );
           Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
