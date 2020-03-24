@@ -240,6 +240,8 @@
                                         <argument>org.apache.druid.extensions:simple-client-sslcontext</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-basic-security</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-pac4j</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>
