@@ -57,12 +57,11 @@ export class LookupValuesTable extends React.PureComponent<
         const { lookupId } = this.props;
 
         const resp = await queryDruidSql<LookupRow>({
-          query: `SELECT * FROM lookup.${lookupId}`,
+          query: `SELECT "k", "v" FROM lookup.${lookupId}
+          LIMIT 5000`,
         });
 
-        return resp.map(object => {
-          return { k: object.k, v: object.v } as LookupRow;
-        });
+        return resp;
       },
       onStateChange: ({ result, error, loading }) => {
         this.setState({ columns: result, error, loading });
