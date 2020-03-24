@@ -136,6 +136,17 @@ source_paths:
 
 ---
 
+name: LDAP string encoding function from OWASP ESAPI
+license_category: source
+module: extensions/druid-basic-security
+license_name: BSD-3-Clause License
+copyright: The OWASP Foundation (https://github.com/ESAPI/esapi-java-legacy)
+license_file_path: licenses/src/esapi.BSD3
+source_paths:
+  - extensions-core/druid-basic-security/src/main/java/org/apache/druid/security/basic/authentication/validator/LDAPCredentialsValidator.java
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
