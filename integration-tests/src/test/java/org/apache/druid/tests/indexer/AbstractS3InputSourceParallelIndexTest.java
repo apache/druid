@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-public abstract class AbstractAzureInputSourceSimpleIndexTest extends AbstractITBatchIndexTest
+public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -49,14 +49,14 @@ public abstract class AbstractAzureInputSourceSimpleIndexTest extends AbstractIT
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "azure://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
-                        "azure://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
-                        "azure://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
+                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
+                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
+                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "azure://%%BUCKET%%/%%PATH%%"
+                        "s3://%%BUCKET%%/%%PATH%%"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
@@ -69,14 +69,14 @@ public abstract class AbstractAzureInputSourceSimpleIndexTest extends AbstractIT
     };
   }
 
-  void doTest(Pair<String, List> azureInputSource) throws Exception
+  void doTest(Pair<String, List> s3InputSource) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
-      final Function<String, String> azurePropsTransform = spec -> {
+      final Function<String, String> s3PropsTransform = spec -> {
         try {
-          String inputSourceValue = jsonMapper.writeValueAsString(azureInputSource.rhs);
+          String inputSourceValue = jsonMapper.writeValueAsString(s3InputSource.rhs);
           inputSourceValue = StringUtils.replace(
               inputSourceValue,
               "%%BUCKET%%",
@@ -96,12 +96,12 @@ public abstract class AbstractAzureInputSourceSimpleIndexTest extends AbstractIT
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
-              "azure"
+              "s3"
           );
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_KEY%%",
-              azureInputSource.lhs
+              s3InputSource.lhs
           );
           return StringUtils.replace(
               spec,
@@ -117,7 +117,7 @@ public abstract class AbstractAzureInputSourceSimpleIndexTest extends AbstractIT
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          azurePropsTransform,
+          s3PropsTransform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,
