@@ -47,6 +47,7 @@ public class QueryContexts
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
   public static final String VECTORIZE_KEY = "vectorize";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
+  public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
@@ -186,6 +187,11 @@ public class QueryContexts
   public static <T> int getVectorSize(Query<T> query, int defaultSize)
   {
     return parseInt(query, VECTOR_SIZE_KEY, defaultSize);
+  }
+
+  public static <T> int getMaxSubqueryRows(Query<T> query, int defaultSize)
+  {
+    return parseInt(query, MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)

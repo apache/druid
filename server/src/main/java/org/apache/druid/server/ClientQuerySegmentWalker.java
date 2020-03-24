@@ -35,6 +35,7 @@ import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -137,7 +138,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
     // First, do an inlining dry run to see if any inlining is necessary, without actually running the queries.
-    final DataSource inlineDryRun = inlineIfNecessary(query.getDataSource(), toolChest, new AtomicInteger(), true);
+    final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
+    final DataSource inlineDryRun = inlineIfNecessary(
+        query.getDataSource(),
+        toolChest,
+        new AtomicInteger(),
+        maxSubqueryRows,
+        true
+    );
 
     if (!canRunQueryUsingClusterWalker(query.withDataSource(inlineDryRun))
         && !canRunQueryUsingLocalWalker(query.withDataSource(inlineDryRun))) {
@@ -151,6 +159,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             query.getDataSource(),
             toolChest,
             new AtomicInteger(),
+            maxSubqueryRows,
             false
         )
     );
@@ -245,6 +254,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final DataSource dataSource,
       @Nullable final QueryToolChest toolChestIfOutermost,
       final AtomicInteger subqueryRowLimitAccumulator,
+      final int maxSubqueryRows,
       final boolean dryRun
   )
   {
@@ -266,7 +276,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
         assert !(current instanceof QueryDataSource);
 
-        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, dryRun);
+        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
@@ -279,7 +289,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         } else {
           // Something happened during inlining that means the toolchest is no longer able to handle this subquery.
           // We need to consider inlining it.
-          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, dryRun);
+          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
@@ -299,7 +309,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             queryResults,
             warehouse.getToolChest(subQueryWithId),
             subqueryRowLimitAccumulator,
-            serverConfig.getMaxSubqueryRows()
+            maxSubqueryRows
         );
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
@@ -310,12 +320,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         Iterables.getOnlyElement(dataSource.getChildren()),
                         null,
                         subqueryRowLimitAccumulator,
+                        maxSubqueryRows,
                         dryRun
                     )
                 )
             ),
             toolChestIfOutermost,
             subqueryRowLimitAccumulator,
+            maxSubqueryRows,
             dryRun
         );
       }
@@ -324,7 +336,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       return dataSource.withChildren(
           dataSource.getChildren()
                     .stream()
-                    .map(child -> inlineIfNecessary(child, null, subqueryRowLimitAccumulator, dryRun))
+                    .map(child -> inlineIfNecessary(child, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun))
                     .collect(Collectors.toList())
       );
     }

@@ -131,8 +131,15 @@ public interface Query<T>
   @Nullable
   String getId();
 
+  /**
+   * Returns a copy of this query with a new subQueryId (see {@link #getSubQueryId()}.
+   */
   Query<T> withSubQueryId(String subQueryId);
 
+  /**
+   * Returns the subQueryId of this query. This is set by ClientQuerySegmentWalker (the entry point for the Broker's
+   * query stack) on any subqueries that it issues. It is null for the main query.
+   */
   @Nullable
   String getSubQueryId();
 

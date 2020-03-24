@@ -31,6 +31,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -116,6 +117,7 @@ public class InlineDataSource implements DataSource
     return signature.getColumnNames();
   }
 
+  @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<ValueType> getColumnTypes()

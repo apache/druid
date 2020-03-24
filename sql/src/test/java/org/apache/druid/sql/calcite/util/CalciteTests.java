@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -207,7 +206,7 @@ public class CalciteTests
   private static final String TIMESTAMP_COLUMN = "t";
 
   private static final Injector INJECTOR = Guice.createInjector(
-      (Module) binder -> {
+      binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
@@ -217,7 +216,8 @@ public class CalciteTests
                 ImmutableMap.of(
                     "a", "xa",
                     "abc", "xabc",
-                    "nosuchkey", "mysteryvalue"
+                    "nosuchkey", "mysteryvalue",
+                    "6", "x6"
                 )
             );
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);

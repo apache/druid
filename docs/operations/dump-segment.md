@@ -92,7 +92,8 @@ Sample output:
 ```
 {
   "bitmapSerdeFactory": {
-    "type": "concise"
+    "type": "roaring",
+    "compressRunOnSerialization": true
   },
   "bitmaps": {
     "isRobot": {

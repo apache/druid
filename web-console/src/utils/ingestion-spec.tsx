@@ -294,6 +294,17 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   return spec as IngestionSpec;
 }
 
+/**
+ * Make sure that any extra junk in the spec other than 'type' and 'spec' is removed
+ * @param spec
+ */
+export function cleanSpec(spec: IngestionSpec): IngestionSpec {
+  return {
+    type: spec.type,
+    spec: spec.spec,
+  };
+}
+
 const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
   {
     name: 'type',
@@ -2391,7 +2402,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'indexSpec.bitmap.type',
     label: 'Index bitmap type',
     type: 'string',
-    defaultValue: 'concise',
+    defaultValue: 'roaring',
     suggestions: ['concise', 'roaring'],
     info: <>Compression format for bitmap indexes.</>,
   },

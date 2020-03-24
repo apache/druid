@@ -37,7 +37,6 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -212,7 +211,7 @@ public class QuerySchedulerTest
   public void testHiLoFailsWhenOutOfLaneCapacity()
   {
     expected.expectMessage(
-        StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, HiLoQueryLaningStrategy.LOW)
+        QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, TEST_LO_CAPACITY)
     );
     expected.expect(QueryCapacityExceededException.class);
 
@@ -237,7 +236,7 @@ public class QuerySchedulerTest
   @Test
   public void testHiLoFailsWhenOutOfTotalCapacity()
   {
-    expected.expectMessage(QueryCapacityExceededException.ERROR_MESSAGE);
+    expected.expectMessage(QueryCapacityExceededException.makeTotalErrorMessage(TEST_HI_CAPACITY));
     expected.expect(QueryCapacityExceededException.class);
 
     Query<?> interactive1 = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(makeInteractiveQuery()), ImmutableSet.of());

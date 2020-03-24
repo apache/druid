@@ -41,7 +41,7 @@ import java.util.List;
  */
 @Test(groups = TestNGGroup.HDFS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITS3ToHdfsParallelIndexTest extends AbstractS3InputSourceSimpleIndexTest
+public class ITS3ToHdfsParallelIndexTest extends AbstractS3InputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
   public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
