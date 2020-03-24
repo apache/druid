@@ -86,7 +86,36 @@ public class TransformSpecTest
     Assert.assertNotNull(row);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
     Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
-    Assert.assertEquals(ImmutableList.of("f", "x", "y", "g", "h"), row.getDimensions());
+    Assert.assertEquals(ImmutableList.of("f", "x", "y"), row.getDimensions());
+    Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
+    Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
+    Assert.assertEquals("foobar", row.getRaw("f"));
+    Assert.assertEquals(ImmutableList.of("foobar"), row.getDimension("f"));
+    Assert.assertEquals(ImmutableList.of("5.0"), row.getDimension("g"));
+    Assert.assertEquals(ImmutableList.of(), row.getDimension("h"));
+    Assert.assertEquals(5L, row.getMetric("g").longValue());
+  }
+
+  @Test
+  public void testTransformsWithAddedDimensions()
+  {
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(
+            new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("h", "concat(f,g)", TestExprMacroTable.INSTANCE)
+        ),
+        ImmutableList.of("h")
+    );
+
+    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
+    final InputRow row = parser.parseBatch(ROW1).get(0);
+
+    Assert.assertNotNull(row);
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(DateTimes.of("2000-01-01"), row.getTimestamp());
+    Assert.assertEquals(ImmutableList.of("f", "x", "y", "h"), row.getDimensions());
     Assert.assertEquals(ImmutableList.of("foo"), row.getDimension("x"));
     Assert.assertEquals(3.0, row.getMetric("b").doubleValue(), 0);
     Assert.assertEquals("foobar", row.getRaw("f"));

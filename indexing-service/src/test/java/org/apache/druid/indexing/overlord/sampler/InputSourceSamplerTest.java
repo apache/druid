@@ -837,8 +837,9 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
     final TransformSpec transformSpec = new TransformSpec(
         null,
-        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1, 'bar')", TestExprMacroTable.INSTANCE)),
-        null
+        ImmutableList.of(new ExpressionTransform("dim1PlusFoo", "concat(dim1, 'foo')", TestExprMacroTable.INSTANCE),
+                         new ExpressionTransform("dim1PlusBar", "concat(dim1, 'bar')", TestExprMacroTable.INSTANCE)),
+        ImmutableList.of("dim1PlusBar")
     );
     final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
     final GranularitySpec granularitySpec = new UniformGranularitySpec(

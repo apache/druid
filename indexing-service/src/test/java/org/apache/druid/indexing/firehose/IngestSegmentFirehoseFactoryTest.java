@@ -510,7 +510,7 @@ public class IngestSegmentFirehoseFactoryTest
           skipped++;
           continue;
         }
-        Assert.assertArrayEquals(new String[]{DIM_NAME, METRIC_FLOAT_NAME}, row.getDimensions().toArray());
+        Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
         Assert.assertArrayEquals(new String[]{DIM_VALUE}, row.getDimension(DIM_NAME).toArray());
         Assert.assertEquals(METRIC_LONG_VALUE.longValue(), row.getMetric(METRIC_LONG_NAME).longValue());
         Assert.assertEquals(
