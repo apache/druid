@@ -305,36 +305,26 @@ public class JobHelper
     return SNAPSHOT_JAR.matcher(jarFile.getName()).matches();
   }
 
-  public static void injectSystemProperties(Job job)
-  {
-    injectSystemProperties(job.getConfiguration());
-  }
-
-  public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
+  public static void injectDruidProperties(Configuration configuration, HadoopDruidIndexerConfig hadoopDruidIndexerConfig)
   {
     String mapJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
     String reduceJavaOpts = StringUtils.nullToEmptyNonDruidDataString(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
 
-    for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
-      for (String prefix : listOfAllowedPrefix) {
-        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
-          mapJavaOpts = StringUtils.format(
-              "%s -D%s=%s",
-              mapJavaOpts,
-              propName,
-              HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName)
-          );
-          reduceJavaOpts = StringUtils.format(
-              "%s -D%s=%s",
-              reduceJavaOpts,
-              propName,
-              HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName)
-          );
-          break;
-        }
-      }
-
+    for (Map.Entry<String, String> allowedProperties : hadoopDruidIndexerConfig.getAllowedProperties().entrySet()) {
+      mapJavaOpts = StringUtils.format(
+          "%s -D%s=%s",
+          mapJavaOpts,
+          allowedProperties.getKey(),
+          allowedProperties.getValue()
+      );
+      reduceJavaOpts = StringUtils.format(
+          "%s -D%s=%s",
+          reduceJavaOpts,
+          allowedProperties.getKey(),
+          allowedProperties.getValue()
+      );
     }
+
     if (!Strings.isNullOrEmpty(mapJavaOpts)) {
       configuration.set(MRJobConfig.MAP_JAVA_OPTS, mapJavaOpts);
     }
@@ -343,13 +333,18 @@ public class JobHelper
     }
   }
 
-  public static Configuration injectSystemProperties(Configuration conf)
+  public static Configuration injectSystemProperties(Configuration conf, HadoopDruidIndexerConfig hadoopDruidIndexerConfig)
   {
     for (String propName : HadoopDruidIndexerConfig.PROPERTIES.stringPropertyNames()) {
       if (propName.startsWith("hadoop.")) {
         conf.set(propName.substring("hadoop.".length()), HadoopDruidIndexerConfig.PROPERTIES.getProperty(propName));
       }
     }
+
+    for (Map.Entry<String, String> allowedProperties : hadoopDruidIndexerConfig.getAllowedProperties().entrySet()) {
+      conf.set(allowedProperties.getKey(), allowedProperties.getValue());
+    }
+
     return conf;
   }
 
@@ -364,7 +359,7 @@ public class JobHelper
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
-      injectSystemProperties(job);
+      injectSystemProperties(job.getConfiguration(), config);
       config.addJobProperties(job);
 
       config.addInputPaths(job);
@@ -401,7 +396,7 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          Configuration conf = injectSystemProperties(new Configuration());
+          Configuration conf = injectSystemProperties(new Configuration(), config);
           config.addJobProperties(conf);
           workingPath.getFileSystem(conf).delete(workingPath, true);
         }
@@ -429,7 +424,7 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          Configuration conf = injectSystemProperties(new Configuration());
+          Configuration conf = injectSystemProperties(new Configuration(), config);
           config.addJobProperties(conf);
           workingPath.getFileSystem(conf).delete(workingPath, true);
         }

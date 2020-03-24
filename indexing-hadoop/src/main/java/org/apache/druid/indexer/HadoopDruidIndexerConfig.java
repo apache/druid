@@ -379,11 +379,24 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
+  public Map<String, String> getAllowedProperties()
+  {
+    Map<String, String> allowedPropertiesMap = new HashMap<>();
+    for (String propName : PROPERTIES.stringPropertyNames()) {
+      for (String prefix : allowedHadoopPrefix) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
+          allowedPropertiesMap.put(propName, PROPERTIES.getProperty(propName));
+          break;
+        }
+      }
+    }
+    return allowedPropertiesMap;
+  }
+
   boolean isUseYarnRMJobStatusFallback()
   {
     return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
   }
-
 
   void setHadoopJobIdFileName(String hadoopJobIdFileName)
   {
@@ -596,10 +609,5 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
-  }
-
-  List<String> getAllowedHadoopPrefix()
-  {
-    return allowedHadoopPrefix;
   }
 }
