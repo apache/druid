@@ -25,6 +25,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -32,8 +33,6 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.UUID;
 import java.util.function.Function;
-
-import static org.apache.directory.api.util.IOUtils.closeQuietly;
 
 /**
  * IMPORTANT:
@@ -48,6 +47,7 @@ import static org.apache.directory.api.util.IOUtils.closeQuietly;
  *    access to the bucket and path specified in #1. The credentials that does have access to the bucket and path
  *    specified in #1 should be set to the env variable OVERRIDE_S3_ACCESS_KEY and OVERRIDE_S3_SECRET_KEY
  */
+@Test(groups = TestNGGroup.S3_INGESTION)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
 {
@@ -191,7 +191,8 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
       Assert.assertTrue(
           taskStatusPlus.getErrorMsg().contains("com.amazonaws.services.s3.model.AmazonS3Exception"),
           "Expect task to fail with AmazonS3Exception");
-    } finally {
+    }
+    finally {
       // If the test pass, then there is no datasource to unload
       closeQuietly(unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()));
     }
@@ -268,19 +269,21 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
       Assert.assertTrue(
           taskStatusPlus.getErrorMsg().contains("IllegalArgumentException: Access key cannot be null"),
           "Expect task to fail with IllegalArgumentException: Access key cannot be null");
-    } finally {
+    }
+    finally {
       // If the test pass, then there is no datasource to unload
       closeQuietly(unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()));
     }
   }
 
-  private void closeQuietly(Closeable closeable) {
+  private void closeQuietly(Closeable closeable)
+  {
     try {
       if (closeable != null) {
         closeable.close();
       }
-    } catch (Exception var2) {
+    }
+    catch (Exception var2) {
     }
   }
-
 }
