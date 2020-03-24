@@ -44,19 +44,23 @@ import java.util.Set;
  */
 public class TransformSpec
 {
-  public static final TransformSpec NONE = new TransformSpec(null, null);
+  public static final TransformSpec NONE = new TransformSpec(null, null, null);
 
   private final DimFilter filter;
   private final List<Transform> transforms;
+  private final List<String> addDimensions;
+
 
   @JsonCreator
   public TransformSpec(
       @JsonProperty("filter") final DimFilter filter,
-      @JsonProperty("transforms") final List<Transform> transforms
+      @JsonProperty("transforms") final List<Transform> transforms,
+      @JsonProperty("addDimensions") final List<String> addDimensions
   )
   {
     this.filter = filter;
     this.transforms = transforms == null ? ImmutableList.of() : transforms;
+    this.addDimensions = addDimensions == null ? ImmutableList.of() : addDimensions;
 
     // Check for name collisions.
     final Set<String> seen = new HashSet<>();
@@ -93,6 +97,11 @@ public class TransformSpec
   public List<Transform> getTransforms()
   {
     return transforms;
+  }
+
+  public List<String> getAddDimensions()
+  {
+    return addDimensions;
   }
 
   public <T> InputRowParser<T> decorate(final InputRowParser<T> parser)

@@ -596,7 +596,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new SelectorDimFilter("dim1", "foo", null),
         ImmutableList.of(
             new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
-        )
+        ),
+        null
     );
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0, true, 0, 1);
     final ListenableFuture<TaskStatus> statusFuture = runTask(task);

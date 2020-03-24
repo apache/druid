@@ -498,7 +498,8 @@ public class IngestSegmentFirehoseFactoryTest
         new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "1", null),
         ImmutableList.of(
             new ExpressionTransform(METRIC_FLOAT_NAME, METRIC_FLOAT_NAME + " * 10", ExprMacroTable.nil())
-        )
+        ),
+        null
     );
     int skipped = 0;
     try (final Firehose firehose =

@@ -934,7 +934,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(
                     new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
-                )
+                ),
+                null
             )
         ),
         new KinesisIndexTaskIOConfig(

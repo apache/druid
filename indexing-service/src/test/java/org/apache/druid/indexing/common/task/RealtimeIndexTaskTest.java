@@ -298,7 +298,8 @@ public class RealtimeIndexTaskTest
         new SelectorDimFilter("dim1", "foo", null),
         ImmutableList.of(
             new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
-        )
+        ),
+        null
     );
     final RealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);
     final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());

@@ -48,6 +48,7 @@ public class Transformer
   private final Map<String, RowFunction> transforms = new HashMap<>();
   private final ThreadLocal<Row> rowSupplierForValueMatcher = new ThreadLocal<>();
   private final ValueMatcher valueMatcher;
+  private final List<String> addDimensions;
 
   Transformer(final TransformSpec transformSpec)
   {
@@ -68,6 +69,8 @@ public class Transformer
     } else {
       valueMatcher = null;
     }
+
+    addDimensions = transformSpec.getAddDimensions();
   }
 
   /**
@@ -87,7 +90,7 @@ public class Transformer
     if (transforms.isEmpty()) {
       transformedRow = row;
     } else {
-      transformedRow = new TransformedInputRow(row, transforms);
+      transformedRow = new TransformedInputRow(row, transforms, addDimensions);
     }
 
     if (valueMatcher != null) {
@@ -115,7 +118,7 @@ public class Transformer
       final List<InputRow> originalRows = row.getInputRows();
       final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
       for (InputRow originalRow : originalRows) {
-        transformedRows.add(new TransformedInputRow(originalRow, transforms));
+        transformedRows.add(new TransformedInputRow(originalRow, transforms, addDimensions));
       }
       inputRowListPlusRawValues = InputRowListPlusRawValues.of(transformedRows, row.getRawValues());
     }
@@ -142,12 +145,12 @@ public class Transformer
     private final Map<String, RowFunction> transforms;
     private final List<String> dimensions;
 
-    public TransformedInputRow(final InputRow row, final Map<String, RowFunction> transforms)
+    public TransformedInputRow(final InputRow row, final Map<String, RowFunction> transforms, List<String> addDimensions)
     {
       this.row = row;
       this.transforms = transforms;
 
-      Set<String> transformedDims = Sets.newHashSet(transforms.keySet());
+      Set<String> transformedDims = Sets.newHashSet(addDimensions);
 
       for (String dim : row.getDimensions()) {
         transformedDims.remove(dim);

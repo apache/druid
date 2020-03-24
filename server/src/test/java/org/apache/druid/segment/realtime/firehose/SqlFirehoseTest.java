@@ -197,7 +197,8 @@ public class SqlFirehoseTest
             null,
             ImmutableList.of(
                 new ExpressionTransform("xfoo", "concat(x,'foo')", ExprMacroTable.nil())
-            )
+            ),
+            null
         )
     );
 

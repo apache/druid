@@ -293,7 +293,8 @@ public class IndexTaskTest extends IngestionTestBase
                     new ExpressionTransform("dimtarray1", "array(dim, dim)", ExprMacroTable.nil()),
                     new ExpressionTransform("dimtarray2", "map(d -> concat(d, 'foo'), dim_array)", ExprMacroTable.nil()),
                     new ExpressionTransform("dimtnum_array", "map(d -> d + 3, dim_num_array)", ExprMacroTable.nil())
-                )
+                ),
+                null
             ),
             null,
             createTuningConfigWithMaxRowsPerSegment(2, false),

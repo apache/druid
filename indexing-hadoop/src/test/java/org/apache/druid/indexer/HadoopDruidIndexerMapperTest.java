@@ -131,7 +131,8 @@ public class HadoopDruidIndexerMapperTest
                     new SelectorDimFilter("dim1", "foo", null),
                     ImmutableList.of(
                         new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
-                    )
+                    ),
+                    null
                 )
             ),
             IO_CONFIG,

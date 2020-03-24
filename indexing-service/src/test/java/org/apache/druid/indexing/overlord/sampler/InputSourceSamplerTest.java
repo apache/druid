@@ -837,7 +837,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
     final TransformSpec transformSpec = new TransformSpec(
         null,
-        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1, 'bar')", TestExprMacroTable.INSTANCE))
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1, 'bar')", TestExprMacroTable.INSTANCE)),
+        null
     );
     final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -929,7 +930,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     );
     final TransformSpec transformSpec = new TransformSpec(
         null,
-        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE))
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE)),
+        null
     );
     final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -998,7 +1000,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   {
     final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
-    final TransformSpec transformSpec = new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
+    final TransformSpec transformSpec = new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null, null);
     final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
         Granularities.DAY,

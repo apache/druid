@@ -1059,7 +1059,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                 new SelectorDimFilter("dim1", "b", null),
                 ImmutableList.of(
                     new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
-                )
+                ),
+                null
             )
         ),
         new KafkaIndexTaskIOConfig(
@@ -2375,7 +2376,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         NEW_DATA_SCHEMA.withTransformSpec(
             new TransformSpec(
                 null,
-                ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil()))
+                ImmutableList.of(new ExpressionTransform("beep", "nofunc()", ExprMacroTable.nil())),
+                null
             )
         ),
         new KafkaIndexTaskIOConfig(

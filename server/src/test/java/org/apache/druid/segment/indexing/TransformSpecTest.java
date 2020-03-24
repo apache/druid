@@ -76,7 +76,8 @@ public class TransformSpecTest
             new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
             new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE),
             new ExpressionTransform("h", "concat(f,g)", TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
@@ -104,7 +105,8 @@ public class TransformSpecTest
         null,
         ImmutableList.of(
             new ExpressionTransform("x", "concat(x,y)", TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
@@ -135,7 +137,8 @@ public class TransformSpecTest
         ImmutableList.of(
             new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
             new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
@@ -150,7 +153,8 @@ public class TransformSpecTest
         null,
         ImmutableList.of(
             new ExpressionTransform("__time", "(a + b) * 3600000", TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
@@ -168,7 +172,8 @@ public class TransformSpecTest
         null,
         ImmutableList.of(
             new ExpressionTransform("__time", "__time + 3600000", TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
@@ -193,7 +198,8 @@ public class TransformSpecTest
         ImmutableList.of(
             new ExpressionTransform("f", "concat(x,y)", TestExprMacroTable.INSTANCE),
             new ExpressionTransform("g", "a + b", TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();

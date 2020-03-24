@@ -164,7 +164,8 @@ public class DataSchemaTest
             new SelectorDimFilter("dimA", "foo", null),
             ImmutableList.of(
                 new ExpressionTransform("expr", "concat(dimA,dimA)", TestExprMacroTable.INSTANCE)
-            )
+            ),
+            null
         ),
         jsonMapper
     );
