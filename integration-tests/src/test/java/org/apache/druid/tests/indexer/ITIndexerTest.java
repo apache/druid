@@ -36,6 +36,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
   private static final String INDEX_WITH_TIMESTAMP_TASK = "/indexer/wikipedia_with_timestamp_index_task.json";
   // TODO: add queries that validate timestamp is different from the __time column since it is a dimension
+  // TODO: https://github.com/apache/druid/issues/9565
   private static final String INDEX_WITH_TIMESTAMP_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_WITH_TIMESTAMP_DATASOURCE = "wikipedia_with_timestamp_index_test";
 

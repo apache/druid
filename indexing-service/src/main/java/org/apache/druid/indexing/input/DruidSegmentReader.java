@@ -274,13 +274,11 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         }
       }
 
-      /*
-       * Timestamp is added last because we expect that the time column will always be a date time object.
-       * If it is added earlier, it can be overwritten by metrics or dimenstions with the same name.
-       *
-       * If a user names a metric or dimension `__time` it will be overwritten. This case should be rare since
-       *  __time is reserved for the time column in druid segments.
-       */
+      // Timestamp is added last because we expect that the time column will always be a date time object.
+      // If it is added earlier, it can be overwritten by metrics or dimenstions with the same name.
+      //
+      // If a user names a metric or dimension `__time` it will be overwritten. This case should be rare since
+      // __time is reserved for the time column in druid segments.
       final long timestamp = timestampColumnSelector.getLong();
       theEvent.put(ColumnHolder.TIME_COLUMN_NAME, DateTimes.utc(timestamp));
 
