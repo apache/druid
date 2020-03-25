@@ -22,6 +22,7 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -42,6 +43,10 @@ import java.util.Map;
 
 public class TransformSpecTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final MapInputRowParser PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec("t", "auto", DateTimes.of("2000-01-01")),
