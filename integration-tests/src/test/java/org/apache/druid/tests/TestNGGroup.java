@@ -78,7 +78,7 @@ public class TestNGGroup
   public static final String S3_INGESTION = "s3-ingestion";
 
   /**
-   * This group os not part of CI explicitly. It allows you to run all the tests that have been tested with
+   * This group is not part of CI explicitly. It allows you to run all the tests that have been tested with
    * against a quickstart deployment of Druid using the instructions in this project's README.
    *
    * As you run tests in your environment, mark the tests as quickstart compatible (see
