@@ -118,10 +118,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
   public ExpectedException expectedException = ExpectedException.none();
 
   public static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec("timestamp", "auto", null),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "dim"))),
+      new TimestampSpec("ts", "auto", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
       "|",
-      Arrays.asList("timestamp", "dim", "val"),
+      Arrays.asList("ts", "dim", "val"),
       false,
       0
   );
@@ -927,7 +927,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       cursor.reset();
       while (!cursor.isDone()) {
         final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
-                                                  .makeDimensionSelector(new DefaultDimensionSpec("timestamp", "timestamp"));
+                                                  .makeDimensionSelector(new DefaultDimensionSpec("ts", "ts"));
         final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
                                                   .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
         final DimensionSelector selector3 = cursor.getColumnSelectorFactory()

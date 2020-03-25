@@ -122,15 +122,15 @@ public class IndexTaskTest extends IngestionTestBase
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("timestamp", "auto", null);
+  private static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   private static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
-      DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "dim"))
+      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
   );
   private static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       DEFAULT_TIMESTAMP_SPEC,
       DEFAULT_DIMENSIONS_SPEC,
       null,
-      Arrays.asList("timestamp", "dim", "val"),
+      Arrays.asList("ts", "dim", "val"),
       false,
       0
   );
