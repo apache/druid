@@ -69,6 +69,11 @@ public class TransformSpec
         throw new ISE("Transform name '%s' cannot be used twice", transform.getName());
       }
     }
+    for (String dim : this.addDimensions) {
+      if (!seen.contains(dim)) {
+        throw new ISE("Transform dimension '%s' is not defined in transforms", dim);
+      }
+    }
   }
 
   public static <T> TransformSpec fromInputRowParser(final InputRowParser<T> parser)
