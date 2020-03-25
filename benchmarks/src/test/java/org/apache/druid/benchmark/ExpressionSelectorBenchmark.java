@@ -20,10 +20,11 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.gen.TestColumnSchema;
-import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.gen.TestColumnSchema;
+import org.apache.druid.data.gen.TestSchemaInfo;
+import org.apache.druid.data.input.impl.DimensionSchema.ValueType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -40,7 +41,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -145,7 +145,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "timestamp_floor(__time, 'PT1H')",
-                    ValueType.LONG,
+                    org.apache.druid.segment.column.ValueType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -239,7 +239,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "timestamp_format(__time, 'yyyy-MM-dd')",
-                    ValueType.STRING,
+                    org.apache.druid.segment.column.ValueType.STRING,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -304,7 +304,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "strlen(s)",
-                    ValueType.STRING,
+                    org.apache.druid.segment.column.ValueType.STRING,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -336,7 +336,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "strlen(s)",
-                    ValueType.STRING,
+                    org.apache.druid.segment.column.ValueType.STRING,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -350,7 +350,9 @@ public class ExpressionSelectorBenchmark
         .map(cursor -> {
           final DimensionSelector selector = cursor
               .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("v", "v", ValueType.STRING));
+              .makeDimensionSelector(
+                  new DefaultDimensionSpec("v", "v", org.apache.druid.segment.column.ValueType.STRING)
+              );
 
           consumeDimension(cursor, selector, blackhole);
           return null;
@@ -397,7 +399,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "n + 1",
-                    ValueType.LONG,
+                    org.apache.druid.segment.column.ValueType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             )
@@ -429,7 +431,7 @@ public class ExpressionSelectorBenchmark
                 new ExpressionVirtualColumn(
                     "v",
                     "concat(n, ' is my favorite number') == '3 is my favorite number'",
-                    ValueType.LONG,
+                    org.apache.druid.segment.column.ValueType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             )

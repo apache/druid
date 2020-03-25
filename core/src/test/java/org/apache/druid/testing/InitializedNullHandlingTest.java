@@ -26,7 +26,7 @@ import org.junit.runners.model.Statement;
 
 public class InitializedNullHandlingTest
 {
-  private final static boolean REPLACE_NULL_WITH_DEFAULT;
+  private static final boolean REPLACE_NULL_WITH_DEFAULT;
 
   static {
     NullHandling.initializeForTests();

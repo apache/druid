@@ -19,10 +19,10 @@
 
 package org.apache.druid.benchmark.indexing;
 
-import org.apache.druid.data.gen.TestDataGenerator;
-import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.gen.TestDataGenerator;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;

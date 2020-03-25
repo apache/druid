@@ -21,10 +21,10 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;

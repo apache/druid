@@ -20,10 +20,11 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.benchmark.datagen.BenchmarkColumnSchema;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.gen.TestColumnSchema;
+import org.apache.druid.data.gen.TestSchemaInfo;
+import org.apache.druid.data.input.impl.DimensionSchema.ValueType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -38,7 +39,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -86,9 +86,9 @@ public class ExpressionFilterBenchmark
   {
     this.closer = Closer.create();
 
-    final BenchmarkSchemaInfo schemaInfo = new BenchmarkSchemaInfo(
+    final TestSchemaInfo schemaInfo = new TestSchemaInfo(
         ImmutableList.of(
-            BenchmarkColumnSchema.makeEnumerated(
+            TestColumnSchema.makeEnumerated(
                 "x",
                 ValueType.STRING,
                 false,
@@ -97,7 +97,7 @@ public class ExpressionFilterBenchmark
                 Arrays.asList("Apple", "Orange", "Xylophone", "Corundum", null),
                 Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
             ),
-            BenchmarkColumnSchema.makeEnumerated(
+            TestColumnSchema.makeEnumerated(
                 "y",
                 ValueType.STRING,
                 false,

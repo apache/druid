@@ -20,8 +20,8 @@
 package org.apache.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.data.gen.TestColumnSchema;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.data.input.impl.DimensionSchema.ValueType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;

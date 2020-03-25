@@ -21,8 +21,8 @@ package org.apache.druid.benchmark.datagen;
 
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.data.gen.TestDataGenerator;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
