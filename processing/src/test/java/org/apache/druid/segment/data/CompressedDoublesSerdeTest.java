@@ -20,7 +20,7 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Longs;
+import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -48,21 +48,28 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * This is a copy-pasta of {@link CompressedFloatsSerdeTest} without {@link CompressedFloatsSerdeTest#testSupplierSerde}
+ * because doubles do not have a supplier serde (e.g. {@link CompressedColumnarFloatsSupplier} or
+ * {@link CompressedColumnarLongsSupplier}).
+ *
+ * It is not important that it remain a copy, the committer is just lazy
+ */
 @RunWith(Parameterized.class)
-public class CompressedLongsSerdeTest
+public class CompressedDoublesSerdeTest
 {
   @Parameterized.Parameters(name = "{0} {1} {2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressionFactory.LongEncodingStrategy encodingStrategy : CompressionFactory.LongEncodingStrategy.values()) {
-      for (CompressionStrategy strategy : CompressionStrategy.values()) {
-        data.add(new Object[]{encodingStrategy, strategy, ByteOrder.BIG_ENDIAN});
-        data.add(new Object[]{encodingStrategy, strategy, ByteOrder.LITTLE_ENDIAN});
-      }
+    for (CompressionStrategy strategy : CompressionStrategy.values()) {
+      data.add(new Object[]{strategy, ByteOrder.BIG_ENDIAN});
+      data.add(new Object[]{strategy, ByteOrder.LITTLE_ENDIAN});
     }
     return data;
   }
+
+  private static final double DELTA = 0.00001;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -70,41 +77,33 @@ public class CompressedLongsSerdeTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  protected final CompressionFactory.LongEncodingStrategy encodingStrategy;
   protected final CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
-  private final long[] values0 = {};
-  private final long[] values1 = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
-  private final long[] values2 = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
-  private final long[] values3 = {1, 1, 1, 1, 1, 11, 11, 11, 11};
-  private final long[] values4 = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
-  private final long[] values5 = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
-  private final long[] values6 = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
-  private final long[] values7 = {
-      Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
-      65487435436632L, -43734526234564L
+  private final double[] values0 = {};
+  private final double[] values1 = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
+  private final double[] values2 = {13.2, 6.1, 0.001, 123, 12572, 123.1, 784.4, 6892.8634, 8.341111};
+  private final double[] values3 = {0.001, 0.001, 0.001, 0.001, 0.001, 100, 100, 100, 100, 100};
+  private final double[] values4 = {0, 0, 0, 0, 0.01, 0, 0, 0, 21.22, 0, 0, 0, 0, 0, 0};
+  private final double[] values5 = {123.16, 1.12, 62.00, 462.12, 517.71, 56.54, 971.32, 824.22, 472.12, 625.26};
+  private final double[] values6 = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
+  private final double[] values7 = {
+      Double.POSITIVE_INFINITY,
+      Double.NEGATIVE_INFINITY,
+      12378.5734,
+      -12718243.7496,
+      -93653653.1,
+      12743153.385534,
+      21431.414538,
+      65487435436632.123,
+      -43734526234564.65
   };
-  private final long[] values8 = {Long.MAX_VALUE, 0, 321, 15248425, 13523212136L, 63822, 3426, 96};
 
-  // built test value with enough unique values to not use table encoding for auto strategy
-  private static long[] addUniques(long[] val)
-  {
-    long[] ret = new long[val.length + CompressionFactory.MAX_TABLE_SIZE];
-    for (int i = 0; i < CompressionFactory.MAX_TABLE_SIZE; i++) {
-      ret[i] = i;
-    }
-    System.arraycopy(val, 0, ret, 256, val.length);
-    return ret;
-  }
-
-  public CompressedLongsSerdeTest(
-      CompressionFactory.LongEncodingStrategy encodingStrategy,
+  public CompressedDoublesSerdeTest(
       CompressionStrategy compressionStrategy,
       ByteOrder order
   )
   {
-    this.encodingStrategy = encodingStrategy;
     this.compressionStrategy = compressionStrategy;
     this.order = order;
   }
@@ -120,70 +119,57 @@ public class CompressedLongsSerdeTest
     testWithValues(values5);
     testWithValues(values6);
     testWithValues(values7);
-    testWithValues(values8);
   }
 
   @Test
   public void testChunkSerde() throws Exception
   {
-    long[] chunk = new long[10000];
+    double[] chunk = new double[10000];
     for (int i = 0; i < 10000; i++) {
       chunk[i] = i;
     }
     testWithValues(chunk);
   }
 
-  // this test takes ~50 minutes to run (even skipping 'auto')
+  // this test takes ~45 minutes to run
   @Ignore
   @Test
   public void testTooManyValues() throws IOException
   {
-    // uncomment this if 'auto' encoded long unbounded heap usage gets put in check and this can actually pass
-    if (encodingStrategy.equals(CompressionFactory.LongEncodingStrategy.AUTO)) {
-      return;
-    }
     expectedException.expect(ColumnCapacityExceededException.class);
     expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
     try (
         SegmentWriteOutMedium segmentWriteOutMedium =
             TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
     ) {
-      ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+      ColumnarDoublesSerializer serializer = CompressionFactory.getDoubleSerializer(
           "test",
           segmentWriteOutMedium,
           "test",
           order,
-          encodingStrategy,
           compressionStrategy
       );
       serializer.open();
 
       final long numRows = Integer.MAX_VALUE + 100L;
       for (long i = 0L; i < numRows; i++) {
-        serializer.add(ThreadLocalRandom.current().nextLong());
+        serializer.add(ThreadLocalRandom.current().nextDouble());
       }
     }
   }
 
-  public void testWithValues(long[] values) throws Exception
+  public void testWithValues(double[] values) throws Exception
   {
-    testValues(values);
-    testValues(addUniques(values));
-  }
-
-  public void testValues(long[] values) throws Exception
-  {
-    ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+    ColumnarDoublesSerializer serializer = CompressionFactory.getDoubleSerializer(
         "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,
-        encodingStrategy,
         compressionStrategy
     );
     serializer.open();
 
-    for (long value : values) {
+    for (double value : values) {
       serializer.add(value);
     }
     Assert.assertEquals(values.length, serializer.size());
@@ -191,42 +177,41 @@ public class CompressedLongsSerdeTest
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
-    CompressedColumnarLongsSupplier supplier = CompressedColumnarLongsSupplier
+    Supplier<ColumnarDoubles> supplier = CompressedColumnarDoublesSuppliers
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    ColumnarLongs longs = supplier.get();
+    ColumnarDoubles doubles = supplier.get();
 
-    assertIndexMatchesVals(longs, values);
+    assertIndexMatchesVals(doubles, values);
     for (int i = 0; i < 10; i++) {
       int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
       int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
       int start = a < b ? a : b;
       int end = a < b ? b : a;
-      tryFill(longs, values, start, end - start);
+      tryFill(doubles, values, start, end - start);
     }
-    testSupplierSerde(supplier, values);
-    testConcurrentThreadReads(supplier, longs, values);
+    testConcurrentThreadReads(supplier, doubles, values);
 
-    longs.close();
+    doubles.close();
   }
 
-  private void tryFill(ColumnarLongs indexed, long[] vals, final int startIndex, final int size)
+  private void tryFill(ColumnarDoubles indexed, double[] vals, final int startIndex, final int size)
   {
-    long[] filled = new long[size];
-    indexed.get(filled, startIndex, size);
+    double[] filled = new double[size];
+    indexed.get(filled, startIndex, filled.length);
 
     for (int i = startIndex; i < filled.length; i++) {
-      Assert.assertEquals(vals[i + startIndex], filled[i]);
+      Assert.assertEquals(vals[i + startIndex], filled[i], DELTA);
     }
   }
 
-  private void assertIndexMatchesVals(ColumnarLongs indexed, long[] vals)
+  private void assertIndexMatchesVals(ColumnarDoubles indexed, double[] vals)
   {
     Assert.assertEquals(vals.length, indexed.size());
 
     // sequential access
     int[] indices = new int[vals.length];
     for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(vals[i], indexed.get(i));
+      Assert.assertEquals(vals[i], indexed.get(i), DELTA);
       indices[i] = i;
     }
 
@@ -235,30 +220,16 @@ public class CompressedLongsSerdeTest
     final int limit = Math.min(indexed.size(), 1000);
     for (int i = 0; i < limit; ++i) {
       int k = indices[i];
-      Assert.assertEquals(vals[k], indexed.get(k));
+      Assert.assertEquals(vals[k], indexed.get(k), DELTA);
     }
-  }
-
-  private void testSupplierSerde(CompressedColumnarLongsSupplier supplier, long[] vals) throws IOException
-  {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    supplier.writeTo(Channels.newChannel(baos), null);
-
-    final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedColumnarLongsSupplier anotherSupplier = CompressedColumnarLongsSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes),
-        order
-    );
-    ColumnarLongs indexed = anotherSupplier.get();
-    assertIndexMatchesVals(indexed, vals);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
   // which sucks but I can't think of a way to deterministically cause it...
   private void testConcurrentThreadReads(
-      final Supplier<ColumnarLongs> supplier,
-      final ColumnarLongs indexed, final long[] vals
+      final Supplier<ColumnarDoubles> supplier,
+      final ColumnarDoubles indexed,
+      final double[] vals
   ) throws Exception
   {
     final AtomicReference<String> reason = new AtomicReference<String>("none");
@@ -285,11 +256,11 @@ public class CompressedLongsSerdeTest
         try {
           for (int i = 0; i < numRuns; ++i) {
             for (int j = 0; j < indexed.size(); ++j) {
-              final long val = vals[j];
-              final long indexedVal = indexed.get(j);
-              if (Longs.compare(val, indexedVal) != 0) {
+              final double val = vals[j];
+              final double indexedVal = indexed.get(j);
+              if (Doubles.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(StringUtils.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(StringUtils.format("Thread1[%d]: %f != %f", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -306,7 +277,7 @@ public class CompressedLongsSerdeTest
       }
     }).start();
 
-    final ColumnarLongs indexed2 = supplier.get();
+    final ColumnarDoubles indexed2 = supplier.get();
     try {
       new Thread(new Runnable()
       {
@@ -324,11 +295,11 @@ public class CompressedLongsSerdeTest
           try {
             for (int i = 0; i < numRuns; ++i) {
               for (int j = indexed2.size() - 1; j >= 0; --j) {
-                final long val = vals[j];
-                final long indexedVal = indexed2.get(j);
-                if (Longs.compare(val, indexedVal) != 0) {
+                final double val = vals[j];
+                final double indexedVal = indexed2.get(j);
+                if (Doubles.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(StringUtils.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(StringUtils.format("Thread2[%d]: %f != %f", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }
