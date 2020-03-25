@@ -215,7 +215,7 @@ public class QueryScheduler implements QueryWatcher
       laneConfig.ifPresent(config -> {
         Bulkhead laneLimiter = laneRegistry.bulkhead(lane, config);
         if (!laneLimiter.tryAcquirePermission()) {
-          throw new QueryCapacityExceededException(lane);
+          throw new QueryCapacityExceededException(lane, config.getMaxConcurrentCalls());
         }
         hallPasses.add(laneLimiter);
       });
@@ -227,7 +227,7 @@ public class QueryScheduler implements QueryWatcher
       totalConfig.ifPresent(config -> {
         Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
         if (!totalLimiter.tryAcquirePermission()) {
-          throw new QueryCapacityExceededException();
+          throw new QueryCapacityExceededException(config.getMaxConcurrentCalls());
         }
         hallPasses.add(totalLimiter);
       });

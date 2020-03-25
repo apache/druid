@@ -67,9 +67,7 @@ public class S3InputSourceConfig
   public boolean isCredentialsConfigured()
   {
     return accessKeyId != null &&
-           accessKeyId.getPassword() != null &&
-           secretAccessKey != null &&
-           secretAccessKey.getPassword() != null;
+           secretAccessKey != null;
   }
 
   @Override

@@ -42,7 +42,7 @@ import java.util.List;
  */
 @Test(groups = TestNGGroup.HDFS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITGcsToHdfsParallelIndexTest extends AbstractGcsInputSourceSimpleIndexTest
+public class ITGcsToHdfsParallelIndexTest extends AbstractGcsInputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
   public void testGcsIndexData(Pair<String, List> gcsInputSource) throws Exception

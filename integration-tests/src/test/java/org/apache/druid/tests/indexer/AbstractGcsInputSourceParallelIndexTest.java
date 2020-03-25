@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-public abstract class AbstractS3InputSourceSimpleIndexTest extends AbstractITBatchIndexTest
+public abstract class AbstractGcsInputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -49,14 +49,14 @@ public abstract class AbstractS3InputSourceSimpleIndexTest extends AbstractITBat
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
+                        "gs://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%"
+                        "gs://%%BUCKET%%/%%PATH%%"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
@@ -69,14 +69,14 @@ public abstract class AbstractS3InputSourceSimpleIndexTest extends AbstractITBat
     };
   }
 
-  void doTest(Pair<String, List> s3InputSource) throws Exception
+  void doTest(Pair<String, List> gcsInputSource) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
-      final Function<String, String> s3PropsTransform = spec -> {
+      final Function<String, String> gcsPropsTransform = spec -> {
         try {
-          String inputSourceValue = jsonMapper.writeValueAsString(s3InputSource.rhs);
+          String inputSourceValue = jsonMapper.writeValueAsString(gcsInputSource.rhs);
           inputSourceValue = StringUtils.replace(
               inputSourceValue,
               "%%BUCKET%%",
@@ -96,12 +96,12 @@ public abstract class AbstractS3InputSourceSimpleIndexTest extends AbstractITBat
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
-              "s3"
+              "google"
           );
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_KEY%%",
-              s3InputSource.lhs
+              gcsInputSource.lhs
           );
           return StringUtils.replace(
               spec,
@@ -117,7 +117,7 @@ public abstract class AbstractS3InputSourceSimpleIndexTest extends AbstractITBat
       doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          s3PropsTransform,
+          gcsPropsTransform,
           INDEX_QUERIES_RESOURCE,
           false,
           true,

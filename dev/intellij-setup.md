@@ -24,7 +24,7 @@ setups of Druid.
 ## Project SDK
 
 The "SDK", configured for the Druid project, *must* be called `1.8`, to avoid annoying changes of
-[.idea/misc.xml](`.idea/misc.xml`) file, that you shouldn't check into your commits. If you don't have an SDK on your
+[`.idea/misc.xml`](/.idea/misc.xml) file, that you shouldn't check into your commits. If you don't have an SDK on your
 dev machine with this name, you should either rename one of the existing SDKs to `1.8`, or create another one with this
 name, and it could point to the same files as some other existing SDK, even if it's actually JDK 9+. `1.8` is just
 an alias name. You can do this in Using `File` -> `Project Structure...` -> `Platform Settings` -> `SDKs`
@@ -46,7 +46,7 @@ This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html
 Before running the apps, you should do a `mvn clean install -DskipTests` in the Druid source in order to make sure directories are populated correctly.
 
 ## XML App Def
-You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in [.idea/runConfigurations](.idea/runConfigurations) in the Druid source code.
+You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.
 
 ### Historical.xml
 ```xml

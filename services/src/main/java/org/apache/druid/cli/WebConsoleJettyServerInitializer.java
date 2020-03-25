@@ -39,8 +39,11 @@ class WebConsoleJettyServerInitializer
       "/favicon.png",
       "/assets/*",
       "/public/*",
-      WEB_CONSOLE_ROOT,
       "/console-config.js"
+  );
+
+  private static final List<String> UNAUTHORIZED_PATHS_FOR_UI = ImmutableList.of(
+      WEB_CONSOLE_ROOT
   );
 
   static void intializeServerForWebConsoleRoot(ServletContextHandler root)
@@ -51,6 +54,7 @@ class WebConsoleJettyServerInitializer
     root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
 
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, UNAUTHORIZED_PATHS_FOR_UI);
   }
 
   static Handler createWebConsoleRewriteHandler()

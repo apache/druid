@@ -25,6 +25,7 @@ import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -108,7 +109,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public TaskState getTaskStatus(String taskID)
+  public TaskStatusPlus getTaskStatus(String taskID)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -127,7 +128,7 @@ public class OverlordResourceTestClient
           {
           }
       );
-      return taskStatusResponse.getStatus().getStatusCode();
+      return taskStatusResponse.getStatus();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -186,11 +187,39 @@ public class OverlordResourceTestClient
           @Override
           public Boolean call()
           {
-            TaskState status = getTaskStatus(taskID);
+            TaskState status = getTaskStatus(taskID).getStatusCode();
             if (status == TaskState.FAILED) {
               throw new ISE("Indexer task FAILED");
             }
             return status == TaskState.SUCCESS;
+          }
+        },
+        true,
+        millisEach,
+        numTimes,
+        taskID
+    );
+  }
+
+  public void waitUntilTaskFails(final String taskID)
+  {
+    waitUntilTaskFails(taskID, 10000, 60);
+  }
+
+
+  public void waitUntilTaskFails(final String taskID, final int millisEach, final int numTimes)
+  {
+    ITRetryUtil.retryUntil(
+        new Callable<Boolean>()
+        {
+          @Override
+          public Boolean call()
+          {
+            TaskState status = getTaskStatus(taskID).getStatusCode();
+            if (status == TaskState.SUCCESS) {
+              throw new ISE("Indexer task SUCCEED");
+            }
+            return status == TaskState.FAILED;
           }
         },
         true,
