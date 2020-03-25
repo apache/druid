@@ -74,31 +74,38 @@ Running Tests Using A Quickstart Cluster
 When writing integration tests, it can be helpful to test against a quickstart
 cluster so that you can set up remote debugging with in your developer
 environment. This section walks you through setting up the integration tests
-so that it can run against a quickstart cluster running on your development
+so that it can run against a [quickstart cluster](../docs/tutorials/index.md#getting-started) running on your development
 machine.
 
-Note that not all features run by default on a quickstart cluster, so it may
-not make sense to run the entire test suite against this configuration.
+> NOTE: Not all features run by default on a quickstart cluster, so it may not make sense to run the entire test suite against this configuration.
+
+> NOTE: Quickstart does not run with ssl, so to trick the integration tests we specify the `*_tls_url` in the config to be the same as the http url.
 
 Make sure you have at least 6GB of memory available before you run the tests.
 
 The tests rely on files in the test/resources folder to exist under the path /resources,
-so create a symlink to make them available
+so create a symlink to make them available:
 
 ```
   ln -s ${DRUID_HOME}/integration-tests/src/test/resources /resources
 ```
 
-Set the cluster config file environment variable to the quickstart config
+Set the cluster config file environment variable to the quickstart config:
 ```
   export CONFIG_FILE=${DRUID_HOME}/integration-tests/quickstart-it.json
 ```
-Note that quickstart does not run with ssl, so to trick the integration tests
-we specify the `*_tls_url` in the config to be the same as the http url
 
-Then run the tests using a command similar to
+The test group `quickstart-compatible` has tests that have been verified to work against the quickstart cluster.
+There may be more tests that work, if you find that they do, please mark it as quickstart-compatible
+(TestNGGroup#QUICKSTART_COMPATIBLE) and open a PR.
+If you find some integration tests do not work, look at the docker files to see what setup they do. You may need to
+do similar steps to get the test to work.
+
+Then run the tests using a command similar to:
 ```
   mvn verify -P int-tests-config-file -Dit.test=<test_name>
+  # Run all integration tests that have been verified to work against a quickstart cluster.
+  mvn verify -P int-tests-config-file -Dgroups=quickstart-compatible
 ```
 
 Running Tests Using A Configuration File for Any Cluster
