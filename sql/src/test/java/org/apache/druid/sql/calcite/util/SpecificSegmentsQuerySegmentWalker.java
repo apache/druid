@@ -116,8 +116,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                     .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
                     .build()
             ),
-            scheduler,
-            joinableFactoryToUse
+            joinableFactoryToUse,
+            scheduler
         ),
         conglomerate,
         new ServerConfig()
