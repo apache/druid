@@ -132,9 +132,9 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 We recommend running your favorite Linux distribution. You will also need:
 
-  * **Java 8**
+  * **Java 8 or later**
 
-> **Warning:** Java 8 is required to run Druid. While Druid will start with a higher version of Java it will not function correctly.
+> **Warning:** Druid only officially supports Java 8. Any Java version later than 8 is still experimental.
 >
 > If needed, you can specify where to find Java using the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the verify-java script.
 

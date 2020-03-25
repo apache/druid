@@ -41,7 +41,6 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -64,6 +63,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
@@ -124,10 +124,8 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -264,11 +262,11 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .aggregators(
                   ImmutableList.of(
-                    new BloomFilterAggregatorFactory(
-                        "a0:agg",
-                        new DefaultDimensionSpec("dim1", "a0:dim1"),
-                        TEST_NUM_ENTRIES
-                    )
+                      new BloomFilterAggregatorFactory(
+                          "a0:agg",
+                          new DefaultDimensionSpec("dim1", "a0:dim1"),
+                          TEST_NUM_ENTRIES
+                      )
                   )
               )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
@@ -460,12 +458,12 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .aggregators(
                   ImmutableList.of(
-                    new BloomFilterAggregatorFactory(
-                        "a0:agg",
-                        new DefaultDimensionSpec("l1", "a0:l1", ValueType.LONG),
-                        TEST_NUM_ENTRIES
-                    )
-                )
+                      new BloomFilterAggregatorFactory(
+                          "a0:agg",
+                          new DefaultDimensionSpec("l1", "a0:l1", ValueType.LONG),
+                          TEST_NUM_ENTRIES
+                      )
+                  )
               )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),
@@ -519,20 +517,20 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "v0",
-                    "(\"l1\" * 2)",
-                    ValueType.LONG,
-                    TestExprMacroTable.INSTANCE
-                )
+                      "v0",
+                      "(\"l1\" * 2)",
+                      ValueType.LONG,
+                      TestExprMacroTable.INSTANCE
+                  )
               )
               .aggregators(
                   ImmutableList.of(
-                    new BloomFilterAggregatorFactory(
-                        "a0:agg",
-                        new DefaultDimensionSpec("v0", "v0"),
-                        TEST_NUM_ENTRIES
-                    )
-                )
+                      new BloomFilterAggregatorFactory(
+                          "a0:agg",
+                          new DefaultDimensionSpec("v0", "a0:v0"),
+                          TEST_NUM_ENTRIES
+                      )
+                  )
               )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),
@@ -587,20 +585,20 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "v0",
-                    "(\"f1\" * 2)",
-                    ValueType.FLOAT,
-                    TestExprMacroTable.INSTANCE
-                )
+                      "v0",
+                      "(\"f1\" * 2)",
+                      ValueType.FLOAT,
+                      TestExprMacroTable.INSTANCE
+                  )
               )
               .aggregators(
                   ImmutableList.of(
-                    new BloomFilterAggregatorFactory(
-                        "a0:agg",
-                        new DefaultDimensionSpec("v0", "v0"),
-                        TEST_NUM_ENTRIES
-                    )
-                )
+                      new BloomFilterAggregatorFactory(
+                          "a0:agg",
+                          new DefaultDimensionSpec("v0", "a0:v0"),
+                          TEST_NUM_ENTRIES
+                      )
+                  )
               )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),
@@ -655,20 +653,20 @@ public class BloomFilterSqlAggregatorTest extends InitializedNullHandlingTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "v0",
-                    "(\"d1\" * 2)",
-                    ValueType.DOUBLE,
-                    TestExprMacroTable.INSTANCE
-                )
+                      "v0",
+                      "(\"d1\" * 2)",
+                      ValueType.DOUBLE,
+                      TestExprMacroTable.INSTANCE
+                  )
               )
               .aggregators(
                   ImmutableList.of(
-                    new BloomFilterAggregatorFactory(
-                        "a0:agg",
-                        new DefaultDimensionSpec("v0", "v0"),
-                        TEST_NUM_ENTRIES
-                    )
-                )
+                      new BloomFilterAggregatorFactory(
+                          "a0:agg",
+                          new DefaultDimensionSpec("v0", "a0:v0"),
+                          TEST_NUM_ENTRIES
+                      )
+                  )
               )
               .context(BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT)
               .build(),

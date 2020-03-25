@@ -84,11 +84,17 @@ public interface Joinable
    * @param searchColumnName Name of the search column
    * @param searchColumnValue Target value of the search column
    * @param retrievalColumnName The column to retrieve values from
+   * @param maxCorrelationSetSize Maximum number of values to retrieve. If we detect that more values would be
+   *                              returned than this limit, return an empty set.
+   * @param allowNonKeyColumnSearch If true, allow searchs on non-key columns. If this is false,
+   *                                a search on a non-key column should return an empty set.
    * @return The set of correlated column values. If we cannot determine correlated values, return an empty set.
    */
   Set<String> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
-      String retrievalColumnName
+      String retrievalColumnName,
+      long maxCorrelationSetSize,
+      boolean allowNonKeyColumnSearch
   );
 }

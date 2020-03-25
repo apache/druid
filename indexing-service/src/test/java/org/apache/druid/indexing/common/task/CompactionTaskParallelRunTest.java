@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
@@ -124,12 +125,14 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   {
     runIndexTask();
 
-    List<InputSplit<List<WindowedSegmentId>>> splits = DruidInputSource.createSplits(
-        getCoordinatorClient(),
-        RETRY_POLICY_FACTORY,
-        DATA_SOURCE,
-        INTERVAL_TO_INDEX,
-        new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
+    List<InputSplit<List<WindowedSegmentId>>> splits = Lists.newArrayList(
+        DruidInputSource.createSplits(
+            getCoordinatorClient(),
+            RETRY_POLICY_FACTORY,
+            DATA_SOURCE,
+            INTERVAL_TO_INDEX,
+            new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
+        )
     );
 
     List<DataSegment> segments = new ArrayList<>(

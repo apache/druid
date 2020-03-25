@@ -155,6 +155,7 @@ public class S3StorageDruidModule implements DruidModule
            .to(S3DataSegmentArchiver.class)
            .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(S3DataSegmentPusher.class).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.storage", S3InputDataConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentArchiverConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
@@ -166,9 +167,11 @@ public class S3StorageDruidModule implements DruidModule
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
+  // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
+  // However, this builder can then be modified and have configuration(s) inside
+  // AmazonS3ClientBuilder and/or S3StorageConfig overridden before being built.
   @Provides
-  @LazySingleton
-  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
+  public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
@@ -178,7 +181,7 @@ public class S3StorageDruidModule implements DruidModule
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
     final Protocol protocol = determineProtocol(clientConfig, endpointConfig);
-    final AmazonS3ClientBuilder builder = AmazonS3Client
+    final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
         .builder()
         .withCredentials(provider)
         .withClientConfiguration(setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
@@ -187,11 +190,24 @@ public class S3StorageDruidModule implements DruidModule
         .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
 
     if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      builder.setEndpointConfiguration(
+      amazonS3ClientBuilder.setEndpointConfiguration(
           new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
       );
     }
 
-    return new ServerSideEncryptingAmazonS3(builder.build(), storageConfig.getServerSideEncryption());
+    return ServerSideEncryptingAmazonS3.builder()
+                                       .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
+                                       .setS3StorageConfig(storageConfig);
+
+  }
+
+  // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection
+  @Provides
+  @LazySingleton
+  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
+      ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder
+  )
+  {
+    return serverSideEncryptingAmazonS3Builder.build();
   }
 }

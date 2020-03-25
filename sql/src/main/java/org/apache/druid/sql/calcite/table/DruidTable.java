@@ -33,6 +33,9 @@ import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.segment.column.RowSignature;
+
+import java.util.Objects;
 
 public class DruidTable implements TranslatableTable
 {
@@ -73,7 +76,7 @@ public class DruidTable implements TranslatableTable
   @Override
   public RelDataType getRowType(final RelDataTypeFactory typeFactory)
   {
-    return rowSignature.getRelDataType(typeFactory);
+    return RowSignatures.toRelDataType(rowSignature, typeFactory);
   }
 
   @Override
@@ -111,10 +114,10 @@ public class DruidTable implements TranslatableTable
 
     DruidTable that = (DruidTable) o;
 
-    if (dataSource != null ? !dataSource.equals(that.dataSource) : that.dataSource != null) {
+    if (!Objects.equals(dataSource, that.dataSource)) {
       return false;
     }
-    return rowSignature != null ? rowSignature.equals(that.rowSignature) : that.rowSignature == null;
+    return Objects.equals(rowSignature, that.rowSignature);
   }
 
   @Override

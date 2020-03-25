@@ -27,6 +27,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -35,6 +36,7 @@ import org.apache.druid.tasklogs.TaskLogs;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 
 /**
  * Provides task logs archived on S3.
@@ -45,12 +47,21 @@ public class S3TaskLogs implements TaskLogs
 
   private final ServerSideEncryptingAmazonS3 service;
   private final S3TaskLogsConfig config;
+  private final S3InputDataConfig inputDataConfig;
+  private final CurrentTimeMillisSupplier timeSupplier;
 
   @Inject
-  public S3TaskLogs(ServerSideEncryptingAmazonS3 service, S3TaskLogsConfig config)
+  public S3TaskLogs(
+      ServerSideEncryptingAmazonS3 service,
+      S3TaskLogsConfig config,
+      S3InputDataConfig inputDataConfig,
+      CurrentTimeMillisSupplier timeSupplier
+  )
   {
     this.service = service;
     this.config = config;
+    this.inputDataConfig = inputDataConfig;
+    this.timeSupplier = timeSupplier;
   }
 
   @Override
@@ -152,14 +163,39 @@ public class S3TaskLogs implements TaskLogs
   }
 
   @Override
-  public void killAll()
+  public void killAll() throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    log.info(
+        "Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'].",
+        config.getS3Bucket(),
+        config.getS3Prefix()
+    );
+
+    long now = timeSupplier.getAsLong();
+    killOlderThan(now);
   }
 
   @Override
-  public void killOlderThan(long timestamp)
+  public void killOlderThan(long timestamp) throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    log.info(
+        "Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getS3Bucket(),
+        config.getS3Prefix(),
+        new Date(timestamp)
+    );
+    try {
+      S3Utils.deleteObjectsInPath(
+          service,
+          inputDataConfig,
+          config.getS3Bucket(),
+          config.getS3Prefix(),
+          (object) -> object.getLastModified().getTime() < timestamp
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting task log files from s3. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
   }
 }

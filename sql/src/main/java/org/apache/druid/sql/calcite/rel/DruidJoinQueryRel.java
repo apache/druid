@@ -42,11 +42,12 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.HashSet;
 import java.util.List;
@@ -59,17 +60,38 @@ import java.util.stream.Collectors;
 public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__join__");
-  private static final double COST_FACTOR = 100.0;
 
   private final PartialDruidQuery partialQuery;
   private final Join joinRel;
   private RelNode left;
   private RelNode right;
 
+  /**
+   * True if {@link #left} requires a subquery.
+   *
+   * This is useful to store in a variable because {@link #left} is sometimes not actually a {@link DruidRel} when
+   * {@link #computeSelfCost} is called. (It might be a {@link org.apache.calcite.plan.volcano.RelSubset}.)
+   *
+   * @see #computeLeftRequiresSubquery(DruidRel)
+   */
+  private final boolean leftRequiresSubquery;
+
+  /**
+   * True if {@link #right} requires a subquery.
+   *
+   * This is useful to store in a variable because {@link #left} is sometimes not actually a {@link DruidRel} when
+   * {@link #computeSelfCost} is called. (It might be a {@link org.apache.calcite.plan.volcano.RelSubset}.)
+   *
+   * @see #computeLeftRequiresSubquery(DruidRel)
+   */
+  private final boolean rightRequiresSubquery;
+
   private DruidJoinQueryRel(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       Join joinRel,
+      boolean leftRequiresSubquery,
+      boolean rightRequiresSubquery,
       PartialDruidQuery partialQuery,
       QueryMaker queryMaker
   )
@@ -78,17 +100,28 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     this.joinRel = joinRel;
     this.left = joinRel.getLeft();
     this.right = joinRel.getRight();
+    this.leftRequiresSubquery = leftRequiresSubquery;
+    this.rightRequiresSubquery = rightRequiresSubquery;
     this.partialQuery = partialQuery;
   }
 
-  public static DruidJoinQueryRel create(final Join joinRel, final QueryMaker queryMaker)
+  /**
+   * Create an instance from a Join that is based on two {@link DruidRel} inputs.
+   */
+  public static DruidJoinQueryRel create(
+      final Join joinRel,
+      final DruidRel<?> left,
+      final DruidRel<?> right
+  )
   {
     return new DruidJoinQueryRel(
         joinRel.getCluster(),
         joinRel.getTraitSet(),
         joinRel,
+        computeLeftRequiresSubquery(left),
+        computeRightRequiresSubquery(right),
         PartialDruidQuery.create(joinRel),
-        queryMaker
+        left.getQueryMaker()
     );
   }
 
@@ -116,6 +149,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getCluster(),
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         joinRel,
+        leftRequiresSubquery,
+        rightRequiresSubquery,
         newQueryBuilder,
         getQueryMaker()
     );
@@ -140,18 +175,20 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final RowSignature rightSignature = rightQuery.getOutputRowSignature();
     final DataSource rightDataSource;
 
-    // Left rel: allow direct embedding of scans/mappings including those of joins.
-    if (DruidRels.isScanOrMapping(leftDruidRel, true)) {
-      leftDataSource = leftQuery.getDataSource();
-    } else {
+    if (computeLeftRequiresSubquery(leftDruidRel)) {
+      assert leftRequiresSubquery;
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
+    } else {
+      assert !leftRequiresSubquery;
+      leftDataSource = leftQuery.getDataSource();
     }
 
-    // Right rel: allow direct embedding of scans/mappings, excluding joins (those must be done as subqueries).
-    if (DruidRels.isScanOrMapping(rightDruidRel, false)) {
-      rightDataSource = rightQuery.getDataSource();
-    } else {
+    if (computeRightRequiresSubquery(rightDruidRel)) {
+      assert rightRequiresSubquery;
       rightDataSource = new QueryDataSource(rightQuery.getQuery());
+    } else {
+      assert !rightRequiresSubquery;
+      rightDataSource = rightQuery.getDataSource();
     }
 
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
@@ -190,7 +227,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignature.from(
+        RowSignatures.fromRelDataType(
             joinRel.getRowType().getFieldNames(),
             joinRel.getRowType()
         ),
@@ -213,6 +250,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
                    .map(input -> RelOptRule.convert(input, DruidConvention.instance()))
                    .collect(Collectors.toList())
         ),
+        leftRequiresSubquery,
+        rightRequiresSubquery,
         partialQuery,
         getQueryMaker()
     );
@@ -251,6 +290,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getCluster(),
         traitSet,
         joinRel.copy(joinRel.getTraitSet(), inputs),
+        leftRequiresSubquery,
+        rightRequiresSubquery,
         getPartialDruidQuery(),
         getQueryMaker()
     );
@@ -296,9 +337,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
     return planner.getCostFactory()
-                  .makeCost(mq.getRowCount(left), 0, 0)
-                  .plus(planner.getCostFactory().makeCost(mq.getRowCount(right), 0, 0))
-                  .multiplyBy(COST_FACTOR);
+                  .makeCost(partialQuery.estimateCost(), 0, 0)
+                  .multiplyBy(leftRequiresSubquery ? CostEstimates.MULTIPLIER_JOIN_SUBQUERY : 1)
+                  .multiplyBy(rightRequiresSubquery ? CostEstimates.MULTIPLIER_JOIN_SUBQUERY : 1);
   }
 
   private static JoinType toDruidJoinType(JoinRelType calciteJoinType)
@@ -317,6 +358,19 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
+  private static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
+  {
+    // Left requires a subquery unless it's a scan or mapping on top of any table or a join.
+    return !DruidRels.isScanOrMapping(left, true);
+  }
+
+  private static boolean computeRightRequiresSubquery(final DruidRel<?> right)
+  {
+    // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
+    return !(DruidRels.isScanOrMapping(right, false)
+             && DruidRels.dataSourceIfLeafRel(right).filter(DataSource::isGlobal).isPresent());
+  }
+
   /**
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
@@ -328,15 +382,15 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     final RowSignature.Builder signatureBuilder = RowSignature.builder();
 
-    for (final String column : leftSignature.getRowOrder()) {
-      signatureBuilder.add(column, leftSignature.getColumnType(column));
+    for (final String column : leftSignature.getColumnNames()) {
+      signatureBuilder.add(column, leftSignature.getColumnType(column).orElse(null));
     }
 
     // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
-    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getRowOrder()) + "0.";
+    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getColumnNames()) + "0.";
 
-    for (final String column : rightSignature.getRowOrder()) {
-      signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column));
+    for (final String column : rightSignature.getColumnNames()) {
+      signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column).orElse(null));
     }
 
     return Pair.of(rightPrefix, signatureBuilder.build());

@@ -32,6 +32,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
+import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
@@ -62,6 +63,9 @@ export interface LookupsViewState {
   deleteLookupTier?: string;
 
   hiddenColumns: LocalStorageBackedArray<string>;
+
+  lookupTableActionDialogId?: string;
+  actions: BasicAction[];
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
@@ -80,6 +84,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditSpec: '',
       isEdit: false,
       allLookupTiers: [],
+      actions: [],
 
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
@@ -333,7 +338,17 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                 const lookupId = row.value.id;
                 const lookupTier = row.value.tier;
                 const lookupActions = this.getLookupActions(lookupTier, lookupId);
-                return <ActionCell actions={lookupActions} />;
+                return (
+                  <ActionCell
+                    onDetail={() => {
+                      this.setState({
+                        lookupTableActionDialogId: lookupId,
+                        actions: lookupActions,
+                      });
+                    }}
+                    actions={lookupActions}
+                  />
+                );
               },
               show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
@@ -372,7 +387,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   render(): JSX.Element {
-    const { lookupsError, hiddenColumns } = this.state;
+    const { lookupsError, hiddenColumns, lookupTableActionDialogId, actions } = this.state;
 
     return (
       <div className="lookups-view app-view">
@@ -401,6 +416,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         {this.renderLookupsTable()}
         {this.renderLookupEditDialog()}
         {this.renderDeleteLookupAction()}
+        {lookupTableActionDialogId && (
+          <LookupTableActionDialog
+            lookupId={lookupTableActionDialogId}
+            actions={actions}
+            onClose={() => this.setState({ lookupTableActionDialogId: undefined })}
+          />
+        )}
       </div>
     );
   }

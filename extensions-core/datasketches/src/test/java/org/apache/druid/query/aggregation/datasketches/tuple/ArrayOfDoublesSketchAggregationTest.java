@@ -536,10 +536,10 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals("sketch", 30.0, (double) row.get(0), 0);
-    Assert.assertEquals("estimate", 30.0, (double) row.get(1), 0);
-    Assert.assertEquals("union", 30.0, (double) row.get(3), 0);
-    Assert.assertEquals("intersection", 30.0, (double) row.get(4), 0);
+    Assert.assertEquals("sketch", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(1), 0);
+    Assert.assertEquals("union", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(3), 0);
+    Assert.assertEquals("intersection", NullHandling.replaceWithDefault() ? 40.0 : 30.0, (double) row.get(4), 0);
     Assert.assertEquals("anotb", 0, (double) row.get(5), 0);
 
     Object meansObj = row.get(6); // means
@@ -548,20 +548,20 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertEquals(3, means.length);
     Assert.assertEquals(1.0, means[0], 0);
     Assert.assertEquals(2.0, means[1], 0);
-    Assert.assertEquals(3.0, means[2], 0.1);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 2.25 : 3.0, means[2], 0.1);
 
     Object obj = row.get(2); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
-    Assert.assertEquals(30, ds.getN());
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds.getN());
     Assert.assertEquals(2.0, ds.getMinValue(), 0);
     Assert.assertEquals(2.0, ds.getMaxValue(), 0);
 
     Object objSketch2 = row.get(7); // quantiles-sketch-with-nulls
     Assert.assertTrue(objSketch2 instanceof DoublesSketch);
     DoublesSketch ds2 = (DoublesSketch) objSketch2;
-    Assert.assertEquals(30, ds2.getN());
-    Assert.assertEquals(3.0, ds2.getMinValue(), 0);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds2.getN());
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinValue(), 0);
     Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
   }
 

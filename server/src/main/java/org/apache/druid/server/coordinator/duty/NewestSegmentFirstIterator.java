@@ -22,10 +22,12 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -39,6 +41,7 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.Streams;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -54,7 +57,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * This class iterates all segments of the dataSources configured for compaction from the newest to the oldest.
@@ -119,13 +121,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
       final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(interval);
 
-      resultMap.put(
-          entry.getDataSource(),
-          holders.stream()
-                 .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-                 .mapToLong(chunk -> chunk.getObject().getSize())
-                 .sum()
-      );
+      long size = 0;
+      for (DataSegment segment : FluentIterable
+          .from(holders)
+          .transformAndConcat(TimelineObjectHolder::getObject)
+          .transform(PartitionChunk::getObject)) {
+        size += segment.getSize();
+      }
+
+      resultMap.put(entry.getDataSource(), size);
     }
     return resultMap;
   }
@@ -237,9 +241,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (holders.isEmpty()) {
         throw new NoSuchElementException();
       }
-      return holders.remove(holders.size() - 1)
-                    .getObject()
-                    .stream()
+      return Streams.sequentialStreamFrom(holders.remove(holders.size() - 1).getObject())
                     .map(PartitionChunk::getObject)
                     .collect(Collectors.toList());
     }
@@ -509,11 +511,16 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private QueueEntry(List<DataSegment> segments)
     {
       Preconditions.checkArgument(segments != null && !segments.isEmpty());
-      Collections.sort(segments);
-      this.interval = new Interval(
-          segments.get(0).getInterval().getStart(),
-          segments.get(segments.size() - 1).getInterval().getEnd()
-      );
+      DateTime minStart = DateTimes.MAX, maxEnd = DateTimes.MIN;
+      for (DataSegment segment : segments) {
+        if (segment.getInterval().getStart().compareTo(minStart) < 0) {
+          minStart = segment.getInterval().getStart();
+        }
+        if (segment.getInterval().getEnd().compareTo(maxEnd) > 0) {
+          maxEnd = segment.getInterval().getEnd();
+        }
+      }
+      this.interval = new Interval(minStart, maxEnd);
       this.segments = segments;
     }
 

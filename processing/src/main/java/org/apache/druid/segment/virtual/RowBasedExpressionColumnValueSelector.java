@@ -95,7 +95,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   {
     Object binding = bindings.get(x);
     if (binding != null) {
-      if (binding instanceof String[] && ((String[]) binding).length > 1) {
+      if (binding instanceof String[]) {
         return true;
       } else if (binding instanceof Number) {
         ignoredColumns.add(x);

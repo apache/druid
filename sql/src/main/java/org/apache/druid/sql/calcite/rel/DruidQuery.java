@@ -26,7 +26,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import org.apache.calcite.plan.RelOptUtil;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -44,7 +45,6 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -68,6 +68,7 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -77,7 +78,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -88,7 +89,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * A fully formed Druid query, built from a {@link PartialDruidQuery}. The work to develop this query is done
@@ -317,6 +317,11 @@ public class DruidQuery
         virtualColumnRegistry
     );
 
+    final Subtotals subtotals = computeSubtotals(
+        partialQuery,
+        rowSignature
+    );
+
     final List<Aggregation> aggregations = computeAggregations(
         partialQuery,
         plannerContext,
@@ -326,7 +331,7 @@ public class DruidQuery
         finalizeAggregations
     );
 
-    final RowSignature aggregateRowSignature = RowSignature.from(
+    final RowSignature aggregateRowSignature = RowSignatures.fromRelDataType(
         ImmutableList.copyOf(
             Iterators.concat(
                 dimensions.stream().map(DimensionExpression::getOutputName).iterator(),
@@ -342,33 +347,12 @@ public class DruidQuery
         aggregateRowSignature
     );
 
+    final Grouping grouping = Grouping.create(dimensions, subtotals, aggregations, havingFilter, aggregateRowSignature);
+
     if (aggregateProject == null) {
-      return Grouping.create(dimensions, aggregations, havingFilter, aggregateRowSignature);
+      return grouping;
     } else {
-      final Projection postAggregationProjection = Projection.postAggregation(
-          aggregateProject,
-          plannerContext,
-          aggregateRowSignature,
-          "p"
-      );
-
-      postAggregationProjection.getPostAggregators().forEach(
-          postAggregator -> aggregations.add(Aggregation.create(postAggregator))
-      );
-
-      // Remove literal dimensions that did not appear in the projection. This is useful for queries
-      // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
-      // actually want to include a dimension 'dummy'.
-      final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(aggregateProject.getChildExps(), null);
-      for (int i = dimensions.size() - 1; i >= 0; i--) {
-        final DimensionExpression dimension = dimensions.get(i);
-        if (Parser.parse(dimension.getDruidExpression().getExpression(), plannerContext.getExprMacroTable())
-                  .isLiteral() && !aggregateProjectBits.get(i)) {
-          dimensions.remove(i);
-        }
-      }
-
-      return Grouping.create(dimensions, aggregations, havingFilter, postAggregationProjection.getOutputRowSignature());
+      return grouping.applyProject(plannerContext, aggregateProject);
     }
   }
 
@@ -393,7 +377,8 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<DimensionExpression> dimensions = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("d", new TreeSet<>(rowSignature.getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("d", rowSignature.getColumnNames());
+
     int outputNameCounter = 0;
 
     for (int i : aggregate.getGroupSet()) {
@@ -417,22 +402,58 @@ public class DruidQuery
 
       final VirtualColumn virtualColumn;
 
-      final String dimOutputName;
+
+      final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
         virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             druidExpression,
             sqlTypeName
         );
-        dimOutputName = virtualColumn.getOutputName();
+        dimensions.add(DimensionExpression.ofVirtualColumn(
+            virtualColumn.getOutputName(),
+            dimOutputName,
+            druidExpression,
+            outputType
+        ));
       } else {
-        dimOutputName = outputNamePrefix + outputNameCounter++;
+        dimensions.add(DimensionExpression.ofSimpleColumn(dimOutputName, druidExpression, outputType));
       }
-
-      dimensions.add(new DimensionExpression(dimOutputName, druidExpression, outputType));
     }
 
     return dimensions;
+  }
+
+  /**
+   * Builds a {@link Subtotals} object based on {@link Aggregate#getGroupSets()}.
+   */
+  private static Subtotals computeSubtotals(
+      final PartialDruidQuery partialQuery,
+      final RowSignature rowSignature
+  )
+  {
+    final Aggregate aggregate = partialQuery.getAggregate();
+
+    // dimBitMapping maps from input field position to group set position (dimension number).
+    final int[] dimBitMapping = new int[rowSignature.size()];
+    int i = 0;
+    for (int dimBit : aggregate.getGroupSet()) {
+      dimBitMapping[dimBit] = i++;
+    }
+
+    // Use dimBitMapping to remap groupSets (which is input-field-position based) into subtotals (which is
+    // dimension-list-position based).
+    final List<IntList> subtotals = new ArrayList<>();
+    for (ImmutableBitSet groupSet : aggregate.getGroupSets()) {
+      final IntList subtotal = new IntArrayList();
+      for (int dimBit : groupSet) {
+        subtotal.add(dimBitMapping[dimBit]);
+      }
+
+      subtotals.add(subtotal);
+    }
+
+    return new Subtotals(subtotals);
   }
 
   /**
@@ -462,7 +483,7 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<Aggregation> aggregations = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("a", new TreeSet<>(rowSignature.getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("a", rowSignature.getColumnNames());
 
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
       final String aggName = outputNamePrefix + i;
@@ -521,7 +542,7 @@ public class DruidQuery
       } else if (collation.getDirection() == RelFieldCollation.Direction.DESCENDING) {
         direction = OrderByColumnSpec.Direction.DESCENDING;
       } else {
-        throw new ISE("WTF?! Don't know what to do with direction[%s]", collation.getDirection());
+        throw new ISE("Don't know what to do with direction[%s]", collation.getDirection());
       }
 
       final SqlTypeName sortExpressionType = sortExpression.getType().getSqlTypeName();
@@ -535,7 +556,7 @@ public class DruidQuery
 
       if (sortExpression.isA(SqlKind.INPUT_REF)) {
         final RexInputRef ref = (RexInputRef) sortExpression;
-        final String fieldName = rowSignature.getRowOrder().get(ref.getIndex());
+        final String fieldName = rowSignature.getColumnName(ref.getIndex());
         orderBys.add(new OrderByColumnSpec(fieldName, direction, comparator));
       } else {
         // We don't support sorting by anything other than refs which actually appear in the query result.
@@ -607,8 +628,8 @@ public class DruidQuery
     if (grouping != null) {
       if (includeDimensions) {
         for (DimensionExpression expression : grouping.getDimensions()) {
-          if (virtualColumnRegistry.isVirtualColumnDefined(expression.getOutputName())) {
-            virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression.getOutputName()));
+          if (virtualColumnRegistry.isVirtualColumnDefined(expression.getVirtualColumn())) {
+            virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression.getVirtualColumn()));
           }
         }
       }
@@ -706,7 +727,9 @@ public class DruidQuery
   @Nullable
   public TimeseriesQuery toTimeseriesQuery()
   {
-    if (grouping == null || grouping.getHavingFilter() != null) {
+    if (grouping == null
+        || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
+        || grouping.getHavingFilter() != null) {
       return null;
     }
 
@@ -787,9 +810,10 @@ public class DruidQuery
   @Nullable
   public TopNQuery toTopNQuery()
   {
-    // Must have GROUP BY one column, ORDER BY zero or one column, limit less than maxTopNLimit, and no HAVING.
+    // Must have GROUP BY one column, no GROUPING SETS, ORDER BY ≤ 1 column, limit less than maxTopNLimit, no HAVING.
     final boolean topNOk = grouping != null
                            && grouping.getDimensions().size() == 1
+                           && !grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
                            && sorting != null
                            && (sorting.getOrderBys().size() <= 1
                                && sorting.isLimited() && sorting.getLimit() <= plannerContext.getPlannerConfig()
@@ -895,9 +919,12 @@ public class DruidQuery
         postAggregators,
         havingSpec,
         sorting != null
-        ? new DefaultLimitSpec(sorting.getOrderBys(), sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null)
+        ? new DefaultLimitSpec(
+            sorting.getOrderBys(),
+            sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null
+        )
         : NoopLimitSpec.instance(),
-        null,
+        grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
@@ -915,10 +942,9 @@ public class DruidQuery
       return null;
     }
 
-
-    if (outputRowSignature.getRowOrder().isEmpty()) {
+    if (outputRowSignature.size() == 0) {
       // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
-      throw new ISE("WTF?! Attempting to convert to Scan query without any columns?");
+      throw new ISE("Cannot convert to Scan query without any columns.");
     }
 
     final Filtration filtration = Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
@@ -949,7 +975,7 @@ public class DruidQuery
     }
 
     // Compute the list of columns to select.
-    final Set<String> columns = new HashSet<>(outputRowSignature.getRowOrder());
+    final Set<String> columns = new HashSet<>(outputRowSignature.getColumnNames());
     if (order != ScanQuery.Order.NONE) {
       columns.add(ColumnHolder.TIME_COLUMN_NAME);
     }

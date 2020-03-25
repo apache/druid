@@ -64,6 +64,13 @@ public class AuthenticationUtils
     }
   }
 
+  public static void addNoopAuthorizationFilters(ServletContextHandler root, List<String> unsecuredPaths)
+  {
+    for (String unsecuredPath : unsecuredPaths) {
+      root.addFilter(new FilterHolder(new AuthenticationOnlyResourceFilter()), unsecuredPath, null);
+    }
+  }
+
   public static void addSecuritySanityCheckFilter(
       ServletContextHandler root,
       ObjectMapper jsonMapper

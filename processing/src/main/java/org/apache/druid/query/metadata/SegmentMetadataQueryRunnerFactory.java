@@ -219,7 +219,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                         }
                     );
                     try {
-                      queryWatcher.registerQuery(query, future);
+                      queryWatcher.registerQueryFuture(query, future);
                       if (QueryContexts.hasTimeout(query)) {
                         return future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
                       } else {

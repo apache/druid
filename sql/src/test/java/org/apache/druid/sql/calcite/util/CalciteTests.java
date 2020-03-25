@@ -28,13 +28,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -52,8 +50,6 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -61,12 +57,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
-import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -76,29 +68,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
-import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanQueryConfig;
-import org.apache.druid.query.scan.ScanQueryEngine;
-import org.apache.druid.query.scan.ScanQueryQueryToolChest;
-import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
-import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
-import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.topn.TopNQueryQueryToolChest;
-import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -106,6 +76,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
@@ -142,7 +113,6 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -236,7 +206,7 @@ public class CalciteTests
   private static final String TIMESTAMP_COLUMN = "t";
 
   private static final Injector INJECTOR = Guice.createInjector(
-      (Module) binder -> {
+      binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
@@ -246,7 +216,8 @@ public class CalciteTests
                 ImmutableMap.of(
                     "a", "xa",
                     "abc", "xabc",
-                    "nosuchkey", "mysteryvalue"
+                    "nosuchkey", "mysteryvalue",
+                    "6", "x6"
                 )
             );
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
@@ -559,106 +530,6 @@ public class CalciteTests
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
-  /**
-   * Returns a new {@link QueryRunnerFactoryConglomerate} and a {@link Closer} which should be closed at the end of the
-   * test.
-   */
-  public static Pair<QueryRunnerFactoryConglomerate, Closer> createQueryRunnerFactoryConglomerate()
-  {
-    final Closer resourceCloser = Closer.create();
-    final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
-        "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(10 * 1024 * 1024)
-    );
-    resourceCloser.register(stupidPool);
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest
-        .makeQueryRunnerFactory(
-            GroupByQueryRunnerTest.DEFAULT_MAPPER,
-            new GroupByQueryConfig()
-            {
-              @Override
-              public String getDefaultStrategy()
-              {
-                return GroupByStrategySelector.STRATEGY_V2;
-              }
-            },
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int intermediateComputeSizeBytes()
-              {
-                return 10 * 1024 * 1024;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                // Only use 1 thread for tests.
-                return 1;
-              }
-
-              @Override
-              public int getNumMergeBuffers()
-              {
-                // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-                // Two buffers for the broker and one for the queryable
-                return 3;
-              }
-            }
-        );
-    final GroupByQueryRunnerFactory factory = factoryCloserPair.lhs;
-    resourceCloser.register(factoryCloserPair.rhs);
-
-    final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-            .put(
-                SegmentMetadataQuery.class,
-                new SegmentMetadataQueryRunnerFactory(
-                    new SegmentMetadataQueryQueryToolChest(
-                        new SegmentMetadataQueryConfig("P1W")
-                    ),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
-                ScanQuery.class,
-                new ScanQueryRunnerFactory(
-                    new ScanQueryQueryToolChest(
-                        new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory()
-                    ),
-                    new ScanQueryEngine(),
-                    new ScanQueryConfig()
-                )
-            )
-            .put(
-                TimeseriesQuery.class,
-                new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(),
-                    new TimeseriesQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
-                TopNQuery.class,
-                new TopNQueryRunnerFactory(
-                    stupidPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(GroupByQuery.class, factory)
-            .build()
-    );
-    return Pair.of(conglomerate, resourceCloser);
-  }
-
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
       final QueryRunnerFactoryConglomerate conglomerate
@@ -699,6 +570,15 @@ public class CalciteTests
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir
+  )
+  {
+    return createMockWalker(conglomerate, tmpDir, null);
+  }
+
+  public static SpecificSegmentsQuerySegmentWalker createMockWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final File tmpDir,
+      @Nullable final QueryScheduler scheduler
   )
   {
     final QueryableIndex index1 = IndexBuilder
@@ -753,7 +633,8 @@ public class CalciteTests
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
         INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
-        null
+        null,
+        scheduler
     ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -879,10 +760,7 @@ public class CalciteTests
         new FakeHttpClient(),
         provider,
         NodeRole.COORDINATOR,
-        "/simple/leader",
-        () -> {
-          throw new UnsupportedOperationException();
-        }
+        "/simple/leader"
     );
 
     return new SystemSchema(

@@ -197,6 +197,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-avro-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-azure-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-bloom-filter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-datasketches</argument>
@@ -238,6 +240,8 @@
                                         <argument>org.apache.druid.extensions:simple-client-sslcontext</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-basic-security</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-pac4j</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>
@@ -381,8 +385,6 @@
                                         <argument>org.apache.druid.extensions.contrib:ambari-metrics-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:dropwizard-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-azure-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-cassandra-storage</argument>
                                         <argument>-c</argument>

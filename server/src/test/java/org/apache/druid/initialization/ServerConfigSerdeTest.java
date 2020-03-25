@@ -44,6 +44,7 @@ public class ServerConfigSerdeTest
         defaultConfig.getMaxIdleTime(),
         defaultConfig.getDefaultQueryTimeout(),
         defaultConfig.getMaxScatterGatherBytes(),
+        defaultConfig.getMaxSubqueryRows(),
         defaultConfig.getMaxQueryTimeout(),
         defaultConfig.getMaxRequestHeaderSize(),
         defaultConfig.getGracefulShutdownTimeout(),

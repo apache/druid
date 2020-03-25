@@ -38,8 +38,32 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>${aws.sdk.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-s3-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-azure-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-google-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-hdfs-storage</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -266,7 +290,9 @@
         <profile>
             <id>integration-tests</id>
             <properties>
-                <jvm.runtime>8</jvm.runtime>
+                <start.hadoop.docker>false</start.hadoop.docker>
+                <override.config.path></override.config.path>
+                <resource.file.dir.path></resource.file.dir.path>
             </properties>
             <build>
                 <plugins>
@@ -281,7 +307,14 @@
                                 </goals>
                                 <phase>pre-integration-test</phase>
                                 <configuration>
-                                    <executable>${project.basedir}/run_cluster_using_java_runtime_${jvm.runtime}.sh</executable>
+                                    <environmentVariables>
+                                    <DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>${start.hadoop.docker}</DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>
+                                    <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
+                                    <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
+                                    <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
+                                    <DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>${resource.file.dir.path}</DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>>
+                                    </environmentVariables>
+                                    <executable>${project.basedir}/run_cluster.sh</executable>
                                 </configuration>
                             </execution>
                             <execution>

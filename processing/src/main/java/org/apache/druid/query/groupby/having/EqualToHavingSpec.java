@@ -66,7 +66,7 @@ public class EqualToHavingSpec implements HavingSpec
   @Override
   public void setQuery(GroupByQuery query)
   {
-    columnNumber = query.getResultRowPositionLookup().getInt(aggregationName);
+    columnNumber = query.getResultRowSignature().indexOf(aggregationName);
     aggregators = HavingSpecUtil.computeAggregatorsMap(query.getAggregatorSpecs());
   }
 

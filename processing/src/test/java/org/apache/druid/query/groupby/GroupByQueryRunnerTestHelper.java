@@ -74,7 +74,7 @@ public class GroupByQueryRunnerTestHelper
     }
 
     for (int i = 0; i < vals.length; i += 2) {
-      final int position = query.getResultRowPositionLookup().getInt(vals[i].toString());
+      final int position = query.getResultRowSignature().indexOf(vals[i].toString());
       row.set(position, vals[i + 1]);
     }
 
@@ -100,7 +100,7 @@ public class GroupByQueryRunnerTestHelper
       ResultRow row = ResultRow.create(query.getResultRowSizeWithPostAggregators());
       for (int i = 0; i < columnNames.length; i++) {
         if (i != timeIndex) {
-          final int position = query.getResultRowPositionLookup().getInt(columnNames[i]);
+          final int position = query.getResultRowSignature().indexOf(columnNames[i]);
           row.set(position, value[i]);
         } else if (query.getResultRowHasTimestamp()) {
           row.set(0, new DateTime(value[i], ISOChronology.getInstanceUTC()).getMillis());

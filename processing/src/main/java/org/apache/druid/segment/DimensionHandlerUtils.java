@@ -519,9 +519,4 @@ public final class DimensionHandlerUtils
   {
     return number == null ? ZERO_FLOAT : number;
   }
-
-  public static Number nullToZero(@Nullable Number number)
-  {
-    return number == null ? ZERO_DOUBLE : number;
-  }
 }

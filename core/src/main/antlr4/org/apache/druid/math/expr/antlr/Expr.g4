@@ -15,32 +15,42 @@
 
 grammar Expr;
 
-expr : 'null'                                         # null
-     | ('-'|'!') expr                                 # unaryOpExpr
-     |<assoc=right> expr '^' expr                     # powOpExpr
-     | expr ('*'|'/'|'%') expr                        # mulDivModuloExpr
-     | expr ('+'|'-') expr                            # addSubExpr
-     | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr        # logicalOpExpr
-     | expr ('&&'|'||') expr                          # logicalAndOrExpr
-     | '(' expr ')'                                   # nestedExpr
-     | IDENTIFIER '(' lambda ',' fnArgs ')'           # applyFunctionExpr
-     | IDENTIFIER '(' fnArgs? ')'                     # functionExpr
-     | IDENTIFIER                                     # identifierExpr
-     | DOUBLE                                         # doubleExpr
-     | LONG                                           # longExpr
-     | STRING                                         # string
-     | '[' DOUBLE  (',' DOUBLE)* ']'                  # doubleArray
-     | '[' LONG (',' LONG)* ']'                       # longArray
-     | '[' STRING (',' STRING)* ']'                   # stringArray
-     | '[]'                                           # emptyArray
+expr : NULL                                                         # null
+     | ('-'|'!') expr                                               # unaryOpExpr
+     |<assoc=right> expr '^' expr                                   # powOpExpr
+     | expr ('*'|'/'|'%') expr                                      # mulDivModuloExpr
+     | expr ('+'|'-') expr                                          # addSubExpr
+     | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr                      # logicalOpExpr
+     | expr ('&&'|'||') expr                                        # logicalAndOrExpr
+     | '(' expr ')'                                                 # nestedExpr
+     | IDENTIFIER '(' lambda ',' fnArgs ')'                         # applyFunctionExpr
+     | IDENTIFIER '(' fnArgs? ')'                                   # functionExpr
+     | IDENTIFIER                                                   # identifierExpr
+     | DOUBLE                                                       # doubleExpr
+     | LONG                                                         # longExpr
+     | STRING                                                       # string
+     | '[' (stringElement (',' stringElement)*)? ']'                # stringArray
+     | '[' longElement (',' longElement)*']'                        # longArray
+     | '<LONG>' '[' (numericElement (',' numericElement)*)? ']'     # explicitLongArray
+     | '<DOUBLE>'? '[' (numericElement (',' numericElement)*)? ']'  # doubleArray
+     | '<STRING>' '[' (literalElement (',' literalElement)*)? ']'   # explicitStringArray
      ;
 
 lambda : (IDENTIFIER | '(' ')' | '(' IDENTIFIER (',' IDENTIFIER)* ')') '->' expr
        ;
 
-fnArgs : expr (',' expr)*                             # functionArgs
+fnArgs : expr (',' expr)*                                           # functionArgs
        ;
 
+stringElement : (STRING | NULL);
+
+longElement : (LONG | NULL);
+
+numericElement : (LONG | DOUBLE | NULL);
+
+literalElement : (STRING | LONG | DOUBLE | NULL);
+
+NULL : 'null';
 IDENTIFIER : [_$a-zA-Z][_$a-zA-Z0-9]* | '"' (ESC | ~ [\"\\])* '"';
 LONG : [0-9]+ ;
 DOUBLE : [0-9]+ '.' [0-9]* ;

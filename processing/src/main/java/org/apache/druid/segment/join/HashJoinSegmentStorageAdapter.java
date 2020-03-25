@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Capabilities;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -54,27 +54,22 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
-  private final boolean enableFilterPushDown;
+  private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
-  HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses
-  )
-  {
-    this.baseAdapter = baseAdapter;
-    this.clauses = clauses;
-    this.enableFilterPushDown = QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN;
-  }
-
+  /**
+   * @param baseAdapter          A StorageAdapter for the left-hand side base segment
+   * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
+   *                             duplicate prefixes or prefixes that shadow each other across the clauses
+   */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
-      final boolean enableFilterPushDown
+      final JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
-    this.enableFilterPushDown = enableFilterPushDown;
+    this.joinFilterPreAnalysis = joinFilterPreAnalysis;
   }
 
   @Override
@@ -223,27 +218,16 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    final Set<String> baseColumns = new HashSet<>();
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
-
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
-    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
-      // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.
-      if (baseColumns.containsAll(virtualColumn.requiredColumns())) {
-        preJoinVirtualColumns.add(virtualColumn);
-      } else {
-        postJoinVirtualColumns.add(virtualColumn);
-      }
-    }
-
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-        this,
-        filter,
-        enableFilterPushDown
+    determineBaseColumnsWithPreAndPostJoinVirtualColumns(
+        virtualColumns,
+        preJoinVirtualColumns,
+        postJoinVirtualColumns
     );
+
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
@@ -278,11 +262,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     );
   }
 
-  public List<JoinableClause> getClauses()
-  {
-    return clauses;
-  }
-
   /**
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
@@ -292,9 +271,47 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     return !getClauseForColumn(column).isPresent();
   }
 
-  public boolean isEnableFilterPushDown()
+  /**
+   * Return a String set containing the name of columns that belong to the base table (including any pre-join virtual
+   * columns as well).
+   *
+   * Additionally, if the preJoinVirtualColumns and/or postJoinVirtualColumns arguments are provided, this method
+   * will add each VirtualColumn in the provided virtualColumns to either preJoinVirtualColumns or
+   * postJoinVirtualColumns based on whether the virtual column is pre-join or post-join.
+   *
+   * @param virtualColumns         List of virtual columns from the query
+   * @param preJoinVirtualColumns  If provided, virtual columns determined to be pre-join will be added to this list
+   * @param postJoinVirtualColumns If provided, virtual columns determined to be post-join will be added to this list
+   *
+   * @return The set of base column names, including any pre-join virtual columns.
+   */
+  public Set<String> determineBaseColumnsWithPreAndPostJoinVirtualColumns(
+      VirtualColumns virtualColumns,
+      @Nullable List<VirtualColumn> preJoinVirtualColumns,
+      @Nullable List<VirtualColumn> postJoinVirtualColumns
+  )
   {
-    return enableFilterPushDown;
+    final Set<String> baseColumns = new HashSet<>();
+    Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
+    Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
+
+    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
+      // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.
+      if (baseColumns.containsAll(virtualColumn.requiredColumns())) {
+        // Since pre-join virtual columns can be computed using only base columns, we include them in the
+        // base column set.
+        baseColumns.add(virtualColumn.getOutputName());
+        if (preJoinVirtualColumns != null) {
+          preJoinVirtualColumns.add(virtualColumn);
+        }
+      } else {
+        if (postJoinVirtualColumns != null) {
+          postJoinVirtualColumns.add(virtualColumn);
+        }
+      }
+    }
+
+    return baseColumns;
   }
 
   /**

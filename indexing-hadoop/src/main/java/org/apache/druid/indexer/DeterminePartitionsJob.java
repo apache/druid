@@ -135,7 +135,7 @@ public class DeterminePartitionsJob implements Jobby
             StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
 
-        JobHelper.injectSystemProperties(groupByJob);
+        JobHelper.injectSystemProperties(groupByJob.getConfiguration(), config);
         config.addJobProperties(groupByJob);
 
         groupByJob.setMapperClass(DeterminePartitionsGroupByMapper.class);
@@ -191,7 +191,7 @@ public class DeterminePartitionsJob implements Jobby
 
       dimSelectionJob.getConfiguration().set("io.sort.record.percent", "0.19");
 
-      JobHelper.injectSystemProperties(dimSelectionJob);
+      JobHelper.injectSystemProperties(dimSelectionJob.getConfiguration(), config);
       config.addJobProperties(dimSelectionJob);
 
       if (!partitionsSpec.isAssumeGrouped()) {

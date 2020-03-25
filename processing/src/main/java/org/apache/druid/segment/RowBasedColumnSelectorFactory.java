@@ -19,10 +19,9 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -31,82 +30,89 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
+/**
+ * A {@link ColumnSelectorFactory} that is based on an object supplier and a {@link RowAdapter} for that type of object.
+ */
 public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
-  private static final RowAdapter<? extends Row> STANDARD_ROW_ADAPTER = new RowAdapter<Row>()
-  {
-    @Override
-    public ToLongFunction<Row> timestampFunction()
-    {
-      return Row::getTimestampFromEpoch;
-    }
-
-    @Override
-    public Function<Row, Object> columnFunction(String columnName)
-    {
-      return r -> r.getRaw(columnName);
-    }
-  };
-
   private final Supplier<T> supplier;
   private final RowAdapter<T> adapter;
-  private final Map<String, ValueType> rowSignature;
+  private final RowSignature rowSignature;
+  private final boolean throwParseExceptions;
 
   private RowBasedColumnSelectorFactory(
       final Supplier<T> supplier,
       final RowAdapter<T> adapter,
-      @Nullable final Map<String, ValueType> rowSignature
+      final RowSignature rowSignature,
+      final boolean throwParseExceptions
   )
   {
     this.supplier = supplier;
     this.adapter = adapter;
-    this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.of();
+    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature must be nonnull");
+    this.throwParseExceptions = throwParseExceptions;
   }
 
-  public static <RowType extends Row> RowBasedColumnSelectorFactory create(
-      final Supplier<RowType> supplier,
-      @Nullable final Map<String, ValueType> signature
-  )
-  {
-    //noinspection unchecked
-    return new RowBasedColumnSelectorFactory<>(supplier, (RowAdapter<RowType>) STANDARD_ROW_ADAPTER, signature);
-  }
-
-  public static <RowType> RowBasedColumnSelectorFactory create(
+  /**
+   * Create an instance based on any object, along with a {@link RowAdapter} for that object.
+   *
+   * @param adapter              adapter for these row objects
+   * @param supplier             supplier of row objects
+   * @param signature            will be used for reporting available columns and their capabilities. Note that the this
+   *                             factory will still allow creation of selectors on any named field in the rows, even if
+   *                             it doesn't appear in "rowSignature". (It only needs to be accessible via
+   *                             {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
+   *                             passing in {@link RowSignature#empty()}.
+   * @param throwParseExceptions whether numeric selectors should throw parse exceptions or use a default/null value
+   *                             when their inputs are not actually numeric
+   */
+  public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
-      @Nullable final Map<String, ValueType> signature
+      final RowSignature signature,
+      final boolean throwParseExceptions
   )
   {
-    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature);
+    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature, throwParseExceptions);
   }
 
   @Nullable
-  public static ColumnCapabilities getColumnCapabilities(
-      final Map<String, ValueType> rowSignature,
+  static ColumnCapabilities getColumnCapabilities(
+      final RowSignature rowSignature,
       final String columnName
   )
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
+      return new ColumnCapabilitiesImpl().setType(ValueType.LONG).setIsComplete(true);
     } else {
-      final ValueType valueType = rowSignature.get(columnName);
+      final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-      return valueType != null ? new ColumnCapabilitiesImpl().setType(valueType) : null;
+      // Do not set hasMultipleValues, because even though we might return multiple values, setting it affirmatively
+      // causes expression selectors to always treat us as arrays. If we might have multiple values (i.e. if our type
+      // is nonnumeric), set isComplete false to compensate.
+      if (valueType != null) {
+        return new ColumnCapabilitiesImpl()
+            .setType(valueType)
+
+            // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
+            .setIsComplete(valueType.isNumeric());
+      } else {
+        return null;
+      }
     }
   }
 
@@ -365,47 +371,47 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     } else {
       final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
 
-      return new ColumnValueSelector()
+      return new ColumnValueSelector<Object>()
       {
         @Override
         public boolean isNull()
         {
-          return columnFunction.apply(supplier.get()) == null;
+          return !NullHandling.replaceWithDefault() && getCurrentValueAsNumber() == null;
         }
 
         @Override
         public double getDouble()
         {
-          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
-          assert NullHandling.replaceWithDefault() || metric != null;
-          return DimensionHandlerUtils.nullToZero(metric).doubleValue();
+          final Number n = getCurrentValueAsNumber();
+          assert NullHandling.replaceWithDefault() || n != null;
+          return n != null ? n.doubleValue() : 0d;
         }
 
         @Override
         public float getFloat()
         {
-          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
-          assert NullHandling.replaceWithDefault() || metric != null;
-          return DimensionHandlerUtils.nullToZero(metric).floatValue();
+          final Number n = getCurrentValueAsNumber();
+          assert NullHandling.replaceWithDefault() || n != null;
+          return n != null ? n.floatValue() : 0f;
         }
 
         @Override
         public long getLong()
         {
-          Number metric = Rows.objectToNumber(columnName, columnFunction.apply(supplier.get()));
-          assert NullHandling.replaceWithDefault() || metric != null;
-          return DimensionHandlerUtils.nullToZero(metric).longValue();
+          final Number n = getCurrentValueAsNumber();
+          assert NullHandling.replaceWithDefault() || n != null;
+          return n != null ? n.longValue() : 0L;
         }
 
         @Nullable
         @Override
         public Object getObject()
         {
-          return columnFunction.apply(supplier.get());
+          return getCurrentValue();
         }
 
         @Override
-        public Class classOfObject()
+        public Class<Object> classOfObject()
         {
           return Object.class;
         }
@@ -414,6 +420,22 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("row", supplier);
+        }
+
+        @Nullable
+        private Object getCurrentValue()
+        {
+          return columnFunction.apply(supplier.get());
+        }
+
+        @Nullable
+        private Number getCurrentValueAsNumber()
+        {
+          return Rows.objectToNumber(
+              columnName,
+              getCurrentValue(),
+              throwParseExceptions
+          );
         }
       };
     }

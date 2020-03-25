@@ -31,6 +31,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
@@ -67,12 +68,11 @@ public class IndexedTableJoinableTest
   };
 
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
-      ImmutableList.of("str", "long"),
-      ImmutableList.of(ValueType.STRING, ValueType.LONG),
       ImmutableList.of(
           new Object[]{"foo", 1L},
           new Object[]{"bar", 2L}
-      )
+      ),
+      RowSignature.builder().add("str", ValueType.STRING).add("long", ValueType.LONG).build()
   );
 
   private final RowBasedIndexedTable<Object[]> indexedTable = new RowBasedIndexedTable<>(
@@ -86,7 +86,7 @@ public class IndexedTableJoinableTest
   public void test_getAvailableColumns()
   {
     final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    Assert.assertEquals(ImmutableList.of("long", "str"), joinable.getAvailableColumns());
+    Assert.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
   }
 
   @Test

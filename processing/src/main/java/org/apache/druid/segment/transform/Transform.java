@@ -21,6 +21,7 @@ package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
  * A row transform that is part of a {@link TransformSpec}. Transforms allow adding new fields to input rows. Each
@@ -34,6 +35,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * they cannot refer to other transforms. And they cannot remove fields, only add them. However, they can shadow a
  * field with another field containing all nulls, which will act similarly to removing the field.
  */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "expression", value = ExpressionTransform.class)

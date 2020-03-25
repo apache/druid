@@ -48,7 +48,7 @@ import java.util.Objects;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
-  static final String CTX_GRAND_TOTAL = "grandTotal";
+  public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
 
   private final VirtualColumns virtualColumns;
@@ -103,6 +103,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Query.TIMESERIES;
   }
 
+  @Override
   @JsonProperty
   public VirtualColumns getVirtualColumns()
   {

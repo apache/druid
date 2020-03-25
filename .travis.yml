@@ -324,6 +324,14 @@ jobs:
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - &integration_security
+      name: "(Compile=openjdk8, Run=openjdk8) security integration test"
+      jdk: openjdk8
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
     - &integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk8) realtime index integration test"
       jdk: openjdk8
@@ -336,75 +344,48 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) other integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
-    # START - Integration tests for Compile with Java 11 and Run with Java 11
+    # START - Integration tests for Compile with Java 8 and Run with Java 11
     - <<: *integration_batch_index
-      name: "(Compile=openjdk11, Run=openjdk11) batch index integration test"
-      jdk: openjdk11
+      name: "(Compile=openjdk8, Run=openjdk11) batch index integration test"
+      jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=11'
 
     - <<: *integration_perfect_rollup_parallel_batch_index
-      name: "(Compile=openjdk11, Run=openjdk11) perfect rollup parallel batch index integration test"
-      jdk: openjdk11
+      name: "(Compile=openjdk8, Run=openjdk11) perfect rollup parallel batch index integration test"
+      jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11'
 
     - <<: *integration_kafka_index
-      name: "(Compile=openjdk11, Run=openjdk11) kafka index integration test"
-      jdk: openjdk11
+      name: "(Compile=openjdk8, Run=openjdk11) kafka index integration test"
+      jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=11'
 
     - <<: *integration_query
-      name: "(Compile=openjdk11, Run=openjdk11) query integration test"
-      jdk: openjdk11
+      name: "(Compile=openjdk8, Run=openjdk11) query integration test"
+      jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11'
 
+    - <<: *integration_security
+      name: "(Compile=openjdk8, Run=openjdk11) security integration test"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11'
+
     - <<: *integration_realtime_index
-      name: "(Compile=openjdk11, Run=openjdk11) realtime index integration test"
-      jdk: openjdk11
+      name: "(Compile=openjdk8, Run=openjdk11) realtime index integration test"
+      jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=11'
 
     - <<: *integration_tests
-      name: "(Compile=openjdk11, Run=openjdk11) other integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index' JVM_RUNTIME='-Djvm.runtime=11'
-    # END - Integration tests for Compile with Java 11 and Run with Java 11
+      name: "(Compile=openjdk8, Run=openjdk11) other integration test"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion' JVM_RUNTIME='-Djvm.runtime=11'
+    # END - Integration tests for Compile with Java 8 and Run with Java 11
 
-    # START - Integration tests for Compile with Java 11 and Run with Java 8
-    - <<: *integration_batch_index
-      name: "(Compile=openjdk11, Run=openjdk8) batch index integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8'
-
-    - <<: *integration_perfect_rollup_parallel_batch_index
-      name: "(Compile=openjdk11, Run=openjdk8) perfect rollup parallel batch index integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8'
-
-    - <<: *integration_kafka_index
-      name: "(Compile=openjdk11, Run=openjdk8) kafka index integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8'
-
-    - <<: *integration_query
-      name: "(Compile=openjdk11, Run=openjdk8) query integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8'
-
-    - <<: *integration_realtime_index
-      name: "(Compile=openjdk11, Run=openjdk8) realtime index integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
-
-    - <<: *integration_tests
-      name: "(Compile=openjdk11, Run=openjdk8) other integration test"
-      jdk: openjdk11
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index' JVM_RUNTIME='-Djvm.runtime=8'
-    # END - Integration tests for Compile with Java 11 and Run with Java 8
-    
     - name: "security vulnerabilities"
       stage: cron
       install: skip
