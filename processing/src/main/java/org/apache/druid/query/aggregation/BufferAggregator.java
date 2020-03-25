@@ -25,6 +25,7 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.nio.ByteBuffer;
 
 /**
@@ -38,7 +39,7 @@ import java.nio.ByteBuffer;
  * @see VectorAggregator, the vectorized version
  */
 @ExtensionPoint
-public interface BufferAggregator extends HotLoopCallee
+public interface BufferAggregator extends HotLoopCallee, Closeable
 {
   /**
    * Initializes the buffer location
@@ -154,6 +155,7 @@ public interface BufferAggregator extends HotLoopCallee
   /**
    * Release any resources used by the aggregator
    */
+  @Override
   void close();
 
   /**

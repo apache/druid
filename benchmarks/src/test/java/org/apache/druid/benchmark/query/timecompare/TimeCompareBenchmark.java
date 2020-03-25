@@ -21,8 +21,8 @@ package org.apache.druid.benchmark.query.timecompare;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
+import org.apache.druid.data.gen.TestDataGenerator;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.StupidPool;
@@ -143,7 +143,7 @@ public class TimeCompareBenchmark
   private Query timeseriesQuery;
   private QueryRunner timeseriesRunner;
 
-  private BenchmarkSchemaInfo schemaInfo;
+  private TestSchemaInfo schemaInfo;
   private File tmpDir;
   private Interval[] segmentIntervals;
 
@@ -172,7 +172,7 @@ public class TimeCompareBenchmark
   private void setupQueries()
   {
     // queries for the basic schema
-    BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    TestSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
     QuerySegmentSpec intervalSpec =
         new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -308,7 +308,7 @@ public class TimeCompareBenchmark
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
 
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      TestDataGenerator gen = new TestDataGenerator(
           schemaInfo.getColumnSchemas(),
           RNG_SEED + i,
           segmentIntervals[i],

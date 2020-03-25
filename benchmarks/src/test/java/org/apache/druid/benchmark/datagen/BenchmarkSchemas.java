@@ -20,6 +20,9 @@
 package org.apache.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.gen.TestSchemaInfo;
+import org.apache.druid.data.gen.TestColumnSchema;
+import org.apache.druid.data.input.impl.DimensionSchema.ValueType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -29,7 +32,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -40,16 +42,16 @@ import java.util.Map;
 
 public class BenchmarkSchemas
 {
-  public static final Map<String, BenchmarkSchemaInfo> SCHEMA_MAP = new LinkedHashMap<>();
+  public static final Map<String, TestSchemaInfo> SCHEMA_MAP = new LinkedHashMap<>();
 
   static { // basic schema
-    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+    List<TestColumnSchema> basicSchemaColumns = ImmutableList.of(
         // dims
-        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.STRING, false, 1, null, 0, 1000),
-        BenchmarkColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 101, 1.0),
-        BenchmarkColumnSchema.makeDiscreteUniform("dimUniform", ValueType.STRING, false, 1, null, 1, 100000),
-        BenchmarkColumnSchema.makeSequential("dimSequentialHalfNull", ValueType.STRING, false, 1, 0.5, 0, 1000),
-        BenchmarkColumnSchema.makeEnumerated(
+        TestColumnSchema.makeSequential("dimSequential", ValueType.STRING, false, 1, null, 0, 1000),
+        TestColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 101, 1.0),
+        TestColumnSchema.makeDiscreteUniform("dimUniform", ValueType.STRING, false, 1, null, 1, 100000),
+        TestColumnSchema.makeSequential("dimSequentialHalfNull", ValueType.STRING, false, 1, 0.5, 0, 1000),
+        TestColumnSchema.makeEnumerated(
             "dimMultivalEnumerated",
             ValueType.STRING,
             false,
@@ -58,7 +60,7 @@ public class BenchmarkSchemas
             Arrays.asList("Hello", "World", "Foo", "Bar", "Baz"),
             Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
         ),
-        BenchmarkColumnSchema.makeEnumerated(
+        TestColumnSchema.makeEnumerated(
             "dimMultivalEnumerated2",
             ValueType.STRING,
             false,
@@ -67,15 +69,15 @@ public class BenchmarkSchemas
             Arrays.asList("Apple", "Orange", "Xylophone", "Corundum", null),
             Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
         ),
-        BenchmarkColumnSchema.makeSequential("dimMultivalSequentialWithNulls", ValueType.STRING, false, 8, 0.15, 1, 11),
-        BenchmarkColumnSchema.makeSequential("dimHyperUnique", ValueType.STRING, false, 1, null, 0, 100000),
-        BenchmarkColumnSchema.makeSequential("dimNull", ValueType.STRING, false, 1, 1.0, 0, 1),
+        TestColumnSchema.makeSequential("dimMultivalSequentialWithNulls", ValueType.STRING, false, 8, 0.15, 1, 11),
+        TestColumnSchema.makeSequential("dimHyperUnique", ValueType.STRING, false, 1, null, 0, 100000),
+        TestColumnSchema.makeSequential("dimNull", ValueType.STRING, false, 1, 1.0, 0, 1),
 
         // metrics
-        BenchmarkColumnSchema.makeSequential("metLongSequential", ValueType.LONG, true, 1, null, 0, 10000),
-        BenchmarkColumnSchema.makeDiscreteUniform("metLongUniform", ValueType.LONG, true, 1, null, 0, 500),
-        BenchmarkColumnSchema.makeNormal("metFloatNormal", ValueType.FLOAT, true, 1, null, 5000.0, 1.0, true),
-        BenchmarkColumnSchema.makeZipf("metFloatZipf", ValueType.FLOAT, true, 1, null, 0, 1000, 1.0)
+        TestColumnSchema.makeSequential("metLongSequential", ValueType.LONG, true, 1, null, 0, 10000),
+        TestColumnSchema.makeDiscreteUniform("metLongUniform", ValueType.LONG, true, 1, null, 0, 500),
+        TestColumnSchema.makeNormal("metFloatNormal", ValueType.FLOAT, true, 1, null, 5000.0, 1.0, true),
+        TestColumnSchema.makeZipf("metFloatZipf", ValueType.FLOAT, true, 1, null, 0, 1000, 1.0)
     );
 
     List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
@@ -96,14 +98,14 @@ public class BenchmarkSchemas
 
     Interval basicSchemaDataInterval = Intervals.of("2000-01-01/P1D");
 
-    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo basicSchema = new TestSchemaInfo(
         basicSchemaColumns,
         basicSchemaIngestAggs,
         basicSchemaDataInterval,
         true
     );
 
-    BenchmarkSchemaInfo basicSchemaExpression = new BenchmarkSchemaInfo(
+    TestSchemaInfo basicSchemaExpression = new TestSchemaInfo(
         basicSchemaColumns,
         basicSchemaIngestAggsExpression,
         basicSchemaDataInterval,
@@ -115,9 +117,9 @@ public class BenchmarkSchemas
   }
 
   static { // simple single string column and count agg schema, no rollup
-    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+    List<TestColumnSchema> basicSchemaColumns = ImmutableList.of(
         // dims
-        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.STRING, false, 1, null, 0, 1000000)
+        TestColumnSchema.makeSequential("dimSequential", ValueType.STRING, false, 1, null, 0, 1000000)
     );
 
     List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
@@ -125,7 +127,7 @@ public class BenchmarkSchemas
 
     Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
-    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo basicSchema = new TestSchemaInfo(
         basicSchemaColumns,
         basicSchemaIngestAggs,
         basicSchemaDataInterval,
@@ -135,9 +137,9 @@ public class BenchmarkSchemas
   }
 
   static { // simple single long column and count agg schema, no rollup
-    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+    List<TestColumnSchema> basicSchemaColumns = ImmutableList.of(
         // dims, ingest as a metric for now with rollup off, until numeric dims at ingestion are supported
-        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.LONG, true, 1, null, 0, 1000000)
+        TestColumnSchema.makeSequential("dimSequential", ValueType.LONG, true, 1, null, 0, 1000000)
     );
 
     List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
@@ -146,7 +148,7 @@ public class BenchmarkSchemas
 
     Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
-    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo basicSchema = new TestSchemaInfo(
         basicSchemaColumns,
         basicSchemaIngestAggs,
         basicSchemaDataInterval,
@@ -156,9 +158,9 @@ public class BenchmarkSchemas
   }
 
   static { // simple single float column and count agg schema, no rollup
-    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+    List<TestColumnSchema> basicSchemaColumns = ImmutableList.of(
         // dims, ingest as a metric for now with rollup off, until numeric dims at ingestion are supported
-        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.FLOAT, true, 1, null, 0, 1000000)
+        TestColumnSchema.makeSequential("dimSequential", ValueType.FLOAT, true, 1, null, 0, 1000000)
     );
 
     List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
@@ -167,7 +169,7 @@ public class BenchmarkSchemas
 
     Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
-    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo basicSchema = new TestSchemaInfo(
         basicSchemaColumns,
         basicSchemaIngestAggs,
         basicSchemaDataInterval,
@@ -177,9 +179,9 @@ public class BenchmarkSchemas
   }
 
   static { // schema with high opportunity for rollup
-    List<BenchmarkColumnSchema> rolloColumns = ImmutableList.of(
+    List<TestColumnSchema> rolloColumns = ImmutableList.of(
         // dims
-        BenchmarkColumnSchema.makeEnumerated(
+        TestColumnSchema.makeEnumerated(
             "dimEnumerated",
             ValueType.STRING,
             false,
@@ -188,7 +190,7 @@ public class BenchmarkSchemas
             Arrays.asList("Hello", "World", "Foo", "Bar", "Baz"),
             Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
         ),
-        BenchmarkColumnSchema.makeEnumerated(
+        TestColumnSchema.makeEnumerated(
             "dimEnumerated2",
             ValueType.STRING,
             false,
@@ -197,14 +199,14 @@ public class BenchmarkSchemas
             Arrays.asList("Apple", "Orange", "Xylophone", "Corundum", null),
             Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
         ),
-        BenchmarkColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 100, 2.0),
-        BenchmarkColumnSchema.makeDiscreteUniform("dimUniform", ValueType.STRING, false, 1, null, 1, 100),
+        TestColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 100, 2.0),
+        TestColumnSchema.makeDiscreteUniform("dimUniform", ValueType.STRING, false, 1, null, 1, 100),
 
         // metrics
-        BenchmarkColumnSchema.makeZipf("metLongZipf", ValueType.LONG, true, 1, null, 0, 10000, 2.0),
-        BenchmarkColumnSchema.makeDiscreteUniform("metLongUniform", ValueType.LONG, true, 1, null, 0, 500),
-        BenchmarkColumnSchema.makeNormal("metFloatNormal", ValueType.FLOAT, true, 1, null, 5000.0, 1.0, true),
-        BenchmarkColumnSchema.makeZipf("metFloatZipf", ValueType.FLOAT, true, 1, null, 0, 1000, 1.5)
+        TestColumnSchema.makeZipf("metLongZipf", ValueType.LONG, true, 1, null, 0, 10000, 2.0),
+        TestColumnSchema.makeDiscreteUniform("metLongUniform", ValueType.LONG, true, 1, null, 0, 500),
+        TestColumnSchema.makeNormal("metFloatNormal", ValueType.FLOAT, true, 1, null, 5000.0, 1.0, true),
+        TestColumnSchema.makeZipf("metFloatZipf", ValueType.FLOAT, true, 1, null, 0, 1000, 1.5)
     );
 
     List<AggregatorFactory> rolloSchemaIngestAggs = new ArrayList<>();
@@ -217,7 +219,7 @@ public class BenchmarkSchemas
 
     Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
 
-    BenchmarkSchemaInfo rolloSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo rolloSchema = new TestSchemaInfo(
         rolloColumns,
         rolloSchemaIngestAggs,
         basicSchemaDataInterval,
@@ -227,17 +229,17 @@ public class BenchmarkSchemas
   }
 
   static { // simple schema with null valued rows, no aggs on numeric columns
-    List<BenchmarkColumnSchema> nullsSchemaColumns = ImmutableList.of(
+    List<TestColumnSchema> nullsSchemaColumns = ImmutableList.of(
         // string dims with nulls
-        BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, 0.8, 1, 101, 1.5),
-        BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, 0.3, 1, 100000),
-        BenchmarkColumnSchema.makeSequential("stringSequential", ValueType.STRING, false, 1, 0.5, 0, 1000),
+        TestColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, 0.8, 1, 101, 1.5),
+        TestColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, 0.3, 1, 100000),
+        TestColumnSchema.makeSequential("stringSequential", ValueType.STRING, false, 1, 0.5, 0, 1000),
 
         // numeric dims with nulls
-        BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, 0.45, 0, 10000),
-        BenchmarkColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, 0.25, 0, 500),
-        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
-        BenchmarkColumnSchema.makeZipf("floatZipf", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
+        TestColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, 0.45, 0, 10000),
+        TestColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, 0.25, 0, 500),
+        TestColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
+        TestColumnSchema.makeZipf("floatZipf", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
     );
 
     List<AggregatorFactory> simpleNullsSchemaIngestAggs = new ArrayList<>();
@@ -245,7 +247,7 @@ public class BenchmarkSchemas
 
     Interval nullsSchemaDataInterval = Intervals.of("2000-01-01/P1D");
 
-    BenchmarkSchemaInfo nullsSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo nullsSchema = new TestSchemaInfo(
         nullsSchemaColumns,
         simpleNullsSchemaIngestAggs,
         nullsSchemaDataInterval,
@@ -256,28 +258,28 @@ public class BenchmarkSchemas
   }
 
   static { // simple schema with null valued rows, no aggs on numeric columns
-    List<BenchmarkColumnSchema> nullsSchemaColumns = ImmutableList.of(
+    List<TestColumnSchema> nullsSchemaColumns = ImmutableList.of(
         // string dims
-        BenchmarkColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, null, 1, 101, 1.5),
-        BenchmarkColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, null, 1, 100000),
-        BenchmarkColumnSchema.makeSequential("stringSequential", ValueType.STRING, false, 1, null, 0, 1000),
+        TestColumnSchema.makeZipf("stringZipf", ValueType.STRING, false, 1, null, 1, 101, 1.5),
+        TestColumnSchema.makeDiscreteUniform("stringUniform", ValueType.STRING, false, 1, null, 1, 100000),
+        TestColumnSchema.makeSequential("stringSequential", ValueType.STRING, false, 1, null, 0, 1000),
 
         // numeric dims
-        BenchmarkColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, null, 0, 10000),
-        BenchmarkColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, null, 0, 500),
-        BenchmarkColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, null, 0, 1000, 2.0),
-        BenchmarkColumnSchema.makeZipf("floatZipf", ValueType.FLOAT, false, 1, null, 0, 1000, 2.0),
+        TestColumnSchema.makeSequential("longSequential", ValueType.LONG, false, 1, null, 0, 10000),
+        TestColumnSchema.makeDiscreteUniform("longUniform", ValueType.LONG, false, 1, null, 0, 500),
+        TestColumnSchema.makeZipf("doubleZipf", ValueType.DOUBLE, false, 1, null, 0, 1000, 2.0),
+        TestColumnSchema.makeZipf("floatZipf", ValueType.FLOAT, false, 1, null, 0, 1000, 2.0),
 
         // string dims with nulls
-        BenchmarkColumnSchema.makeZipf("stringZipfWithNulls", ValueType.STRING, false, 1, 0.8, 1, 101, 1.5),
-        BenchmarkColumnSchema.makeDiscreteUniform("stringUniformWithNulls", ValueType.STRING, false, 1, 0.3, 1, 100000),
-        BenchmarkColumnSchema.makeSequential("stringSequentialWithNulls", ValueType.STRING, false, 1, 0.5, 0, 1000),
+        TestColumnSchema.makeZipf("stringZipfWithNulls", ValueType.STRING, false, 1, 0.8, 1, 101, 1.5),
+        TestColumnSchema.makeDiscreteUniform("stringUniformWithNulls", ValueType.STRING, false, 1, 0.3, 1, 100000),
+        TestColumnSchema.makeSequential("stringSequentialWithNulls", ValueType.STRING, false, 1, 0.5, 0, 1000),
 
         // numeric dims with nulls
-        BenchmarkColumnSchema.makeSequential("longSequentialWithNulls", ValueType.LONG, false, 1, 0.45, 0, 10000),
-        BenchmarkColumnSchema.makeDiscreteUniform("longUniformWithNulls", ValueType.LONG, false, 1, 0.25, 0, 500),
-        BenchmarkColumnSchema.makeZipf("doubleZipfWithNulls", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
-        BenchmarkColumnSchema.makeZipf("floatZipfWithNulls", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
+        TestColumnSchema.makeSequential("longSequentialWithNulls", ValueType.LONG, false, 1, 0.45, 0, 10000),
+        TestColumnSchema.makeDiscreteUniform("longUniformWithNulls", ValueType.LONG, false, 1, 0.25, 0, 500),
+        TestColumnSchema.makeZipf("doubleZipfWithNulls", ValueType.DOUBLE, false, 1, 0.1, 0, 1000, 2.0),
+        TestColumnSchema.makeZipf("floatZipfWithNulls", ValueType.FLOAT, false, 1, 0.1, 0, 1000, 2.0)
     );
 
     List<AggregatorFactory> simpleNullsSchemaIngestAggs = new ArrayList<>();
@@ -285,7 +287,7 @@ public class BenchmarkSchemas
 
     Interval nullsSchemaDataInterval = Intervals.of("2000-01-01/P1D");
 
-    BenchmarkSchemaInfo nullsSchema = new BenchmarkSchemaInfo(
+    TestSchemaInfo nullsSchema = new TestSchemaInfo(
         nullsSchemaColumns,
         simpleNullsSchemaIngestAggs,
         nullsSchemaDataInterval,

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.data.gen;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -27,15 +27,15 @@ import org.joda.time.Interval;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BenchmarkSchemaInfo
+public class TestSchemaInfo
 {
-  private List<BenchmarkColumnSchema> columnSchemas;
+  private List<TestColumnSchema> columnSchemas;
   private List<AggregatorFactory> aggs;
   private Interval dataInterval;
   private boolean withRollup;
 
-  public BenchmarkSchemaInfo(
-      List<BenchmarkColumnSchema> columnSchemas,
+  public TestSchemaInfo(
+      List<TestColumnSchema> columnSchemas,
       List<AggregatorFactory> aggs,
       Interval dataInterval,
       boolean withRollup
@@ -47,7 +47,7 @@ public class BenchmarkSchemaInfo
     this.withRollup = withRollup;
   }
 
-  public List<BenchmarkColumnSchema> getColumnSchemas()
+  public List<TestColumnSchema> getColumnSchemas()
   {
     return columnSchemas;
   }
@@ -56,7 +56,7 @@ public class BenchmarkSchemaInfo
   {
     List<DimensionSchema> specs = getColumnSchemas().stream()
                                                     .filter(x -> !x.isMetric())
-                                                    .map(BenchmarkColumnSchema::getDimensionSchema)
+                                                    .map(TestColumnSchema::getDimensionSchema)
                                                     .collect(Collectors.toList());
 
     return new DimensionsSpec(specs);

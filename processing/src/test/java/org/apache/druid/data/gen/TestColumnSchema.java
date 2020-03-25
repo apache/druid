@@ -17,19 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.data.gen;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionSchema.ValueType;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
 
-public class BenchmarkColumnSchema
+public class TestColumnSchema
 {
   /**
    * SEQUENTIAL:          Generate integer or enumerated values in sequence. Not random.
@@ -128,7 +128,7 @@ public class BenchmarkColumnSchema
   private Double mean;
   private Double standardDeviation;
 
-  private BenchmarkColumnSchema(
+  private TestColumnSchema(
       String name,
       ValueType type,
       boolean isMetric,
@@ -145,9 +145,9 @@ public class BenchmarkColumnSchema
     this.nullProbability = nullProbability;
   }
 
-  public BenchmarkColumnValueGenerator makeGenerator(long seed)
+  public TestColumnValueGenerator makeGenerator(long seed)
   {
-    return new BenchmarkColumnValueGenerator(this, seed);
+    return new TestColumnValueGenerator(this, seed);
   }
 
   public DimensionSchema getDimensionSchema()
@@ -241,7 +241,7 @@ public class BenchmarkColumnSchema
     return standardDeviation;
   }
 
-  public static BenchmarkColumnSchema makeSequential(
+  public static TestColumnSchema makeSequential(
       String name,
       ValueType type,
       boolean isMetric,
@@ -251,7 +251,7 @@ public class BenchmarkColumnSchema
       int endInt
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -264,7 +264,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumeratedSequential(
+  public static TestColumnSchema makeEnumeratedSequential(
       String name,
       ValueType type,
       boolean isMetric,
@@ -273,7 +273,7 @@ public class BenchmarkColumnSchema
       List<Object> enumeratedValues
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -285,7 +285,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeDiscreteUniform(
+  public static TestColumnSchema makeDiscreteUniform(
       String name,
       ValueType type,
       boolean isMetric,
@@ -295,7 +295,7 @@ public class BenchmarkColumnSchema
       int endInt
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -308,7 +308,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumeratedDiscreteUniform(
+  public static TestColumnSchema makeEnumeratedDiscreteUniform(
       String name,
       ValueType type,
       boolean isMetric,
@@ -317,7 +317,7 @@ public class BenchmarkColumnSchema
       List<Object> enumeratedValues
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -329,7 +329,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeContinuousUniform(
+  public static TestColumnSchema makeContinuousUniform(
       String name,
       ValueType type,
       boolean isMetric,
@@ -339,7 +339,7 @@ public class BenchmarkColumnSchema
       double endDouble
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -352,7 +352,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeNormal(
+  public static TestColumnSchema makeNormal(
       String name,
       ValueType type,
       boolean isMetric,
@@ -363,7 +363,7 @@ public class BenchmarkColumnSchema
       boolean useRounding
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -376,7 +376,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeZipf(
+  public static TestColumnSchema makeZipf(
       String name,
       ValueType type,
       boolean isMetric,
@@ -387,7 +387,7 @@ public class BenchmarkColumnSchema
       Double zipfExponent
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -401,7 +401,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumeratedZipf(
+  public static TestColumnSchema makeEnumeratedZipf(
       String name,
       ValueType type,
       boolean isMetric,
@@ -411,7 +411,7 @@ public class BenchmarkColumnSchema
       Double zipfExponent
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,
@@ -424,7 +424,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumerated(
+  public static TestColumnSchema makeEnumerated(
       String name,
       ValueType type,
       boolean isMetric,
@@ -434,7 +434,7 @@ public class BenchmarkColumnSchema
       List<Double> enumeratedProbabilities
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    TestColumnSchema schema = new TestColumnSchema(
         name,
         type,
         isMetric,

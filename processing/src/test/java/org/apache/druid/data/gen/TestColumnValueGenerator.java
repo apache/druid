@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.data.gen;
 
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
@@ -26,31 +26,25 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.commons.math3.util.Pair;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.data.input.impl.DimensionSchema.ValueType;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class BenchmarkColumnValueGenerator
+public class TestColumnValueGenerator
 {
-  private final BenchmarkColumnSchema schema;
-  private final long seed;
+  private final TestColumnSchema schema;
+  private final Random simpleRng;
+  private final Serializable distribution;
 
-  private Serializable distribution;
-  private Random simpleRng;
-
-  public BenchmarkColumnValueGenerator(
-      BenchmarkColumnSchema schema,
-      long seed
-  )
+  public TestColumnValueGenerator(TestColumnSchema schema, long seed)
   {
     this.schema = schema;
-    this.seed = seed;
 
     simpleRng = new Random(seed);
-    initDistribution();
+    distribution = initDistribution(schema, seed);
   }
 
   public Object generateRowValue()
@@ -76,7 +70,7 @@ public class BenchmarkColumnValueGenerator
     }
   }
 
-  public BenchmarkColumnSchema getSchema()
+  public TestColumnSchema getSchema()
   {
     return schema;
   }
@@ -98,7 +92,7 @@ public class BenchmarkColumnValueGenerator
     return ret;
   }
 
-  private Object convertType(Object input, ValueType type)
+  private static Object convertType(Object input, ValueType type)
   {
     if (input == null) {
       return null;
@@ -136,14 +130,15 @@ public class BenchmarkColumnValueGenerator
     return ret;
   }
 
-  private void initDistribution()
+  private static Serializable initDistribution(TestColumnSchema schema, long seed)
   {
-    BenchmarkColumnSchema.ValueDistribution distributionType = schema.getDistributionType();
+    TestColumnSchema.ValueDistribution distributionType = schema.getDistributionType();
     ValueType type = schema.getType();
     List<Object> enumeratedValues = schema.getEnumeratedValues();
     List<Double> enumeratedProbabilities = schema.getEnumeratedProbabilities();
     List<Pair<Object, Double>> probabilities = new ArrayList<>();
 
+    final Serializable distribution;
     switch (distributionType) {
       case SEQUENTIAL:
         // not random, just cycle through numbers from start to end, or cycle through enumerated values if provided
@@ -213,5 +208,6 @@ public class BenchmarkColumnValueGenerator
     } else {
       ((EnumeratedDistribution) distribution).reseedRandomGenerator(seed);
     }
+    return distribution;
   }
 }

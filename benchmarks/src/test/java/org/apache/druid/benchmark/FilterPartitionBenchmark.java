@@ -22,8 +22,8 @@ package org.apache.druid.benchmark;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
+import org.apache.druid.data.gen.TestDataGenerator;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -125,7 +125,7 @@ public class FilterPartitionBenchmark
   private Filter timeFilterHalf;
   private Filter timeFilterAll;
 
-  private BenchmarkSchemaInfo schemaInfo;
+  private TestSchemaInfo schemaInfo;
 
   private static String JS_FN = "function(str) { return 'super-' + str; }";
   private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
@@ -155,7 +155,7 @@ public class FilterPartitionBenchmark
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
-    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+    TestDataGenerator gen = new TestDataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval(),

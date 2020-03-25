@@ -20,10 +20,57 @@
 package org.apache.druid.testing;
 
 import org.apache.druid.common.config.NullHandling;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
 public class InitializedNullHandlingTest
 {
+  private final static boolean REPLACE_NULL_WITH_DEFAULT;
+
   static {
     NullHandling.initializeForTests();
+    REPLACE_NULL_WITH_DEFAULT = NullHandling.replaceWithDefault();
+  }
+
+  public static boolean isReplaceNullWithDefault()
+  {
+    return REPLACE_NULL_WITH_DEFAULT;
+  }
+
+  public static class AssumingSqlCompatibleMode implements TestRule
+  {
+    @Override
+    public Statement apply(Statement base, Description description)
+    {
+      return new Statement()
+      {
+        @Override
+        public void evaluate() throws Throwable
+        {
+          if (!isReplaceNullWithDefault()) {
+            base.evaluate();
+          }
+        }
+      };
+    }
+  }
+
+  public static class AssumingReplaceNullWithDefaultMode implements TestRule
+  {
+    @Override
+    public Statement apply(Statement base, Description description)
+    {
+      return new Statement()
+      {
+        @Override
+        public void evaluate() throws Throwable
+        {
+          if (isReplaceNullWithDefault()) {
+            base.evaluate();
+          }
+        }
+      };
+    }
   }
 }

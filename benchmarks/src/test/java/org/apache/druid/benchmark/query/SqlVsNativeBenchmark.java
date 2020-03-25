@@ -21,7 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.common.config.NullHandling;
@@ -96,7 +96,7 @@ public class SqlVsNativeBenchmark
   {
     this.closer = Closer.create();
 
-    final BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    final TestSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
     final DataSegment dataSegment = DataSegment.builder()
                                                .dataSource("foo")

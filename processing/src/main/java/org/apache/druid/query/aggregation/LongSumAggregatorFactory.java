@@ -40,7 +40,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("fieldName") @Nullable final String fieldName,
       @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )

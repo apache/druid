@@ -28,6 +28,50 @@ import javax.annotation.Nullable;
 public final class Numbers
 {
   /**
+   * Parse the given object as a {@code double}. The input object can be a {@link String} or a {@link Number}.
+   *
+   * @throws NumberFormatException if the input is an unparseable string.
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
+  public static double parseDouble(@Nullable Object val)
+  {
+    if (val instanceof String) {
+      return Double.parseDouble((String) val);
+    } else if (val instanceof Number) {
+      return ((Number) val).doubleValue();
+    } else {
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
+    }
+  }
+
+  /**
+   * Parse the given object as a {@code float}. The input object can be a {@link String} or a {@link Number}.
+   *
+   * @throws NumberFormatException if the input is an unparseable string.
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
+  public static float parseFloat(@Nullable Object val)
+  {
+    if (val instanceof String) {
+      return Float.parseFloat((String) val);
+    } else if (val instanceof Number) {
+      return ((Number) val).floatValue();
+    } else {
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
+    }
+  }
+
+  /**
    * Parse the given object as a {@code long}. The input object can be a {@link String} or one of the implementations of
    * {@link Number}. You may want to use {@code GuavaUtils.tryParseLong()} instead if the input is a nullable string and
    * you want to avoid any exceptions.

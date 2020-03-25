@@ -20,8 +20,8 @@
 package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
+import org.apache.druid.data.gen.TestDataGenerator;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.StupidPool;
@@ -125,7 +125,7 @@ public class TopNTypeInterfaceBenchmark
   private List<QueryableIndex> qIndexes;
 
   private QueryRunnerFactory factory;
-  private BenchmarkSchemaInfo schemaInfo;
+  private TestSchemaInfo schemaInfo;
   private TopNQueryBuilder queryBuilder;
   private TopNQuery stringQuery;
   private TopNQuery longQuery;
@@ -153,7 +153,7 @@ public class TopNTypeInterfaceBenchmark
   {
     // queries for the basic schema
     Map<String, TopNQueryBuilder> basicQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    TestSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
     { // basic.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -258,7 +258,7 @@ public class TopNTypeInterfaceBenchmark
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
 
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      TestDataGenerator gen = new TestDataGenerator(
           schemaInfo.getColumnSchemas(),
           RNG_SEED + i,
           schemaInfo.getDataInterval(),

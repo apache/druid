@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
+import org.apache.druid.data.gen.TestDataGenerator;
+import org.apache.druid.data.gen.TestSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -133,7 +133,7 @@ public class SearchBenchmark
   private List<QueryableIndex> qIndexes;
 
   private QueryRunnerFactory factory;
-  private BenchmarkSchemaInfo schemaInfo;
+  private TestSchemaInfo schemaInfo;
   private Druids.SearchQueryBuilder queryBuilder;
   private SearchQuery query;
   private File tmpDir;
@@ -162,7 +162,7 @@ public class SearchBenchmark
   {
     // queries for the basic schema
     final Map<String, SearchQueryBuilder> basicQueries = new LinkedHashMap<>();
-    final BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    final TestSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
     final List<String> queryTypes = ImmutableList.of("A", "B", "C", "D");
     for (final String eachType : queryTypes) {
@@ -172,7 +172,7 @@ public class SearchBenchmark
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
 
-  private static SearchQueryBuilder makeQuery(final String name, final BenchmarkSchemaInfo basicSchema)
+  private static SearchQueryBuilder makeQuery(final String name, final TestSchemaInfo basicSchema)
   {
     switch (name) {
       case "A":
@@ -188,7 +188,7 @@ public class SearchBenchmark
     }
   }
 
-  private static SearchQueryBuilder basicA(final BenchmarkSchemaInfo basicSchema)
+  private static SearchQueryBuilder basicA(final TestSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
@@ -199,7 +199,7 @@ public class SearchBenchmark
                  .query("123");
   }
 
-  private static SearchQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
+  private static SearchQueryBuilder basicB(final TestSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
@@ -230,7 +230,7 @@ public class SearchBenchmark
                  .filters(new AndDimFilter(dimFilters));
   }
 
-  private static SearchQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
+  private static SearchQueryBuilder basicC(final TestSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
@@ -284,7 +284,7 @@ public class SearchBenchmark
                  .filters(new AndDimFilter(dimFilters));
   }
 
-  private static SearchQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
+  private static SearchQueryBuilder basicD(final TestSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
         Collections.singletonList(basicSchema.getDataInterval())
@@ -335,7 +335,7 @@ public class SearchBenchmark
     incIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      TestDataGenerator gen = new TestDataGenerator(
           schemaInfo.getColumnSchemas(),
           System.currentTimeMillis(),
           schemaInfo.getDataInterval(),

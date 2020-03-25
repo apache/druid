@@ -28,8 +28,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.data.input.impl.NoopInputFormat;
-import org.apache.druid.data.input.impl.NoopInputSource;
+import org.apache.druid.common.ProcessingTestToolbox;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -37,7 +36,6 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.NoopIndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -49,7 +47,6 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -68,27 +65,18 @@ public class TestUtils
 
   private static final Logger log = new Logger(TestUtils.class);
 
-  private final ObjectMapper jsonMapper;
-  private final IndexMergerV9 indexMergerV9;
-  private final IndexIO indexIO;
+  private final ProcessingTestToolbox processingTestToolbox = new ProcessingTestToolbox();
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   public TestUtils()
   {
-    this.jsonMapper = new DefaultObjectMapper();
-    indexIO = new IndexIO(
-        jsonMapper,
-        () -> 0
-    );
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
-
     this.rowIngestionMetersFactory = new DropwizardRowIngestionMetersFactory();
 
-    jsonMapper.setInjectableValues(
+    processingTestToolbox.getJsonMapper().setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
-            .addValue(IndexIO.class, indexIO)
-            .addValue(ObjectMapper.class, jsonMapper)
+            .addValue(IndexIO.class, processingTestToolbox.getIndexIO())
+            .addValue(ObjectMapper.class, processingTestToolbox.getJsonMapper())
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
@@ -101,38 +89,36 @@ public class TestUtils
             .addValue(IndexTaskClientFactory.class, TASK_CLIENT_FACTORY)
     );
 
-    jsonMapper.registerModule(
+    processingTestToolbox.getJsonMapper().registerModule(
         new SimpleModule()
         {
           @Override
           public void setupModule(SetupContext context)
           {
             context.registerSubtypes(
-                new NamedType(LocalLoadSpec.class, "local"),
-                new NamedType(NoopInputSource.class, "noop"),
-                new NamedType(NoopInputFormat.class, "noop")
+                new NamedType(LocalLoadSpec.class, "local")
             );
           }
         }
     );
 
     List<? extends Module> firehoseModules = new FirehoseModule().getJacksonModules();
-    firehoseModules.forEach(jsonMapper::registerModule);
+    firehoseModules.forEach(processingTestToolbox.getJsonMapper()::registerModule);
   }
 
   public ObjectMapper getTestObjectMapper()
   {
-    return jsonMapper;
+    return processingTestToolbox.getJsonMapper();
   }
 
   public IndexMergerV9 getTestIndexMergerV9()
   {
-    return indexMergerV9;
+    return processingTestToolbox.getIndexMerger();
   }
 
   public IndexIO getTestIndexIO()
   {
-    return indexIO;
+    return processingTestToolbox.getIndexIO();
   }
 
   public RowIngestionMetersFactory getRowIngestionMetersFactory()

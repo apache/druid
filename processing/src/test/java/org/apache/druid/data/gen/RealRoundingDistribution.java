@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.data.gen;
 
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
