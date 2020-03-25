@@ -158,7 +158,7 @@ public class QueryStackTests
       final SegmentWrangler segmentWrangler,
       final JoinableFactory joinableFactory,
       final QueryScheduler scheduler
-      )
+  )
   {
     return new LocalQuerySegmentWalker(
         conglomerate,

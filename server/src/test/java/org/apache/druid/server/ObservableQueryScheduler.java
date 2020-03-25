@@ -64,7 +64,8 @@ public class ObservableQueryScheduler extends QueryScheduler
 
   @Override
   public <T> Sequence<T> run(
-      Query<?> query, Sequence<T> resultSequence
+      Query<?> query,
+      Sequence<T> resultSequence
   )
   {
     return super.run(query, resultSequence).withBaggage(totalRun::incrementAndGet);
@@ -72,7 +73,8 @@ public class ObservableQueryScheduler extends QueryScheduler
 
   @Override
   public <T> Query<T> prioritizeAndLaneQuery(
-      QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments
+      QueryPlus<T> queryPlus,
+      Set<SegmentServerSelector> segments
   )
   {
     totalPrioritizedAndLaned.incrementAndGet();
