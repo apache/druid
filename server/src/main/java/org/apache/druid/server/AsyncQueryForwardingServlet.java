@@ -275,6 +275,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
 
     doService(request, response);
+    if (response != null && response.getHeader("Date") != null) {
+      response.setHeader("Date", null);
+    }
   }
 
   protected void doService(
