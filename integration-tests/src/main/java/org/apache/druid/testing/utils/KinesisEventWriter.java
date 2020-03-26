@@ -1,0 +1,84 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.testing.utils;
+
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.kinesis.producer.KinesisProducer;
+import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
+import com.amazonaws.util.AwsHostNameUtils;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.FileInputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
+
+public class KinesisEventWriter implements EventWriter
+{
+  private static final Logger LOG = LoggerFactory.getLogger(KinesisEventWriter.class);
+
+  private final String streamName;
+  private final KinesisProducer kinesisProducer;
+
+  public KinesisEventWriter(String endpoint, String streamName, boolean aggregate) throws Exception
+  {
+    String pathToConfigFile = System.getProperty("override.config.path");
+    Properties prop = new Properties();
+    prop.load(new FileInputStream(pathToConfigFile));
+
+    AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
+        new BasicAWSCredentials(
+            prop.getProperty("druid_kinesis_accessKey"),
+            prop.getProperty("druid_kinesis_secretKey")
+        )
+    );
+
+    KinesisProducerConfiguration kinesisProducerConfiguration = new KinesisProducerConfiguration()
+        .setCredentialsProvider(credentials)
+        .setRegion(AwsHostNameUtils.parseRegion(endpoint, null))
+        .setRequestTimeout(20000L)
+        .setRecordTtl(9223372036854775807L)
+        .setMetricsLevel("none")
+        .setAggregationEnabled(aggregate);
+
+    this.kinesisProducer = new KinesisProducer(kinesisProducerConfiguration);
+    this.streamName = streamName;
+  }
+
+  @Override
+  public void write(String event)
+  {
+    kinesisProducer.addUserRecord(
+        streamName,
+        DigestUtils.sha1Hex(event),
+        ByteBuffer.wrap(event.getBytes(StandardCharsets.UTF_8))
+    );
+  }
+
+  @Override
+  public void shutdown()
+  {
+    LOG.info("Shutting down Kinesis client");
+    kinesisProducer.flushSync();
+  }
+}
