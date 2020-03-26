@@ -159,6 +159,7 @@
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/ec2-extensions</module>
         <module>extensions-core/s3-extensions</module>
+        <module>extensions-core/druid-aws-rds-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
