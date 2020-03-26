@@ -50,15 +50,17 @@ public class AWSRDSTokenPasswordProvider implements PasswordProvider
 
   @JsonCreator
   public AWSRDSTokenPasswordProvider(
+      @JsonProperty("user") String user,
+      @JsonProperty("host") String host,
+      @JsonProperty("port") int port,
       @JsonProperty("region") String region,
-      @JacksonInject AWSMetadataStorageConnectorConfig metadataStorageConnectorConfig,
       @JacksonInject AWSCredentialsProvider awsCredentialsProvider
   )
   {
-    userName = Preconditions.checkNotNull(metadataStorageConnectorConfig.getUser(), "null metadataStorage user");
-    hostName = Preconditions.checkNotNull(metadataStorageConnectorConfig.getHost(), "null metadataStorage host");
-    Preconditions.checkArgument(metadataStorageConnectorConfig.getPort() > 0, "must provide port");
-    port = metadataStorageConnectorConfig.getPort();
+    userName = Preconditions.checkNotNull(user, "null metadataStorage user");
+    hostName = Preconditions.checkNotNull(host, "null metadataStorage host");
+    Preconditions.checkArgument(port > 0, "must provide port");
+    this.port = port;
 
     this.region = Preconditions.checkNotNull(region, "null region");
 
@@ -70,17 +72,20 @@ public class AWSRDSTokenPasswordProvider implements PasswordProvider
   public String getPassword()
   {
     try {
-      RdsIamAuthTokenGenerator generator = RdsIamAuthTokenGenerator.builder()
-                                                                   .credentials(awsCredentialsProvider)
-                                                                   .region(region)
-                                                                   .build();
+      RdsIamAuthTokenGenerator generator = RdsIamAuthTokenGenerator
+          .builder()
+          .credentials(awsCredentialsProvider)
+          .region(region)
+          .build();
 
       String authToken = generator.getAuthToken(
-          GetIamAuthTokenRequest.builder()
-                                .hostname(hostName)
-                                .port(port)
-                                .userName(userName)
-                                .build());
+          GetIamAuthTokenRequest
+              .builder()
+              .hostname(hostName)
+              .port(port)
+              .userName(userName)
+              .build()
+      );
 
       return authToken;
     }

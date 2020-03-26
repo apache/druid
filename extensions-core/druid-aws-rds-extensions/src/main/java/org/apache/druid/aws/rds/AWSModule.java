@@ -20,10 +20,10 @@
 package org.apache.druid.aws.rds;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
@@ -34,8 +34,8 @@ public class AWSModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-        new SimpleModule("DruidAwsExtentionsModule").registerSubtypes(
-            AWSModule.class
+        new SimpleModule("DruidAwsRdsExtentionsModule").registerSubtypes(
+            new NamedType(AWSRDSTokenPasswordProvider.class, "awsrdstoken")
         )
     );
   }
@@ -43,6 +43,5 @@ public class AWSModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", AWSMetadataStorageConnectorConfig.class);
   }
 }
