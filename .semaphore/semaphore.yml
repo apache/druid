@@ -48,6 +48,30 @@ blocks:
           - checkout
           - cache restore
       jobs:
+        - name: "animal sniffer checks"
+          commands:
+            - ${MVN} animal-sniffer:check --fail-at-end
+
+        - name: "checkstyle"
+          commands:
+            - ${MVN} checkstyle:checkstyle --fail-at-end
+
+        - name: "enforcer checks"
+          commands:
+            - ${MVN} enforcer:enforce --fail-at-end
+
+        - name: "forbidden api checks"
+          commands:
+            - ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+
+        - name: "pmd checks"
+          commands:
+            - ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
+
+        - name: "spotbugs checks"
+          commands:
+            - ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+
         - name: "Confluent Extensions"
           env_vars:
             - name: MAVEN_PROJECTS
@@ -56,26 +80,31 @@ blocks:
             - >
               MAVEN_OPTS="${MAVEN_OPTS} -Xmx800m" ${MVN} test -pl ${MAVEN_PROJECTS}
               ${MAVEN_SKIP} -Dremoteresources.skip=true
+
         - name: "Server"
           env_vars:
             - name: MAVEN_PROJECTS
               value: server
           commands: *run_tests
+
         - name: "Processing"
           env_vars:
             - name: MAVEN_PROJECTS
               value: processing
           commands: *run_tests
+
         - name: "Indexing Service"
           env_vars:
             - name: MAVEN_PROJECTS
               value: indexing-service
           commands: *run_tests
+
         - name: "Kafka Indexing Service"
           env_vars:
             - name: MAVEN_PROJECTS
               value: extensions-core/kafka-indexing-service
           commands: *run_tests
+
         - name: "Other Tests"
           env_vars:
             - name: MAVEN_PROJECTS
