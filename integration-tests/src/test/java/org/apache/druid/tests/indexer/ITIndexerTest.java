@@ -26,7 +26,7 @@ import org.testng.annotations.Test;
 
 import java.io.Closeable;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
