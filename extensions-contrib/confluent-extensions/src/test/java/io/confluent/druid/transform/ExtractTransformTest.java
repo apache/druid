@@ -4,7 +4,6 @@
 
 package io.confluent.druid.transform;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -139,7 +138,7 @@ public class ExtractTransformTest
   public void testSerde() throws Exception
   {
     final TransformSpec transformSpec = new TransformSpec(
-       null,
+        null,
         ImmutableList.of(
             new ExtractTenantTopicTransform("tenant_topic", "topic"),
             new ExtractTenantTransform("tenant", "topic")
