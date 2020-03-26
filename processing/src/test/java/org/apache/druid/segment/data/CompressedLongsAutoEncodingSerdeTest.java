@@ -95,6 +95,7 @@ public class CompressedLongsAutoEncodingSerdeTest
   public void testValues(long[] values) throws Exception
   {
     ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+        "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,

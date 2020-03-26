@@ -19,16 +19,21 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.segment.serde.Serializer;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.io.IOException;
-
-/**
- * Serializer that produces {@link ColumnarDoubles}.
- */
-public interface ColumnarDoublesSerializer extends Serializer
+public class ColumnCapacityExceededException extends RuntimeException
 {
-  void open() throws IOException;
-  int size();
-  void add(double value) throws IOException;
+  @VisibleForTesting
+  public static String formatMessage(String columnName)
+  {
+    return StringUtils.format(
+        "Too many values to store for %s column, try reducing maxRowsPerSegment",
+        columnName
+    );
+  }
+  public ColumnCapacityExceededException(String columnName)
+  {
+    super(formatMessage(columnName));
+  }
 }
