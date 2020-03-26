@@ -1,0 +1,83 @@
+version: v1.0
+name: Apache Druid
+agent:
+  machine:
+    type: e1-standard-4
+    os_image: ubuntu1804
+
+blocks:
+  - name: "Install"
+    task:
+      env_vars: &env_vars
+        - name: MVN
+          value: "mvn -B"
+        - name: MAVEN_OPTS
+          value: "-Dmaven.repo.local=.m2"
+        - name: MAVEN_SKIP
+          value: >
+            -Danimal.sniffer.skip=true
+            -Dcheckstyle.skip=true
+            -Ddruid.console.skip=true
+            -Denforcer.skip=true
+            -Dforbiddenapis.skip=true
+            -Dmaven.javadoc.skip=true
+            -Dpmd.skip=true
+            -Dspotbugs.skip=true
+
+        - name: MAVEN_SKIP_TESTS
+          value: "-DskipTests -Djacoco.skip=true"
+      prologue:
+        commands:
+          - sem-version java 8
+          - checkout
+      jobs:
+        - name: "Install"
+          commands:
+            - cache restore
+            - >
+              MAVEN_OPTS="${MAVEN_OPTS} -Xmx3000m" ${MVN} clean install
+              -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
+            - cache store
+
+  - name: "Tests"
+    task:
+      env_vars: *env_vars
+      prologue:
+        commands:
+          - sem-version java 8
+          - checkout
+          - cache restore
+      jobs:
+        - name: "Confluent Extensions"
+          env_vars:
+            - name: MAVEN_PROJECTS
+              value: extensions-contrib/confluent-extensions
+          commands: &run_tests
+            - >
+              MAVEN_OPTS="${MAVEN_OPTS} -Xmx800m" ${MVN} test -pl ${MAVEN_PROJECTS}
+              ${MAVEN_SKIP} -Dremoteresources.skip=true
+        - name: "Server"
+          env_vars:
+            - name: MAVEN_PROJECTS
+              value: server
+          commands: *run_tests
+        - name: "Processing"
+          env_vars:
+            - name: MAVEN_PROJECTS
+              value: processing
+          commands: *run_tests
+        - name: "Indexing Service"
+          env_vars:
+            - name: MAVEN_PROJECTS
+              value: indexing-service
+          commands: *run_tests
+        - name: "Kafka Indexing Service"
+          env_vars:
+            - name: MAVEN_PROJECTS
+              value: extensions-core/kafka-indexing-service
+          commands: *run_tests
+        - name: "Other Tests"
+          env_vars:
+            - name: MAVEN_PROJECTS
+              value: '!server,!processing,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-contrib/confluent-extensions'
+          commands: *run_tests
