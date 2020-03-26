@@ -4,8 +4,11 @@
 
 package io.confluent.druid.transform;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.confluent.druid.ConfluentExtensionsModule;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -13,6 +16,7 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -129,5 +133,25 @@ public class ExtractTransformTest
     Assert.assertEquals(ImmutableList.of("topic", "tenant"), row.getDimensions());
     Assert.assertNull(row.getRaw("tenant"));
     Assert.assertNull(row.getRaw("tenant_topic"));
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final TransformSpec transformSpec = new TransformSpec(
+       null,
+        ImmutableList.of(
+            new ExtractTenantTopicTransform("tenant_topic", "topic"),
+            new ExtractTenantTransform("tenant", "topic")
+        )
+    );
+
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    jsonMapper.registerModules(new ConfluentExtensionsModule().getJacksonModules());
+
+    Assert.assertEquals(
+        transformSpec,
+        jsonMapper.readValue(jsonMapper.writeValueAsString(transformSpec), TransformSpec.class)
+    );
   }
 }
