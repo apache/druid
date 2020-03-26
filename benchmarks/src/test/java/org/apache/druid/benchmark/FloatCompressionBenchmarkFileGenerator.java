@@ -156,6 +156,7 @@ public class FloatCompressionBenchmarkFileGenerator
         File dataFile = new File(dir, entry.getKey());
 
         ColumnarFloatsSerializer writer = CompressionFactory.getFloatSerializer(
+            "float-benchmark",
             new OffHeapMemorySegmentWriteOutMedium(),
             "float",
             ByteOrder.nativeOrder(),

@@ -149,6 +149,7 @@ public class LongCompressionBenchmarkFileGenerator
           File dataFile = new File(dir, entry.getKey());
 
           ColumnarLongsSerializer writer = CompressionFactory.getLongSerializer(
+              "long-benchmark",
               new OffHeapMemorySegmentWriteOutMedium(),
               "long",
               ByteOrder.nativeOrder(),
