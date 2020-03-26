@@ -44,13 +44,13 @@ import java.util.Collections;
 import java.util.Map;
 
 @RunWith(Enclosed.class)
-public class JdbcDataFetcherTest extends InitializedNullHandlingTest
+public class JdbcDataFetcherTest
 {
   private static final String TABLE_NAME = "tableName";
   private static final String KEY_COLUMN = "keyColumn";
   private static final String VALUE_COLUMN = "valueColumn";
 
-  public static class FetchTest
+  public static class FetchTest extends InitializedNullHandlingTest
   {
     @Rule
     public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -194,7 +194,7 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
     }
   }
 
-  public static class MissingJdbcJarTest
+  public static class MissingJdbcJarTest extends InitializedNullHandlingTest
   {
     private static final MetadataStorageConnectorConfig MISSING_METADATA_STORAGE_CONNECTOR_CONFIG =
         createMissingMetadataStorageConnectorConfig();
