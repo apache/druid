@@ -87,16 +87,31 @@ public class LongSumAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void testFactorize()
   {
-    Assert.assertSame(LongSumAggregator.class, aggregatorFactory.factorize(columnSelectorFactory).getClass());
+    if (isReplaceNullWithDefault()) {
+      Assert.assertSame(LongSumAggregator.class, aggregatorFactory.factorize(columnSelectorFactory).getClass());
+    } else {
+      Aggregator aggregator = aggregatorFactory.factorize(columnSelectorFactory);
+      Assert.assertSame(NullableNumericAggregator.class, aggregator.getClass());
+      Assert.assertSame(LongSumAggregator.class, ((NullableNumericAggregator) aggregator).getDelegate().getClass());
+    }
   }
 
   @Test
   public void testFactorizeBufferedWithOnlyColumnSelectorFactory()
   {
-    Assert.assertSame(
-        LongSumBufferAggregator.class,
-        aggregatorFactory.factorizeBuffered(columnSelectorFactory).getClass()
-    );
+    if (isReplaceNullWithDefault()) {
+      Assert.assertSame(
+          LongSumBufferAggregator.class,
+          aggregatorFactory.factorizeBuffered(columnSelectorFactory).getClass()
+      );
+    } else {
+      BufferAggregator aggregator = aggregatorFactory.factorizeBuffered(columnSelectorFactory);
+      Assert.assertSame(NullableNumericBufferAggregator.class, aggregator.getClass());
+      Assert.assertSame(
+          LongSumBufferAggregator.class,
+          ((NullableNumericBufferAggregator) aggregator).getDelegate().getClass()
+      );
+    }
   }
 
   @Test
@@ -109,13 +124,22 @@ public class LongSumAggregatorFactoryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testFactorizeVector()
+  public void testFactorizeVectorWithOnlyVectorColumnSelectorFactory()
   {
     if (aggregatorFactory.canVectorize()) {
-      Assert.assertSame(
-          LongSumVectorAggregator.class,
-          aggregatorFactory.factorizeVector(vectorColumnSelectorFactory).getClass()
-      );
+      if (isReplaceNullWithDefault()) {
+        Assert.assertSame(
+            LongSumVectorAggregator.class,
+            aggregatorFactory.factorizeVector(vectorColumnSelectorFactory).getClass()
+        );
+      } else {
+        VectorAggregator aggregator = aggregatorFactory.factorizeVector(vectorColumnSelectorFactory);
+        Assert.assertSame(NullableNumericVectorAggregator.class, aggregator.getClass());
+        Assert.assertSame(
+            LongSumVectorAggregator.class,
+            ((NullableNumericVectorAggregator) aggregator).getDelegate().getClass()
+        );
+      }
     }
   }
 

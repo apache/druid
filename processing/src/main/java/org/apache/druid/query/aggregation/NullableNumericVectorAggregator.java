@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -152,6 +153,15 @@ public class NullableNumericVectorAggregator implements VectorAggregator
   public void close()
   {
     delegate.close();
+  }
+
+  /**
+   * Return delegate. Should be used only for testing.
+   */
+  @VisibleForTesting
+  VectorAggregator getDelegate()
+  {
+    return delegate;
   }
 
   private void doAggregate(ByteBuffer buf, int position, int start, int end)

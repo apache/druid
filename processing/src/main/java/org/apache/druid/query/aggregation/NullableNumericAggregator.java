@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -113,5 +114,14 @@ public final class NullableNumericAggregator implements Aggregator
   public void close()
   {
     delegate.close();
+  }
+
+  /**
+   * Return delegate. Should be used only for testing.
+   */
+  @VisibleForTesting
+  Aggregator getDelegate()
+  {
+    return delegate;
   }
 }

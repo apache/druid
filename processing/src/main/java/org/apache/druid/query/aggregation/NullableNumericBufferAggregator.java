@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -136,5 +137,14 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   {
     inspector.visit("delegate", delegate);
     inspector.visit("nullSelector", nullSelector);
+  }
+
+  /**
+   * Return delegate. Should be used only for testing.
+   */
+  @VisibleForTesting
+  BufferAggregator getDelegate()
+  {
+    return delegate;
   }
 }
