@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -56,6 +57,10 @@ import java.util.stream.IntStream;
 
 public class RecordSupplierInputSourceTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final int NUM_COLS = 16;
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";

@@ -22,6 +22,7 @@ package org.apache.druid.inputsource.hdfs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -66,6 +67,10 @@ import java.util.stream.IntStream;
 @RunWith(Enclosed.class)
 public class HdfsInputSourceTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final String PATH = "/foo/bar";
   private static final Configuration CONFIGURATION = new Configuration();
   private static final String COLUMN = "value";

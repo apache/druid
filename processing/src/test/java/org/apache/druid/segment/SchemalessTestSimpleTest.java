@@ -74,6 +74,10 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class SchemalessTestSimpleTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {

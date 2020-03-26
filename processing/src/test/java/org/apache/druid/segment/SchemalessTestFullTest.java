@@ -75,6 +75,10 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class SchemalessTestFullTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
