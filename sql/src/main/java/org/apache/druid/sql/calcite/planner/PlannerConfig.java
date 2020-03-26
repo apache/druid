@@ -36,13 +36,7 @@ public class PlannerConfig
   private Period metadataRefreshPeriod = new Period("PT1M");
 
   @JsonProperty
-  private int maxSemiJoinRowsInMemory = 100000;
-
-  @JsonProperty
   private int maxTopNLimit = 100000;
-
-  @JsonProperty
-  private int maxQueryCount = 8;
 
   @JsonProperty
   private boolean useApproximateCountDistinct = true;
@@ -82,19 +76,9 @@ public class PlannerConfig
     return metadataRefreshPeriod;
   }
 
-  public int getMaxSemiJoinRowsInMemory()
-  {
-    return maxSemiJoinRowsInMemory;
-  }
-
   public int getMaxTopNLimit()
   {
     return maxTopNLimit;
-  }
-
-  public int getMaxQueryCount()
-  {
-    return maxQueryCount;
   }
 
   public boolean isUseApproximateCountDistinct()
@@ -135,9 +119,7 @@ public class PlannerConfig
 
     final PlannerConfig newConfig = new PlannerConfig();
     newConfig.metadataRefreshPeriod = getMetadataRefreshPeriod();
-    newConfig.maxSemiJoinRowsInMemory = getMaxSemiJoinRowsInMemory();
     newConfig.maxTopNLimit = getMaxTopNLimit();
-    newConfig.maxQueryCount = getMaxQueryCount();
     newConfig.useApproximateCountDistinct = getContextBoolean(
         context,
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
@@ -185,9 +167,7 @@ public class PlannerConfig
       return false;
     }
     final PlannerConfig that = (PlannerConfig) o;
-    return maxSemiJoinRowsInMemory == that.maxSemiJoinRowsInMemory &&
-           maxTopNLimit == that.maxTopNLimit &&
-           maxQueryCount == that.maxQueryCount &&
+    return maxTopNLimit == that.maxTopNLimit &&
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            requireTimeCondition == that.requireTimeCondition &&
@@ -205,9 +185,7 @@ public class PlannerConfig
 
     return Objects.hash(
         metadataRefreshPeriod,
-        maxSemiJoinRowsInMemory,
         maxTopNLimit,
-        maxQueryCount,
         useApproximateCountDistinct,
         useApproximateTopN,
         requireTimeCondition,
@@ -224,9 +202,7 @@ public class PlannerConfig
   {
     return "PlannerConfig{" +
            "metadataRefreshPeriod=" + metadataRefreshPeriod +
-           ", maxSemiJoinRowsInMemory=" + maxSemiJoinRowsInMemory +
            ", maxTopNLimit=" + maxTopNLimit +
-           ", maxQueryCount=" + maxQueryCount +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +

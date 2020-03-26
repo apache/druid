@@ -20,9 +20,9 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -42,14 +42,12 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
   @Test
   public void testInitializationWithNoData() throws Exception
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-
-    try {
+    try (final Closer closer = Closer.create()) {
+      final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
       final DruidSchema druidSchema = new DruidSchema(
           CalciteTests.createMockQueryLifecycleFactory(
-              new SpecificSegmentsQuerySegmentWalker(conglomerateCloserPair.lhs),
-              conglomerateCloserPair.lhs
+              new SpecificSegmentsQuerySegmentWalker(conglomerate),
+              conglomerate
           ),
           new TestServerInventoryView(Collections.emptyList()),
           PLANNER_CONFIG_DEFAULT,
@@ -61,9 +59,6 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
       druidSchema.awaitInitialization();
 
       Assert.assertEquals(ImmutableMap.of(), druidSchema.getTableMap());
-    }
-    finally {
-      conglomerateCloserPair.rhs.close();
     }
   }
 }

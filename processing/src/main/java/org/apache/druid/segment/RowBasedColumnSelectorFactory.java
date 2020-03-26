@@ -101,13 +101,12 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-      // Do set hasMultipleValues, because we might return multiple values.
+      // Do not set hasMultipleValues, because even though we might return multiple values, setting it affirmatively
+      // causes expression selectors to always treat us as arrays. If we might have multiple values (i.e. if our type
+      // is nonnumeric), set isComplete false to compensate.
       if (valueType != null) {
         return new ColumnCapabilitiesImpl()
             .setType(valueType)
-
-            // Non-numeric types might have multiple values
-            .setHasMultipleValues(!valueType.isNumeric())
 
             // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
             .setIsComplete(valueType.isNumeric());

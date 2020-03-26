@@ -84,7 +84,7 @@ active:
 
 8. Press the `Apply` button, then `OK` to exit the inspection preferences.
 
-9. If you did everything right, file `.idea/inspectionProfiles/Druid.xml` should be updated with a new
+9. If you did everything right, file [`.idea/inspectionProfiles/Druid.xml`](/.idea/inspectionProfiles/Druid.xml) should be updated with a new
 `searchConfiguration` entry, in this example case, the following:
 ```xml
       <searchConfiguration name="Use Map.putIfAbsent() instead of containsKey() + put()" text="if (!$m$.containsKey($k$)) {&#10;  $m$.put($k$, $v$);&#10;}" recursive="true" caseInsensitive="true" type="JAVA">

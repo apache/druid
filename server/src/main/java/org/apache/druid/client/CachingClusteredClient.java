@@ -100,7 +100,10 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
+ * This is the class on the Broker that is responsible for making native Druid queries to a cluster of data servers.
  *
+ * The main user of this class is {@link org.apache.druid.server.ClientQuerySegmentWalker}. In tests, its behavior
+ * is partially mimicked by TestClusterQuerySegmentWalker.
  */
 public class CachingClusteredClient implements QuerySegmentWalker
 {
@@ -480,7 +483,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return Collections.emptyList();
       }
       final List<Pair<Interval, byte[]>> alreadyCachedResults = new ArrayList<>();
-      Map<SegmentServerSelector, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(segments, queryCacheKey);
+      Map<SegmentServerSelector, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(
+          segments,
+          queryCacheKey
+      );
       // Pull cached segments from cache and remove from set of segments to query
       final Map<Cache.NamedKey, byte[]> cachedValues = computeCachedValues(perSegmentCacheKeys);
 

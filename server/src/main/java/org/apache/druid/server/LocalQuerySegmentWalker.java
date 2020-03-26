@@ -49,6 +49,8 @@ import java.util.stream.StreamSupport;
  * The datasource for the query must satisfy {@link DataSourceAnalysis#isConcreteBased()} and
  * {@link DataSourceAnalysis#isGlobal()}. Its base datasource must also be handleable by the provided
  * {@link SegmentWrangler}.
+ *
+ * Mainly designed to be used by {@link ClientQuerySegmentWalker}.
  */
 public class LocalQuerySegmentWalker implements QuerySegmentWalker
 {
@@ -88,7 +90,11 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         joinableFactory,
         cpuAccumulator,
         QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query)
+        QueryContexts.getEnableJoinFilterRewrite(query),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getJoinFilterRewriteMaxSize(query),
+        query.getFilter() == null ? null : query.getFilter().toFilter(),
+        query.getVirtualColumns()
     );
 
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

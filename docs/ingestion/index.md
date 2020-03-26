@@ -707,7 +707,7 @@ is:
   "maxRowsInMemory": 1000000,
   "maxBytesInMemory": <one-sixth of JVM memory>,
   "indexSpec": {
-    "bitmap": { "type": "concise" },
+    "bitmap": { "type": "roaring" },
     "dimensionCompression": "lz4",
     "metricCompression": "lz4",
     "longEncoding": "longs"
@@ -730,7 +730,7 @@ The `indexSpec` object can include the following properties:
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `concise` or `roaring`. For type `roaring`, the boolean property `compressRunOnSerialization` (defaults to true) controls whether or not run-length encoding will be used when it is determined to be more space-efficient.|`{"type": "concise"}`|
+|bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`. For type `roaring`, the boolean property `compressRunOnSerialization` (defaults to true) controls whether or not run-length encoding will be used when it is determined to be more space-efficient.|`{"type": "concise"}`|
 |dimensionCompression|Compression format for dimension columns. Options are `lz4`, `lzf`, or `uncompressed`.|`lz4`|
 |metricCompression|Compression format for metric columns. Options are `lz4`, `lzf`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|

@@ -249,6 +249,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return subtotalsSpec;
   }
 
+  @Override
   @JsonProperty
   public VirtualColumns getVirtualColumns()
   {

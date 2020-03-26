@@ -16,7 +16,7 @@
 
 # Cleanup old images/containers
 {
-  for node in druid-historical druid-coordinator druid-overlord druid-router druid-router-permissive-tls druid-router-no-client-auth-tls druid-router-custom-check-tls druid-broker druid-middlemanager druid-zookeeper-kafka druid-metadata-storage;
+  for node in druid-historical druid-coordinator druid-overlord druid-router druid-router-permissive-tls druid-router-no-client-auth-tls druid-router-custom-check-tls druid-broker druid-middlemanager druid-zookeeper-kafka druid-metadata-storage druid-it-hadoop;
   do
   docker stop $node
   docker rm $node
@@ -29,6 +29,7 @@
 {
   # environment variables
   DIR=$(cd $(dirname $0) && pwd)
+  HADOOP_DOCKER_DIR=$DIR/../examples/quickstart/tutorial/hadoop/docker
   DOCKERDIR=$DIR/docker
   SERVICE_SUPERVISORDS_DIR=$DOCKERDIR/service-supervisords
   ENVIRONMENT_CONFIGS_DIR=$DOCKERDIR/environment-configs
@@ -45,13 +46,37 @@
   cp -r client_tls docker/client_tls
 
   # Make directories if they dont exist
+  mkdir -p $SHARED_DIR/hadoop_xml
+  mkdir -p $SHARED_DIR/hadoop-dependencies
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
+  mkdir -p $SHARED_DIR/docker/extensions
+  mkdir -p $SHARED_DIR/docker/credentials
 
   # install druid jars
   rm -rf $SHARED_DIR/docker
   cp -R docker $SHARED_DIR/docker
   mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
+
+  # move extensions into a seperate extension folder
+  # For druid-s3-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-s3-extensions
+  mv $SHARED_DIR/docker/lib/druid-s3-extensions-* $SHARED_DIR/docker/extensions/druid-s3-extensions
+  # For druid-azure-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-azure-extensions
+  mv $SHARED_DIR/docker/lib/druid-azure-extensions-* $SHARED_DIR/docker/extensions/druid-azure-extensions
+  # For druid-google-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-google-extensions
+  mv $SHARED_DIR/docker/lib/druid-google-extensions-* $SHARED_DIR/docker/extensions/druid-google-extensions
+  $ For druid-hdfs-storage
+  mkdir -p $SHARED_DIR/docker/extensions/druid-hdfs-storage
+  mv $SHARED_DIR/docker/lib/druid-hdfs-storage-* $SHARED_DIR/docker/extensions/druid-hdfs-storage
+
+  # Pull Hadoop dependency if needed
+  if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
+  then
+    java -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client:2.8.5 -h org.apache.hadoop:hadoop-aws:2.8.5
+  fi
 
   # install logging config
   cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
@@ -64,8 +89,14 @@
   cp ../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz $SHARED_DIR/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
   cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
 
+  # copy other files if needed
+  if [ -n "$DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH" ]
+  then
+    cp -a $DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH/. $SHARED_DIR/docker/credentials/
+  fi
+
   # setup all enviornment variables to be pass to the containers
-  COMMON_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/common"
+  COMMON_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/common -e DRUID_INTEGRATION_TEST_GROUP"
   BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker"
   COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator"
   HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical"
@@ -80,6 +111,12 @@
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
       echo "\$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH is not set. No override config file provided"
+      if [ "$DRUID_INTEGRATION_TEST_GROUP" = "s3-deep-storage" ] || \
+      [ "$DRUID_INTEGRATION_TEST_GROUP" = "gcs-deep-storage" ] || \
+      [ "$DRUID_INTEGRATION_TEST_GROUP" = "azure-deep-storage" ]; then
+        echo "Test group $DRUID_INTEGRATION_TEST_GROUP requires override config file. Stopping test..."
+        exit 1
+      fi
   else
       echo "\$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH is set with value ${DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH}"
       OVERRIDE_ENV="--env-file=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH"
@@ -114,9 +151,51 @@ else
       esac
 fi
 
+# Build Hadoop docker if needed
+if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
+then
+  docker build -t druid-it/hadoop:2.8.5 $HADOOP_DOCKER_DIR
+fi
+
 
 # Start docker containers for all Druid processes and dependencies
 {
+  # Start Hadoop docker if needed
+  if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
+  then
+    # Start Hadoop docker container
+    docker run -d --privileged --net druid-it-net --ip 172.172.172.13 -h druid-it-hadoop --name druid-it-hadoop -p 2049:2049 -p 2122:2122 -p 8020:8020 -p 8021:8021 -p 8030:8030 -p 8031:8031 -p 8032:8032 -p 8033:8033 -p 8040:8040 -p 8042:8042 -p 8088:8088 -p 8443:8443 -p 9000:9000 -p 10020:10020 -p 19888:19888 -p 34455:34455 -p 49707:49707 -p 50010:50010 -p 50020:50020 -p 50030:50030 -p 50060:50060 -p 50070:50070 -p 50075:50075 -p 50090:50090 -p 51111:51111 -v $RESOURCEDIR:/resources -v $SHARED_DIR:/shared druid-it/hadoop:2.8.5 sh -c "/etc/bootstrap.sh && tail -f /dev/null"
+
+    # wait for hadoop namenode to be up
+    echo "Waiting for hadoop namenode to be up"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
+    while [ $? -ne 0 ]
+    do
+       sleep 2
+       docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
+    done
+    echo "Finished waiting for Hadoop namenode"
+
+    # Setup hadoop druid dirs
+    echo "Setting up druid hadoop dirs"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /druid/segments"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /quickstart"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /druid"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /druid/segments"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod 777 /quickstart"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /tmp"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -chmod -R 777 /user"
+    # Copy data files to Hadoop container
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /shared/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz"
+    docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /resources/data/batch_index /batch_index"
+    echo "Finished setting up druid hadoop dirs"
+
+    echo "Copying Hadoop XML files to shared"
+    docker exec -t druid-it-hadoop sh -c "cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml"
+    echo "Copied Hadoop XML files to shared"
+  fi
+
   # Start zookeeper and kafka
   docker run -d --privileged --net druid-it-net --ip 172.172.172.2 ${COMMON_ENV} --name druid-zookeeper-kafka -p 2181:2181 -p 9092:9092 -p 9093:9093 -v $SHARED_DIR:/shared -v $SERVICE_SUPERVISORDS_DIR/zookeeper.conf:$SUPERVISORDIR/zookeeper.conf -v $SERVICE_SUPERVISORDS_DIR/kafka.conf:$SUPERVISORDIR/kafka.conf druid/cluster
 
@@ -150,4 +229,3 @@ fi
   # Start Router with custom TLS cert checkers
   docker run -d --privileged --net druid-it-net --ip 172.172.172.12 ${COMMON_ENV} ${ROUTER_CUSTOM_CHECK_TLS_ENV} ${OVERRIDE_ENV} --hostname druid-router-custom-check-tls --name druid-router-custom-check-tls -p 8891:8891 -p 9091:9091 -v $SHARED_DIR:/shared -v $SERVICE_SUPERVISORDS_DIR/druid.conf:$SUPERVISORDIR/druid.conf --link druid-zookeeper-kafka:druid-zookeeper-kafka --link druid-coordinator:druid-coordinator --link druid-broker:druid-broker druid/cluster
 }
-

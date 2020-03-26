@@ -21,7 +21,6 @@ package org.apache.druid.tests.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -110,7 +109,7 @@ public class ITWikipediaQueryTest
       StatusResponseHolder status = future.get();
       if (status.getStatus().getCode() == QueryCapacityExceededException.STATUS_CODE) {
         limited++;
-        Assert.assertTrue(status.getContent().contains(StringUtils.format(QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE, "one")));
+        Assert.assertTrue(status.getContent().contains(QueryCapacityExceededException.makeLaneErrorMessage("one", 1)));
       } else if (status.getStatus().getCode() == HttpResponseStatus.OK.getCode()) {
         success++;
       }

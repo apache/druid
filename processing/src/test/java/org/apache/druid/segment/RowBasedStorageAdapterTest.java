@@ -55,6 +55,8 @@ import java.util.stream.Collectors;
 
 public class RowBasedStorageAdapterTest
 {
+  private static final String UNKNOWN_TYPE_NAME = "unknownType";
+
   private static final RowSignature ROW_SIGNATURE =
       RowSignature.builder()
                   .add(ValueType.FLOAT.name(), ValueType.FLOAT)
@@ -62,6 +64,7 @@ public class RowBasedStorageAdapterTest
                   .add(ValueType.LONG.name(), ValueType.LONG)
                   .add(ValueType.STRING.name(), ValueType.STRING)
                   .add(ValueType.COMPLEX.name(), ValueType.COMPLEX)
+                  .add(UNKNOWN_TYPE_NAME, null)
                   .build();
 
   private static final List<Function<Cursor, Supplier<Object>>> READ_STRING =
@@ -186,12 +189,16 @@ public class RowBasedStorageAdapterTest
         @Override
         public Function<Integer, Object> columnFunction(String columnName)
         {
-          final ValueType valueType = GuavaUtils.getEnumIfPresent(ValueType.class, columnName);
-
-          if (valueType == null || valueType == ValueType.COMPLEX) {
-            return i -> null;
+          if (UNKNOWN_TYPE_NAME.equals(columnName)) {
+            return i -> i;
           } else {
-            return i -> DimensionHandlerUtils.convertObjectToType(i, valueType);
+            final ValueType valueType = GuavaUtils.getEnumIfPresent(ValueType.class, columnName);
+
+            if (valueType == null || valueType == ValueType.COMPLEX) {
+              return i -> null;
+            } else {
+              return i -> DimensionHandlerUtils.convertObjectToType(i, valueType);
+            }
           }
         }
       };
@@ -359,10 +366,10 @@ public class RowBasedStorageAdapterTest
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.STRING.name());
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
 
-    // Note: unlike numeric types, STRING-typed columns report that they might have multiple values and that they
-    // are incomplete. It would be good in the future to support some way of changing this, when it is known ahead
-    // of time that multi-valuedness is impossible.
-    Assert.assertTrue(capabilities.hasMultipleValues());
+    // Note: unlike numeric types, STRING-typed columns might have multiple values, so they report as incomplete. It
+    // would be good in the future to support some way of changing this, when it is known ahead of time that
+    // multi-valuedness is definitely happening or is definitely impossible.
+    Assert.assertFalse(capabilities.hasMultipleValues());
     Assert.assertFalse(capabilities.isComplete());
   }
 
@@ -373,11 +380,19 @@ public class RowBasedStorageAdapterTest
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.COMPLEX.name());
 
-    // Note: unlike numeric types, COMPLEX-typed columns report that they might have multiple values and that they
-    // are incomplete.
+    // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete.
     Assert.assertEquals(ValueType.COMPLEX, capabilities.getType());
-    Assert.assertTrue(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues());
     Assert.assertFalse(capabilities.isComplete());
+  }
+
+  @Test
+  public void test_getColumnCapabilities_unknownType()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+
+    final ColumnCapabilities capabilities = adapter.getColumnCapabilities(UNKNOWN_TYPE_NAME);
+    Assert.assertNull(capabilities);
   }
 
   @Test
@@ -393,7 +408,11 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     for (String columnName : ROW_SIGNATURE.getColumnNames()) {
-      Assert.assertEquals(columnName, ValueType.valueOf(columnName).name(), adapter.getColumnTypeName(columnName));
+      if (UNKNOWN_TYPE_NAME.equals(columnName)) {
+        Assert.assertNull(columnName, adapter.getColumnTypeName(columnName));
+      } else {
+        Assert.assertEquals(columnName, ValueType.valueOf(columnName).name(), adapter.getColumnTypeName(columnName));
+      }
     }
   }
 
@@ -695,7 +714,14 @@ public class RowBasedStorageAdapterTest
                 NullHandling.defaultDoubleValue(),
                 NullHandling.defaultLongValue(),
                 null,
-                null
+                null,
+
+                // unknownType
+                0f,
+                0d,
+                0L,
+                "0",
+                0
             ),
             Lists.newArrayList(
                 Intervals.ETERNITY.getStart(),
@@ -733,7 +759,14 @@ public class RowBasedStorageAdapterTest
                 NullHandling.defaultDoubleValue(),
                 NullHandling.defaultLongValue(),
                 null,
-                null
+                null,
+
+                // unknownType
+                1f,
+                1d,
+                1L,
+                "1",
+                1
             )
         ),
         walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))

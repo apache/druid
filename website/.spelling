@@ -226,6 +226,7 @@ deserialization
 deserialize
 deserialized
 downtimes
+druid
 e.g.
 encodings
 endian
@@ -646,6 +647,11 @@ maximumSize
 onHeapPolling
 pollPeriod
 reverseLoadingCacheSpec
+ - ../docs/development/extensions-core/druid-pac4j.md
+OAuth
+Okta
+OpenID
+pac4j
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
