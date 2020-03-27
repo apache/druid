@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -64,7 +65,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @RunWith(Enclosed.class)
-public class HdfsInputSourceTest
+public class HdfsInputSourceTest extends InitializedNullHandlingTest
 {
   private static final String PATH = "/foo/bar";
   private static final Configuration CONFIGURATION = new Configuration();
