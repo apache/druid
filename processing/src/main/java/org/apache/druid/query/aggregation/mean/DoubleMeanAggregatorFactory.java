@@ -152,6 +152,8 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
       return DoubleMeanHolder.fromBytes(StringUtils.decodeBase64(StringUtils.toUtf8((String) object)));
     } else if (object instanceof DoubleMeanHolder) {
       return object;
+    } else if (object instanceof byte[]) {
+      return DoubleMeanHolder.fromBytes((byte[]) object);
     } else {
       throw new IAE("Unknown object type [%s]", Utils.safeObjectClassGetName(object));
     }
@@ -165,6 +167,8 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
       return ((DoubleMeanHolder) object).mean();
     } else if (object == null) {
       return null;
+    } else if (object instanceof byte[]) {
+      return DoubleMeanHolder.fromBytes((byte[]) object).mean();
     } else {
       throw new IAE("Unknown object type [%s]", object.getClass().getName());
     }
