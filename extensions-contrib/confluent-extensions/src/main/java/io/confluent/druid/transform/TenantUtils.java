@@ -14,13 +14,13 @@ public class TenantUtils
   public static String extractTenant(String prefixedTopic)
   {
     int i = prefixedTopic.indexOf(DELIMITER);
-    return i < 0 ? null : prefixedTopic.substring(0, i);
+    return i > 0 ? prefixedTopic.substring(0, i) : null;
   }
 
   @Nullable
   public static String extractTenantTopic(String prefixedTopic)
   {
     int i = prefixedTopic.indexOf(DELIMITER);
-    return i < 0 ? null : prefixedTopic.substring(i + 1);
+    return i > 0 ? prefixedTopic.substring(i + 1) : null;
   }
 }
