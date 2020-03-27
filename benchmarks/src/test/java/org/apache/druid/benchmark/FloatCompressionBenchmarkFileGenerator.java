@@ -65,21 +65,26 @@ public class FloatCompressionBenchmarkFileGenerator
       dirPath = args[0];
     }
 
-    BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated("", ValueType.FLOAT, true, 1, 0d,
-                                                                                  ImmutableList.of(
-                                                                                      0f,
-                                                                                      1.1f,
-                                                                                      2.2f,
-                                                                                      3.3f,
-                                                                                      4.4f
-                                                                                  ),
-                                                                                  ImmutableList.of(
-                                                                                      0.95,
-                                                                                      0.001,
-                                                                                      0.0189,
-                                                                                      0.03,
-                                                                                      0.0001
-                                                                                  )
+    BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated(
+        "",
+        ValueType.FLOAT,
+        true,
+        1,
+        0d,
+        ImmutableList.of(
+            0f,
+            1.1f,
+            2.2f,
+            3.3f,
+            4.4f
+        ),
+        ImmutableList.of(
+            0.95,
+            0.001,
+            0.0189,
+            0.03,
+            0.0001
+        )
     );
     BenchmarkColumnSchema zipfLowSchema = BenchmarkColumnSchema.makeZipf(
         "",
@@ -151,6 +156,7 @@ public class FloatCompressionBenchmarkFileGenerator
         File dataFile = new File(dir, entry.getKey());
 
         ColumnarFloatsSerializer writer = CompressionFactory.getFloatSerializer(
+            "float-benchmark",
             new OffHeapMemorySegmentWriteOutMedium(),
             "float",
             ByteOrder.nativeOrder(),
