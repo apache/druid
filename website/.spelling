@@ -816,6 +816,7 @@ DistinctCount
 artifactId
 com.example
 common.runtime.properties
+druid-aws-rds-extensions
 druid-cassandra-storage
 druid-distinctcount
 druid-ec2-extensions
