@@ -19,22 +19,46 @@
 
 package org.apache.druid.client;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.SegmentDescriptor;
 
+import javax.annotation.Nullable;
+
 /**
  * Given a {@link SegmentDescriptor}, get a {@link ServerSelector} to use to pick a {@link DruidServer} to query.
  *
- * Used by {@link CachingClusteredClient} on the broker to fan out queries to historical and realtime data
+ * Used by {@link CachingClusteredClient} on the broker to fan out queries to historical and realtime data. Used
+ * by {@link org.apache.druid.server.LocalQuerySegmentWalker} on the broker for on broker queries
  */
 public class SegmentServerSelector extends Pair<ServerSelector, SegmentDescriptor>
 {
+  /**
+   * This is for a segment hosted on a remote server, where {@link ServerSelector} may be used to pick
+   * a {@link DruidServer} to query.
+   */
   public SegmentServerSelector(ServerSelector server, SegmentDescriptor segment)
   {
     super(server, segment);
+    Preconditions.checkNotNull(server, "ServerSelector must not be null");
+    Preconditions.checkNotNull(segment, "SegmentDescriptor must not be null");
   }
 
+  /**
+   * This is for a segment hosted locally
+   */
+  public SegmentServerSelector(SegmentDescriptor segment)
+  {
+    super(null, segment);
+    Preconditions.checkNotNull(segment, "SegmentDescriptor must not be null");
+  }
+
+  /**
+   * This may be null if {@link SegmentDescriptor} is locally available, but will definitely not be null for segments
+   * which must be queried remotely (e.g. {@link CachingClusteredClient})
+   */
+  @Nullable
   public ServerSelector getServer()
   {
     return lhs;

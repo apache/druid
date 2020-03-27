@@ -462,8 +462,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         throw new ISE("Unexpected query received");
       }
 
-      Sequence<T> result = baseRunner.run(queryPlus.withQuery(newQuery), responseContext);
-      return result;
+      return baseRunner.run(queryPlus.withQuery(newQuery), responseContext);
     }
   }
 }

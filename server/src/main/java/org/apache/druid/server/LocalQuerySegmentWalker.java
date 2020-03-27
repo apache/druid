@@ -133,7 +133,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   {
     Set<SegmentServerSelector> segmentServerSelectors = new HashSet<>();
     for (Segment s : segments) {
-      segmentServerSelectors.add(new SegmentServerSelector(null, s.getId().toDescriptor()));
+      segmentServerSelectors.add(new SegmentServerSelector(s.getId().toDescriptor()));
     }
     return scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(query), segmentServerSelectors);
   }
