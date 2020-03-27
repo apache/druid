@@ -24,6 +24,7 @@ import com.amazonaws.services.rds.auth.GetIamAuthTokenRequest;
 import com.amazonaws.services.rds.auth.RdsIamAuthTokenGenerator;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.RE;
@@ -41,8 +42,8 @@ import org.apache.druid.metadata.PasswordProvider;
 public class AWSRDSTokenPasswordProvider implements PasswordProvider
 {
   private static final Logger LOGGER = new Logger(AWSRDSTokenPasswordProvider.class);
-  private final String userName;
-  private final String hostName;
+  private final String user;
+  private final String host;
   private final int port;
   private final String region;
 
@@ -57,17 +58,42 @@ public class AWSRDSTokenPasswordProvider implements PasswordProvider
       @JacksonInject AWSCredentialsProvider awsCredentialsProvider
   )
   {
-    userName = Preconditions.checkNotNull(user, "null metadataStorage user");
-    hostName = Preconditions.checkNotNull(host, "null metadataStorage host");
+    this.user = Preconditions.checkNotNull(user, "null metadataStorage user");
+    this.host = Preconditions.checkNotNull(host, "null metadataStorage host");
     Preconditions.checkArgument(port > 0, "must provide port");
     this.port = port;
 
     this.region = Preconditions.checkNotNull(region, "null region");
 
-    LOGGER.info("AWS RDS Config user[%s], host[%s], port[%d], region[%s]", userName, hostName, port, this.region);
-    this.awsCredentialsProvider = awsCredentialsProvider;
+    LOGGER.info("AWS RDS Config user[%s], host[%s], port[%d], region[%s]", this.user, this.host, port, this.region);
+    this.awsCredentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider, "null AWSCredentialsProvider");
   }
 
+  @JsonProperty
+  public String getUser()
+  {
+    return user;
+  }
+
+  @JsonProperty
+  public String getHost()
+  {
+    return host;
+  }
+
+  @JsonProperty
+  public int getPort()
+  {
+    return port;
+  }
+
+  @JsonProperty
+  public String getRegion()
+  {
+    return region;
+  }
+
+  @JsonIgnore
   @Override
   public String getPassword()
   {
@@ -81,9 +107,9 @@ public class AWSRDSTokenPasswordProvider implements PasswordProvider
       String authToken = generator.getAuthToken(
           GetIamAuthTokenRequest
               .builder()
-              .hostname(hostName)
+              .hostname(host)
               .port(port)
-              .userName(userName)
+              .userName(user)
               .build()
       );
 
