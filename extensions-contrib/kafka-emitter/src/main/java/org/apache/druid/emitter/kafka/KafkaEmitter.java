@@ -76,16 +76,12 @@ public class KafkaEmitter implements Emitter
     this.invalidLost = new AtomicLong(0L);
   }
 
-  private Callback setProducerCallback(AtomicLong counter, String topic)
+  private Callback setProducerCallback(AtomicLong lostCouter)
   {
     return (recordMetadata, e) -> {
       if (e != null) {
         log.debug("Event send failed [%s]", e.getMessage());
-        if (recordMetadata != null && recordMetadata.topic().equals(topic)) {
-          counter.incrementAndGet();
-        } else {
-          invalidLost.incrementAndGet();
-        }
+        lostCouter.incrementAndGet();
       }
     };
   }
@@ -124,12 +120,12 @@ public class KafkaEmitter implements Emitter
 
   private void sendMetricToKafka()
   {
-    sendToKafka(config.getMetricTopic(), metricQueue, setProducerCallback(metricLost, config.getMetricTopic()));
+    sendToKafka(config.getMetricTopic(), metricQueue, setProducerCallback(metricLost));
   }
 
   private void sendAlertToKafka()
   {
-    sendToKafka(config.getAlertTopic(), alertQueue, setProducerCallback(alertLost, config.getAlertTopic()));
+    sendToKafka(config.getAlertTopic(), alertQueue, setProducerCallback(alertLost));
   }
 
   private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
