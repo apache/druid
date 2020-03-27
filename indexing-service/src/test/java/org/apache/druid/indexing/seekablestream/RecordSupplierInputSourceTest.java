@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -36,6 +35,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -55,11 +55,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class RecordSupplierInputSourceTest
+public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private static final int NUM_COLS = 16;
   private static final int NUM_ROWS = 128;
