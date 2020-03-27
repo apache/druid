@@ -27,10 +27,17 @@ import com.google.common.hash.Hashing;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.HashedWheelTimer;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.asynchttpclient.AsyncCompletionHandler;
 import org.asynchttpclient.AsyncHttpClient;
@@ -38,9 +45,17 @@ import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
+import org.joda.time.Interval;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 /**
@@ -75,6 +90,91 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     asyncClientConfigBuilder.setNettyTimer(new HashedWheelTimer(Execs.makeThreadFactory(
         "nflx-druid-ksgateway-asynchttpclient-timer-%d")));
     client = new DefaultAsyncHttpClient(asyncClientConfigBuilder.build());
+  }
+
+  public static String intervalsToString(List<Interval> intervals)
+  {
+    if (intervals == null || intervals.isEmpty()) {
+      return "";
+    }
+    List<Interval> condenseIntervals = JodaUtils.condenseIntervals(intervals);
+    StringBuilder builder = new StringBuilder();
+    Iterator<Interval> itr = condenseIntervals.iterator();
+    while (itr.hasNext()) {
+      builder.append(itr.next());
+      if (itr.hasNext()) {
+        builder.append(";");
+      }
+    }
+    return builder.toString();
+  }
+
+  public static String aggregators(Query query)
+  {
+    if (query instanceof GroupByQuery) {
+      return asString(((GroupByQuery) query).getAggregatorSpecs());
+    }
+    if (query instanceof TimeseriesQuery) {
+      return asString(((TimeseriesQuery) query).getAggregatorSpecs());
+    }
+    if (query instanceof TopNQuery) {
+      return asString(((TopNQuery) query).getAggregatorSpecs());
+    }
+    return "";
+  }
+
+  public static String postAggregators(Query query)
+  {
+    if (query instanceof GroupByQuery) {
+      return asString(((GroupByQuery) query).getPostAggregatorSpecs());
+    }
+    if (query instanceof TimeseriesQuery) {
+      return asString(((TimeseriesQuery) query).getPostAggregatorSpecs());
+    }
+    if (query instanceof TopNQuery) {
+      return asString(((TopNQuery) query).getPostAggregatorSpecs());
+    }
+    return "";
+  }
+
+  public static String asString(List<? extends Cacheable> list)
+  {
+    if (list == null || list.isEmpty()) {
+      return "";
+    }
+    List<Object> sortedList = new ArrayList<>(list);
+    Collections.sort(sortedList, Comparator.comparing(Object::toString));
+    StringBuilder sb = new StringBuilder();
+    sortedList.stream().forEach(postAggregator -> sb.append(postAggregator.toString()).append(";;"));
+    return sb.toString();
+  }
+
+  public static String dimensionsProjectedAndFiltered(Query query)
+  {
+    if (query instanceof GroupByQuery) {
+      return dimensionsString(((GroupByQuery) query).getDimensions(), ((GroupByQuery) query).getDimFilter());
+    }
+    if (query instanceof TopNQuery) {
+      return dimensionsString(Collections.singletonList(((TopNQuery) query).getDimensionSpec()), query.getFilter());
+    }
+    return dimensionsString(Collections.emptyList(), query.getFilter());
+  }
+
+  public static String dimensionsString(List<DimensionSpec> dims, DimFilter filter)
+  {
+    if (dims == null && filter == null) {
+      return "";
+    }
+    Set<String> dimensionNames = new TreeSet<>();
+    if (dims != null) {
+      dims.stream().forEach(dimensionSpec -> dimensionNames.add(dimensionSpec.getDimension()));
+    }
+    if (filter != null) {
+      dimensionNames.addAll(filter.getRequiredColumns());
+    }
+    StringBuilder sb = new StringBuilder();
+    dimensionNames.stream().forEach(dimensioName -> sb.append(dimensioName + ";;"));
+    return sb.toString();
   }
 
   @Override
@@ -152,7 +252,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   }
 
   @VisibleForTesting
-  enum QueryStatsKey
+  enum QueryStats
   {
     QUERY_TIME("query/time"),
     QUERY_BYTES("query/bytes"),
@@ -163,7 +263,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
 
     private final String key;
 
-    QueryStatsKey(String key)
+    QueryStats(String key)
     {
       this.key = key;
     }
@@ -198,6 +298,11 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     private final String interruptionReason;
     private final String druidHostType;
     private final String queryString;
+    private final String intervals;
+    private final String filter;
+    private final String aggregators;
+    private final String postAggregators;
+    private final String dimensionsUsed;
 
     // Netflix druid cluster details
     private final String druidStackName;
@@ -214,14 +319,19 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
       queryType = query.getType();
       isDescending = query.isDescending();
       hasFilters = query.hasFilters();
+      intervals = intervalsToString(query.getIntervals());
+      filter = query.getFilter() != null ? query.getFilter().toString() : "";
+      aggregators = aggregators(query);
+      postAggregators = postAggregators(query);
+      dimensionsUsed = dimensionsProjectedAndFiltered(query);
       remoteAddress = logLine.getRemoteAddr();
       Map<String, Object> queryStats = logLine.getQueryStats().getStats();
-      querySuccessful = (Boolean) queryStats.get(QueryStatsKey.SUCCESS.key);
-      queryTime = (Long) queryStats.get(QueryStatsKey.QUERY_TIME.key);
-      queryBytes = (Long) queryStats.get(QueryStatsKey.QUERY_BYTES.key);
-      errorStackTrace = (String) queryStats.get(QueryStatsKey.ERROR_STACKTRACE.key);
-      wasInterrupted = queryStats.get(QueryStatsKey.INTERRUPTED.key) != null;
-      interruptionReason = (String) queryStats.get(QueryStatsKey.INTERRUPTION_REASON.key);
+      querySuccessful = (Boolean) queryStats.get(QueryStats.SUCCESS.key);
+      queryTime = (Long) queryStats.get(QueryStats.QUERY_TIME.key);
+      queryBytes = (Long) queryStats.get(QueryStats.QUERY_BYTES.key);
+      errorStackTrace = (String) queryStats.get(QueryStats.ERROR_STACKTRACE.key);
+      wasInterrupted = queryStats.get(QueryStats.INTERRUPTED.key) != null;
+      interruptionReason = (String) queryStats.get(QueryStats.INTERRUPTION_REASON.key);
       druidHostType = NETFLIX_DETAIL;
       druidStackName = NETFLIX_STACK;
       druidAsg = NETFLIX_ASG;
@@ -335,6 +445,35 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
       return druidHostType;
     }
 
+    @JsonProperty
+    public String getIntervals()
+    {
+      return intervals;
+    }
+
+    @JsonProperty
+    public String getFilter()
+    {
+      return filter;
+    }
+
+    @JsonProperty
+    public String getAggregators()
+    {
+      return aggregators;
+    }
+
+    @JsonProperty
+    public String getPostAggregators()
+    {
+      return postAggregators;
+    }
+
+    @JsonProperty
+    public String getDimensionsUsed()
+    {
+      return dimensionsUsed;
+    }
   }
 
   @JsonTypeName("request")

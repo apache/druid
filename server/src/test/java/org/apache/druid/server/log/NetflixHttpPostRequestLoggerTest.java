@@ -19,21 +19,25 @@
 
 package org.apache.druid.server.log;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.LegacyDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.filter.DimFilters;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
@@ -44,19 +48,54 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class NetflixHttpPostRequestLoggerTest
 {
   private static final String QUERY_ID = "fakequeryid";
   private static final String REMOTE_ADDRESS = "some.host";
   private static final String DATASOURCE = "fakeds";
-  private static final String QUERY_TYPE = "faketype";
-  private static final boolean DESCENDING = true;
-  private static final boolean HAS_FILTERS = false;
+  private static final boolean HAS_FILTERS = true;
   private static final String ERROR_STACK_TRACE = Throwables.getStackTraceAsString(new Exception());
   private static final Long QUERY_TIME = 100L;
   private static final Long QUERY_BYTES = 200L;
+
+  private static final List<Interval> INTERVALS = ImmutableList.of(
+      Intervals.of("2016-01-01T00Z/2016-01-02T00Z"),
+      Intervals.of("2016-01-01T00Z/2016-01-04T00Z"),
+      Intervals.of("2016-01-06T00Z/2016-01-08T00Z")
+  );
+  private static final String INTERVAL_STRING = NetflixHttpPostRequestLogger.intervalsToString(INTERVALS);
+
+  private static final List<AggregatorFactory> AGGREGATOR_FACTORIES = ImmutableList.of(new LongSumAggregatorFactory(
+      "n1",
+      "f1"
+  ), new DoubleSumAggregatorFactory("n2", "f2"));
+  private static final String AGGREGATOR_STRING = NetflixHttpPostRequestLogger.asString(
+      AGGREGATOR_FACTORIES);
+
+  private static final List<PostAggregator> POST_AGGREGATOR = Collections.singletonList(new ConstantPostAggregator(
+      "post",
+      1
+  ));
+  private static final String POST_AGGREGATOR_STRING = NetflixHttpPostRequestLogger.asString(
+      POST_AGGREGATOR);
+
+  private static final List<DimensionSpec> DIMENSION_SPECS = Collections.singletonList(new DefaultDimensionSpec(
+      "dimName",
+      "dimOutput"
+  ));
+
+  private static final DimFilter IN_DIM_FILTER =
+      DimFilters.or(
+          new InDimFilter(
+              "foo",
+              ImmutableList.of("a", "b"),
+              null
+          )
+      );
+
+  private static final String DIMENSIONS_USED = NetflixHttpPostRequestLogger.dimensionsString(DIMENSION_SPECS, IN_DIM_FILTER);
+
   private static final Map<String, Object> QUERY_CONTEXT = ImmutableMap.of(
       "foo",
       "bar",
@@ -64,37 +103,37 @@ public class NetflixHttpPostRequestLoggerTest
       QUERY_ID
   );
 
+
+
+  private static GroupByQuery GROUP_BY_QUERY;
+
+  static {
+    GroupByQuery.Builder builder = GroupByQuery.builder();
+    builder.setDataSource(DATASOURCE)
+           .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+           .setAggregatorSpecs(AGGREGATOR_FACTORIES)
+           .setPostAggregatorSpecs(POST_AGGREGATOR)
+           .setDimFilter(IN_DIM_FILTER)
+           .setDimensions(DIMENSION_SPECS)
+           .setInterval(INTERVALS)
+           .setContext(QUERY_CONTEXT);
+    GROUP_BY_QUERY = builder.build();
+  }
+
   @Test
-  public void testSuccessfulQueryPayload()
+  public void testSuccessfulGroupByQueryPayload()
   {
     final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");
-    final Query successfulQuery = new FakeQuery(
-        new LegacyDataSource(DATASOURCE),
-        new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
-          {
-            return null;
-          }
-        }, DESCENDING, QUERY_CONTEXT
-    );
     final QueryStats successfulQueryStats = new QueryStats(ImmutableMap.of(
-        NetflixHttpPostRequestLogger.QueryStatsKey.QUERY_TIME.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.QUERY_TIME.toString(),
         QUERY_TIME,
-        NetflixHttpPostRequestLogger.QueryStatsKey.QUERY_BYTES.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.QUERY_BYTES.toString(),
         QUERY_BYTES,
-        NetflixHttpPostRequestLogger.QueryStatsKey.SUCCESS.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.SUCCESS.toString(),
         true
     ));
     final RequestLogLine logLine = RequestLogLine.forNative(
-        successfulQuery,
+        GROUP_BY_QUERY,
         timestamp,
         REMOTE_ADDRESS,
         successfulQueryStats
@@ -108,13 +147,17 @@ public class NetflixHttpPostRequestLoggerTest
     NetflixHttpPostRequestLogger.Payload payload = request.getPayload();
     Assert.assertEquals(QUERY_ID, payload.getQueryId());
     Assert.assertEquals(DATASOURCE, payload.getDatasource());
-    Assert.assertEquals(QUERY_TYPE, payload.getQueryType());
-    Assert.assertEquals(DESCENDING, payload.isDescending());
+    Assert.assertEquals(Query.GROUP_BY, payload.getQueryType());
     Assert.assertEquals(HAS_FILTERS, payload.isHasFilters());
-    Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
-    Assert.assertEquals(true, payload.isQuerySuccessful());
+    Assert.assertEquals(INTERVAL_STRING, payload.getIntervals());
+    Assert.assertEquals(IN_DIM_FILTER.toString(), payload.getFilter());
+    Assert.assertEquals(AGGREGATOR_STRING, payload.getAggregators());
+    Assert.assertEquals(POST_AGGREGATOR_STRING, payload.getPostAggregators());
+    Assert.assertEquals(DIMENSIONS_USED, payload.getDimensionsUsed());
     Assert.assertEquals(QUERY_TIME, payload.getQueryTime());
     Assert.assertEquals(QUERY_BYTES, payload.getQueryBytes());
+    Assert.assertEquals(true, payload.isQuerySuccessful());
+    Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
     Assert.assertNull(payload.getErrorStackTrace());
     Assert.assertFalse(payload.isWasInterrupted());
     Assert.assertNull(payload.getInterruptionReason());
@@ -125,34 +168,22 @@ public class NetflixHttpPostRequestLoggerTest
   {
     final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");
 
-    final Query failedQuery = new FakeQuery(
-        new LegacyDataSource(DATASOURCE),
-        new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
-          {
-            return null;
-          }
-        }, DESCENDING, QUERY_CONTEXT
-    );
     final QueryStats failedQueryStats = new QueryStats(ImmutableMap.of(
-        NetflixHttpPostRequestLogger.QueryStatsKey.QUERY_TIME.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.QUERY_TIME.toString(),
         QUERY_TIME,
-        NetflixHttpPostRequestLogger.QueryStatsKey.QUERY_BYTES.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.QUERY_BYTES.toString(),
         QUERY_BYTES,
-        NetflixHttpPostRequestLogger.QueryStatsKey.ERROR_STACKTRACE.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.ERROR_STACKTRACE.toString(),
         ERROR_STACK_TRACE,
-        NetflixHttpPostRequestLogger.QueryStatsKey.SUCCESS.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.SUCCESS.toString(),
         false
     ));
-    final RequestLogLine logLine = RequestLogLine.forNative(failedQuery, timestamp, REMOTE_ADDRESS, failedQueryStats);
+    final RequestLogLine logLine = RequestLogLine.forNative(
+        GROUP_BY_QUERY,
+        timestamp,
+        REMOTE_ADDRESS,
+        failedQueryStats
+    );
     NetflixHttpPostRequestLogger.KeyStoneGatewayRequest request = new NetflixHttpPostRequestLogger.KeyStoneGatewayRequest(
         "druid",
         "localhost",
@@ -162,13 +193,17 @@ public class NetflixHttpPostRequestLoggerTest
     NetflixHttpPostRequestLogger.Payload payload = request.getPayload();
     Assert.assertEquals(QUERY_ID, payload.getQueryId());
     Assert.assertEquals(DATASOURCE, payload.getDatasource());
-    Assert.assertEquals(QUERY_TYPE, payload.getQueryType());
-    Assert.assertEquals(DESCENDING, payload.isDescending());
+    Assert.assertEquals(Query.GROUP_BY, payload.getQueryType());
     Assert.assertEquals(HAS_FILTERS, payload.isHasFilters());
-    Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
-    Assert.assertFalse(payload.isQuerySuccessful());
+    Assert.assertEquals(INTERVAL_STRING, payload.getIntervals());
+    Assert.assertEquals(IN_DIM_FILTER.toString(), payload.getFilter());
+    Assert.assertEquals(AGGREGATOR_STRING, payload.getAggregators());
+    Assert.assertEquals(POST_AGGREGATOR_STRING, payload.getPostAggregators());
+    Assert.assertEquals(DIMENSIONS_USED, payload.getDimensionsUsed());
     Assert.assertEquals(QUERY_TIME, payload.getQueryTime());
     Assert.assertEquals(QUERY_BYTES, payload.getQueryBytes());
+    Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
+    Assert.assertFalse(payload.isQuerySuccessful());
     Assert.assertEquals(ERROR_STACK_TRACE, payload.getErrorStackTrace());
     Assert.assertFalse(payload.isWasInterrupted());
     Assert.assertNull(payload.getInterruptionReason());
@@ -178,39 +213,22 @@ public class NetflixHttpPostRequestLoggerTest
   public void testInterruptedQueryPayload()
   {
     final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");
-    final Query interruptedQuery = new FakeQuery(
-        new LegacyDataSource(DATASOURCE),
-        new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
-          {
-            return null;
-          }
-        }, DESCENDING, QUERY_CONTEXT
-    );
     final String interruptionReason = "query timed out";
     final QueryStats interruptedQueryStats = new QueryStats(ImmutableMap.of(
-        NetflixHttpPostRequestLogger.QueryStatsKey.QUERY_TIME.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.QUERY_TIME.toString(),
         QUERY_TIME,
-        NetflixHttpPostRequestLogger.QueryStatsKey.QUERY_BYTES.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.QUERY_BYTES.toString(),
         QUERY_BYTES,
-        NetflixHttpPostRequestLogger.QueryStatsKey.INTERRUPTED.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.INTERRUPTED.toString(),
         true,
-        NetflixHttpPostRequestLogger.QueryStatsKey.INTERRUPTION_REASON.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.INTERRUPTION_REASON.toString(),
         interruptionReason,
-        NetflixHttpPostRequestLogger.QueryStatsKey.SUCCESS.toString(),
+        NetflixHttpPostRequestLogger.QueryStats.SUCCESS.toString(),
         false
 
     ));
     final RequestLogLine logLine = RequestLogLine.forNative(
-        interruptedQuery,
+        GROUP_BY_QUERY,
         timestamp,
         REMOTE_ADDRESS,
         interruptedQueryStats
@@ -224,92 +242,18 @@ public class NetflixHttpPostRequestLoggerTest
     NetflixHttpPostRequestLogger.Payload payload = request.getPayload();
     Assert.assertEquals(QUERY_ID, payload.getQueryId());
     Assert.assertEquals(DATASOURCE, payload.getDatasource());
-    Assert.assertEquals(QUERY_TYPE, payload.getQueryType());
-    Assert.assertEquals(DESCENDING, payload.isDescending());
+    Assert.assertEquals(Query.GROUP_BY, payload.getQueryType());
     Assert.assertEquals(HAS_FILTERS, payload.isHasFilters());
-    Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
-    Assert.assertFalse(payload.isQuerySuccessful());
+    Assert.assertEquals(INTERVAL_STRING, payload.getIntervals());
+    Assert.assertEquals(IN_DIM_FILTER.toString(), payload.getFilter());
+    Assert.assertEquals(AGGREGATOR_STRING, payload.getAggregators());
+    Assert.assertEquals(POST_AGGREGATOR_STRING, payload.getPostAggregators());
+    Assert.assertEquals(DIMENSIONS_USED, payload.getDimensionsUsed());
     Assert.assertEquals(QUERY_TIME, payload.getQueryTime());
     Assert.assertEquals(QUERY_BYTES, payload.getQueryBytes());
+    Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
     Assert.assertNull(payload.getErrorStackTrace());
     Assert.assertTrue(payload.isWasInterrupted());
     Assert.assertEquals(interruptionReason, payload.getInterruptionReason());
-  }
-
-
-  @JsonTypeName("fake")
-  private static class FakeQuery extends BaseQuery
-  {
-    public FakeQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, boolean descending, Map context)
-    {
-      super(dataSource, querySegmentSpec, descending, context);
-    }
-
-    @Override
-    public boolean hasFilters()
-    {
-      return false;
-    }
-
-    @Override
-    public DimFilter getFilter()
-    {
-      return new DimFilter()
-      {
-        @Override
-        public DimFilter optimize()
-        {
-          return null;
-        }
-
-        @Override
-        public Filter toFilter()
-        {
-          return null;
-        }
-
-        @Override
-        public RangeSet<String> getDimensionRangeSet(String dimension)
-        {
-          return null;
-        }
-
-        @Override
-        public Set<String> getRequiredColumns()
-        {
-          return null;
-        }
-
-        @Override
-        public byte[] getCacheKey()
-        {
-          return new byte[0];
-        }
-      };
-    }
-
-    @Override
-    public String getType()
-    {
-      return QUERY_TYPE;
-    }
-
-    @Override
-    public Query withQuerySegmentSpec(QuerySegmentSpec spec)
-    {
-      return this;
-    }
-
-    @Override
-    public Query withDataSource(DataSource dataSource)
-    {
-      return this;
-    }
-
-    @Override
-    public Query withOverriddenContext(Map contextOverride)
-    {
-      return this;
-    }
   }
 }
