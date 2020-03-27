@@ -75,6 +75,15 @@ public class ExtractTransformTest
   }
 
   @Test
+  public void testInternal()
+  {
+    Assert.assertEquals(null, TenantUtils.extractTenantTopic("__consumer_offsets"));
+    Assert.assertEquals(null, TenantUtils.extractTenant("__consumer_offsets"));
+    Assert.assertEquals(null, TenantUtils.extractTenantTopic("other.topic"));
+    Assert.assertEquals(null, TenantUtils.extractTenant("other.topic"));
+  }
+
+  @Test
   public void testPreserveExistingFields()
   {
     final TransformSpec transformSpec = new TransformSpec(
