@@ -2111,7 +2111,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
                 const newFilter = joinFilter(deepSet(curFilter, `restFilter`, newFilterValue));
                 this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-                this.setState({ newFilterValue: undefined });
                 this.queryForFilter();
               }}
             />
