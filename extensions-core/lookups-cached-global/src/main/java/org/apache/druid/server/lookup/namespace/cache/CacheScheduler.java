@@ -544,8 +544,7 @@ public final class CacheScheduler
    * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
    *                created
    * @param version version, associated with the cache
-   * @param cacheHandler, {@link CacheHandler} object to create {@link VersionedCache} from,
-   *                used for incremental load.
+   * @param cacheHandler {@link CacheHandler} object to create {@link VersionedCache} from, used for incremental load
    */
   public VersionedCacheBuilder createVersionedCache(
       @Nullable EntryImpl<? extends ExtractionNamespace> entryId,

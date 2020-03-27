@@ -192,7 +192,6 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       final JdbcExtractionNamespace namespace,
       String tsColumn, Long lastLoadTs)
   {
-    final DBI dbi = ensureDBI(key, namespace);
     final String table = namespace.getTable();
     final String filter = namespace.getFilter();
     final String valueColumn = namespace.getValueColumn();
