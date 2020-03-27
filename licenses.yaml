@@ -146,6 +146,15 @@ source_paths:
 
 ---
 
+name: AWS RDS SDK for Java
+license_category: source
+module: extensions/druid-aws-rds-extensions
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: aws-java-sdk-rds
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
