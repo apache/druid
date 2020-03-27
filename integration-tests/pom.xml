@@ -72,6 +72,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-kinesis-indexing-service</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-azure-extensions</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>

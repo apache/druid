@@ -55,9 +55,9 @@ import java.util.Properties;
 abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
-  protected static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/kafka_supervisor_spec_legacy_parser.json";
-  protected static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/kafka_supervisor_spec_input_format.json";
-  private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
+  protected static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/stream_supervisor_spec_legacy_parser.json";
+  protected static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/stream_supervisor_spec_input_format.json";
+  private static final String QUERIES_FILE = "/indexer/stream_index_queries.json";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
 
   private static final int NUM_EVENTS_TO_SEND = 60;

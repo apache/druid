@@ -66,12 +66,20 @@ public abstract class SyntheticGenerator implements Generator
   @Override
   public void start(EventWriter eventWriter)
   {
-    // The idea here is that we will send [eventsPerSecond] events that will use this value as the primary timestamp.
+    start(eventWriter, null);
+  }
+
+  @Override
+  public void start(EventWriter eventWriter, DateTime overrrideFirstEventTime)
+  {
+    // The idea here is that we will send [eventsPerSecond] events that will either use [nowFlooredToSecond]
+    // or the [overrrideFirstEventTime] as the primary timestamp.
     // Having a fixed number of events that use the same timestamp will help in allowing us to determine if any events
     // were dropped or duplicated. We will try to space the event generation over the remainder of the second so that it
     // roughly completes at the top of the second, but if it doesn't complete, it will still send the remainder of the
     // events with the original timestamp, even after wall time has moved onto the next second.
     DateTime nowFlooredToSecond = DateTime.now().secondOfDay().roundFloorCopy();
+    DateTime eventTimestamp = overrrideFirstEventTime == null ? nowFlooredToSecond : overrrideFirstEventTime;
     int seconds = 0;
 
     while (true) {
@@ -90,7 +98,7 @@ public abstract class SyntheticGenerator implements Generator
         );
 
         for (int i = 1; i <= eventsPerSecond; i++) {
-          eventWriter.write(MAPPER.writeValueAsString(getEvent(i, nowFlooredToSecond)));
+          eventWriter.write(MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
 
           long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowFlooredToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
@@ -103,6 +111,7 @@ public abstract class SyntheticGenerator implements Generator
         }
 
         nowFlooredToSecond = nowFlooredToSecond.plusSeconds(1);
+        eventTimestamp = eventTimestamp.plusSeconds(1);
         seconds++;
 
         log.info(
@@ -112,7 +121,7 @@ public abstract class SyntheticGenerator implements Generator
             nowFlooredToSecond
         );
 
-        if (seconds > totalNumberOfSecond) {
+        if (seconds >= totalNumberOfSecond) {
           log.info(
               "Finished writing {} seconds",
               seconds

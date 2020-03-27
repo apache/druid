@@ -30,7 +30,7 @@ public class StreamVerifierSyntheticEvent
   private Long expectedSequenceNumberSum;
   private boolean firstEvent;
 
-  private StreamVerifierSyntheticEvent(
+  public StreamVerifierSyntheticEvent(
       String id,
       long groupingTimestamp,
       long insertionTimestamp,

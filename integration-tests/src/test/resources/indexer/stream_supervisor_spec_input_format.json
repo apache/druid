@@ -1,21 +1,15 @@
 {
-  "type": "kafka",
+  "type": "%%STREAM_TYPE%%",
   "dataSchema": {
     "dataSource": "%%DATASOURCE%%",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": ["page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city"],
-          "dimensionExclusions": [],
-          "spatialDimensions": []
-        }
-      }
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": ["page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city"],
+      "dimensionExclusions": [],
+      "spatialDimensions": []
     },
     "metricsSpec": [
       {
@@ -45,17 +39,20 @@
     }
   },
   "tuningConfig": {
-    "type": "kafka",
+    "type": "%%STREAM_TYPE%%",
     "intermediatePersistPeriod": "PT30S",
     "maxRowsPerSegment": 5000000,
     "maxRowsInMemory": 500000
   },
   "ioConfig": {
-    "topic": "%%TOPIC%%",
-    "consumerProperties": %%CONSUMER_PROPERTIES%%,
-    "taskCount": 2,
+    "%%TOPIC_KEY%%": "%%TOPIC_VALUE%%",
+    "%%STREAM_PROPERTIES_KEY%%": %%STREAM_PROPERTIES_VALUE%%,
+    "taskCount": 1,
     "replicas": 1,
     "taskDuration": "PT2M",
-    "useEarliestOffset": true
+    "useEarliestOffset": true,
+    "inputFormat" : {
+      "type" : "json"
+    }
   }
 }

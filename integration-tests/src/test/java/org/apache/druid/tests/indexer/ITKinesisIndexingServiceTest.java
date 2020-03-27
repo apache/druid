@@ -19,6 +19,220 @@
 
 package org.apache.druid.tests.indexer;
 
-public class ITKinesisIndexingServiceTest
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.KinesisAdminClient;
+import org.apache.druid.testing.utils.KinesisEventWriter;
+import org.apache.druid.testing.utils.WikipediaStreamEventGenerator;
+import org.apache.druid.tests.TestNGGroup;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Guice;
+import org.testng.annotations.Test;
+
+import java.io.Closeable;
+import java.util.UUID;
+import java.util.function.Function;
+
+@Test(groups = TestNGGroup.KINESIS_INDEX)
+@Guice(moduleFactory = DruidTestModuleFactory.class)
+public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
 {
+  private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
+  private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
+  private static final DateTime FIRST_EVENT_TIME = DateTime.parse("1994-04-29T00:00:00.000Z");
+  private static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/stream_supervisor_spec_legacy_parser.json";
+  private static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/stream_supervisor_spec_input_format.json";
+  private static final String QUERIES_FILE = "/indexer/stream_index_queries.json";
+  // format for the querying interval
+  private static final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
+  // format for the expected timestamp in a query response
+  private static final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
+  private static final int EVENTS_PER_SECOND = 6;
+  private static final long CYCLE_PADDING_MS = 100;
+  private static final int TOTAL_NUMBER_OF_SECOND = 10;
+
+  private String streamName;
+  private String fullDatasourceName;
+  private KinesisAdminClient kinesisAdminClient;
+  private KinesisEventWriter kinesisEventWriter;
+  private WikipediaStreamEventGenerator wikipediaStreamEventGenerator;
+  private Function<String, String> kinesisIngestionPropsTransform;
+  private Function<String, String> kinesisQueryPropsTransform;
+
+  @BeforeClass
+  public void beforeClass() throws Exception
+  {
+    kinesisAdminClient = new KinesisAdminClient(config.getStreamEndpoint());
+  }
+
+  @BeforeMethod
+  public void before() throws Exception
+  {
+    streamName = "kinesis_index_test_" + UUID.randomUUID();
+    String datasource = "kinesis_indexing_service_test_" + UUID.randomUUID();
+    kinesisAdminClient.createStream(streamName, 2);
+    ITRetryUtil.retryUntil(
+        () -> kinesisAdminClient.isStreamActive(streamName),
+        true,
+        10000,
+        30,
+        "Wait for stream active"
+    );
+    kinesisEventWriter = new KinesisEventWriter(config.getStreamEndpoint(), streamName, false);
+    wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, TOTAL_NUMBER_OF_SECOND);
+    fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
+    kinesisIngestionPropsTransform = spec -> {
+      try {
+        spec = StringUtils.replace(
+            spec,
+            "%%DATASOURCE%%",
+            fullDatasourceName
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%STREAM_TYPE%%",
+            "kinesis"
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TOPIC_KEY%%",
+            "stream"
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TOPIC_VALUE%%",
+            streamName
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%STREAM_PROPERTIES_KEY%%",
+            "endpoint"
+        );
+        return StringUtils.replace(
+            spec,
+            "%%STREAM_PROPERTIES_VALUE%%",
+            jsonMapper.writeValueAsString(config.getStreamEndpoint())
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+    kinesisQueryPropsTransform = spec -> {
+      try {
+        spec = StringUtils.replace(
+            spec,
+            "%%DATASOURCE%%",
+            fullDatasourceName
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%",
+            TIMESTAMP_FMT.print(FIRST_EVENT_TIME)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%",
+            TIMESTAMP_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND))
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMEBOUNDARY_RESPONSE_MINTIME%%",
+            TIMESTAMP_FMT.print(FIRST_EVENT_TIME)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMESERIES_QUERY_START%%",
+            INTERVAL_FMT.print(FIRST_EVENT_TIME)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMESERIES_QUERY_END%%",
+            INTERVAL_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND).plusMinutes(2))
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMESERIES_RESPONSE_TIMESTAMP%%",
+            TIMESTAMP_FMT.print(FIRST_EVENT_TIME)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%TIMESERIES_ADDED%%",
+            Long.toString(getSumOfEventSequence(EVENTS_PER_SECOND*TOTAL_NUMBER_OF_SECOND))
+        );
+        return StringUtils.replace(
+            spec,
+            "%%TIMESERIES_NUMEVENTS%%",
+            Integer.toString(EVENTS_PER_SECOND*TOTAL_NUMBER_OF_SECOND)
+        );
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+  }
+
+  @AfterMethod
+  public void teardown()
+  {
+//    kinesisAdminClient.deleteStream(streamName);
+//    wikipediaStreamEventGenerator.shutdown();
+//    kinesisEventWriter.shutdown();
+  }
+
+  @Test
+  public void test_x() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_LEGACY_PARSER));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start Kinesis data generator
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      // Wait for supervisor to consume events
+      LOG.info("Waiting for [%s] millis for Kafka indexing tasks to consume events", WAIT_TIME_MILLIS);
+      Thread.sleep(WAIT_TIME_MILLIS);
+      // Query data
+      final String querySpec = kinesisQueryPropsTransform.apply(getResourceAsString(QUERIES_FILE));
+      // this query will probably be answered from the indexing tasks but possibly from 2 historical segments / 2 indexing
+      this.queryHelper.testQueriesFromString(querySpec, 2);
+      LOG.info("Shutting down supervisor");
+      indexer.shutdownSupervisor(supervisorId);
+      // wait for all kafka indexing tasks to finish
+      LOG.info("Waiting for all indexing tasks to finish");
+      ITRetryUtil.retryUntilTrue(
+          () -> (indexer.getPendingTasks().size()
+                 + indexer.getRunningTasks().size()
+                 + indexer.getWaitingTasks().size()) == 0,
+          "Waiting for Tasks Completion"
+      );
+      // wait for segments to be handed off
+      ITRetryUtil.retryUntil(
+          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+          true,
+          10000,
+          30,
+          "Real-time generated segments loaded"
+      );
+
+      // this query will be answered by at least 1 historical segment, most likely 2, and possibly up to all 4
+      this.queryHelper.testQueriesFromString(querySpec, 2);
+    }
+  }
+
+  private long getSumOfEventSequence(int numEvents)
+  {
+    return (numEvents * (1 + numEvents)) / 2;
+  }
 }

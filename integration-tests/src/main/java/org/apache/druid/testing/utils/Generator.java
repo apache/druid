@@ -19,9 +19,13 @@
 
 package org.apache.druid.testing.utils;
 
+import org.joda.time.DateTime;
+
 public interface Generator
 {
   void start(EventWriter eventWriter);
+
+  void start(EventWriter eventWriter, DateTime overrrideFirstEventTime);
 
   void shutdown();
 }

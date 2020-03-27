@@ -42,7 +42,7 @@ public class KinesisAdminClient
 {
   private AmazonKinesis amazonKinesis;
 
-  KinesisAdminClient(String endpoint) throws Exception
+  public KinesisAdminClient(String endpoint) throws Exception
   {
     String pathToConfigFile = System.getProperty("override.config.path");
     Properties prop = new Properties();
@@ -66,7 +66,7 @@ public class KinesisAdminClient
                               )).build();
   }
 
-  void createStream(String streamName, int shardCount)
+  public void createStream(String streamName, int shardCount)
   {
     CreateStreamResult createStreamResult = amazonKinesis.createStream(streamName, shardCount);
     if (createStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
@@ -74,7 +74,7 @@ public class KinesisAdminClient
     }
   }
 
-  void deleteStream(String streamName)
+  public void deleteStream(String streamName)
   {
     DeleteStreamResult deleteStreamResult = amazonKinesis.deleteStream(streamName);
     if (deleteStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
@@ -82,7 +82,7 @@ public class KinesisAdminClient
     }
   }
 
-  void updateShardCount(String streamName, int newShardCount)
+  public void updateShardCount(String streamName, int newShardCount)
   {
     UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
     updateShardCountRequest.setStreamName(streamName);
@@ -94,7 +94,7 @@ public class KinesisAdminClient
     }
   }
 
-  boolean isStreamActive(String streamName)
+  public boolean isStreamActive(String streamName)
   {
     DescribeStreamResult describeStreamResult = amazonKinesis.describeStream(streamName);
     if (describeStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
@@ -103,7 +103,7 @@ public class KinesisAdminClient
     return StreamStatus.ACTIVE.toString().equals(describeStreamResult.getStreamDescription().getStreamStatus());
   }
 
-  int getStreamShardCount(String streamName)
+  public int getStreamShardCount(String streamName)
   {
     DescribeStreamResult describeStreamResult = amazonKinesis.describeStream(streamName);
     if (describeStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {

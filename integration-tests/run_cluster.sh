@@ -71,6 +71,9 @@
   $ For druid-hdfs-storage
   mkdir -p $SHARED_DIR/docker/extensions/druid-hdfs-storage
   mv $SHARED_DIR/docker/lib/druid-hdfs-storage-* $SHARED_DIR/docker/extensions/druid-hdfs-storage
+  # For druid-kinesis-indexing-service
+  mkdir -p $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
+  mv $SHARED_DIR/docker/lib/druid-kinesis-indexing-service-* $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 
   # Pull Hadoop dependency if needed
   if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]

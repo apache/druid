@@ -25,9 +25,9 @@ import java.util.UUID;
 
 public class StreamVerifierEventGenerator extends SyntheticGenerator
 {
-  public StreamVerifierEventGenerator(int eventsPerHour, long cyclePaddingMs, int totalNumberOfHours)
+  public StreamVerifierEventGenerator(int eventsPerSeconds, long cyclePaddingMs, int totalNumberOfSeconds)
   {
-    super(eventsPerHour, cyclePaddingMs, totalNumberOfHours);
+    super(eventsPerSeconds, cyclePaddingMs, totalNumberOfSeconds);
   }
 
   @Override
@@ -38,7 +38,7 @@ public class StreamVerifierEventGenerator extends SyntheticGenerator
         timestamp.getMillis(),
         DateTime.now().getMillis(),
         i,
-        i == getEventsPerHour() ? getSumOfEventSequence(getEventsPerHour()) : null,
+        i == getEventsPerSecond() ? getSumOfEventSequence(getEventsPerSecond()) : null,
         i == 1
     );
   }

@@ -25,6 +25,7 @@ package org.apache.druid.tests;
  */
 public class TestNGGroup
 {
+  public static final String KINESIS_INDEX = "kinesis-index";
   public static final String BATCH_INDEX = "batch-index";
   public static final String HADOOP_INDEX = "hadoop-index";
   public static final String KAFKA_INDEX = "kafka-index";
