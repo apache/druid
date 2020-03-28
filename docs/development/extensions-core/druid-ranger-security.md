@@ -1,0 +1,97 @@
+---
+id: druid-ranger-security
+title: "Apache Ranger Security"
+---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+  
+This Apache Druid extension adds:
+
+- an Authorizer which implements access control for the Druid metastore against Apache Ranger
+
+Make sure to [include](../../development/extensions.md#loading-extensions) `druid-ranger-security` as an extension.
+
+Please see [Authentication and Authorization](../../design/auth.md) for more information on the extension interfaces being implemented.
+
+## Configuration
+
+Support for Apache Ranger authorization consists of three elements: configuration of the extension 
+in Apache Druid, configuring the connection to Apache Ranger and providing the service definition for Druid to Apache Ranger.
+ 
+### Enabling the extension
+Ensure that you have a valid authentication chain set in your `common.runtime.properties`. For every 
+authenticator your wish to use the authorizer for set `druid.auth.authenticator.<authenticatorName>.authorizerName` 
+to the name you will give the authorizer, e.g. `ranger`.
+
+Then add the following and amend to your needs (in case you use multiple authorizers):
+
+```
+druid.auth.authorizers=["ranger"]
+druid.auth.authorizer.ranger.type=ranger
+```
+
+#### Properties to configure the extension in Apache Druid
+|Property|Description|Default|required|
+|--------|-----------|-------|--------|
+|`druid.auth.ranger.keytab`|Defines the keytab to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
+|`druid.auth.ranger.principal`|Defines the principal to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
+|`druid.auth.ranger.use_ugi`|Determines if groups that the authenticated user belongs to should be obtained from Hadoop's UserGroupInformation|null|No|
+|`druid.auth.ranger.hadoop_config`|If defined, loads extra configuration for Hadoop's UserGroupInformation from this file|ranger-druid-site.xml|No|
+
+### Configuring the connection to Apache Ranger
+
+The Apache Ranger authorization extension will read several configuration files. Discussing the
+the contents of those files are beyond the scope of this document. Depending on your needs you will 
+need to create them. The minimum you will need to have is a `ranger-druid-security.xml` file 
+that you will need to put in the classpath. For auditing, the configuration is in `ranger-druid-audit.xml`.
+
+### Adding the service definition for Apache Druid to Apache Ranger
+
+At the time of writing of this document Apache Ranger (2.0) does not include a service and 
+service definition yet. You can add the service definition to Apache Ranger by entering the following
+command:
+
+`curl -u <user>:<password> -d "@ranger-servicedef-druid.json" -X POST -H "Accept: application/json" -H "Content-Type: application/json" http://localhost:6080/service/public/v2/api/servicedef/`
+
+You should get back json describing the service definition you just added. You can now go to the web
+interface of Apache Ranger which should now include a widget for "Druid". Click the plus sign an create
+the new service. Ensure your service name is equal to what you configured in `ranger-druid-security.xml`.
+
+## Usage
+
+### HTTP methods
+
+For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](../../operations/api-reference.md).
+
+GET requires READ permission, while POST and DELETE require WRITE permission.
+
+### SQL Permissions
+
+Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
+
+Queries on the [INFORMATION_SCHEMA tables](../../querying/sql.html#information-schema) will
+return information about datasources that the caller has DATASOURCE READ access to. Other
+datasources will be omitted.
+
+Queries on the [system schema tables](../../querying/sql.html#system-schema) require the following permissions:
+- `segments`: Segments will be filtered based on DATASOURCE READ permissions.
+- `servers`: The user requires STATE READ permissions.
+- `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
+- `tasks`: Tasks will be filtered based on DATASOURCE READ permissions.
