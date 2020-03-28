@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.mean;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,10 +39,10 @@ public class DoubleMeanAggregatorFactoryTest
     DoubleMeanHolder expectedHolder = new DoubleMeanHolder(50.0, 10L);
 
     DoubleMeanHolder actualHolder = (DoubleMeanHolder) factory.deserialize(expectedHolder);
-    Assert.assertTrue(EqualsBuilder.reflectionEquals(expectedHolder, actualHolder));
+    Assert.assertEquals(expectedHolder, actualHolder);
 
     actualHolder = (DoubleMeanHolder) factory.deserialize(expectedHolder.toBytes());
-    Assert.assertTrue(EqualsBuilder.reflectionEquals(expectedHolder, actualHolder));
+    Assert.assertEquals(expectedHolder, actualHolder);
   }
 
   @Test
