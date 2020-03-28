@@ -78,15 +78,15 @@ public abstract class SyntheticGenerator implements Generator
     // were dropped or duplicated. We will try to space the event generation over the remainder of the second so that it
     // roughly completes at the top of the second, but if it doesn't complete, it will still send the remainder of the
     // events with the original timestamp, even after wall time has moved onto the next second.
-    DateTime nowFlooredToSecond = DateTime.now().secondOfDay().roundFloorCopy();
-    DateTime eventTimestamp = overrrideFirstEventTime == null ? nowFlooredToSecond : overrrideFirstEventTime;
+    DateTime nowCeilingToSecond = DateTime.now().secondOfDay().roundCeilingCopy();
+    DateTime eventTimestamp = overrrideFirstEventTime == null ? nowCeilingToSecond : overrrideFirstEventTime;
     int seconds = 0;
 
     while (true) {
       try {
-        long sleepMillis = nowFlooredToSecond.getMillis() - DateTime.now().getMillis();
+        long sleepMillis = nowCeilingToSecond.getMillis() - DateTime.now().getMillis();
         if (sleepMillis > 0) {
-          log.info("Waiting {} ms for next run cycle (at {})", sleepMillis, nowFlooredToSecond);
+          log.info("Waiting {} ms for next run cycle (at {})", sleepMillis, nowCeilingToSecond);
           Thread.sleep(sleepMillis);
           continue;
         }
@@ -94,13 +94,13 @@ public abstract class SyntheticGenerator implements Generator
         log.info(
             "Beginning run cycle with {} events, target completion time: {}",
             eventsPerSecond,
-            nowFlooredToSecond.plusSeconds(1).minus(cyclePaddingMs)
+            nowCeilingToSecond.plusSeconds(1).minus(cyclePaddingMs)
         );
 
         for (int i = 1; i <= eventsPerSecond; i++) {
           eventWriter.write(MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
 
-          long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowFlooredToSecond);
+          long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowCeilingToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
             log.info("Event: {}/{}, sleep time: {} ms", i, eventsPerSecond, sleepTime);
           }
@@ -110,7 +110,7 @@ public abstract class SyntheticGenerator implements Generator
           }
         }
 
-        nowFlooredToSecond = nowFlooredToSecond.plusSeconds(1);
+        nowCeilingToSecond = nowCeilingToSecond.plusSeconds(1);
         eventTimestamp = eventTimestamp.plusSeconds(1);
         seconds++;
 
@@ -118,7 +118,7 @@ public abstract class SyntheticGenerator implements Generator
             "Finished writing {} events, current time: {} - updating next timestamp to: {}",
             eventsPerSecond,
             DateTime.now(),
-            nowFlooredToSecond
+            nowCeilingToSecond
         );
 
         if (seconds >= totalNumberOfSecond) {

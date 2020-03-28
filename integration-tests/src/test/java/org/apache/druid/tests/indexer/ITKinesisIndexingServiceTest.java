@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -37,6 +38,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -45,7 +47,8 @@ import java.util.function.Function;
 public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
 {
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
-  private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
+  private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
+  private static final long WAIT_TIME_MILLIS = 60 * 1000L;
   private static final DateTime FIRST_EVENT_TIME = DateTime.parse("1994-04-29T00:00:00.000Z");
   private static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/stream_supervisor_spec_legacy_parser.json";
   private static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/stream_supervisor_spec_input_format.json";
@@ -77,7 +80,8 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   {
     streamName = "kinesis_index_test_" + UUID.randomUUID();
     String datasource = "kinesis_indexing_service_test_" + UUID.randomUUID();
-    kinesisAdminClient.createStream(streamName, 2);
+    Map<String, String> tags = ImmutableMap.of(STREAM_EXPIRE_TAG, Long.toString(DateTime.now().plusMinutes(30).getMillis()));
+    kinesisAdminClient.createStream(streamName, 2, tags);
     ITRetryUtil.retryUntil(
         () -> kinesisAdminClient.isStreamActive(streamName),
         true,
@@ -112,6 +116,11 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         );
         spec = StringUtils.replace(
             spec,
+            "%%USE_EARLIEST_KEY%%",
+            "useEarliestSequenceNumber"
+        );
+        spec = StringUtils.replace(
+            spec,
             "%%STREAM_PROPERTIES_KEY%%",
             "endpoint"
         );
@@ -140,7 +149,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         spec = StringUtils.replace(
             spec,
             "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%",
-            TIMESTAMP_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND))
+            TIMESTAMP_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND-1))
         );
         spec = StringUtils.replace(
             spec,
@@ -155,7 +164,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         spec = StringUtils.replace(
             spec,
             "%%TIMESERIES_QUERY_END%%",
-            INTERVAL_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND).plusMinutes(2))
+            INTERVAL_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND-1).plusMinutes(2))
         );
         spec = StringUtils.replace(
             spec,
@@ -165,7 +174,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         spec = StringUtils.replace(
             spec,
             "%%TIMESERIES_ADDED%%",
-            Long.toString(getSumOfEventSequence(EVENTS_PER_SECOND*TOTAL_NUMBER_OF_SECOND))
+            Long.toString(getSumOfEventSequence(EVENTS_PER_SECOND) * TOTAL_NUMBER_OF_SECOND)
         );
         return StringUtils.replace(
             spec,
@@ -182,9 +191,9 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   @AfterMethod
   public void teardown()
   {
-//    kinesisAdminClient.deleteStream(streamName);
-//    wikipediaStreamEventGenerator.shutdown();
-//    kinesisEventWriter.shutdown();
+    kinesisAdminClient.deleteStream(streamName);
+    wikipediaStreamEventGenerator.shutdown();
+    kinesisEventWriter.shutdown();
   }
 
   @Test
@@ -209,14 +218,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       this.queryHelper.testQueriesFromString(querySpec, 2);
       LOG.info("Shutting down supervisor");
       indexer.shutdownSupervisor(supervisorId);
-      // wait for all kafka indexing tasks to finish
-      LOG.info("Waiting for all indexing tasks to finish");
-      ITRetryUtil.retryUntilTrue(
-          () -> (indexer.getPendingTasks().size()
-                 + indexer.getRunningTasks().size()
-                 + indexer.getWaitingTasks().size()) == 0,
-          "Waiting for Tasks Completion"
-      );
+//      // wait for all kafka indexing tasks to finish
+//      LOG.info("Waiting for all indexing tasks to finish");
+//      ITRetryUtil.retryUntilTrue(
+//          () -> (indexer.getPendingTasks().size()
+//                 + indexer.getRunningTasks().size()
+//                 + indexer.getWaitingTasks().size()) == 0,
+//          "Waiting for Tasks Completion"
+//      );
       // wait for segments to be handed off
       ITRetryUtil.retryUntil(
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),

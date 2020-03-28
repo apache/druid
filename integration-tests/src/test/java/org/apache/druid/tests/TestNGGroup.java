@@ -25,12 +25,18 @@ package org.apache.druid.tests;
  */
 public class TestNGGroup
 {
-  public static final String KINESIS_INDEX = "kinesis-index";
   public static final String BATCH_INDEX = "batch-index";
   public static final String HADOOP_INDEX = "hadoop-index";
   public static final String KAFKA_INDEX = "kafka-index";
   public static final String OTHER_INDEX = "other-index";
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
+  /**
+   * This group is not part of CI. To run this group, kinesis configs/credentials for your kinesis must be provided in a file.
+   * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
+   * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
+   *
+   */
+  public static final String KINESIS_INDEX = "kinesis-index";
   // This group can only be run individually using -Dgroups=query since it requires specific test data setup.
   public static final String QUERY = "query";
   public static final String REALTIME_INDEX = "realtime-index";

@@ -25,6 +25,8 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.model.AddTagsToStreamRequest;
+import com.amazonaws.services.kinesis.model.AddTagsToStreamResult;
 import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
@@ -33,9 +35,11 @@ import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.FileInputStream;
+import java.util.Map;
 import java.util.Properties;
 
 public class KinesisAdminClient
@@ -66,12 +70,22 @@ public class KinesisAdminClient
                               )).build();
   }
 
-  public void createStream(String streamName, int shardCount)
+  public void createStream(String streamName, int shardCount, Map<String,String> tags)
   {
     CreateStreamResult createStreamResult = amazonKinesis.createStream(streamName, shardCount);
     if (createStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
       throw new ISE("Cannot create stream for integration test");
     }
+    if (tags != null && !tags.isEmpty()) {
+      AddTagsToStreamRequest addTagsToStreamRequest = new AddTagsToStreamRequest();
+      addTagsToStreamRequest.setStreamName(streamName);
+      addTagsToStreamRequest.setTags(tags);
+      AddTagsToStreamResult addTagsToStreamResult = amazonKinesis.addTagsToStream(addTagsToStreamRequest);
+      if (addTagsToStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
+        throw new ISE("Cannot tag stream for integration test");
+      }
+    }
+
   }
 
   public void deleteStream(String streamName)

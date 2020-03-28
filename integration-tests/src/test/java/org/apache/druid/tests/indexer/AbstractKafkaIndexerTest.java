@@ -137,8 +137,12 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
       spec = getResourceAsString(supervisorSpecPath);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
-      spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
-      spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
+      spec = StringUtils.replace(spec, "%%STREAM_TYPE%%", "kafka");
+      spec = StringUtils.replace(spec, "%%TOPIC_KEY%%", "topic");
+      spec = StringUtils.replace(spec, "%%TOPIC_VALUE%%", TOPIC_NAME);
+      spec = StringUtils.replace(spec, "%%USE_EARLIEST_KEY%%", "useEarliestOffset");
+      spec = StringUtils.replace(spec, "%%STREAM_PROPERTIES_KEY%%", "consumerProperties");
+      spec = StringUtils.replace(spec, "%%STREAM_PROPERTIES_VALUE%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {

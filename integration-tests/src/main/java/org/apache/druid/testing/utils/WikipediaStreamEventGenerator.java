@@ -19,15 +19,12 @@
 
 package org.apache.druid.testing.utils;
 
-import org.apache.calcite.plan.Strong;
-import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class WikipediaStreamEventGenerator extends SyntheticGenerator
 {

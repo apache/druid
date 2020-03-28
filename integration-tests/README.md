@@ -66,7 +66,22 @@ Integration tests can also be run with either Java 8 or Java 11 by adding -Djvm.
 can either be 8 or 11.
 
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
-The file must contain one property per line, the key must start with druid_ and the format should be snake case. 
+The file must contain one property per line, the key must start with druid_ and the format should be snake case.
+
+## Debugging Druid while running tests
+
+For your convenience, Druid processes running inside Docker have debugging enabled and the following ports have 
+been made available to attach your remote debugger (such as via IntelliJ IDEA's Remote Configuration):
+
+- Overlord process at port 5009
+- Middlemanager process at port 5008
+- Historical process at port 5007
+- Coordinator process at port 5006
+- Broker process at port 5005
+- Router process at port 5004
+- Router with custom check tls process at port 5003
+- Router with no client auth tls process at port 5002
+- Router with permissive tls process at port 5001
 
 Running Tests Using A Configuration File for Any Cluster
 -------------------

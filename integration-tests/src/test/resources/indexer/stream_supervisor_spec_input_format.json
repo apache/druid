@@ -47,10 +47,10 @@
   "ioConfig": {
     "%%TOPIC_KEY%%": "%%TOPIC_VALUE%%",
     "%%STREAM_PROPERTIES_KEY%%": %%STREAM_PROPERTIES_VALUE%%,
-    "taskCount": 1,
+    "taskCount": 2,
     "replicas": 1,
-    "taskDuration": "PT2M",
-    "useEarliestOffset": true,
+    "taskDuration": "PT5M",
+    "%%USE_EARLIEST_KEY%%": true,
     "inputFormat" : {
       "type" : "json"
     }
