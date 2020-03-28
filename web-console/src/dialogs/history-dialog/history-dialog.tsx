@@ -65,10 +65,12 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
   }
 
   return (
-    <Dialog className="history-dialog" isOpen {...props}>
-      <div className={classNames(Classes.DIALOG_BODY, 'history-record-container')}>{content}</div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>{buttons}</div>
+    <Dialog isOpen {...props}>
+      <div className="history-dialog">
+        <div className={classNames(Classes.DIALOG_BODY, 'history-record-container')}>{content}</div>
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>{buttons}</div>
+        </div>
       </div>
     </Dialog>
   );

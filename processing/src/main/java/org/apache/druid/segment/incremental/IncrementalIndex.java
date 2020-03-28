@@ -48,7 +48,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractIndex;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -63,11 +62,14 @@ import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -130,7 +132,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       final boolean deserializeComplexMetrics
   )
   {
-    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in::get, null);
+    final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
+        RowAdapters.standardRow(),
+        in::get,
+        RowSignature.empty(),
+        true
+    );
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {

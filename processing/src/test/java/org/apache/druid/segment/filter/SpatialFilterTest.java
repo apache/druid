@@ -561,8 +561,7 @@ public class SpatialFilterTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -614,8 +613,7 @@ public class SpatialFilterTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -702,8 +700,7 @@ public class SpatialFilterTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );

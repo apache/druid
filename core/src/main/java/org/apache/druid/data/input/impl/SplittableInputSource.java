@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 
 import javax.annotation.Nullable;
@@ -34,6 +35,8 @@ import java.util.stream.Stream;
  */
 public interface SplittableInputSource<T> extends InputSource
 {
+  SplitHintSpec DEFAULT_SPLIT_HINT_SPEC = new MaxSizeSplitHintSpec(null);
+
   @JsonIgnore
   @Override
   default boolean isSplittable()
@@ -70,5 +73,10 @@ public interface SplittableInputSource<T> extends InputSource
    * Helper method for ParallelIndexSupervisorTask.
    * Most of implementations can simply create a new instance with the given split.
    */
-  SplittableInputSource<T> withSplit(InputSplit<T> split);
+  InputSource withSplit(InputSplit<T> split);
+
+  default SplitHintSpec getSplitHintSpecOrDefault(@Nullable SplitHintSpec splitHintSpec)
+  {
+    return splitHintSpec == null ? DEFAULT_SPLIT_HINT_SPEC : splitHintSpec;
+  }
 }

@@ -110,10 +110,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         strategySelector,
-        new GroupByQueryQueryToolChest(
-            strategySelector,
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector)
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(

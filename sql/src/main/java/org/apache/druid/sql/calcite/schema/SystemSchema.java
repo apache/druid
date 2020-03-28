@@ -60,6 +60,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -72,7 +73,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
@@ -95,7 +96,6 @@ import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
-  public static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
@@ -258,7 +258,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SEGMENTS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SEGMENTS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -285,17 +285,14 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
       }
 
-      // get published segments from metadata segment cache (if enabled in sql planner config), else directly from
-      // coordinator
+      // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
+      // Coordinator.
       final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(
-              metadataStoreSegments,
-              root
-          ))
+          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
             try {
               final DataSegment segment = val.getDataSegment();
@@ -353,7 +350,8 @@ public class SystemSchema extends AbstractSchema
                   numReplicas,
                   val.getValue().getNumRows(),
                   IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
-                  IS_AVAILABLE_TRUE, // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                  IS_AVAILABLE_TRUE,
                   val.getValue().isRealtime(),
                   IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
                   jsonMapper.writeValueAsString(val.getKey())
@@ -398,8 +396,10 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment -> Collections
-          .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
+      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment ->
+          Collections.singletonList(
+              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource())
+          );
 
       final Iterable<Entry<SegmentId, AvailableSegmentMetadata>> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(
@@ -456,7 +456,7 @@ public class SystemSchema extends AbstractSchema
   }
 
   /**
-   * This table contains row per server. It contains all the discovered servers in druid cluster.
+   * This table contains row per server. It contains all the discovered servers in Druid cluster.
    * Some columns like tier and size are only applicable to historical nodes which contain segments.
    */
   static class ServersTable extends AbstractTable implements ScannableTable
@@ -479,7 +479,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SERVERS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SERVERS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -548,7 +548,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SERVER_SEGMENTS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SERVER_SEGMENTS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -567,7 +567,7 @@ public class SystemSchema extends AbstractSchema
 
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
-      final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
+      final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.size();
       for (ImmutableDruidServer druidServer : druidServers) {
         final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
             authenticationResult,
@@ -613,7 +613,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return TASKS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(TASKS_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -797,7 +797,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SUPERVISOR_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SUPERVISOR_SIGNATURE, typeFactory);
     }
 
     @Override

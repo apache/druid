@@ -205,7 +205,7 @@ public class TestKafkaExtractionCluster
 
   private void checkServer()
   {
-    if (!kafkaServer.apis().controller().isActive()) {
+    if (!kafkaServer.dataPlaneRequestProcessor().controller().isActive()) {
       throw new ISE("server is not active!");
     }
   }

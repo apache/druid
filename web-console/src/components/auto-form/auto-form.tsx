@@ -45,8 +45,9 @@ export interface Field<M> {
     | 'json'
     | 'interval';
   defaultValue?: any;
+  emptyValue?: any;
   suggestions?: Functor<M, Suggestion[]>;
-  placeholder?: string;
+  placeholder?: Functor<M, string>;
   min?: number;
   zeroMeansUndefined?: boolean;
   disabled?: Functor<M, boolean>;
@@ -55,13 +56,14 @@ export interface Field<M> {
   adjustment?: (model: M) => M;
 }
 
-export interface AutoFormProps<T> {
-  fields: Field<T>[];
-  model: T | undefined;
-  onChange: (newModel: T) => void;
+export interface AutoFormProps<M> {
+  fields: Field<M>[];
+  model: M | undefined;
+  onChange: (newModel: M) => void;
   onFinalize?: () => void;
-  showCustom?: (model: T) => boolean;
+  showCustom?: (model: M) => boolean;
   large?: boolean;
+  globalAdjustment?: (model: M) => M;
 }
 
 export class AutoForm<T extends Record<string, any>> extends React.PureComponent<AutoFormProps<T>> {
@@ -99,16 +101,26 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { model } = this.props;
     if (!model) return;
 
-    const newModel =
-      typeof newValue === 'undefined'
-        ? deepDelete(model, field.name)
-        : deepSet(model, field.name, newValue);
+    let newModel: T;
+    if (typeof newValue === 'undefined') {
+      if (typeof field.emptyValue === 'undefined') {
+        newModel = deepDelete(model, field.name);
+      } else {
+        newModel = deepSet(model, field.name, field.emptyValue);
+      }
+    } else {
+      newModel = deepSet(model, field.name, newValue);
+    }
+
+    if (field.adjustment) {
+      newModel = field.adjustment(newModel);
+    }
 
     this.modelChange(newModel);
   };
 
   private modelChange = (newModel: T) => {
-    const { fields, onChange, model } = this.props;
+    const { globalAdjustment, fields, onChange, model } = this.props;
 
     // Delete things that are not defined now (but were defined prior to the change)
     for (const someField of fields) {
@@ -120,11 +132,9 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       }
     }
 
-    // Perform any adjustments if needed
-    for (const someField of fields) {
-      if (someField.adjustment) {
-        newModel = someField.adjustment(newModel);
-      }
+    // Perform any global adjustments if needed
+    if (globalAdjustment) {
+      newModel = globalAdjustment(newModel);
     }
 
     onChange(newModel);
@@ -155,7 +165,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
-        placeholder={field.placeholder}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         intent={
           AutoForm.evaluateFunctor(field.required, model, false) && modelValue == null
             ? AutoForm.REQUIRED_INTENT
@@ -196,14 +206,14 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       <SuggestibleInput
         value={modelValue != null ? modelValue : field.defaultValue || ''}
         onValueChange={v => {
-          if (sanitize) v = sanitize(v);
+          if (sanitize && typeof v === 'string') v = sanitize(v);
           this.fieldChange(field, v);
         }}
         onBlur={() => {
           if (modelValue === '') this.fieldChange(field, undefined);
         }}
         onFinalize={onFinalize}
-        placeholder={field.placeholder}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         suggestions={AutoForm.evaluateFunctor(field.suggestions, model, undefined)}
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
@@ -261,7 +271,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       <JsonInput
         value={deepGet(model as any, field.name)}
         onChange={(v: any) => this.fieldChange(field, v)}
-        placeholder={field.placeholder}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
       />
     );
   }
@@ -275,7 +285,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         onChange={(v: any) => {
           this.fieldChange(field, v);
         }}
-        placeholder={field.placeholder}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={
@@ -297,7 +307,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         onValueChange={(v: any) => {
           this.fieldChange(field, v);
         }}
-        placeholder={field.placeholder}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
       />
     );
   }

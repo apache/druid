@@ -83,4 +83,10 @@ public interface DimensionSpec extends Cacheable
   }
 
   boolean preservesOrdering();
+
+  /**
+   * Returns a copy of this DimensionSpec with the underlying dimension (the value of {@link #getDimension()})
+   * replaced by "newDimension".
+   */
+  DimensionSpec withDimension(String newDimension);
 }

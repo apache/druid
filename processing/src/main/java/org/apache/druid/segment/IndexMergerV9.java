@@ -272,8 +272,7 @@ public class IndexMergerV9 implements IndexMerger
 
     long startTime = System.currentTimeMillis();
     final Set<String> finalDimensions = new LinkedHashSet<>();
-    final Set<String> finalColumns = new LinkedHashSet<>();
-    finalColumns.addAll(mergedMetrics);
+    final Set<String> finalColumns = new LinkedHashSet<>(mergedMetrics);
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       if (mergers.get(i).canSkip()) {
         continue;

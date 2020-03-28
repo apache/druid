@@ -34,7 +34,9 @@ import java.util.concurrent.TimeUnit;
 @PublicApi
 public class QueryContexts
 {
+  public static final String FINALIZE_KEY = "finalize";
   public static final String PRIORITY_KEY = "priority";
+  public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
@@ -43,11 +45,13 @@ public class QueryContexts
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
-
-  @Deprecated
-  public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
   public static final String VECTORIZE_KEY = "vectorize";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
+  public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
+  public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
+  public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
+  public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
+  public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -60,6 +64,10 @@ public class QueryContexts
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY = 10000;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -158,7 +166,7 @@ public class QueryContexts
 
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "finalize", defaultValue);
+    return parseBoolean(query, FINALIZE_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)
@@ -181,6 +189,11 @@ public class QueryContexts
     return parseInt(query, VECTOR_SIZE_KEY, defaultSize);
   }
 
+  public static <T> int getMaxSubqueryRows(Query<T> query, int defaultSize)
+  {
+    return parseInt(query, MAX_SUBQUERY_ROWS_KEY, defaultSize);
+  }
+
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
   {
     return getUncoveredIntervalsLimit(query, DEFAULT_UNCOVERED_INTERVALS_LIMIT);
@@ -199,6 +212,11 @@ public class QueryContexts
   public static <T> int getPriority(Query<T> query, int defaultValue)
   {
     return parseInt(query, PRIORITY_KEY, defaultValue);
+  }
+
+  public static <T> String getLane(Query<T> query)
+  {
+    return (String) query.getContextValue(LANE_KEY);
   }
 
   public static <T> boolean getEnableParallelMerges(Query<T> query)
@@ -220,12 +238,30 @@ public class QueryContexts
   {
     return parseInt(query, BROKER_PARALLELISM, defaultValue);
   }
-
-  @Deprecated
-  public static <T> String getChunkPeriod(Query<T> query)
+  public static <T> boolean getEnableJoinFilterRewriteValueColumnFilters(Query<T> query)
   {
-    return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
+    return parseBoolean(
+        query,
+        JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
+        DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+    );
   }
+
+  public static <T> long getJoinFilterRewriteMaxSize(Query<T> query)
+  {
+    return parseLong(query, JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY);
+  }
+
+  public static <T> boolean getEnableJoinFilterPushDown(Query<T> query)
+  {
+    return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+  }
+
+  public static <T> boolean getEnableJoinFilterRewrite(Query<T> query)
+  {
+    return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
+  }
+
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {

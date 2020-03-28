@@ -156,10 +156,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        strategySelector,
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
     return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 

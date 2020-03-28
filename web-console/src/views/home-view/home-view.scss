@@ -22,9 +22,5 @@
   display: grid;
   gap: $standard-padding;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-
-  & > a {
-    text-decoration: inherit;
-    color: inherit;
-  }
+  padding: 0 60px;
 }

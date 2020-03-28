@@ -21,15 +21,14 @@ package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeSet;
 
 /**
  * Provides facilities to create and re-use {@link VirtualColumn} definitions for dimensions, filters, and filtered
@@ -60,7 +59,7 @@ public class VirtualColumnRegistry
   {
     return new VirtualColumnRegistry(
         rowSignature,
-        Calcites.findUnusedPrefix("v", new TreeSet<>(rowSignature.getRowOrder())),
+        Calcites.findUnusedPrefixForDigits("v", rowSignature.getColumnNames()),
         new HashMap<>(),
         new HashMap<>()
     );
@@ -117,11 +116,8 @@ public class VirtualColumnRegistry
    */
   public RowSignature getFullRowSignature()
   {
-    final RowSignature.Builder builder = RowSignature.builder();
-
-    for (String columnName : baseRowSignature.getRowOrder()) {
-      builder.add(columnName, baseRowSignature.getColumnType(columnName));
-    }
+    final RowSignature.Builder builder =
+        RowSignature.builder().addAll(baseRowSignature);
 
     for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
       final String columnName = virtualColumn.getOutputName();

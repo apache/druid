@@ -19,13 +19,10 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.PartitionBoundaries;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
 
 import java.util.Map;
@@ -38,8 +35,8 @@ import java.util.Map;
 class PartialRangeSegmentGenerateParallelIndexTaskRunner
     extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
 {
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
-  private final AppenderatorsManager appenderatorsManager;
+  private static final String PHASE_NAME = "partial segment generation";
+
   private final Map<Interval, PartitionBoundaries> intervalToPartitions;
 
   PartialRangeSegmentGenerateParallelIndexTaskRunner(
@@ -52,42 +49,14 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       Map<Interval, PartitionBoundaries> intervalToPartitions
   )
   {
-    this(
-        toolbox,
-        taskId,
-        groupId,
-        ingestionSchema,
-        context,
-        indexingServiceClient,
-        intervalToPartitions,
-        null,
-        null
-    );
-  }
-
-  @VisibleForTesting
-  PartialRangeSegmentGenerateParallelIndexTaskRunner(
-      TaskToolbox toolbox,
-      String taskId,
-      String groupId,
-      ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient,
-      Map<Interval, PartitionBoundaries> intervalToPartitions,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      AppenderatorsManager appenderatorsManager
-  )
-  {
     super(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient);
-    this.taskClientFactory = taskClientFactory;
-    this.appenderatorsManager = appenderatorsManager;
     this.intervalToPartitions = intervalToPartitions;
   }
 
   @Override
   public String getName()
   {
-    return PartialRangeSegmentGenerateTask.TYPE;
+    return PHASE_NAME;
   }
 
   @Override
@@ -97,8 +66,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       String supervisorTaskId,
       Map<String, Object> context,
       InputSplit split,
-      ParallelIndexIngestionSpec subTaskIngestionSpec,
-      IndexingServiceClient indexingServiceClient
+      ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
     return new SubTaskSpec<PartialRangeSegmentGenerateTask>(
@@ -121,9 +89,9 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
             subTaskIngestionSpec,
             context,
             intervalToPartitions,
-            indexingServiceClient,
-            taskClientFactory,
-            appenderatorsManager
+            null,
+            null,
+            null
         );
       }
     };

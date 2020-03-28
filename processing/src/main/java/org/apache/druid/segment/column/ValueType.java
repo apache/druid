@@ -121,7 +121,8 @@ public enum ValueType
   }
 
   @JsonCreator
-  public static ValueType fromString(String name)
+  @Nullable
+  public static ValueType fromString(@Nullable String name)
   {
     if (name == null) {
       return null;

@@ -20,76 +20,55 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class FloatLastBufferAggregator implements BufferAggregator
+public class FloatLastBufferAggregator extends NumericLastBufferAggregator<BaseFloatColumnValueSelector>
 {
-  private final BaseLongColumnValueSelector timeSelector;
-  private final BaseFloatColumnValueSelector valueSelector;
-
-  public FloatLastBufferAggregator(BaseLongColumnValueSelector timeSelector, BaseFloatColumnValueSelector valueSelector)
+  public FloatLastBufferAggregator(
+      BaseLongColumnValueSelector timeSelector,
+      BaseFloatColumnValueSelector valueSelector
+  )
   {
-    this.timeSelector = timeSelector;
-    this.valueSelector = valueSelector;
+    super(timeSelector, valueSelector);
   }
 
   @Override
-  public void init(ByteBuffer buf, int position)
+  void initValue(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MIN_VALUE);
-    buf.putFloat(position + Long.BYTES, 0);
+    buf.putFloat(position, 0);
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position)
   {
-    long time = timeSelector.getLong();
-    long lastTime = buf.getLong(position);
-    if (time >= lastTime) {
-      buf.putLong(position, time);
-      buf.putFloat(position + Long.BYTES, valueSelector.getFloat());
-    }
+    buf.putFloat(position, valueSelector.getFloat());
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(buf.getLong(position), buf.getFloat(position + Long.BYTES));
+    final boolean rhsNull = isValueNull(buf, position);
+    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getFloat(position + VALUE_OFFSET));
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return buf.getFloat(position + Long.BYTES);
+    return buf.getFloat(position + VALUE_OFFSET);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getFloat(position + Long.BYTES);
+    return (long) buf.getFloat(position + VALUE_OFFSET);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getFloat(position + Long.BYTES);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    inspector.visit("timeSelector", timeSelector);
-    inspector.visit("valueSelector", valueSelector);
+    return buf.getFloat(position + VALUE_OFFSET);
   }
 }

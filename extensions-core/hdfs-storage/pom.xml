@@ -255,18 +255,13 @@
               <groupId>commons-beanutils</groupId>
               <artifactId>commons-beanutils-core</artifactId>
             </exclusion>
-            <exclusion>
-              <!-- excluded to remove security vulnerabilities; jackson-mapper-asl is renamed to jackson-databind -->
-              <groupId>org.codehaus.jackson</groupId>
-              <artifactId>jackson-mapper-asl</artifactId>
-            </exclusion>
           </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-aws</artifactId>
           <version>${hadoop.compile.version}</version>
-          <scope>provided</scope>
+          <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>

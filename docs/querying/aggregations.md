@@ -136,7 +136,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `doubleFirst` aggregator
 
-`doubleFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+`doubleFirst` computes the metric value with the minimum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
 
 ```json
 {
@@ -148,7 +148,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `doubleLast` aggregator
 
-`doubleLast` computes the metric value with the maximum timestamp or 0 if no row exist
+`doubleLast` computes the metric value with the maximum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
 
 ```json
 {
@@ -160,7 +160,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `floatFirst` aggregator
 
-`floatFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+`floatFirst` computes the metric value with the minimum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
 
 ```json
 {
@@ -172,7 +172,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `floatLast` aggregator
 
-`floatLast` computes the metric value with the maximum timestamp or 0 if no row exist
+`floatLast` computes the metric value with the maximum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
 
 ```json
 {
@@ -184,7 +184,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `longFirst` aggregator
 
-`longFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+`longFirst` computes the metric value with the minimum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
 
 ```json
 {
@@ -196,7 +196,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `longLast` aggregator
 
-`longLast` computes the metric value with the maximum timestamp or 0 if no row exist
+`longLast` computes the metric value with the maximum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
 
 ```json
 {
@@ -215,8 +215,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "type" : "stringFirst",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
-  "maxStringBytes" : <integer> # (optional, defaults to 1024),
-  "filterNullValues" : <boolean> # (optional, defaults to false)
+  "maxStringBytes" : <integer> # (optional, defaults to 1024)
 }
 ```
 
@@ -231,8 +230,62 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "type" : "stringLast",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
+  "maxStringBytes" : <integer> # (optional, defaults to 1024)
+}
+```
+
+### ANY aggregator
+
+(Double/Float/Long/String) ANY aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+
+Returns any value including null. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)
+
+#### `doubleAny` aggregator
+
+`doubleAny` returns any double metric value
+
+```json
+{
+  "type" : "doubleAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `floatAny` aggregator
+
+`floatAny` returns any float metric value
+
+```json
+{
+  "type" : "floatAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `longAny` aggregator
+
+`longAny` returns any long metric value
+
+```json
+{
+  "type" : "longAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+}
+```
+
+#### `stringAny` aggregator
+
+`stringAny` returns any string metric value
+
+```json
+{
+  "type" : "stringAny",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
   "maxStringBytes" : <integer> # (optional, defaults to 1024),
-  "filterNullValues" : <boolean> # (optional, defaults to false)
 }
 ```
 

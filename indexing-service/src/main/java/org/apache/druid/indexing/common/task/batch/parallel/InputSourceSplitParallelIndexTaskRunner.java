@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -33,7 +34,7 @@ import java.util.Map;
 
 /**
  * Base class for different implementations of {@link ParallelIndexTaskRunner} that operate on
- * {@link org.apache.druid.data.input.InputSource} splits.
+ * {@link InputSource} splits.
  */
 abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends SubTaskReport>
     extends ParallelIndexPhaseRunner<T, R>
@@ -85,7 +86,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
   final SubTaskSpec<T> newTaskSpec(InputSplit split)
   {
     final FirehoseFactory firehoseFactory;
-    final SplittableInputSource inputSource;
+    final InputSource inputSource;
     if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
       firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
       inputSource = null;
@@ -110,8 +111,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
         getTaskId(),
         getContext(),
         split,
-        subTaskIngestionSpec,
-        getIndexingServiceClient()
+        subTaskIngestionSpec
     );
   }
 
@@ -124,7 +124,6 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
       String supervisorTaskId,
       Map<String, Object> context,
       InputSplit split,
-      ParallelIndexIngestionSpec subTaskIngestionSpec,
-      IndexingServiceClient indexingServiceClient
+      ParallelIndexIngestionSpec subTaskIngestionSpec
   );
 }

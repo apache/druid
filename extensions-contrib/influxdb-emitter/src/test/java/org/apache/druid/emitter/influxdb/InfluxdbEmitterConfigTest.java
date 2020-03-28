@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 public class InfluxdbEmitterConfigTest
@@ -57,7 +56,7 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test
-  public void testInfluxdbEmitterConfigObjectsAreDifferent() throws IOException
+  public void testInfluxdbEmitterConfigObjectsAreDifferent()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigComparison = new InfluxdbEmitterConfig(
         "localhost",
@@ -74,7 +73,7 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testConfigWithNullHostname() throws IOException
+  public void testConfigWithNullHostname()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullHostname = new InfluxdbEmitterConfig(
         null,
@@ -90,7 +89,7 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test
-  public void testConfigWithNullPort() throws IOException
+  public void testConfigWithNullPort()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullPort = new InfluxdbEmitterConfig(
         "localhost",
@@ -142,7 +141,7 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testConfigWithNullInfluxdbUserName() throws IOException
+  public void testConfigWithNullInfluxdbUserName()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullHostname = new InfluxdbEmitterConfig(
         "localhost",
@@ -158,7 +157,7 @@ public class InfluxdbEmitterConfigTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testConfigWithNullInfluxdbPassword() throws IOException
+  public void testConfigWithNullInfluxdbPassword()
   {
     InfluxdbEmitterConfig influxdbEmitterConfigWithNullHostname = new InfluxdbEmitterConfig(
         "localhost",

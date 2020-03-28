@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -63,6 +62,7 @@ import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.groupby.strategy.GroupByStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
@@ -91,28 +91,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
   private final GroupByStrategySelector strategySelector;
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public GroupByQueryQueryToolChest(
-      GroupByStrategySelector strategySelector,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
-  )
+  public GroupByQueryQueryToolChest(GroupByStrategySelector strategySelector)
   {
-    this(strategySelector, intervalChunkingQueryRunnerDecorator, DefaultGroupByQueryMetricsFactory.instance());
+    this(strategySelector, DefaultGroupByQueryMetricsFactory.instance());
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       GroupByQueryMetricsFactory queryMetricsFactory
   )
   {
     this.strategySelector = strategySelector;
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -497,16 +490,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
               }
             }
 
-            return strategySelector.strategize(delegateGroupByQuery)
-                                   .createIntervalChunkingRunner(
-                                       intervalChunkingQueryRunnerDecorator,
-                                       runner,
-                                       GroupByQueryQueryToolChest.this
-                                   )
-                                   .run(
-                                       queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
-                                       responseContext
-                                   );
+            return runner.run(
+                queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
+                responseContext
+            );
           }
         }
     );
@@ -677,6 +664,37 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     };
   }
 
+  @Override
+  public boolean canPerformSubquery(Query<?> subquery)
+  {
+    Query<?> current = subquery;
+
+    while (current != null) {
+      if (!(current instanceof GroupByQuery)) {
+        return false;
+      }
+
+      if (current.getDataSource() instanceof QueryDataSource) {
+        current = ((QueryDataSource) current.getDataSource()).getQuery();
+      } else {
+        current = null;
+      }
+    }
+
+    return true;
+  }
+
+  @Override
+  public RowSignature resultArraySignature(GroupByQuery query)
+  {
+    return query.getResultRowSignature();
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(final GroupByQuery query, final Sequence<ResultRow> resultSequence)
+  {
+    return resultSequence.map(ResultRow::getArray);
+  }
 
   /**
    * This function checks the query for dimensions which can be optimized by applying the dimension extraction

@@ -92,9 +92,6 @@
       "development/extensions-contrib/ambari-metrics-emitter": {
         "title": "Ambari Metrics Emitter"
       },
-      "development/extensions-contrib/azure": {
-        "title": "Microsoft Azure"
-      },
       "development/extensions-contrib/cassandra": {
         "title": "Apache Cassandra"
       },
@@ -123,7 +120,7 @@
         "title": "Moment Sketches for Approximate Quantiles module"
       },
       "development/extensions-contrib/moving-average-query": {
-        "title": "development/extensions-contrib/moving-average-query"
+        "title": "Moving Average Query"
       },
       "development/extensions-contrib/opentsdb-emitter": {
         "title": "OpenTSDB Emitter"
@@ -151,6 +148,9 @@
       },
       "development/extensions-core/avro": {
         "title": "Apache Avro"
+      },
+      "development/extensions-core/azure": {
+        "title": "Microsoft Azure"
       },
       "development/extensions-core/bloom-filter": {
         "title": "Bloom Filter"
@@ -466,6 +466,9 @@
       },
       "tutorials/cluster": {
         "title": "Clustered deployment"
+      },
+      "tutorials/docker": {
+        "title": "Docker"
       },
       "tutorials/index": {
         "title": "Quickstart"

@@ -20,6 +20,7 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpResponseException;
+import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.RE;
@@ -37,17 +38,25 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   private static final Logger LOG = new Logger(GoogleDataSegmentKiller.class);
 
   private final GoogleStorage storage;
+  private final GoogleAccountConfig accountConfig;
+  private final GoogleInputDataConfig inputDataConfig;
 
   @Inject
-  public GoogleDataSegmentKiller(final GoogleStorage storage)
+  public GoogleDataSegmentKiller(
+      final GoogleStorage storage,
+      GoogleAccountConfig accountConfig,
+      GoogleInputDataConfig inputDataConfig
+  )
   {
     this.storage = storage;
+    this.accountConfig = accountConfig;
+    this.inputDataConfig = inputDataConfig;
   }
 
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
-    LOG.info("Killing segment [%s]", segment);
+    LOG.info("Killing segment [%s]", segment.getId());
 
     Map<String, Object> loadSpec = segment.getLoadSpec();
     final String bucket = MapUtils.getString(loadSpec, "bucket");
@@ -93,8 +102,25 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killAll()
+  public void killAll() throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    LOG.info(
+        "Deleting all segment files from gs location [bucket: '%s' prefix: '%s']",
+        accountConfig.getBucket(),
+        accountConfig.getPrefix()
+    );
+    try {
+      GoogleUtils.deleteObjectsInPath(
+          storage,
+          inputDataConfig,
+          accountConfig.getBucket(),
+          accountConfig.getPrefix(),
+          Predicates.alwaysTrue()
+      );
+    }
+    catch (Exception e) {
+      LOG.error("Error occurred while deleting task log files from gs. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
   }
 }

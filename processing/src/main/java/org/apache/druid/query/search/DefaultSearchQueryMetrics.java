@@ -26,7 +26,6 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
-import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -89,6 +88,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void subQueryId(SearchQuery query)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
   public void sqlQueryId(SearchQuery query)
   {
     throw new ISE("Unsupported method in default query metrics implementation.");
@@ -134,12 +139,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public void segment(String segmentIdentifier)
   {
     delegateQueryMetrics.segment(segmentIdentifier);
-  }
-
-  @Override
-  public void chunkInterval(Interval interval)
-  {
-    delegateQueryMetrics.chunkInterval(interval);
   }
 
   @Override
@@ -206,12 +205,6 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportSegmentAndCacheTime(long timeNs)
   {
     return delegateQueryMetrics.reportSegmentAndCacheTime(timeNs);
-  }
-
-  @Override
-  public QueryMetrics reportIntervalChunkTime(long timeNs)
-  {
-    return delegateQueryMetrics.reportIntervalChunkTime(timeNs);
   }
 
   @Override

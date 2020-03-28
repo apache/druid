@@ -25,13 +25,52 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class CacheUtil
 {
+  public enum ServerType
+  {
+    BROKER {
+      @Override
+      boolean willMergeRunners()
+      {
+        return false;
+      }
+    },
+    DATA {
+      @Override
+      boolean willMergeRunners()
+      {
+        return true;
+      }
+    };
+
+    /**
+     * Same meaning as the "willMergeRunners" parameter to {@link CacheStrategy#isCacheable}.
+     */
+    abstract boolean willMergeRunners();
+  }
+
+  public static Cache.NamedKey computeResultLevelCacheKey(String resultLevelCacheIdentifier)
+  {
+    return new Cache.NamedKey(resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier));
+  }
+
+  public static void populateResultCache(
+      Cache cache,
+      Cache.NamedKey key,
+      byte[] resultBytes
+  )
+  {
+    cache.put(key, resultBytes);
+  }
+
   public static Cache.NamedKey computeSegmentCacheKey(
       String segmentId,
       SegmentDescriptor descriptor,
@@ -54,64 +93,105 @@ public class CacheUtil
     );
   }
 
-  public static <T> boolean useCacheOnBrokers(
+  /**
+   * Returns whether the segment-level cache should be checked for a particular query.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   * @param serverType    BROKER or DATA
+   */
+  public static <T> boolean isUseSegmentCache(
       Query<T> query,
-      CacheStrategy<T, Object, Query<T>> strategy,
-      CacheConfig cacheConfig
+      @Nullable CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      CacheConfig cacheConfig,
+      ServerType serverType
   )
   {
-    return useCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+           && QueryContexts.isUseCache(query)
+           && cacheConfig.isUseCache();
   }
 
-  public static <T> boolean populateCacheOnBrokers(
+  /**
+   * Returns whether the result-level cache should be populated for a particular query.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   * @param serverType    BROKER or DATA
+   */
+  public static <T> boolean isPopulateSegmentCache(
       Query<T> query,
-      CacheStrategy<T, Object, Query<T>> strategy,
-      CacheConfig cacheConfig
+      @Nullable CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      CacheConfig cacheConfig,
+      ServerType serverType
   )
   {
-    return populateCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+           && QueryContexts.isPopulateCache(query)
+           && cacheConfig.isPopulateCache();
   }
 
-  public static <T> boolean useCacheOnDataNodes(
+  /**
+   * Returns whether the result-level cache should be checked for a particular query.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   * @param serverType    BROKER or DATA
+   */
+  public static <T> boolean isUseResultCache(
       Query<T> query,
-      CacheStrategy<T, Object, Query<T>> strategy,
-      CacheConfig cacheConfig
+      @Nullable CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      CacheConfig cacheConfig,
+      ServerType serverType
   )
   {
-    return useCache(query, strategy, cacheConfig) && strategy.isCacheable(query, true);
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+           && QueryContexts.isUseResultLevelCache(query)
+           && cacheConfig.isUseResultLevelCache();
   }
 
-  public static <T> boolean populateCacheOnDataNodes(
+  /**
+   * Returns whether the result-level cache should be populated for a particular query.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   * @param serverType    BROKER or DATA
+   */
+  public static <T> boolean isPopulateResultCache(
       Query<T> query,
-      CacheStrategy<T, Object, Query<T>> strategy,
-      CacheConfig cacheConfig
+      @Nullable CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      CacheConfig cacheConfig,
+      ServerType serverType
   )
   {
-    return populateCache(query, strategy, cacheConfig) && strategy.isCacheable(query, true);
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
+           && QueryContexts.isPopulateResultLevelCache(query)
+           && cacheConfig.isPopulateResultLevelCache();
   }
 
-  private static <T> boolean useCache(
-      Query<T> query,
-      CacheStrategy<T, Object, Query<T>> strategy,
-      CacheConfig cacheConfig
+  /**
+   * Returns whether a particular query is cacheable. Does not check whether we are actually configured to use or
+   * populate the cache; that should be done separately.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   * @param serverType    BROKER or DATA
+   */
+  static <T> boolean isQueryCacheable(
+      final Query<T> query,
+      @Nullable final CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      final CacheConfig cacheConfig,
+      final ServerType serverType
   )
   {
-    return QueryContexts.isUseCache(query)
-           && strategy != null
-           && cacheConfig.isUseCache()
-           && cacheConfig.isQueryCacheable(query);
+    return cacheStrategy != null
+           && cacheStrategy.isCacheable(query, serverType.willMergeRunners())
+           && cacheConfig.isQueryCacheable(query)
+           && query.getDataSource().isCacheable();
   }
-
-  private static <T> boolean populateCache(
-      Query<T> query,
-      CacheStrategy<T, Object, Query<T>> strategy,
-      CacheConfig cacheConfig
-  )
-  {
-    return QueryContexts.isPopulateCache(query)
-           && strategy != null
-           && cacheConfig.isPopulateCache()
-           && cacheConfig.isQueryCacheable(query);
-  }
-
 }

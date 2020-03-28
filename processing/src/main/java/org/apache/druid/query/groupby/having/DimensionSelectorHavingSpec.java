@@ -74,7 +74,7 @@ public class DimensionSelectorHavingSpec implements HavingSpec
   @Override
   public void setQuery(GroupByQuery query)
   {
-    columnNumber = query.getResultRowPositionLookup().getInt(dimension);
+    columnNumber = query.getResultRowSignature().indexOf(dimension);
   }
 
   @Override

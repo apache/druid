@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -36,6 +37,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -116,11 +118,30 @@ public interface Query<T>
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
+  /**
+   * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.
+   *
+   * This often changes the behavior of {@link #getRunner(QuerySegmentWalker)}, since most queries inherit that method
+   * from {@link BaseQuery}, which implements it by calling {@link QuerySegmentSpec#lookup}.
+   */
   Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
 
   Query<T> withId(String id);
 
+  @Nullable
   String getId();
+
+  /**
+   * Returns a copy of this query with a new subQueryId (see {@link #getSubQueryId()}.
+   */
+  Query<T> withSubQueryId(String subQueryId);
+
+  /**
+   * Returns the subQueryId of this query. This is set by ClientQuerySegmentWalker (the entry point for the Broker's
+   * query stack) on any subqueries that it issues. It is null for the main query.
+   */
+  @Nullable
+  String getSubQueryId();
 
   default Query<T> withSqlQueryId(String sqlQueryId)
   {
@@ -140,13 +161,18 @@ public interface Query<T>
     return this;
   }
 
-  default List<Interval> getIntervalsOfInnerMostQuery()
+  default Query<T> withPriority(int priority)
   {
-    if (getDataSource() instanceof QueryDataSource) {
-      //noinspection unchecked
-      return ((QueryDataSource) getDataSource()).getQuery().getIntervalsOfInnerMostQuery();
-    } else {
-      return getIntervals();
-    }
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+  }
+
+  default Query<T> withLane(String lane)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+  }
+
+  default VirtualColumns getVirtualColumns()
+  {
+    return VirtualColumns.EMPTY;
   }
 }

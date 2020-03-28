@@ -70,11 +70,11 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
           if (rawValue instanceof Collection) {
             for (final Object next : ((Collection) rawValue)) {
               if (next != null) {
-                h.offer(Rows.objectToNumber(metricName, next).floatValue());
+                h.offer(Rows.objectToNumber(metricName, next, true).floatValue());
               }
             }
           } else {
-            h.offer(Rows.objectToNumber(metricName, rawValue).floatValue());
+            h.offer(Rows.objectToNumber(metricName, rawValue, true).floatValue());
           }
 
           return h;

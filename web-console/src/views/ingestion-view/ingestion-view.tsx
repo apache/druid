@@ -418,7 +418,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       },
       {
         icon: IconNames.STEP_BACKWARD,
-        title: 'Reset',
+        title: 'Hard reset',
         intent: Intent.DANGER,
         onAction: () => this.setState({ resetSupervisorId: id }),
       },
@@ -503,9 +503,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           );
           return resp.data;
         }}
-        confirmButtonText="Reset supervisor"
-        successText="Supervisor has been reset"
-        failText="Could not reset supervisor"
+        confirmButtonText="Hard reset supervisor"
+        successText="Supervisor has been hard reset"
+        failText="Could not hard reset supervisor"
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ resetSupervisorId: undefined });
@@ -513,9 +513,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         onSuccess={() => {
           this.supervisorQueryManager.rerunLastQuery();
         }}
+        warningChecks={[
+          `I understand that resetting ${resetSupervisorId} will clear checkpoints and therefore lead to data loss or duplication.`,
+          'I understand that this operation cannot be undone.',
+        ]}
       >
-        <p>{`Are you sure you want to reset supervisor '${resetSupervisorId}'?`}</p>
-        <p>Resetting a supervisor could lead data loss or data duplication</p>
+        <p>{`Are you sure you want to hard reset supervisor '${resetSupervisorId}'?`}</p>
+        <p>Hard resetting a supervisor will lead to data loss or data duplication.</p>
+        <p>
+          The reason for using this operation is to recover from a state in which the supervisor
+          ceases operating due to missing offsets.
+        </p>
       </AsyncActionDialog>
     );
   }

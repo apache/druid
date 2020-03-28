@@ -22,11 +22,11 @@ package org.apache.druid.sql.calcite.aggregation;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexNode;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -90,7 +90,7 @@ public class Aggregations
 
     if (druidExpression.isSimpleExtraction() &&
         (!druidExpression.isDirectColumnAccess()
-         || rowSignature.getColumnType(druidExpression.getDirectColumn()) == ValueType.STRING)) {
+         || rowSignature.getColumnType(druidExpression.getDirectColumn()).orElse(null) == ValueType.STRING)) {
       // Aggregators are unable to implicitly cast strings to numbers.
       // So remove the simple extraction, which forces the expression to be used instead of the direct column access.
       return druidExpression.map(simpleExtraction -> null, Function.identity());

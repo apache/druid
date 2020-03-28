@@ -29,6 +29,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
             autocomplete="off"
             class="bp3-input"
             min="0"
+            placeholder=""
             style="padding-right: 10px;"
             type="text"
             value=""
@@ -194,6 +195,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       >
         <input
           class="bp3-input"
+          placeholder=""
           style="padding-right: 10px;"
           type="text"
           value=""
@@ -300,6 +302,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
     >
       <textarea
         class="bp3-input bp3-fill"
+        placeholder=""
       />
     </div>
   </div>

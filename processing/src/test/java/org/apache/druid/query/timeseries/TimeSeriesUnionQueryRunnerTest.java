@@ -61,7 +61,7 @@ public class TimeSeriesUnionQueryRunnerTest
     return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeUnionQueryRunners(
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -143,7 +143,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                   )
                                   .descending(descending)
                                   .build();
-    QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator());
+    QueryToolChest toolChest = new TimeseriesQueryQueryToolChest();
     final List<Result<TimeseriesResultValue>> ds1 = Lists.newArrayList(
         new Result<>(
             DateTimes.of("2011-04-02"),

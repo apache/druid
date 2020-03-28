@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
 /**
+ *
  */
 public class ServerConfig
 {
@@ -48,6 +49,7 @@ public class ServerConfig
       @NotNull Period maxIdleTime,
       long defaultQueryTimeout,
       long maxScatterGatherBytes,
+      int maxSubqueryRows,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
@@ -63,6 +65,7 @@ public class ServerConfig
     this.maxIdleTime = maxIdleTime;
     this.defaultQueryTimeout = defaultQueryTimeout;
     this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxSubqueryRows = maxSubqueryRows;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
@@ -99,6 +102,10 @@ public class ServerConfig
   @JsonProperty
   @Min(1)
   private long maxScatterGatherBytes = Long.MAX_VALUE;
+
+  @JsonProperty
+  @Min(1)
+  private int maxSubqueryRows = 100000;
 
   @JsonProperty
   @Min(1)
@@ -157,6 +164,11 @@ public class ServerConfig
     return maxScatterGatherBytes;
   }
 
+  public int getMaxSubqueryRows()
+  {
+    return maxSubqueryRows;
+  }
+
   public long getMaxQueryTimeout()
   {
     return maxQueryTimeout;
@@ -207,6 +219,7 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
@@ -227,6 +240,7 @@ public class ServerConfig
         maxIdleTime,
         defaultQueryTimeout,
         maxScatterGatherBytes,
+        maxSubqueryRows,
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
@@ -247,6 +261,7 @@ public class ServerConfig
            ", maxIdleTime=" + maxIdleTime +
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+           ", maxSubqueryRows=" + maxSubqueryRows +
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +

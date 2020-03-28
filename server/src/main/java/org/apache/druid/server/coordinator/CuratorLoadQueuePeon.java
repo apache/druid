@@ -342,7 +342,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     if (!ZKPaths.getNodeFromPath(path).equals(segmentHolder.getSegmentIdentifier())) {
       log.warn(
           "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
-          basePath, path, segmentHolder
+          basePath,
+          path,
+          segmentHolder
       );
       return;
     }

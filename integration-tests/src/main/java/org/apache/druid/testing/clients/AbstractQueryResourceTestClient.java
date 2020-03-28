@@ -35,6 +35,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
@@ -87,4 +88,19 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     }
   }
 
+  public Future<StatusResponseHolder> queryAsync(String url, QueryType query)
+  {
+    try {
+      return httpClient.go(
+          new Request(HttpMethod.POST, new URL(url)).setContent(
+              "application/json",
+              jsonMapper.writeValueAsBytes(query)
+          ),
+          StatusResponseHandler.getInstance()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

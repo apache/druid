@@ -22,6 +22,7 @@
 64-bit
 ACL
 APIs
+AvroStorage
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -58,6 +59,7 @@ Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
 Dropwizard
 dropwizard
+DruidInputSource
 DruidSQL
 EC2
 EC2ContainerCredentialsProviderWrapper
@@ -67,6 +69,7 @@ EMRFS
 ETL
 Elasticsearch
 FirehoseFactory
+FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.POSITIVE_INFINITY
 ForwardedRequestCustomizer
@@ -77,6 +80,7 @@ GUIs
 GroupBy
 Guice
 HDFS
+HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -92,6 +96,7 @@ IndexSpec
 IndexTask
 InfluxDB
 InputFormat
+InputSource
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -103,6 +108,7 @@ JMX
 JRE
 JS
 JSON
+JsonPath
 JVM
 JVMs
 Joda
@@ -150,6 +156,7 @@ SSL
 Samza
 Splunk
 SqlFirehose
+SqlParameter
 StatsD
 TCP
 TGT
@@ -211,6 +218,8 @@ dbcp
 denormalization
 denormalize
 denormalized
+deprioritization
+deprioritizes
 dequeued
 deserialization
 deserialize
@@ -220,12 +229,16 @@ e.g.
 encodings
 endian
 enum
+expr
 failover
+featureSpec
+findColumnsFromHeader
 filenames
 filesystem
 firefox
 firehose
 firehoses
+fromPigAvroStorage
 frontends
 granularities
 gzip
@@ -240,13 +253,16 @@ http
 https
 i.e.
 influxdb
+ingestionSpec
 injective
 inlined
 interruptible
+jackson-jq
 javadoc
 kerberos
 keystore
 keytab
+laning
 lifecycle
 localhost
 log4j
@@ -262,6 +278,7 @@ mergeable
 metadata
 millis
 misconfiguration
+mostAvailableSize
 multitenancy
 multitenant
 mysql
@@ -329,6 +346,7 @@ searchable
 servlet
 sharded
 sharding
+skipHeaderRows
 smooshed
 splittable
 stdout
@@ -362,6 +380,7 @@ unparseable
 unparsed
 uptime
 uris
+useFieldDiscovery
 v1
 v2
 vCPUs
@@ -427,7 +446,7 @@ Pdist
 ambari-metrics
 metricName
 trustStore
- - ../docs/development/extensions-contrib/azure.md
+ - ../docs/development/extensions-core/azure.md
 StaticAzureBlobStoreFirehose
 StaticS3Firehose
 fetchTimeout
@@ -442,6 +461,13 @@ StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
+StaticAzureBlobStoreFirehose
+gz
+shardSpecs
+maxCacheCapacityBytes
+maxFetchCapacityBytes
+fetchTimeout
+maxFetchRetry
  - ../docs/development/extensions-contrib/distinctcount.md
 distinctCount
 groupBy
@@ -503,6 +529,7 @@ postAggregations
 postAveragers
  - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
+namespacePrefix
 src
  - ../docs/development/extensions-contrib/redis-cache.md
 loadList
@@ -884,7 +911,6 @@ ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
 index_hadoop
-ingestionSpec
 inputPath
 inputSpecs
 interval1
@@ -931,6 +957,7 @@ PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
 SplitHintSpec
+accessKeyId
 appendToExisting
 baseDir
 chatHandlerNumRetries
@@ -950,6 +977,7 @@ maxNumSegmentsToMerge
 maxRetry
 pushTimeout
 reportParseExceptions
+secretAccessKey
 segmentWriteOutMediumFactory
 sql
 sqls
@@ -957,6 +985,8 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
+StaticS3Firehose
+prefetchTriggerBytes
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1114,7 +1144,6 @@ SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
 bufferPoolName
-chunkInterval
 cms
 cpuName
 cpuTime
@@ -1234,7 +1263,6 @@ TimeseriesQuery
 D1
 D2
 D3
-chunkPeriod
 druid.query.groupBy.defaultStrategy
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
@@ -1560,7 +1588,6 @@ allowAll
 array_mod
 batch_index_task
 cgroup
-chunkPeriod
 classloader
 com.metamx
 common.runtime.properties

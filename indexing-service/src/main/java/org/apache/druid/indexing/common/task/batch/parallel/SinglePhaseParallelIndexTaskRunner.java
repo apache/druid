@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -38,9 +39,10 @@ import java.util.Map;
  * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
  * a result, this task can't be used for perfect rollup.
  */
-class SinglePhaseParallelIndexTaskRunner
-    extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
+class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
 {
+  private static final String PHASE_NAME = "segment generation";
+
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
 
@@ -70,7 +72,7 @@ class SinglePhaseParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return SinglePhaseSubTask.TYPE;
+    return PHASE_NAME;
   }
 
   @VisibleForTesting
@@ -102,7 +104,7 @@ class SinglePhaseParallelIndexTaskRunner
   SubTaskSpec<SinglePhaseSubTask> newTaskSpec(InputSplit split)
   {
     final FirehoseFactory firehoseFactory;
-    final SplittableInputSource inputSource;
+    final InputSource inputSource;
     if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
       firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
       inputSource = null;

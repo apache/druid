@@ -34,7 +34,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -90,19 +90,58 @@ public class DimensionPredicateFilter implements Filter
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
 
         @Override
         public DruidDoublePredicate makeDoublePredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidDoublePredicate()
+          {
+            @Override
+            public boolean applyDouble(double input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
       };
     }
@@ -125,7 +164,7 @@ public class DimensionPredicateFilter implements Filter
   {
     return DimensionHandlerUtils.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(predicateFactory);
   }

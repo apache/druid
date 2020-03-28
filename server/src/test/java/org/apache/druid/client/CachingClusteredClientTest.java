@@ -68,14 +68,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BySegmentResultValueClass;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
@@ -99,6 +97,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
@@ -117,7 +116,11 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -149,6 +152,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -429,11 +433,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
-    );
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     testQueryCaching(
         runner,
@@ -468,11 +468,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
-    );
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     testQueryCaching(
         runner,
@@ -594,10 +590,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator())
-    );
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     testQueryCaching(
         runner,
@@ -655,11 +648,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
-    );
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     testQueryCaching(
         runner,
@@ -699,10 +688,9 @@ public class CachingClusteredClientTest
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator())
-    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
     testQueryCaching(
         runner,
         1,
@@ -775,10 +763,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(
-            new TopNQueryConfig(),
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new TopNQueryQueryToolChest(new TopNQueryConfig())
     );
 
     testQueryCaching(
@@ -851,10 +836,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(
-            new TopNQueryConfig(),
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new TopNQueryQueryToolChest(new TopNQueryConfig())
     );
 
     testQueryCaching(
@@ -955,10 +937,8 @@ public class CachingClusteredClientTest
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new TopNQueryQueryToolChest(new TopNQueryConfig())
     );
     testQueryCaching(
         runner,
@@ -1027,11 +1007,10 @@ public class CachingClusteredClientTest
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new TopNQueryQueryToolChest(new TopNQueryConfig())
     );
+
     testQueryCaching(
         runner,
         builder.build(),
@@ -1127,11 +1106,10 @@ public class CachingClusteredClientTest
     );
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new SearchQueryQueryToolChest(
-        new SearchQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new SearchQueryQueryToolChest(new SearchQueryConfig())
     );
+
     TestHelper.assertExpectedResults(
         makeSearchResults(
             TOP_DIM,
@@ -1196,11 +1174,10 @@ public class CachingClusteredClientTest
     );
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new SearchQueryQueryToolChest(
-        new SearchQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new SearchQueryQueryToolChest(new SearchQueryConfig())
     );
+
     ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedResults(
         makeSearchResults(
@@ -1437,11 +1414,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
-    );
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     /*
     For dim0 (2011-01-01/2011-01-05), the combined range is {[1,1], [222,333]}, so segments [-inf,1], [1,2], [2,3], and
@@ -1510,11 +1483,7 @@ public class CachingClusteredClientTest
     final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
     final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    )
-    );
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 1);
@@ -2380,7 +2349,7 @@ public class CachingClusteredClientTest
       }
 
       for (Map.Entry<String, Object> entry : rowMap.entrySet()) {
-        final int position = query.getResultRowPositionLookup().getInt(entry.getKey());
+        final int position = query.getResultRowSignature().indexOf(entry.getKey());
         row.set(position, entry.getValue());
       }
 
@@ -2427,9 +2396,9 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
+          public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
           {
-            return timeline;
+            return Optional.of(timeline);
           }
 
           @Override
@@ -2508,7 +2477,13 @@ public class CachingClusteredClientTest
             return 4;
           }
         },
-        ForkJoinPool.commonPool()
+        ForkJoinPool.commonPool(),
+        new QueryScheduler(
+            0,
+            ManualQueryPrioritizationStrategy.INSTANCE,
+            NoQueryLaningStrategy.INSTANCE,
+            new ServerConfig()
+        )
     );
   }
 

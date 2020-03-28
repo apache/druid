@@ -55,6 +55,8 @@ like `100` (denoting an integer), `100.0` (denoting a floating point value), or 
 timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
 written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
 
+Druid SQL supports dynamic parameters in question mark (`?`) syntax, where parameters are bound to the `?` placeholders at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and ensure that corresponding parameter values are provided at execution time. Parameters are bound to the placeholders in the order in which they are passed.
+ 
 Druid SQL supports SELECT queries with the following structure:
 
 ```
@@ -63,7 +65,7 @@ Druid SQL supports SELECT queries with the following structure:
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM table
 [ WHERE expr ]
-[ GROUP BY exprs ]
+[ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
@@ -83,6 +85,22 @@ The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINC
 trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). GROUP BY
 can refer to an expression or a select clause ordinal position (like `GROUP BY 2` to group by the second selected
 column).
+
+The GROUP BY clause can also refer to multiple grouping sets in three ways. The most flexible is GROUP BY GROUPING SETS,
+for example `GROUP BY GROUPING SETS ( (country, city), () )`. This example is equivalent to a `GROUP BY country, city`
+followed by `GROUP BY ()` (a grand total). With GROUPING SETS, the underlying data is only scanned one time, leading to
+better efficiency. Second, GROUP BY ROLLUP computes a grouping set for each level of the grouping expressions. For
+example `GROUP BY ROLLUP (country, city)` is equivalent to `GROUP BY GROUPING SETS ( (country, city), (country), () )`
+and will produce grouped rows for each country / city pair, along with subtotals for each country, along with a grand
+total. Finally, GROUP BY CUBE computes a grouping set for each combination of grouping expressions. For example,
+`GROUP BY CUBE (country, city)` is equivalent to `GROUP BY GROUPING SETS ( (country, city), (country), (city), () )`.
+Grouping columns that do not apply to a particular row will contain `NULL`. For example, when computing
+`GROUP BY GROUPING SETS ( (country, city), () )`, the grand total row corresponding to `()` will have `NULL` for the
+"country" and "city" columns.
+
+When using GROUP BY GROUPING SETS, GROUP BY ROLLUP, or GROUP BY CUBE, be aware that results may not be generated in the
+order that you specify your grouping sets in the query. If you need results to be generated in a particular order, use
+the ORDER BY clause.
 
 The HAVING clause refers to columns that are present after execution of GROUP BY. It can be used to filter on either
 grouping expressions or aggregated values. It can only be used together with GROUP BY.
@@ -199,10 +217,14 @@ Only the COUNT aggregation can accept DISTINCT.
 |`STDDEV_POP(expr)`|Computes standard deviation population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
 |`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
 |`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
-|`EARLIEST(expr)`|Returns the earliest non-null value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "earliest" is the value first encountered with the minimum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the first value encountered.|
+|`EARLIEST(expr)`|Returns the earliest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "earliest" is the value first encountered with the minimum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the first value encountered.|
 |`EARLIEST(expr, maxBytesPerString)`|Like `EARLIEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
-|`LATEST(expr)`|Returns the latest non-null value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "latest" is the value last encountered with the maximum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|
+|`LATEST(expr)`|Returns the latest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "latest" is the value last encountered with the maximum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|
 |`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+|`ANY_VALUE(expr)`|Returns any value of `expr` including null. `expr` must be numeric. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)|
+|`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+
+
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
 
@@ -308,6 +330,22 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
 |`TIMESTAMPDIFF(<unit>, <timestamp1>, <timestamp2>)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |<code>timestamp_expr { + &#124; - } <interval_expr><code>|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
+
+
+### Reduction functions
+
+Reduction functions operate on zero or more expressions and return a single expression. If no expressions are passed as
+arguments, then the result is `NULL`. The expressions must all be convertible to a common data type, which will be the
+type of the result:
+*  If all argument are `NULL`, the result is `NULL`. Otherwise, `NULL` arguments are ignored.
+*  If the arguments comprise a mix of numbers and strings, the arguments are interpreted as strings.
+*  If all arguments are integer numbers, the arguments are interpreted as longs.
+*  If all arguments are numbers and at least one argument is a double, the arguments are interpreted as doubles. 
+
+|Function|Notes|
+|--------|-----|
+|`GREATEST([expr1, ...])`|Evaluates zero or more expressions and returns the maximum value based on comparisons as described above.|
+|`LEAST([expr1, ...])`|Evaluates zero or more expressions and returns the minimum value based on comparisons as described above.|
 
 
 ### IP address functions
@@ -512,6 +550,17 @@ of configuration.
 You can make Druid SQL queries using JSON over HTTP by posting to the endpoint `/druid/v2/sql/`. The request should
 be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
 
+##### Request
+      
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`query`|`String`| SQL query to run| yes |
+|`resultFormat`|`String` (`ResultFormat`)| Result format for output | no (default `"object"`)|
+|`header`|`Boolean`| Write column name header for supporting formats| no (default `false`)|
+|`context`|`Object`| Connection context map. see [connection context parameters](#connection-context)| no |
+|`parameters`|`SqlParameter` list| List of query parameters for parameterized queries. | no |
+
+
 You can use _curl_ to send SQL queries from the command-line:
 
 ```bash
@@ -534,7 +583,27 @@ like:
 }
 ```
 
-Metadata is available over the HTTP API by querying [system tables](#metadata-tables).
+Parameterized SQL queries are also supported:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = ? AND __time > ?",
+  "parameters": [
+    { "type": "VARCHAR", "value": "bar"},
+    { "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
+  ]
+}
+```
+
+##### SqlParameter
+
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`type`|`String` (`SqlType`) | String value of `SqlType` of parameter. [`SqlType`](https://calcite.apache.org/avatica/javadocAggregate/org/apache/calcite/avatica/SqlType.html) is a friendly wrapper around [`java.sql.Types`](https://docs.oracle.com/javase/8/docs/api/java/sql/Types.html?is-external=true)|yes|
+|`value`|`Object`| Value of the parameter|yes|
+
+
+Metadata is also available over the HTTP API by querying [system tables](#metadata-tables).
 
 #### Responses
 
@@ -611,8 +680,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 ```
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
-["INFORMATION_SCHEMA" tables](#metadata-tables). Parameterized queries (using `?` or other placeholders) don't work properly,
-so avoid those.
+["INFORMATION_SCHEMA" tables](#metadata-tables).
 
 #### Connection stickiness
 
@@ -623,6 +691,17 @@ the necessary stickiness even with a normal non-sticky load balancer. Please see
 [Router](../design/router.md) documentation for more details.
 
 Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and does not require stickiness.
+
+### Dynamic Parameters
+
+You can also use parameterized queries in JDBC code, as in this example;
+
+```java
+PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");
+statement.setString(1, "abc");
+statement.setString(2, "def");
+final ResultSet resultSet = statement.executeQuery();
+```
 
 ### Connection context
 
@@ -859,8 +938,6 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|4|
 |`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
-|`druid.sql.planner.maxQueryCount`|Maximum number of queries to issue, including nested queries. Set to 1 to disable sub-queries, or set to 0 for unlimited.|8|
-|`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
@@ -869,6 +946,10 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
 |`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
+
+> Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
+> These properties are no longer available. Since Druid 0.18.0, you can use `druid.server.http.maxSubqueryRows` to control the maximum
+> number of rows permitted across all subqueries.
 
 ## SQL Metrics
 
