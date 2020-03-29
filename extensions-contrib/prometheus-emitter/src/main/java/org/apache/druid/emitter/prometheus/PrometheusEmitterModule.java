@@ -29,7 +29,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
