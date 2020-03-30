@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -58,6 +59,30 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   private S3InputDataConfig inputDataConfig;
 
   private S3DataSegmentKiller segmentKiller;
+
+  @Test
+  public void test_killAll_accountConfigWithNullBucketAndBaseKey_throwsISEException() throws IOException
+  {
+    EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(null);
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(null);
+    EasyMock.expectLastCall().anyTimes();
+
+    boolean thrownISEException = false;
+
+    try {
+
+      EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+
+      segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
+      segmentKiller.killAll();
+    }
+    catch (ISE e) {
+      thrownISEException = true;
+    }
+    Assert.assertTrue(thrownISEException);
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
+  }
 
   @Test
   public void test_killAll_noException_deletesAllSegments() throws IOException
