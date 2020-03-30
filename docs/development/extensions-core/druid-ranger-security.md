@@ -52,7 +52,7 @@ druid.auth.authorizer.ranger.type=ranger
 |--------|-----------|-------|--------|
 |`druid.auth.ranger.keytab`|Defines the keytab to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
 |`druid.auth.ranger.principal`|Defines the principal to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
-|`druid.auth.ranger.use_ugi`|Determines if groups that the authenticated user belongs to should be obtained from Hadoop's UserGroupInformation|null|No|
+|`druid.auth.ranger.use_ugi`|Determines if groups that the authenticated user belongs to should be obtained from Hadoop's `UserGroupInformation`|null|No|
 
 ### Configuring the connection to Apache Ranger
 
@@ -70,7 +70,7 @@ command:
 
 `curl -u <user>:<password> -d "@ranger-servicedef-druid.json" -X POST -H "Accept: application/json" -H "Content-Type: application/json" http://localhost:6080/service/public/v2/api/servicedef/`
 
-You should get back json describing the service definition you just added. You can now go to the web
+You should get back `json` describing the service definition you just added. You can now go to the web
 interface of Apache Ranger which should now include a widget for "Druid". Click the plus sign an create
 the new service. Ensure your service name is equal to what you configured in `ranger-druid-security.xml`.
 
