@@ -20,12 +20,13 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.DruidDockerAdminClient;
+import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
@@ -35,7 +36,6 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -65,26 +65,22 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   private static final long CYCLE_PADDING_MS = 100;
   private static final int TOTAL_NUMBER_OF_SECOND = 10;
 
+  @Inject
+  private DruidClusterAdminClient druidClusterAdminClient;
+  @Inject
+  private KinesisAdminClient kinesisAdminClient;
+
   private String streamName;
   private String fullDatasourceName;
-  private KinesisAdminClient kinesisAdminClient;
   private KinesisEventWriter kinesisEventWriter;
   private WikipediaStreamEventGenerator wikipediaStreamEventGenerator;
   private Function<String, String> kinesisIngestionPropsTransform;
   private Function<String, String> kinesisQueryPropsTransform;
   private int secondsToGenerateRemaining;
 
-
-  @BeforeClass
-  public void beforeClass() throws Exception
-  {
-    kinesisAdminClient = new KinesisAdminClient(config.getStreamEndpoint());
-  }
-
   @BeforeMethod
   public void before() throws Exception
   {
-    DruidDockerAdminClient.test();
     streamName = "kinesis_index_test_" + UUID.randomUUID();
     String datasource = "kinesis_indexing_service_test_" + UUID.randomUUID();
     Map<String, String> tags = ImmutableMap.of(STREAM_EXPIRE_TAG, Long.toString(DateTimes.nowUtc().plusMinutes(30).getMillis()));
@@ -240,52 +236,18 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
 
   public void testKineseIndexDataWithLosingCoordinator() throws Exception
   {
-    try (
-        final Closeable ignored1 = unloader(fullDatasourceName)
-    ) {
-      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
-      LOG.info("Submitted supervisor");
-      // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-      verifyIngestedData(supervisorId);
-    }
+    testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartCoordinatorContainer(), () -> druidClusterAdminClient.waitUntilCoordinatorReady());
   }
 
   public void testKineseIndexDataWithLosingOverlord() throws Exception
   {
-    try (
-        final Closeable ignored1 = unloader(fullDatasourceName)
-    ) {
-      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
-      LOG.info("Submitted supervisor");
-      // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-      verifyIngestedData(supervisorId);
-    }
+    testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartIndexerContainer(), () -> druidClusterAdminClient.waitUntilIndexerReady());
   }
 
   public void testKineseIndexDataWithLosingHistorical() throws Exception
   {
-    try (
-        final Closeable ignored1 = unloader(fullDatasourceName)
-    ) {
-      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
-      LOG.info("Submitted supervisor");
-      // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-      verifyIngestedData(supervisorId);
-    }
+    testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartHistoricalContainer(), () -> druidClusterAdminClient.waitUntilHistoricalReady());
   }
-
 
   @Test
   public void testKineseIndexDataWithStartStopSupervisor() throws Exception
@@ -327,17 +289,57 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   public void testKineseIndexDataWithKinesisReshardSplit() throws Exception
   {
     // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT * 2
-    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
+    testIndexWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
   }
 
   @Test
   public void testKineseIndexDataWithKinesisReshardMerge() throws Exception
   {
     // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT / 2
-    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
+    testIndexWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
   }
 
-  private void testKineseIndexDataWithKinesisReshardHelper(int newShardCount) throws Exception
+  private void testIndexWithLosingNodeHelper(Runnable restartRunnable, Runnable waitForReadyRunnable) throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start generating one third of the data (before restarting)
+      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
+      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
+      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      // Restart Druid process
+      restartRunnable.run();
+      // Start generating one third of the data (while restarting)
+      int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
+      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
+      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateSecondRound);
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
+      // Wait for Druid process to be available
+      waitForReadyRunnable.run();
+      // Start generating remainding data (after restarting)
+      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
+      // Verify supervisor is healthy
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor to be healthy"
+      );
+      // Verify that supervisor ingested all data
+      verifyIngestedData(supervisorId);
+    }
+  }
+
+  private void testIndexWithKinesisReshardHelper(int newShardCount) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
