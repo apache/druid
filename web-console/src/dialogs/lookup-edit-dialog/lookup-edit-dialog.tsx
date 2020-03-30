@@ -75,7 +75,6 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
     } catch {
       return false;
     }
-    return true;
   }
 
   function addISOVersion() {
