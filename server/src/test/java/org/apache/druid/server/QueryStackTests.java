@@ -64,6 +64,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import javax.annotation.Nullable;
@@ -75,6 +77,12 @@ import java.util.Map;
  */
 public class QueryStackTests
 {
+  public static final QueryScheduler DEFAULT_NOOP_SCHEDULER = new QueryScheduler(
+      0,
+      ManualQueryPrioritizationStrategy.INSTANCE,
+      NoQueryLaningStrategy.INSTANCE,
+      new ServerConfig()
+  );
   private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
@@ -148,10 +156,17 @@ public class QueryStackTests
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
-      final JoinableFactory joinableFactory
+      final JoinableFactory joinableFactory,
+      final QueryScheduler scheduler
   )
   {
-    return new LocalQuerySegmentWalker(conglomerate, segmentWrangler, joinableFactory, EMITTER);
+    return new LocalQuerySegmentWalker(
+        conglomerate,
+        segmentWrangler,
+        joinableFactory,
+        scheduler,
+        EMITTER
+    );
   }
 
   /**
@@ -255,4 +270,5 @@ public class QueryStackTests
 
     return conglomerate;
   }
+
 }

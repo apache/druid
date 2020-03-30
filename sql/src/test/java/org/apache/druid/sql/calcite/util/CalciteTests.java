@@ -77,6 +77,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
@@ -572,13 +573,13 @@ public class CalciteTests
       final File tmpDir
   )
   {
-    return createMockWalker(conglomerate, tmpDir, null);
+    return createMockWalker(conglomerate, tmpDir, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
   }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
-      @Nullable final QueryScheduler scheduler
+      final QueryScheduler scheduler
   )
   {
     final QueryableIndex index1 = IndexBuilder
