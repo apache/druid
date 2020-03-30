@@ -32,6 +32,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
+import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
@@ -55,7 +56,7 @@ export interface LookupsViewState {
   lookupEditName: string;
   lookupEditTier: string;
   lookupEditVersion: string;
-  lookupEditSpec: string;
+  lookupEditSpec: LookupSpec;
   isEdit: boolean;
   allLookupTiers: string[];
 
@@ -81,7 +82,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditTier: '',
       lookupEditName: '',
       lookupEditVersion: '',
-      lookupEditSpec: '',
+      lookupEditSpec: { type: '' },
       isEdit: false,
       allLookupTiers: [],
       actions: [],
@@ -162,7 +163,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         lookupEditName: '',
         lookupEditTier: prevState.allLookupTiers[0],
         lookupEditDialogOpen: true,
-        lookupEditSpec: '',
+        lookupEditSpec: { type: '' },
         lookupEditVersion: new Date().toISOString(),
         isEdit: false,
       }));
@@ -171,14 +172,14 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         lookupEditName: id,
         lookupEditTier: tier,
         lookupEditDialogOpen: true,
-        lookupEditSpec: JSON.stringify(target.spec, null, 2),
+        lookupEditSpec: target.spec,
         lookupEditVersion: target.version,
         isEdit: true,
       });
     }
   }
 
-  private handleChangeLookup = (field: string, value: string) => {
+  private handleChangeLookup = (field: string, value: string | LookupSpec) => {
     this.setState({
       [field]: value,
     } as any);
@@ -193,7 +194,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       isEdit,
     } = this.state;
     let endpoint = '/druid/coordinator/v1/lookups/config';
-    const specJson: any = JSON.parse(lookupEditSpec);
+    const specJson: any = lookupEditSpec;
     let dataJson: any;
     if (isEdit) {
       endpoint = `${endpoint}/${lookupEditTier}/${lookupEditName}`;

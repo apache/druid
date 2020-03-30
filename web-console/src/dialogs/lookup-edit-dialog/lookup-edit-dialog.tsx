@@ -26,20 +26,27 @@ import {
   Intent,
 } from '@blueprintjs/core';
 import React from 'react';
-import AceEditor from 'react-ace';
 
-import { validJson } from '../../utils';
+import { AutoForm } from '../../components';
+// import { validJson } from '../../utils';
 
 import './lookup-edit-dialog.scss';
+// import AceEditor from 'react-ace';
 
+// import {SnitchDialog} from "..";
+
+export interface LookupSpec {
+  type: string;
+  map?: {};
+}
 export interface LookupEditDialogProps {
   onClose: () => void;
   onSubmit: () => void;
-  onChange: (field: string, value: string) => void;
+  onChange: (field: string, value: string | LookupSpec) => void;
   lookupName: string;
   lookupTier: string;
   lookupVersion: string;
-  lookupSpec: string;
+  lookupSpec: LookupSpec;
   isEdit: boolean;
   allLookupTiers: string[];
 }
@@ -56,6 +63,20 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
     isEdit,
     allLookupTiers,
   } = props;
+
+  function isValidMap(map: object) {
+    try {
+      if (typeof map !== 'object') return false;
+      const entries = Object.entries(map);
+      for (let i = 0; i < entries.length; i++) {
+        if (typeof entries[i][1] !== 'string') return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+    return true;
+  }
 
   function addISOVersion() {
     const currentDate = new Date();
@@ -94,7 +115,13 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
   }
 
   const disableSubmit =
-    lookupName === '' || lookupVersion === '' || lookupTier === '' || !validJson(lookupSpec);
+    lookupName === '' ||
+    lookupVersion === '' ||
+    lookupTier === '' ||
+    lookupSpec.type === '' ||
+    lookupSpec.type === undefined ||
+    lookupSpec.map === undefined ||
+    !isValidMap(lookupSpec.map);
 
   return (
     <Dialog
@@ -111,9 +138,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
           placeholder="Enter the lookup name"
         />
       </FormGroup>
-
       {renderTierInput()}
-
       <FormGroup className="lookup-label" label="Version:">
         <InputGroup
           value={lookupVersion}
@@ -124,27 +149,24 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
           }
         />
       </FormGroup>
-
-      <FormGroup className="lookup-label" label="Spec:" />
-
-      <AceEditor
-        className="lookup-edit-dialog-textarea"
-        mode="hjson"
-        theme="solarized_dark"
-        onChange={(e: any) => onChange('lookupEditSpec', e)}
-        fontSize={12}
-        height="40vh"
-        width="auto"
-        showPrintMargin={false}
-        showGutter={false}
-        value={lookupSpec}
-        editorProps={{ $blockScrolling: Infinity }}
-        setOptions={{
-          tabSize: 2,
+      <AutoForm
+        fields={[
+          {
+            name: 'type',
+            type: 'string',
+            label: 'Type :',
+          },
+          {
+            name: 'map',
+            type: 'json',
+            label: 'Map :',
+          },
+        ]}
+        model={lookupSpec}
+        onChange={m => {
+          onChange('lookupEditSpec', m);
         }}
-        style={{}}
       />
-
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />

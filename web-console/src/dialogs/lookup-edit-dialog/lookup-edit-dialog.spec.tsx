@@ -31,7 +31,7 @@ describe('lookup edit dialog', () => {
         lookupName={'test'}
         lookupTier={'test'}
         lookupVersion={'test'}
-        lookupSpec={'test'}
+        lookupSpec={{ type: 'test', map: {} }}
         isEdit={false}
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
       />
