@@ -17,6 +17,12 @@
 
 cd /tls
 
+FILE_CHECK_IF_RAN=/tls/server.key
+if [ -f "$FILE_CHECK_IF_RAN" ]; then
+  echo "Script was ran already. Skip running again."
+  exit
+fi
+
 rm -f cert_db.txt
 touch cert_db.txt
 

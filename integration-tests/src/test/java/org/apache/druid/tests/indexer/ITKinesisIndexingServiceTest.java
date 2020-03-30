@@ -234,16 +234,19 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     }
   }
 
+  @Test
   public void testKineseIndexDataWithLosingCoordinator() throws Exception
   {
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartCoordinatorContainer(), () -> druidClusterAdminClient.waitUntilCoordinatorReady());
   }
 
+  @Test
   public void testKineseIndexDataWithLosingOverlord() throws Exception
   {
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartIndexerContainer(), () -> druidClusterAdminClient.waitUntilIndexerReady());
   }
 
+  @Test
   public void testKineseIndexDataWithLosingHistorical() throws Exception
   {
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartHistoricalContainer(), () -> druidClusterAdminClient.waitUntilHistoricalReady());
@@ -315,14 +318,18 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
       wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
       // Restart Druid process
+      LOG.info("Restarting Druid process");
       restartRunnable.run();
+      LOG.info("Restarted Druid process");
       // Start generating one third of the data (while restarting)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
       wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateSecondRound);
       wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
       // Wait for Druid process to be available
+      LOG.info("Waiting for Druid process to be available");
       waitForReadyRunnable.run();
+      LOG.info("Druid process is now available");
       // Start generating remainding data (after restarting)
       wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
       wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));

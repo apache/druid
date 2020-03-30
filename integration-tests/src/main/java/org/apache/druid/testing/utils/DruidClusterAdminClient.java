@@ -44,12 +44,12 @@ import java.util.Optional;
 public class DruidClusterAdminClient
 {
   private static final Logger LOG = new Logger(DruidClusterAdminClient.class);
-  private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "druid-coordinator";
-  private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "druid-historical";
-  private static final String INDEXER_DOCKER_CONTAINER_NAME = "druid-overlord";
-  private static final String BROKERR_DOCKER_CONTAINER_NAME = "druid-broker";
-  private static final String ROUTER_DOCKER_CONTAINER_NAME = "druid-router";
-  private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "druid-middlemanager";
+  private static final String COORDINATOR_DOCKER_CONTAINER_NAME = "/druid-coordinator";
+  private static final String HISTORICAL_DOCKER_CONTAINER_NAME = "/druid-historical";
+  private static final String INDEXER_DOCKER_CONTAINER_NAME = "/druid-overlord";
+  private static final String BROKERR_DOCKER_CONTAINER_NAME = "/druid-broker";
+  private static final String ROUTER_DOCKER_CONTAINER_NAME = "/druid-router";
+  private static final String MIDDLEMANAGER_DOCKER_CONTAINER_NAME = "/druid-middlemanager";
 
   private final HttpClient httpClient;
   private IntegrationTestingConfig config;
@@ -132,9 +132,10 @@ public class DruidClusterAdminClient
                                                .map(container -> container.getId());
 
     if (!containerName.isPresent()) {
+      LOG.error("Cannot find docker container for " + serviceName);
       throw new ISE("Cannot find docker container for " + serviceName);
     }
-    dockerClient.restartContainerCmd(containerName.get());
+    dockerClient.restartContainerCmd(containerName.get()).exec();
   }
 
   private void waitUntilInstanceReady(final String host)
