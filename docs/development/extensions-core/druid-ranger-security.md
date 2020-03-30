@@ -53,14 +53,14 @@ druid.auth.authorizer.ranger.type=ranger
 |`druid.auth.ranger.keytab`|Defines the keytab to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
 |`druid.auth.ranger.principal`|Defines the principal to be used while authenticating against Apache Ranger to obtain policies and provide auditing|null|No|
 |`druid.auth.ranger.use_ugi`|Determines if groups that the authenticated user belongs to should be obtained from Hadoop's UserGroupInformation|null|No|
-|`druid.auth.ranger.hadoop_config`|If defined, loads extra configuration for Hadoop's UserGroupInformation from this file|ranger-druid-site.xml|No|
 
 ### Configuring the connection to Apache Ranger
 
 The Apache Ranger authorization extension will read several configuration files. Discussing the
-the contents of those files are beyond the scope of this document. Depending on your needs you will 
+the contents of those files is beyond the scope of this document. Depending on your needs you will 
 need to create them. The minimum you will need to have is a `ranger-druid-security.xml` file 
-that you will need to put in the classpath. For auditing, the configuration is in `ranger-druid-audit.xml`.
+that you will need to put in the classpath (e.g. `_common`). For auditing, the configuration is 
+in `ranger-druid-audit.xml`.
 
 ### Adding the service definition for Apache Druid to Apache Ranger
 
