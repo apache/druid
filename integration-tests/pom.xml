@@ -31,15 +31,11 @@
         <version>0.18.0-SNAPSHOT</version>
     </parent>
 
-    <properties>
-        <kinesis.producer.version>0.13.1</kinesis.producer.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>amazon-kinesis-producer</artifactId>
-            <version>${kinesis.producer.version}</version>
+            <version>0.13.1</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -253,7 +249,7 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <version>${netty4.version}</version>
-            <classifier>${os.detected.name}-${os.detected.arch}</classifier>
+            <classifier>osx-x86_64</classifier>
         </dependency>
 
         <!-- Tests -->
@@ -294,13 +290,6 @@
     </dependencies>
 
     <build>
-        <extensions>
-            <extension>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>1.6.1</version>
-            </extension>
-        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
