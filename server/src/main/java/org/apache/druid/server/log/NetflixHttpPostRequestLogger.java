@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -49,6 +50,7 @@ import org.joda.time.Interval;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -137,7 +139,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     return "";
   }
 
-  public static String asString(List<? extends Cacheable> list)
+  private static String asString(List<? extends Cacheable> list)
   {
     if (list == null || list.isEmpty()) {
       return "";
@@ -145,14 +147,14 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     List<Object> sortedList = new ArrayList<>(list);
     Collections.sort(sortedList, Comparator.comparing(Object::toString));
     StringBuilder sb = new StringBuilder();
-    sortedList.stream().forEach(postAggregator -> sb.append(postAggregator.toString()).append(";;"));
+    sortedList.stream().forEach(s -> sb.append(s.toString()).append(";;"));
     return sb.toString();
   }
 
   public static String dimensionsProjectedAndFiltered(Query query)
   {
     if (query instanceof GroupByQuery) {
-      return dimensionsString(((GroupByQuery) query).getDimensions(), ((GroupByQuery) query).getDimFilter());
+      return dimensionsString(((GroupByQuery) query).getDimensions(), query.getFilter());
     }
     if (query instanceof TopNQuery) {
       return dimensionsString(Collections.singletonList(((TopNQuery) query).getDimensionSpec()), query.getFilter());
@@ -160,7 +162,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     return dimensionsString(Collections.emptyList(), query.getFilter());
   }
 
-  public static String dimensionsString(List<DimensionSpec> dims, DimFilter filter)
+  private static String dimensionsString(List<DimensionSpec> dims, DimFilter filter)
   {
     if (dims == null && filter == null) {
       return "";
@@ -174,6 +176,35 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     }
     StringBuilder sb = new StringBuilder();
     dimensionNames.stream().forEach(dimensioName -> sb.append(dimensioName + ";;"));
+    return sb.toString();
+  }
+
+  public static String metricsFromAggregators(Query query)
+  {
+    Set<String> fields = new TreeSet<>();
+    if (query instanceof GroupByQuery) {
+      for (AggregatorFactory agg : ((GroupByQuery) query).getAggregatorSpecs()) {
+        fields.addAll(agg.requiredFields());
+      }
+    } else if (query instanceof TimeseriesQuery) {
+      for (AggregatorFactory agg : ((TimeseriesQuery) query).getAggregatorSpecs()) {
+        fields.addAll(agg.requiredFields());
+      }
+    } else if (query instanceof TopNQuery) {
+      for (AggregatorFactory agg : ((TopNQuery) query).getAggregatorSpecs()) {
+        fields.addAll(agg.requiredFields());
+      }
+    }
+    return asDelimitedString(fields);
+  }
+
+  private static String asDelimitedString(Collection<String> collection)
+  {
+    if (collection == null || collection.isEmpty()) {
+      return "";
+    }
+    StringBuilder sb = new StringBuilder();
+    collection.stream().forEach(s -> sb.append(s).append(";;"));
     return sb.toString();
   }
 
@@ -303,6 +334,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     private final String aggregators;
     private final String postAggregators;
     private final String dimensionsUsed;
+    private final String metricsUsed;
 
     // Netflix druid cluster details
     private final String druidStackName;
@@ -324,6 +356,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
       aggregators = aggregators(query);
       postAggregators = postAggregators(query);
       dimensionsUsed = dimensionsProjectedAndFiltered(query);
+      metricsUsed = metricsFromAggregators(query);
       remoteAddress = logLine.getRemoteAddr();
       Map<String, Object> queryStats = logLine.getQueryStats().getStats();
       querySuccessful = (Boolean) queryStats.get(QueryStats.SUCCESS.key);
@@ -473,6 +506,12 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     public String getDimensionsUsed()
     {
       return dimensionsUsed;
+    }
+
+    @JsonProperty
+    public String getMetricsUsed()
+    {
+      return metricsUsed;
     }
   }
 

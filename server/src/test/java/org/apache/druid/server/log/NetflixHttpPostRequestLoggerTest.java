@@ -58,27 +58,28 @@ public class NetflixHttpPostRequestLoggerTest
   private static final String ERROR_STACK_TRACE = Throwables.getStackTraceAsString(new Exception());
   private static final Long QUERY_TIME = 100L;
   private static final Long QUERY_BYTES = 200L;
+  private static String INTERVAL_STRING;
+  private static String METRICS_USED;
+  private static String POST_AGGREGATOR_STRING;
+  private static String DIMENSIONS_USED;
+  private static String AGGREGATOR_STRING;
 
   private static final List<Interval> INTERVALS = ImmutableList.of(
       Intervals.of("2016-01-01T00Z/2016-01-02T00Z"),
       Intervals.of("2016-01-01T00Z/2016-01-04T00Z"),
       Intervals.of("2016-01-06T00Z/2016-01-08T00Z")
   );
-  private static final String INTERVAL_STRING = NetflixHttpPostRequestLogger.intervalsToString(INTERVALS);
 
   private static final List<AggregatorFactory> AGGREGATOR_FACTORIES = ImmutableList.of(new LongSumAggregatorFactory(
       "n1",
       "f1"
   ), new DoubleSumAggregatorFactory("n2", "f2"));
-  private static final String AGGREGATOR_STRING = NetflixHttpPostRequestLogger.asString(
-      AGGREGATOR_FACTORIES);
+
 
   private static final List<PostAggregator> POST_AGGREGATOR = Collections.singletonList(new ConstantPostAggregator(
       "post",
       1
   ));
-  private static final String POST_AGGREGATOR_STRING = NetflixHttpPostRequestLogger.asString(
-      POST_AGGREGATOR);
 
   private static final List<DimensionSpec> DIMENSION_SPECS = Collections.singletonList(new DefaultDimensionSpec(
       "dimName",
@@ -94,16 +95,12 @@ public class NetflixHttpPostRequestLoggerTest
           )
       );
 
-  private static final String DIMENSIONS_USED = NetflixHttpPostRequestLogger.dimensionsString(DIMENSION_SPECS, IN_DIM_FILTER);
-
   private static final Map<String, Object> QUERY_CONTEXT = ImmutableMap.of(
       "foo",
       "bar",
       BaseQuery.QUERY_ID,
       QUERY_ID
   );
-
-
 
   private static GroupByQuery GROUP_BY_QUERY;
 
@@ -118,6 +115,12 @@ public class NetflixHttpPostRequestLoggerTest
            .setInterval(INTERVALS)
            .setContext(QUERY_CONTEXT);
     GROUP_BY_QUERY = builder.build();
+
+    INTERVAL_STRING = NetflixHttpPostRequestLogger.intervalsToString(INTERVALS);
+    DIMENSIONS_USED = NetflixHttpPostRequestLogger.dimensionsProjectedAndFiltered(GROUP_BY_QUERY);
+    METRICS_USED = NetflixHttpPostRequestLogger.metricsFromAggregators(GROUP_BY_QUERY);
+    AGGREGATOR_STRING = NetflixHttpPostRequestLogger.aggregators(GROUP_BY_QUERY);
+    POST_AGGREGATOR_STRING = NetflixHttpPostRequestLogger.postAggregators(GROUP_BY_QUERY);
   }
 
   @Test
@@ -154,6 +157,7 @@ public class NetflixHttpPostRequestLoggerTest
     Assert.assertEquals(AGGREGATOR_STRING, payload.getAggregators());
     Assert.assertEquals(POST_AGGREGATOR_STRING, payload.getPostAggregators());
     Assert.assertEquals(DIMENSIONS_USED, payload.getDimensionsUsed());
+    Assert.assertEquals(METRICS_USED, payload.getMetricsUsed());
     Assert.assertEquals(QUERY_TIME, payload.getQueryTime());
     Assert.assertEquals(QUERY_BYTES, payload.getQueryBytes());
     Assert.assertEquals(true, payload.isQuerySuccessful());
@@ -200,6 +204,7 @@ public class NetflixHttpPostRequestLoggerTest
     Assert.assertEquals(AGGREGATOR_STRING, payload.getAggregators());
     Assert.assertEquals(POST_AGGREGATOR_STRING, payload.getPostAggregators());
     Assert.assertEquals(DIMENSIONS_USED, payload.getDimensionsUsed());
+    Assert.assertEquals(METRICS_USED, payload.getMetricsUsed());
     Assert.assertEquals(QUERY_TIME, payload.getQueryTime());
     Assert.assertEquals(QUERY_BYTES, payload.getQueryBytes());
     Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
@@ -249,6 +254,7 @@ public class NetflixHttpPostRequestLoggerTest
     Assert.assertEquals(AGGREGATOR_STRING, payload.getAggregators());
     Assert.assertEquals(POST_AGGREGATOR_STRING, payload.getPostAggregators());
     Assert.assertEquals(DIMENSIONS_USED, payload.getDimensionsUsed());
+    Assert.assertEquals(METRICS_USED, payload.getMetricsUsed());
     Assert.assertEquals(QUERY_TIME, payload.getQueryTime());
     Assert.assertEquals(QUERY_BYTES, payload.getQueryBytes());
     Assert.assertEquals(REMOTE_ADDRESS, payload.getRemoteAddress());
