@@ -22,6 +22,7 @@ package org.apache.druid.inputsource.hdfs;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -276,6 +277,21 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       // Set maxSplitSize to 1 so that each inputSplit has only one object
       int numSplits = target.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L));
       Assert.assertEquals(NUM_FILE, numSplits);
+    }
+
+    @Test
+    public void createCorrectInputSourceWithSplit() throws Exception
+    {
+      // Set maxSplitSize to 1 so that each inputSplit has only one object
+      List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(1L))
+                                                  .collect(Collectors.toList());
+
+      for (InputSplit<List<Path>> split : splits) {
+        String expectedPath = Iterables.getOnlyElement(split.get()).toString();
+        HdfsInputSource inputSource = (HdfsInputSource) target.withSplit(split);
+        String actualPath = Iterables.getOnlyElement(inputSource.getInputPaths());
+        Assert.assertEquals(expectedPath, actualPath);
+      }
     }
   }
 
